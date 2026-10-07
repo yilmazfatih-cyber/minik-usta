@@ -1,30 +1,54 @@
 # Sanat yönü — Minik Usta
 
-Sahip: design-lead · Durum: Faz 1 revizyonu (2026-10-04; R-01, R-04, R-05, R-24 işlendi); Faz 2 boşluğu 2 (2026-10-06) · Kaynak: `docs/BRIEF.md` §6,
-§7, §9, §11 · Kod karşılığı: `src/theme/tokens.json` (her değerin tek kaynağı; türetilen renkler `check.*`, salt
-kontrol)
+Sahip: design-lead · Sürüm: **Faz 2R (2026-10-07) — görsel dil v2** (R2-07 görsel çıta, R2-08 ücretsiz üretim yolu,
+R2-02 değişken boyut); **Faz 2R çapraz inceleme kapanışı** (aynı gün: R2-08 güncellemesi — görseller elle yazılmış SVG,
+yapay zekâ yok; R2-12 sahip referansları — studlu oyuncak tuğla, çivit arayüz zemini; Ağır Yük ve moloz yeniden tarif;
+`docs/review_inbox/design-lead-2R-closure.md`); önceki: Faz 1 revizyonu (2026-10-04; R-01, R-04, R-05, R-24), Faz 2 boşluğu 2 (2026-10-06) ·
+Kaynak: `docs/BRIEF.md` §6, §7, §9, §11 · Kod karşılığı: `src/theme/tokens.json` (her değerin tek kaynağı; türetilen
+renkler `check.*`, salt kontrol)
 
 > Bu belgedeki tüm ölçüler **1080×1920 tasarım çözünürlüğünde piksel** (px) olarak verilir. 390 pt genişlikte bir
 > telefonda 1 pt ≈ 2,77 px; 375 pt'de 1 pt ≈ 2,88 px. "Hücre" (c) = 120 px (bkz. `UX_FLOWS.md` §0).
+>
+> **Faz 2R okuma sırası:** §1 (görsel sütunlar) → §2.5 (blok tonları v2) → §3A (blok çizim şartnamesi v2) → §14 (UI
+> kiti v2) → §15 (efektler v2) → §7 (arka planlar v2) → §8.1 (yazı stili v2) → §16 (araştırma kaynakları). §3'teki v1
+> tarifi ve tabloları kodun bugünkü hâlidir; testler bu tabloları okuduğu için code-lead v2 çiziciyi ve testlerini
+> getirene kadar yerinde kalır, sonra silinir (bkz. §3 başındaki not).
 
 ---
 
-## 1. His ve ilkeler
+## 1. Görsel sütunlar (v2 — Faz 2R, R2-07)
 
-1. **Dokunsal ve sıcak (yetişkin casual cilası):** parlak, sıcak, dokunulası. Nesneler cilalı plastik/ahşap malzeme
-   hissi taşır: kalın koyu kontur, üstte ışık bandı, altta gölge bandı, köşeler yuvarlak. Gerçekçi doku yok; düz renk +
-   2 tonlu ışık. **Okul öncesi stil değil:** ABC küpü, bebeksi oran, neon parıltı yok; üretim istemlerinde "toy box /
-   toy-like" yerine "polished, tactile casual-game art for adults" kullanılır (BUSINESS S2–S5).
-2. **Önce okunabilirlik:** Tahtadaki her bilgi (renk, şekil, engel, geçit tipi) 375 pt genişlikte 1 saniyede okunur.
-   Renk asla tek taşıyıcı değildir: her renk bir sembol, her geçit tipi bir biçim, her engel bir siluet taşır.
-3. **Kodla güzel:** Final sanat gelmeden oyun güzel görünmelidir. Bloklar, plan hücreleri, duvar, geçitler ve engeller
-   bu belgedeki tariflerle **prosedürel** çizilir: Canvas2D (`Path2D(svgPath)`, kesik çizgi, `shadowBlur`) →
-   `textures.createCanvas` → `CanvasTexture`, tek `refresh()` (code-lead; Phaser 4'te Graphics SVG yolu ve blur
-   desteklemez). Bloklar **bölüm başında parça bazlı** pişirilir (§3).
-4. **Sakin arka plan, canlı tahta:** Arka planlar düşük doygunlukta ve bulanık; en doygun renkler yalnızca bloklarda.
-5. **Sarı-siyah ikaz şeridi** yalnızca vurgu: geçit kenarları, duvar başlığı, "ZOR" etiketinin kenarı. Başka yerde yok.
+Proje sahibinin geri bildirimi: "görsel dil yok, çok basic". Hedef çıta Royal Match / Block Blast düzeyinde parlaklık,
+hacim ve ödül hissi; ton **yetişkin casual oyuncu için "premium casual"; çocuksu değil** (EN-2R-12, BUSINESS S8: "her
+yaşa / tüm aile / for all ages / family-friendly" ifadeleri hiçbir belgede, SVG açıklamasında ve mağaza metninde
+kullanılmaz). Proje sahibinin stil referansları (R2-12, `artifacts/reference/owner-2026-10-07/`, git dışı) **yalnız
+ilke** olarak alınır: çivit/mor arayüz zemini, doygun ana renkler, çıkıntılı (studlu) oyuncak tuğla bloklar, hacimli şeker
+düğmeler, kalın konturlu beyaz yazı. Referans oyunun ve rakiplerin karakteri, logosu, ikonu ve ekran düzeni kopyalanmaz,
+izi sürülmez, kırpılıp kullanılmaz (kaynaklar ve çıkarılan ilkeler §16, özgünlük §11.8).
 
----
+| # | Sütun | Kural (ölçülebilir) | Tarif |
+| - | ----- | ------------------- | ----- |
+| 1 | **Şeker hacim + oyuncak tuğla** | Her blok dolgun ve parlak: koyu kontur 6 px, hücre başına yastık + dikey gradyan + üst parlama elipsi, alt kenarda 12 px görünen yan duvar (kalınlık), yastık altında iç gölge; **hücre başına tek büyük çıkıntı (stud)**, sembol çıkıntının tepesine kabartılır (R2-12). Bir blok tahtada düz renk alan olarak görünmez. Plan hücresi, gölge ve Ağır Yük çıkıntısızdır. | §3A, §3A.5 |
+| 2 | **Cilalı UI kiti** | Her dokunulur öğe hacimlidir: 6 px kontur + 14 px alt kalınlık + gradyan yüz + üst parlama bandı; basılınca 10 px iner. Paneller ahşap çerçeveli krem, başlıklar şerit (ribbon), sayaçlar koyu yarı saydam kapsül, bildirimler kırmızı rozet. | §14 |
+| 3 | **Zengin sahne, sakin orta** | Ana sayfa ve kazanma arka planları design-lead'in elle yazdığı **SVG illüstrasyonlarıdır** (R2-08, ASSET §16; yapay zekâ yok); oyun ekranı **prosedürel çivit sahnedir** (R2-12, §7.1). Kenarlar ayrıntılı, tahta ve birincil düğmenin arkası sakin (orta bölgede belirgin nesne yok). Sahne doygunluğu blok tabanlarının altında kalır. | §7 |
+| 4 | **Her ödül parlar** | Doğru yerleşim, dilim, kazanma, toplama: ışık (parlama süpürmesi, 4 köşeli kıvılcım, yıldız patlaması, ışın) + ses + haptik. Bütçe JUICE §0 kural 4 (ekranda ≤ 120, patlama başına ≤ 40 parçacık). | §15, JUICE §8 |
+| 5 | **Okunurluk kutsal** | 375 pt'de 1 sn kuralı; renk asla tek taşıyıcı değil; gradyan ve parlama sembol kontrastını 3:1 altına indiremez (ölçüm §2.5). | §2.5 |
+| 6 | **Kodla keskin** | Bloklar, plan hücreleri, düğmeler, paneller, şeritler, rozetler, kapsüller, ilerleme çubukları ve efektler **prosedürel** (Canvas2D, ekran/bölüm başında pişirilir): her çözünürlükte keskin, renk körü moduna uyar. İllüstrasyonlar (arka plan, karakter, kasaba yapısı, ikon, logo amblemi) elle yazılmış SVG'dir (`public/art/**`, R2-08); kullanım boyutunda raster edilir (ASSET §16). | §3A, §14 |
+| 7 | **Yetişkine saygı** | Okul öncesi işaret yok (ABC küpü, bebeksi oran, emzik pasteli, harfli küp); SVG adlarında ve açıklamalarında "toy box / kids" yok (BUSINESS S2–S5). Studlu tuğla bir **inşaat malzemesi** olarak çizilir (mat-parlak plastik, kalın kontur), oyuncak kutusu sahnesi kurulmaz. Parlak ama zarif: çivit zemin üstünde **neon ışıma yok** (ışıltı yalnız ödül anında, §15). | §7, ASSET §16.2 |
+| 8 | **İkaz şeridi yalnız vurgu** | Sarı-siyah şerit yalnız duvar başlığı, geçit kenarı, **Ağır Yük** (Y5, §6; PL-2R-04) ve "ÇOK ZOR" etiketinde. | §5, §6 |
+
+**v1 → v2 farkı (Faz 2 ekran görüntüleri, 2026-10-07 incelemesi):**
+
+| Konu | v1 (Faz 2) | v2 (Faz 2R) |
+| ---- | ---------- | ----------- |
+| Blok | düz taban + 17 px ışık bandı + 19 px gölge bandı, parça başına tek küçük parlama hapı; tahtada "mat karo" | hücre başına yastık, dikey gradyan, her hücrede parlama elipsi + nokta, 12 px yan duvar, hücre başına tek çıkıntı (stud) ve tepesinde kabartmalı sembol (§3A, §3A.5) |
+| Öğretici | ekranın tamamı %60 (yumuşak adımda %30) kararır; HUD ve tahta zeytin/gri görünür | karartma yok; eldiven + kenarda küçük balon (UX §13.1); `alpha.tutorialOverlay` = 0 |
+| Arka plan | düz gök mavisi gradyan | prosedürel çivit şantiye sahnesi (oyun, R2-12), SVG Renkli Tepe kasabası (ana sayfa), SVG kutlama meydanı (kazanma) |
+| HUD / panel | gri-krem düz kutular, başlıksız | ahşap çerçeveli paneller, şerit başlık, kapsül sayaçlar |
+| Ana sayfa | gök + logo metni + tek düğme | üst çubuk, alan şeridi + ilerleme, kasaba yapısı, büyük "Bölüm N", alt gezinme (UX §3) |
+| Kazanma | tahta üstünde "KAZANDIN!" yazısı | tam ekran: ışın + altın şerit + yıldız patlaması + karakter + ödül kapsülleri (UX §6.1) |
+| Alt %25 | boş (Faz 2'de güçlendirici çubuğu yok) | Tuna + Kepçe köşesi ve kilitli güçlendirici yuvaları her bölümde görünür (UX §5.9) |
 
 ## 2. Palet
 
@@ -170,10 +194,78 @@ yeşil üstünde ham kontrastı düşüktür (2,7:1); kontur ve gölge okunurlu�
 | `board.rail` | #3F454D | W1 geçit rayı (koyu çelik, 8 px; üst ışık çizgisi `wallLight`; §5). İskele ve tavan kirişinden bilerek ayrı ton |
 | `board.craneSky` | #FFFFFF %10 | vinç alanı bandı (gökyüzü üstüne) |
 | `board.craneLine` | #FFFFFF %45 | vinç alanı alt sınırı (kesik çizgi) |
+| delikli pano (`board.yardGrid`) | #D4AE6E | **Faz 2R (DL-2R-18):** saha zemini **delikli pano**dur: her saha hücresinin merkezinde Ø 12 px delik (`layout.adaptive.yardHolePx`), dolgu `board.yardGrid`, alt yarısında 2 px `board.yardFrame` iç gölge yayı. Havada (altı boş) duran saha bloğu "panoya asılı" okunur; kamyon dökümü ise düşer (K-25), iki davranış görsel olarak ayrılır |
+| sahaya bırakma önizlemesi | #FFFFFF %60 | blok saha hücrelerine değerken oturacağı hücrelerde 4 px noktalı kontur (nokta 4, aralık 10), hücre kenarından 6 px içeride (`stroke.yardPreviewPx`, `alpha.yardPreview`; UX §5.3). Şantiyedeki düşüş gölgesinin (renkli gövde + rozet) deseninden ayrıdır |
+| saha üstü hava | `board.craneSky` | Hy < H iken sahanın üstündeki satırlar: zeminsiz gök bandı, ızgara/delik/çerçeve yok (UX §5.8) |
+
+### 2.5 Blok tonları v2 (Faz 2R)
+
+**Taban renkleri değişmedi** (§2.1; renk kodları W Y G R O C B P, semboller ve renk körü doğrulaması aynen geçerli).
+v2'nin "şeker" görünümü tabandan **formülle** türetilen altı tondan gelir (`tokens.blockV2`; kod formülü uygular,
+`check.v2.*` ±1 salt kontroldür):
+
+- **açık (light)** = taban·0,68 + beyaz·0,32 (`lightMix`) — yastık gradyanının üst durağı
+- **alt (bottom)** = taban × 0,92 (`bottomFactor`) — yastık gradyanının alt durağı
+- **oluk (groove)** = taban × 0,88 (`grooveFactor`) — yastıklar arası yüz ve dış kenar payı
+- **yan duvar (dark)** = taban × 0,68 (`darkFactor`) — alt kenarda görünen kalınlık, iç gölge rengi
+- **kontur (outline)** = taban × 0,42 (`outlineFactor`) — 6 px dış kontur, beyaz sembol kabartma gölgesi
+- **ışıltı (glow)** = taban·0,45 + beyaz·0,55 (`glowMix`) — kaldırma halkası, kıvılcım ve konfeti kenarı
+
+| Kod | Taban | Açık | Alt | Oluk | Yan duvar | Kontur | Işıltı | Sembol kontrastı (taban / sembol üst kenarı) |
+| --- | ----- | ---- | --- | ---- | --------- | ------ | ------ | -------------------------------------------- |
+| W | #764012 | #A27D5E | #6D3B11 | #683810 | #502C0C | #321B08 | #C1A994 | 7,4 / 6,4 |
+| Y | #FFE23E | #FFEB7C | #EBD039 | #E0C737 | #AD9A2A | #6B5F1A | #FFF2A8 | 5,3 / 5,4 |
+| G | #44D088 | #80DFAE | #3FBF7D | #3CB778 | #2E8D5C | #1D5739 | #ABEAC9 | 4,5 / 4,7 |
+| R | #CF404E | #DE7D87 | #BE3B48 | #B63845 | #8D2C35 | #571B21 | #E9A9AF | 4,2 / 3,9 |
+| O | #EC8D20 | #F2B167 | #D9821D | #D07C1C | #A06016 | #633B0D | #F6CC9B | 4,1 / 4,3 |
+| C | #C8CFDA | #DADEE6 | #B8BEC9 | #B0B6C0 | #888D94 | #54575C | #E6E9EE | 4,9 / 5,1 |
+| B | #2984DE | #6DABE9 | #2679CC | #2474C3 | #1C5A97 | #11375D | #9FC8F0 | 3,5 / 3,2 |
+| P | #5D3AAE | #9179C8 | #5635A0 | #523399 | #3F2776 | #271849 | #B6A6DB | 6,9 / 6,0 |
+
+**Sembol kontrastı (ölçüldü, WCAG 1.4.11 eşiği 3:1).** Mürekkep kuralı §2.2 ile aynı (L\* ≥ 60: taban × 0,40, %100;
+L\* < 60: beyaz). v2'de beyaz mürekkep **%92** (`blockV2.symbolWhiteAlpha`; v1 %85) çünkü gradyanın açık durağı
+sembolün üst kenarına değer. "Sembol üst kenarı" sütunu sembol kutusunun en üst satırındaki gradyan rengine göre en
+kötü değerdir: gradyan durağı yastık yüksekliğinin **%30**'unda (`gradientStop`) bitiyor; durak %42 olsaydı B 2,9:1'e
+düşüyordu (eşik altı), bu yüzden %30 seçildi. En düşük değer B 3,2:1; beyaz sembolün altındaki 4 px koyu kabartma
+gölgesi (§3A katman 7) kenar kontrastını ayrıca taşır.
+
+**Renk körlüğü (aynı yöntem §2.2: Machado 2009 + Brettel 1997, CIEDE2000, en kötü model).** Kimlik taban rengiyle
+okunur: yastık alanının %70'i taban ya da daha koyu tondadır. Türetilen tonlar ayrıca ölçüldü:
+
+| Ton | Normal | Deutan | Protan | Tritan |
+| --- | ------ | ------ | ------ | ------ |
+| Taban (değişmedi) | 26,3 (W–R) | 14,4 (Y–O) | 14,1 (W–R) | 16,6 (G–B) |
+| Açık | 19,3 (Y–O) | 9,4 (B–P) | 11,6 (G–O) | 10,3 (G–B) |
+| Yan duvar | 20,5 (W–R) | 9,6 (B–P) | 11,2 (W–R) | 12,3 (R–O) |
+
+Açık ve yan duvar tonları tek başına kimlik taşımadığı için (yalnız gradyan ucu ve 12 px şerit) 12'nin altındaki
+değerler kabul edilir; bu çiftler (B–P, G–O, G–B) sembolle ayrışır (parıltı ↔ elmas, yaprak ↔ kiremit dalgası,
+yaprak ↔ parıltı).
+
+### 2.6 Arayüz renkleri v2 (UI kiti)
+
+§2.3 renkleri geçerlidir; v2 kiti (§14) kendi dörtlülerini `tokens.kit.*` altında taşır (`color.ui.*` değişmedi):
+
+| Token | Üst / Yüz / Kalınlık / Kontur | Kullanım |
+| ----- | ----------------------------- | -------- |
+| `kit.buttonColor.green` | #8BE36A / #4CC23F / #2E8A2A / #16501A | birincil: "Bölüm N", "Devam", "Oyna" |
+| `kit.buttonColor.orange` | #FFC966 / #FF9A1F / #C46A00 / #6E3600 | satın alma ve teklif: "+5 hamle", "Al" |
+| `kit.buttonColor.blue` | #7FD0FF / #2E9BF0 / #1767B5 / #0B3A6E | araç düğmesi: ayar dişlisi, bilgi (i) |
+| `kit.buttonColor.cream` | #FFFFFF / #FFF4D6 / #D9B878 / #6B4A26 | nötr: "Hayır, teşekkürler", "Bölümden çık", duraklat |
+| `kit.buttonColor.red` | #FF8A7E / #EC4A3C / #A82A22 / #5E1410 | kapat (×) |
+| `kit.buttonColor.grey` | #D6D1C8 / #B9B2A5 / #8C8579 / #5C564D | pasif ve kilitli |
+
+Beyaz yazı yeşil yüzde ham olarak 2,3:1'dir; 0,16 em koyu kontur (#16501A üstünde beyaz 9,6:1) ve 0,07 em gölge
+okunurluğu taşır (türün yerleşik dili, §2.3 notu). Krem düğmede yazı `ui.ink` (12,5:1), kontursuz.
 
 ---
 
 ## 3. Blok render tarifi (prosedürel)
+
+> **v1 — Faz 2'nin bugünkü çizimi.** Faz 2R'de bu tarifin yerini **§3A (v2)** aldı. Bu bölümün tabloları
+> `tests/review/services-theme.review.test.ts` ve `tests/theme/*` tarafından okunduğu için code-lead v2 çiziciyi ve
+> testlerini getirene kadar metin değiştirilmez; v2 birleşince bu bölüm (3.1 sembol tarifleri hariç) silinir ve
+> `block.*` v1 anahtarları kaldırılır (code-lead'e liste: dönüş notu). Sembol yolları (§3.1) v2'de aynen kullanılır.
 
 **Yaklaşım: bölüm başında parça bazlı pişirme** (code-lead önerisi, kabul). Bölümde geçen her (şekil × renk × bayrak)
 birleşimi için **bir doku** Canvas2D ile çizilir (tipik ≤ 24 doku, en çok 360×360), `CanvasTexture`'a yüklenir; tahtada
@@ -243,7 +335,139 @@ dörtgen) — gri tonlamada da ayırt edilirler.
 
 ---
 
+## 3A. Blok çizim şartnamesi v2 — "şeker blok" (Faz 2R)
+
+Kaynak token: `tokens.blockV2` (oranlar hücre boyu `c` = 120 px'e göre; yastık içi konumlar yastık dikdörtgeninin
+`w`/`h`'sine göre). Tonlar §2.5. Doğrulama: `scratchpad` prototipinde Chromium Canvas2D ile 8 renk × 9 şekil, kaldırılmış
+blok ve 6 düğme varyantı çizildi (§12).
+
+**Pişirme modeli değişmez (§3 ilk paragraf):** bölüm başında parça bazlı (şekil × renk × bayrak) tek `CanvasTexture`,
+şekil başına bulanık siluet dokuları, renk körü modunda yeniden pişirme. Doku boyu v1 ile aynıdır (`w·c × h·c`); 12 px
+yan duvar **parçanın kendi kutusunun içindedir**, alttaki hücreye taşmaz (ızgara okunurluğu korunur).
+
+### 3A.1 Geometri — yollar
+
+1. **Siluet `S`:** polyomino dış hattı (hücre kenarları birleşimi, saat yönünde), her kenar 3 px içe (`insetPx`). Dış
+   (dışbükey) köşe yarıçapı 0,20c = **24 px**, iç (içbükey) köşe 0,07c = **8 px** (`cornerRadiusRatio`,
+   `innerCornerRadiusRatio`; köşeler `arcTo` ile).
+2. **Gövde `B`:** `S` her kenarda 6 px daha içe (`outlinePx`); köşe yarıçapları 18 / 6 px (24 − 6; iç köşe en az 2 px).
+3. **Yüz `F`:** `B`'nin yalnız **altı açık** (aşağıya bakan) kenarları 12 px yukarı ötelenmiş hâli (`lipPx`); öteki
+   kenarlar `B` ile aynı. Hesap (dik açılı çokgende kesin): her kenar kendi iç normali yönünde ötelenir (yatay kenar
+   y'de, dikey kenar x'te); her köşe, komşu iki kenarın ötelenmiş doğrularının kesişimidir. L, T, S şekillerindeki iç
+   basamaklarda da alt kenar ötelenir; böylece her basamakta yan duvar görünür.
+4. **Yastık `P(x, y)` (hücre başına):** hücre dikdörtgeninden içe pay: komşusu **olan** kenarda 0,06c = **7 px**
+   (`pillowInsetRatio`), komşusu **olmayan** kenarda 0,12c = **14 px** (`pillowOpenInsetRatio`), altı açık kenarda ek
+   olarak +12 px (`lipPx`). Köşe yarıçapı 0,16c = **19 px**. Örnekler: 1×1 blokta yastık x 14,4–105,6, y 14,4–93,6 (≈ 91×79);
+   yatay I4'ün iç hücrelerinde x 7–113 (106 genişlik), uç hücrelerde 99; komşu iki yastık arasında 14 px oluk.
+
+### 3A.2 Katmanlar (çizim sırası)
+
+| # | Katman | Tarif | 120 px'te |
+| - | ------ | ----- | --------- |
+| 0 | Temas gölgesi | Pişirilmiş siluet, `shadow.contact` (y +4, 6 px bulanık, siyah %12) — v1 ile aynı | — |
+| 1 | Kontur | `S` dolgusu **kontur** tonu (taban × 0,42); `B` üstüne çizildiği için 6 px halka olarak kalır | 6 px |
+| 2 | Yan duvar | `B` dolgusu **yan duvar** tonu (× 0,68); yüz yukarı kaydığı için yalnız altı açık kenarlarda 12 px şerit görünür | 12 px |
+| 3 | Yüz / oluk | `F` dolgusu **oluk** tonu (× 0,88); yastıkların arasında (14 px) ve çevresinde (dış kenarda 5 px) kalan kısım | 5–14 px |
+| 4 | Yastık | `P` dolgusu dikey doğrusal gradyan: durak 0 → **açık**, durak 0,30 → **taban**, durak 1 → **alt** (× 0,92) | — |
+| 5 | İç gölge | Yastığa kırpılı, yastığın alt %18'i (`innerShadeRatio`): **yan duvar** tonu α 0 → α 0,28 (`innerShadeAlpha`) | 14–15 px |
+| 6 | Parlama | Her yastıkta beyaz elips: merkez (0,34w, 0,13h), yarıçap (0,22w, 0,06h), −8° döndürülmüş, α 0,50 (`glossEllipse`, `glossRotDeg`, `glossAlpha`) + beyaz nokta: merkez (0,70w, 0,12h), r 0,035c = 4 px, α 0,80 (`glossDot`) | elips 40×10 px (1×1) |
+| 7 | Sembol | Yastık merkezinde (0,5w, **0,54h**; `symbolCenterYRatio`), kutu 0,42c = **50 px** (`symbolSizeRatio`), §3.1 yolları. **Kabartma:** koyu mürekkepli renklerde (Y C G O) önce beyaz α 0,45 kopya **+3 px aşağıda** (`embossLight*`; oyma izi), beyaz mürekkepli renklerde (W R B P) önce **kontur** tonu α 0,55 kopya **+4 px aşağıda** (`embossDark*`; gölge), sonra asıl sembol. Sembol içi "oyma" çizgileri (G damarı, P fasetleri) **taban** renginde | 50 px |
+| 8 | Bayrak katmanları | `glass`, `mortar`, `balloon`, `chained`, `wet` (§3 tablosu, Faz 3): yastıkların üstüne, sembolün altına; konumlar hücre yerine yastık dikdörtgenine göre | — |
+
+**Durum katmanları (pişirilmez, çalışma anında):**
+
+| Durum | Görsel | Token |
+| ----- | ------ | ----- |
+| Kaldırılmış (sürükleme) | ölçek × 1,08 (`drag.liftScale`) + `shadow.lifted` (vinç alanında `shadow.crane`) + **ışıltı halkası**: siluetin 10 px genişletilmiş pişirilmiş kopyası, **ışıltı** tonunda α 0,35, bloğun arkasında (`liftGlowPx`, `liftGlowAlpha`; JUICE #91) | `blockV2.liftGlow*` |
+| Yerleşti (doğru) | v1 #12 dolumu + pişirilmiş siluetin üstünde 260 ms beyaz **ADD flaşı** (bütün siluet aynı anda, α 0 → 0,60 → 0, `placedSheenAlpha`; eğik süpürme bandı **yok** — maske gerektirmez, CL-2R-25, JUICE kural 11) + 6 adet 4 köşeli kıvılcım (JUICE #92); köşe harç noktaları (§4) kalır | `blockV2.placedSheenAlpha` |
+| İptal öngörüsü | %60 opak + "↩" rozeti (UX §5.3) — değişmedi | — |
+| Tutulabilir (K-09; DL-2R-17) | tam parlama: yastık elipsi + çıkıntı parlama yayı + çıkıntı parlama noktası (§3A.5) | — |
+| Tutulamaz (K-09; DL-2R-17) | çıkıntının parlama yayı ve noktası **yok**, parça ×0,92 koyulaşır (`setTint` `blockV2.notHoldableTint` #EBEBEB); ton ilişkisi ve sembol aynı. Uygulama: çıkıntı parlaması parçadan **ayrı** pişirilen renksiz beyaz bir dokudur (şekil başına 1 doku, en çok 9; renkten bağımsız), yalnız tutulabilir parçanın üstüne konur. Küme `holdableIds` her hamle sonunda ve teslimattan sonra (UX §5.3); geçiş 160 ms | `blockV2.notHoldableTint` |
+| Taşınamaz (dokunuş) | v1 titreme + ötelemeyi kesen bütün komşuların 300 ms vurgusu (UX §5.3) | — |
+
+### 3A.3 Birleşik blok (hücreler arası)
+
+- Parça **tek kontur ve tek yan duvar** taşır: dış hat kesintisizdir, içbükey köşeler 8 px yayla döner; iki hücre
+  arasında kontur çizilmez.
+- Hücre sayısı yastıklardan okunur: komşu iki yastık arasında 14 px **oluk** (taban × 0,88) kalır; v1'deki 3 px iç dikiş
+  çizgisi v2'de yoktur.
+- Parlama **her hücrede** tekrarlanır (v1'de parça başına bir tane): şeker hissi buradan gelir; tahtada 48 hücrelik
+  dolu sahada da tekrar ritmi "taneli" bir yüzey verir, tek bir büyük parlama noktası oluşmaz.
+- Bitişik iki **aynı renkli** blok yine iki ayrı konturla ayrılır (3 px pay × 2 + 6 px kontur × 2 = 18 px ayrım: kontur
+  6 px · zemin 6 px · kontur 6 px). **Ölçüm (PL-2R-13 a, sRGB çarpanı, CIELAB L\*):** blok içi oluk (taban × 0,88) ile
+  kontur (× 0,42) arasındaki fark en az ΔL\* 16,6 (W; P 17,4, R 23,5, B 25,5, O 30,8, G 33,9, C 37,1, Y 40,0), kontrast en
+  az 1,68:1 (W). İki blok arasındaki ayrım bandında saha zemini (#E9C891) kontura karşı en az 4,0:1'dir (Y; W 10,2). Yani
+  "iki blok" ipucu = koyu–açık–koyu 18 px bant (≥ 4:1), "tek blok" ipucu = orta tonlu 14 px oluk (≤ 3,8:1). Ayrıca her
+  hücrenin kendi çıkıntısı vardır (§3A.5); hücre sayısı çıkıntı sayısından da okunur.
+- Renk körü modu: sembol × 1,2 (60 px; yastığın en dar hâline, 80 px, sığar), mürekkep kuralı §10; tonlar değişmez.
+
+### 3A.4 Canvas2D çizim sırası (code-lead için birebir)
+
+```
+c = cellPx; poly = rectilinearOutline(cells) × c
+S = offsetEdges(poly, 3, 3, 3, 3);  B = offsetEdges(S, 6, 6, 6, 6);  F = offsetEdges(B, top 0, right 0, bottom 12, left 0)
+trace(S, R=0.20c, r=0.07c); fill(outline)
+trace(B, R−6, max(2, r−2)); fill(dark)
+trace(F, R−6, max(2, r−2)); fill(groove)
+for each cell (x, y):
+  P = cellRect(x, y) inset { shared: 0.06c, open: 0.12c, openBottom: 0.12c + 12 }
+  roundRect(P, 0.16c); fill(linearGradient(P.top → P.bottom: 0 light, 0.30 base, 1 bottom))
+  clip(P); fillRect(P.x, P.bottom − 0.18·P.h, P.w, 0.18·P.h, gradient dark α0 → α0.28); unclip
+  ellipse(P.x + 0.34·P.w, P.y + 0.13·P.h, 0.22·P.w, 0.06·P.h, −8°); fill(white α0.50)
+  if !studEnabled: circle(P.x + 0.70·P.w, P.y + 0.12·P.h, 0.035c); fill(white α0.80)
+  # §3A.5 stud (R2-12): d = min(0.54c, P.w − 12, P.h − 18); sc = (P.cx, P.y + (P.h − 6)/2)
+  circle(sc + (0, 6), d/2); fill(dark); circle(sc, d/2); fill(base); stroke(outline α0.45, 2 px)
+  [holdable layer, baked separately] arc(sc, 0.42d, 205°→285°, 5 px, white α0.50); circle(sc + polar(225°, 0.30d), 4); fill(white α0.80)
+  symbol at sc, size min(0.42c, 0.82d): emboss copy (+3 px white α0.45 | +4 px outline α0.55), then ink
+  (studEnabled = false iken: glossDot yastıkta, symbol at (P.cx, P.y + 0.54·P.h), size 0.42c — v2 ilk tarifi)
+```
+
+`offsetEdges` tek bir saf fonksiyondur (birim testi: L4 ve T4 için köşe koordinatları); gradyan, elips ve kırpma
+Canvas2D çağrılarıdır (Phaser Graphics değil; §1 ilke 6). Bölüm başı pişirme bütçesi v1'den yüksektir (hücre başına
++1 gradyan, +1 kırpma, +2 dolgu): tahmin ≤ 24 doku × ≈ 1,5 ms; perf kapısı `npm run perf` (code-lead) ölçer.
+
+### 3A.5 Çıkıntı (stud) — oyuncak tuğla katmanı (Faz 2R, R2-12)
+
+Proje sahibinin referansındaki "çıkıntılı oyuncak tuğla" ilkesi Minik Usta'nın inşaat temasına birebir uyar. Özgün
+uygulamamız: **hücre başına tek büyük çıkıntı** ve **sembol çıkıntının tepesinde** (referanstaki hücre başına 2×2 küçük
+çıkıntı ve okla işaretli özel bloklar kullanılmaz, §11.8). Çıkıntı yalnız malzeme bloklarındadır; plan hücresi, düşüş
+gölgesi, Ağır Yük, kasa ve torba çıkıntısızdır (blok ↔ plan ↔ yük ayrımı büyür). Değerler `tokens.blockV2.stud*`.
+
+| # | Katman (yastık `P` çizildikten sonra, sembolden önce) | Tarif | 120 px'te (iç hücre / 1×1) |
+| - | ------------------------------------------------------ | ----- | -------------------------- |
+| 6a | Geometri | çap `d = min(0,54c, P.w − 12, P.h − 12 − 6)` (`studDiameterRatio`, `studMarginPx` 6, `studSidePx` 6); merkez `(P.cx, P.y + (P.h − 6)/2)` | d 65 / 61 px |
+| 6b | Yan (kalınlık) | merkezden 6 px aşağıdaki aynı çaplı daire, **yan duvar** tonu (taban × 0,68); üstteki yüz örttüğü için altta 6 px hilal kalır | 6 px hilal |
+| 6c | Üst yüz | çap `d` daire, **taban** rengi düz dolgu (gradyan yok: sembol kontrastı §2.5 "taban" sütunu aynen geçerli, en düşük B 3,5:1) | — |
+| 6d | Kenar | üst yüzün çevresinde 2 px **kontur** tonu α 0,45 (`studRimPx`, `studRimAlpha`) | — |
+| 6e | Parlama yayı (yalnız tutulabilir) | yarıçap 0,42d, 205° → 285° (sol üst), 5 px beyaz α 0,50, uçlar yuvarlak (`studGlossArc`, `studGlossWidthPx`, `studGlossAlpha`) | — |
+| 6f | Parlama noktası (yalnız tutulabilir) | açı 225°, yarıçap 0,30d konumunda r 4 px beyaz α 0,80 (`studDot`). §3A.2 katman 6'daki yastık parlama **noktası** çıkıntı varken çizilmez (yastık parlama elipsi kalır) | — |
+| 7 | Sembol | çıkıntı merkezinde; kutu `min(0,42c, 0,82d)` (`studSymbolMaxRatio`); kabartma kuralı §3A.2 katman 7 ile aynı | 50 / 50 px |
+
+- 6e ve 6f renksizdir; tutulabilirlik görünümü için ayrı pişirilir (§3A.2 durum tablosu "Tutulamaz"). Renk körü
+  modunda sembol × 1,2 (60 px) çıkıntının dışına 0–4 px taşabilir; kabul (sembol okunurluğu önce gelir).
+- Yerleşmiş (kilitli) bloklar çıkıntısını korur (yapı "tuğla tuğla" görünür); düşüş gölgesi ve plan hücreleri düz kalır.
+- **Doğrulama (blockout önce, §13):** Faz 2R görsel uygulamasında 8 renk × {B1, D2_0, D2_90, O4, C3, L4} prototipi
+  Chromium'da 375 pt'de çizilir; kabul ölçütleri §12 "Faz 2R kabul testleri" (sembol ayırt etme 5/5, iki blok/tek blok
+  5/5, tutulabilirlik 4/5). Ölçüt tutmazsa ilk geri dönüş: `studDiameterRatio` 0,54 → 0,48 (sembol yastığa taşar,
+  çıkıntı halka gibi okunur); ikinci: çıkıntı kapatılır (`studEnabled` false), v2 yastık aynen kalır.
+- Pişirme maliyeti: hücre başına +4 dolgu, +1 yay; tahmin ≤ 24 doku × ≈ 1,8 ms (perf kapısı code-lead).
+
+---
+
 ## 4. Şantiye (ozalit) ve plan hücreleri
+
+> **Faz 2R (v2) değişiklikleri:**
+> - **Genişlik değişken (R2-02):** şantiye `site.cols` = 1–4 sütun, `rows` = 4–8 satır; bütün tarifler sütun sayısından
+>   bağımsızdır (ızgara her hücre, kalın ızgara her 2 hücre, iskele iki yanda). Yerleşim UX §5.8.
+> - **İskele v2 (hacimli):** iki yanda dikey boru 16 px, yatay gradyan #C6CED6 → #6E7A87 + 3 px `ui.ink` kontur; tepede
+>   40 px vinç alanına uzanır; her 2 satırda yatay kuşak (10 px `board.scaffold`) ve uçlarda turuncu kelepçe 24×20
+>   (`board.scaffoldClamp`, 3 px kontur). Ozalit zemin ve plan hücresi tarifleri aşağıdaki gibi kalır (plan hücresi düz
+>   ve kesik konturlu olduğu için şeker bloktan bir bakışta ayrışır; v2 farkı büyüdü).
+> - **`.` hücresi MVP'de yok (R2-01):** plan şantiyeyi tamamen kaplar. Aşağıdaki `.` tarifi product-lead'in olası ÖNERİ'si
+>   için korunur; MVP bölümlerinde çizilmez.
+> - **Tam örtü (R2-01, K-48):** son plan hücresi dolunca sahada **malzeme bloğu** kalmaz; Ağır Yük, kasa ve torba
+>   kalabilir (malzeme değildir). "Bütün bloklar yerinde" anı JUICE #94 (tetik K-48'in sağlandığı an; PL-2R-07).
+
 
 - **Zemin:** `board.blueprint` #1F4F8F; ince ızgara her hücre (beyaz %14, 2 px), kalın ızgara her 2 hücre (beyaz %24,
   3 px); sol alt köşede 0,6c'lik "pafta" köşebendi (beyaz %30 L çizgisi). Kâğıt dokusu: 2 px'lik rastgele beyaz %4
@@ -285,7 +509,8 @@ dörtgen) — gri tonlamada da ayırt edilirler.
      konturuyla aynı yol, kesikleri örter) + dış parlama `alpha.buildFrontGlow` (8 px bulanıklık). Dolgu, açıklık ve
      sembol **yok**; katman sırasındaki "inşa cephesi konturu" budur.
   Diğer boş hücreler kesik konturda kalır. `?` hücresi cephedeyse açıklık almaz (renk bilgisi vermez); yalnız
-  `plan_front` konturu etiketli hücreyi çerçeveler. Altın Mala hedefleri bu kümedir.
+  `plan_front` konturu etiketli hücreyi çerçeveler. (Faz 2R: Altın Mala hedefleri bu küme değildir; mala seçilen
+  bloğun `P` konumlarını gölge diliyle gösterir, UX §5.2.)
 - **Eksik destek taraması (K-34):** yatay çizgi (6 px, 20 px aralık, `color.ghost.support` %85), hücre konturunun
   içinde; **her sarı çizginin altında 10 px `ui.ink` %80 alt çizgi** (Faz 2 tur 2: sarı çizgi tek başına açık plan
   renklerinde kayboluyordu — Y #F2DD5E 1,15:1, G 1,14:1, C 1,03:1, O 1,39:1; sarı/koyu çift ikaz bandı gibi kendi
@@ -303,18 +528,29 @@ dörtgen) — gri tonlamada da ayırt edilirler.
 
 ## 5. Duvar, geçitler ve vinç alanı
 
-**Duvar (K-04):** genişlik 0,5c (60 px, `layout.grid.wallW`), `height` satır kadar. Mantıkta duvar sütun 5 ile 6
-arasındaki sıfır genişlikli **sınırdır** (R-03); 60 px yalnız görseldir, geçitten geçen blok çizimde duvar şeridinin
+> **Faz 2R genelleme (R2-02, GDD K-49):** tahta `W = Wy + Ws` (≤ 8) sütun ve **H = max(Hy, Hs + eMax)** satırdır
+> (saha Hy ve şantiye Hs farklı olabilir; yerleşim UX §5.8). Duvar sahanın son sütunuyla şantiyenin ilk sütunu
+> arasındaki sınırdır (x = Wy−1 | Wy); görsel genişliği 60 px aynen. Vinç alanı tahtanın üstündeki **2 satırdır**
+> (y = H ve H + 1). Açık yükseklik işareti **`(H + 2) − height`** çentik gösterir. Kural metni GDD'de (product-lead);
+> buradaki sayılar yalnız görseldir. **Duvar v2:** beton gövdeye yatay gradyan (#D3D8DE → `board.wall` → `board.wallDark`)
+> eklenir; kalıp çizgileri, kenarlar, ikaz başlığı ve kontur aşağıdaki gibi kalır.
+
+
+**Duvar (K-04):** genişlik 0,5c (60 px, `layout.grid.wallW`), `height` satır kadar. Mantıkta duvar sütun Wy−1 ile Wy
+arasındaki sıfır genişlikli **sınırdır** (R-03; varsayılan 6 + 2 tahtada 5 | 6); 60 px yalnız görseldir, geçitten geçen blok çizimde duvar şeridinin
 üstünden kayar. Beton gövde `board.wall`; dikey kalıp çizgileri (2 px,
 `wallDark` %40, 20 px aralık); sol kenar 6 px `wallLight`, sağ kenar 6 px `wallDark`; 6 px `#3B2A1A` %80 kontur.
-Üstte 20 px duvar başlığı: sarı-siyah ikaz şeridi + 6 px kontur. Duvar 8 satırsa başlık vinç alanının alt sınırına
-oturur.
+Üstte 20 px duvar başlığı: sarı-siyah ikaz şeridi + 6 px kontur. Duvar H satırsa (W2; dilimde Bölüm 6, 7, 10) başlık
+vinç alanının alt sınırına oturur.
 
-**Vinç alanı (K-05):** tahtanın üstünde 2 satır (240 px) gökyüzü; `board.craneSky` bandı + alt sınırda 4 px kesik çizgi
-(`board.craneLine`, 16/12 px). Sol uçta sabit küçük vinç kancası süsü (80×120, sallanmaz). Sağ kenarda **açık yükseklik
-işareti**: duvar tepesinden (y = `height`) vinç alanı tavanına (y = 10) uzanan dikey cetvel, içinde `10 − height` kısa
-çentik + küçük ↕ (K-05; duvar 8 → 2 çentik, duvar 7 → 3 çentik; metin yok, sayı çentikten okunur). Boyu `10 − height`'i
-aşan blok takılınca işaret ve kesik çizgi 400 ms parlar.
+**Vinç alanı (K-05):** tahtanın üstünde 2 satır (240 px; üst kenarı `boardTopY − 240`, UX §5.8) gök bandı;
+`board.craneSky` bandı + alt sınırda 4 px kesik çizgi (`board.craneLine`, 16/12 px). Sol uçta sabit küçük vinç kancası
+süsü (80×120, sallanmaz). Sağ kenarda **açık yükseklik işareti**: duvar tepesinden (y = `height`) vinç alanı tavanına
+(y = H + 2) uzanan dikey cetvel, içinde `(H + 2) − height` kısa çentik + küçük ↕ (K-05; metin yok, sayı çentikten
+okunur). Dilim örnekleri: Bölüm 1 (H 5, duvar 4) → 3 çentik; Bölüm 4 ve 9 (H 6, duvar 4) → 4; Bölüm 6 (H 7, duvar 7) →
+2; Bölüm 8 (H 6, duvar 5) → 3; varsayılan 8 satır, duvar 8 → 2. Boyu `(H + 2) − height`'i aşan blok takılınca işaret
+ve kesik çizgi 400 ms parlar. Saha üstü hava (Hy ≤ y < H, UX §5.8) aynı `board.craneSky` dolgusuyla, ızgarasız çizilir;
+geçit açıklığı da `board.craneSky` ile doldurulur (arkadaki sahne açıklıkta görünmez; PL-2R-13 b).
 Saha tarafındaki havada bırakılan blok buradan yerine döner (JUICE: iptal).
 
 **Hiza kılavuzu (S6 asansör, W5 kayar kapı):** geçidin satırını şantiyede gösteren 3 px beyaz %35 yatay kesik çizgi,
@@ -349,20 +585,84 @@ olabilir; kepenk **yatay** lamel, kilitli **dikey** parmaklık + altın kilit �
 | Islak beton | Y4 | §3 `wet` katmanı + sayaç. | Parlak gri tabaka + rakam. |
 | Altın vida | Y7 | Zemin hücresinde altın vida başı (Ø 56, `ui.gold`, artı yarık #C98A00). Üstü kapalıyken, kapatan bloğun (ya da kasanın) o hücresinin sağ alt köşesinde 20 px altın "ışıltı" ucu + 28 px soluk vida simgesi **her zorlukta** görünür (adalet: konum gizlenmez; product-lead onayı, GDD K-42). | Altın daire + artı yarık. |
 | Anahtar | W7 | Zemin hücresinde altın anahtar (88×40, `ui.gold`), halkasında kilidin kimlik rengi şeridi. Üstü kapalıyken vida gibi köşe ışıltısı. | Anahtar silueti. |
-| Moloz | S4 | Blok şeklinde ama **kırık beton parçaları**: #8D8579 kahve-gri, 3–4 düzensiz çatlak (#5E574D), dış hattı tırtıklı (6 köşeli kırık), sembol yok, üstünde toz zerreleri. | Tırtıklı kenar + çatlak; C bloğundan (açık, düzgün, sembollü) belirgin koyu. |
+| Moloz (Faz 2R, PL-2R-11) | S4 | **Renkli malzeme bloğudur:** §3A şeker blok (kendi rengi, sembolü ve çıkıntısı; kontrast kuralları aynen) + "yanlış yerde" katmanı: 3–4 çatlak çizgisi (4 px, `obstacle.debrisCrack`) ve toz zerreleri, **α ≤ 0,35** (`alpha.debrisLayer`), sembolün altında; sağ üstte 40 px **"↩" rozeti** (krem daire, 4 px `ui.ink` kontur, ok `ui.ink`). İlk ayrılışta `debris` bayrağı kalkar; katman ve rozet 200 ms'de söner, blok sıradan bloktur. Eski "gri #8D8579, sembolsüz" tarif rengi gizlediği için kalktı (`obstacle.debris` token'ı yalnız eski kayıt) | Renk ve sembol her zaman görünür; çatlak + ↩ rozeti "başlangıç yeri yanlış" der |
 | Cam blok | S3 | §3 `glass` katmanı. | Saydamlık + çapraz parıltı + kırık cam rozeti. |
 | Harçlı blok | Y8 | §3 `mortar` katmanı. | Sarkan harç + mala rozeti. |
 | Balonlu blok | S8 | §3 `balloon` katmanı. | Bağlı beyaz balon. |
-| Ağır malzeme | Y5 | Normal blok tarifi + şerit: blok üstünde 2 sarı-siyah ikaz bandı (16 px) ve sol üstte 40 px "ağırlık" rozeti (kettlebell silueti, #3B2A1A). Genişlik ≥ 3. | İkaz bandı + ağırlık rozeti. |
+| Ağır Yük (Faz 2R, PL-2R-04) | Y5 (Q9, I5) | **Malzeme değildir, renksizdir** (veri renk vermez), plana girmez. **Tek parça** çizilir (hücre başına yastık, çıkıntı ve sembol **yok**). **Q9 = 3×3 yük paleti:** alt 24 px koyu palet (`obstacle.cargoDark` #3A3A3A, 3 ayak), üstünde kayışlı çelik sandık: gövde `obstacle.cargoSteel` #7A7A7A (alanın ≥ %70'i), 4 px yatay panel çizgileri `cargoDark` α 0,5, iki dikey kayış 16 px `cargoDark` + toka 20×14 `obstacle.cargoBuckle` #B5B5B5; üst kenarda 4 px beyaz α 0,35 ışık çizgisi; 6 px `ui.hazardBlack` kontur, köşe 18. **I5 = 5×1 çelik I-kiriş:** aynı gövde rengi, üst ve alt flanş 14 px `cargoDark`, gövdede 3 cıvata deliği Ø 10 (`cargoDark`). **İkisinde:** iki karşı köşede (sol üst, sağ alt) 16 px genişlikli 45° sarı-siyah ikaz bandı (`ui.hazardYellow` / `ui.hazardBlack`; §1 sütun 8) ve sol üstte 40 px **kettlebell rozeti** (krem daire, `ui.ink` kettlebell silueti). **Ölçüm (CIEDE2000; Machado 2009 renk körü simülasyonu):** gövde #7A7A7A her blok tabanına ΔE00 ≥ 24,6 (en yakın B), renk körü simülasyonlarında C'ye ≥ 25,9 ve her tabana ≥ 13,6 (protan, R); palet #3A3A3A her tabana ≥ 23,1 (W). Oyuncu metninde Ağır Yük'e "blok" denmez ("yük"; STORY §6A `tut.m.heavy`). **Kabul:** 375 pt ekran görüntüsünde (Bölüm 8 ve 10) 5 kişiden 5'i "bu plana girmez" der | Çıkıntısız gri çelik + palet + ikaz bandı + kettlebell; hiçbir blok renginde değil |
 
 ---
 
-## 7. Arka planlar (hikaye bölümüne göre)
+## 7. Arka planlar (v2 — üç sahne + hikaye bölümü renkleri)
 
-Katmanlar (arkadan öne): gökyüzü gradyanı → bulutlar → uzak siluet → orta katman → yakın katman. Oyun ekranında
-yalnızca tahtanın çevresi ve vinç alanı görünür; arka plan %0 bulanık ama doygunluğu tahtadan en az %30 düşük.
-Ana ekranda (Kasaba) hafif paralaks: uzak 0,2, orta 0,5, yakın 1,0. Uzak / Orta / Yakın sütunlarının ilk hex'i
-`tokens.color.chapter.ch<n>.far` / `mid` / `near` ile birebirdir (tek kaynak tokens).
+**Üretim (R2-08 güncellemesi, 2026-10-07):** yapay zekâ ve Canva **kullanılmaz**. Ana sayfa ve kazanma arka planları
+design-lead'in elle yazdığı **SVG** dosyalarıdır (`public/art/bg/*.svg`, ASSET §16); oyun ekranı arka planı
+**prosedüreldir** (R2-12 çivit sahne, doku yok). SVG yokken ya da yüklenemezse §7.4 tablosundaki prosedürel yedek
+çizilir. Ortak kurallar:
+
+- **Boyut, raster ve bellek (CL-2R-23):** SVG `viewBox="0 0 1080 1920"`; oyun **0,5 ölçekte** raster eder (540×960
+  RGBA = 2,0 MB GPU) ve ×2 çizer. Arka plan sakin ve düşük ayrıntılı olduğu için yumuşama kabul edilir (derinlik
+  hissi verir); bunu taşımak için arka plan SVG'lerinde kontur **en az 8 px**, en küçük şekil 24 px'tir. 1920'nin
+  üstündeki fazla yükseklik (EXPAND, en çok 480 px) görselin üst kenar rengine eşlenmiş **prosedürel gök gradyanıdır**
+  (doku değil). Raster yolu (çalışma anında `load.svg` boyutla ya da derlemede PNG/WebP) code-lead'in kararıdır;
+  bütçe ikisinde de aynıdır: **v2 görsellerinin toplam indirmesi ≤ 900 KB, toplam doku belleği ≤ 64 MB** (TECH §2R.7
+  ölçüm kapısı; ayrıntılı tablo ASSET §16.1).
+- **Sakin orta:** oyun ekranında tahta grubunun dikdörtgeni (8 sütunluk tahtada x 10–1070, y = vinç alanı tepesi –
+  durum şeridi altı) ve ana sayfada "Bölüm N" düğmesinin arkası belirgin nesne içermez; ayrıntı kenarlarda.
+- **Doygunluk:** arka planın ortalama HSL doygunluğu blok tabanlarının ortalamasından en az **%25 düşük**; en doygun
+  renkler yalnız bloklarda ve birincil düğmede. Kabul ölçütü ASSET §16.
+- **Paralaks:** yalnız ana sayfada, kasaba görseli tek katman + bulut katmanı (prosedürel, 0,2 hızla sürüklenir: 12
+  px/s). Oyun ekranında arka plan sabittir (performans ve dikkat).
+
+### 7.1 Oyun sahnesi — çivit şantiye (prosedürel; R2-12)
+
+R2-12 gereği oyun ekranının zemini **koyu çivit/mor**dur; tahta bu zeminde çerçeveli durur. Çizim (doku yok, ekran
+açılışında `Graphics` + bir kez pişirilen desen):
+
+- **Zemin:** dikey gradyan `color.scene.gameTop` #3B2C85 → `color.scene.gameBottom` #1F1850 (ekranın tamamı, EXPAND
+  dahil). Üstüne çok düşük kontrastlı **ozalit deseni**: 120 px ızgara, 2 px `color.scene.gameLine` #FFFFFF α 0,04 ve
+  her 4 hücrede bir 3 px α 0,07 (planın çizildiği kâğıt fikri; tahta ızgarasıyla hizalı değildir, tahtanın arkasında
+  kalır).
+- **Kenar siluetleri:** sol ve sağ kenarda, yalnız x < 120 ve x > 960 içinde, alt %40'ta iskele ve kule vinç
+  siluetleri beyaz α 0,06 dolgu (`color.scene.gameSilhouette` #FFFFFF + `alpha.sceneSilhouette`; zeminden ΔL\* 4–6, doygunluk yok), tek SVG
+  (`bg_level_site_edges`, 0,5 raster, ≤ 30 KB). Tahta grubunun dikdörtgeninin arkasında hiçbir nesne yoktur.
+- **Tahta:** saha ahşap çerçeveli "malzeme sandığı" (UX §5.8; delikli pano zemini §2.4), şantiye iskeleli ozalit
+  (§4), duvar beton (§5). Saha üstü hava ve vinç alanı `board.craneSky` (beyaz α 0,10) bandıdır: çivit üstünde açık
+  bir "hava" şeridi olarak okunur.
+- **Alt bant:** UX §5.10 (`ui.ink` α 0 → 0,35).
+- Block Blast benzerliğinden ayrışma (§11.8): tahta koyu ızgara değildir — sıcak kum/ahşap saha + mavi ozalit +
+  beton duvar; neon ışıma yok; bloklar çıkıntılı ve sembollü.
+
+### 7.2 Ana sayfa — Renkli Tepe kasabası (`bg_home_town` + `town_ch1_treehouse`)
+
+Tepe yamacına kurulu sabah kasabası: kiremit, nane, tereyağı sarısı ve leylak çatılı evler, kıvrılan Arnavut kaldırımı,
+yuvarlak ağaçlar, bacasından kıvrık duman çıkan fırın, sağda kıyıda uzak fener, uzakta festival tepesi. **Ortada boş çimen
+arsa ve büyük çınar**: aktif hikaye yapısı (`town_ch1_treehouse`, ayrı şeffaf görsel) buraya oturur. Üst %15 sakin gök
+(üst çubuk), alt %22 sakin çimen (Bölüm düğmesi + alt gezinme). İnşa ilerlemesi yapının üstüne prosedürel çizilir:
+yapılmamış katmanlar **ozalit hayaleti** (yapı siluetinin `board.blueprint` %35 dolgusu + 4 px beyaz %90 kesik kontur,
+16/12) ve iki yanda iskele; yapılan kısım tam renk, alttan üste `setCrop` ile açılır (JUICE #102). Hayaletin plan
+dilini oyun ekranındaki ozalitten alması bilinçlidir: "planı çiz, sonra inşa et".
+
+**SVG ve kırpma durakları (R2-08, PL-2R-15 c):** `bg_home_town` ve `town_ch1_treehouse` elle yazılmış SVG'dir (ASSET
+§16). Yapı, STORY §5 görev sırası **alttan üste** okunacak biçimde çizilir: basamaklar → platform → duvarlar → pencere
+ve perde → çatı → **ip merdiven ve makara** (çatının üstündeki gözcü dalına yukarı doğru uzanır, platformdan aşağı
+sarkmaz) → bayrak ve tabela (en tepe). Açılan yükseklik oranları (görselin altından, yüksekliğine göre)
+`layout.home.ch1CropStops` = [0,18 · 0,36 · 0,52 · 0,62 · 0,76 · 0,88 · 1,00]; Faz 4'te k. görev tamamlanınca oran
+`ch1CropStops[k−1]`. **Faz 2R dilimi** (görev yok, META §10): oran = kazanılmış farklı bölüm / 10 (doğrusal). Tek görsel
++ `setCrop` yeter; maske gerekmez (JUICE kural 11).
+
+### 7.3 Kazanma — kutlama meydanı (`bg_win_plaza`)
+
+Altın saatte bayram süslü kasaba meydanı: gökte çapraz bayrak dizileri (blok renklerinde üçgenler), merkezden ılık
+ışık, yumuşak bokeh konfeti, uzakta çeşme silueti; **merkez parlak ve sade** (ödül kartı burada). Üstüne prosedürel
+**ışın** (§15.4) döner. Ön planda insan yok (karakterler ayrı görsel). Prosedürel yedek: radyal gradyan #FFE7A3 →
+#FF9E55 + 12 ışın + bayrak üçgenleri (`fx_confetti_<c>` renkleri).
+
+### 7.4 Hikaye bölümü renkleri (prosedürel yedek ve tint)
+
+Katmanlar (arkadan öne): gökyüzü gradyanı → bulutlar → uzak siluet → orta katman → yakın katman. Uzak / Orta / Yakın
+sütunlarının ilk hex'i `tokens.color.chapter.ch<n>.far` / `mid` / `near` ile birebirdir (tek kaynak tokens). Görsel
+yokken üç sahnenin yedeği bu tabloyla çizilir (UX §3 ve §5.8 mock'ları bu yedekle doğrulandı, §12).
 
 | Hikaye bölümü | Gökyüzü (üst → alt) | Bulut | Uzak | Orta | Yakın / vurgu |
 | ------------- | ------------------- | ----- | ---- | ---- | ------------- |
@@ -372,12 +672,14 @@ Ana ekranda (Kasaba) hafif paralaks: uzak 0,2, orta 0,5, yakın 1,0. Uzak / Orta
 | 4 Fener ve Köprü | #FF9E7A → #FFE3B0 (gün batımı) | #FFD3C2 | ufuk #7FD8D2, uzak fener silueti | deniz #2FB7B3 | kayalık #3F7F8C + dalga köpüğü #E8FFFB, martılar (beyaz V) |
 | 5 Festival Şatosu | #2E2464 → #6B3FA0 (gece) | #8E6CD9 %50 | tepe silueti #3E2F7A | kasaba ışıkları #FFD24A noktaları | ön plan silueti #2E2464, bayrak dizileri (G, Y, R, B), sıcak sarı ip lambalar, uzak havai fişek (yalnız Kasaba ekranında) |
 
-**Benzerlik sınırları (BUSINESS §2):** Festival Şatosu renkli bloklardan bir "festival kalesi"dir: taç, arma, kraliyet
-altını kenar süsü, kırmızı pelerinli figür yok (Royal Match/Kingdom'dan uzak). Oyun ekranında ozalit yalnız 2 sütunda
-kalır (tahtanın %24'ü), bloklar mat ve parıltısız (neon/glow yok; Block Blast'ın lacivert tahta + neon görünümünden
-uzak); mağaza görsellerinde sıcak saha baskındır.
-
-Ana ekranda aktif yapının yarı inşa hâli arka planın odağıdır (bkz. `ASSET_LIST.md` kasaba yapıları).
+**Benzerlik sınırları (BUSINESS §2), v2:** Festival Şatosu renkli bloklardan bir "festival kalesi"dir: taç, arma,
+kraliyet altını kenar süsü, kırmızı pelerinli figür yok (Royal Match'in kral ve şato evreninden uzak). Oyun ekranı
+R2-12 gereği çivit zeminlidir, ama **tahta koyu değildir**: sıcak kum/ahşap saha + mavi ozalit şantiye + beton duvar,
+iki bölgeli; bloklarda neon ışıma yok, her hücrede çıkıntı ve sembol var (Block Blast'ın lacivert 8×8 tahta + ışıyan
+blok görünümünden ve referans oyunun mor çerçeveli tek tahtasından uzak); ozalit yalnız şantiye sütunlarında
+(tahtanın %24–%47'si, `site.cols` 2–4). Ana sayfa düzeni Royal Match örüntüsündedir (üst çubuk, ortada yapı, altta büyük oyna düğmesi, alt
+gezinme — türün ortak dili, R2-09) ama yapı kasaba arsasında bir **inşaat projesidir**, oda dekorasyonu değil; görev
+balonu yerine ozalit hayaleti ilerlemeyi gösterir.
 
 ---
 
@@ -430,9 +732,37 @@ Büyük harf her zaman `toLocaleUpperCase('tr-TR')` ("MİNİK USTA", "ÇOK ZOR")
 yazımlıdır ve TR yerelinde `toLocaleUpperCase` "LİFT" yazardı. Başlıklar ve düğmeler: beyaz dolgu + 0,12 em
 koyu kontur + 4 px gölge. Konuşma balonu metni: `ui.ink` düz.
 
+### 8.1 Yazı stili kuralları v2 (Faz 2R)
+
+Font ve boyut tablosu değişmedi. v2'de **dört yazı stili** vardır; her metin bunlardan biriyle çizilir (stil adı kodda
+tek yardımcı fonksiyon, `kit.button.textStrokeEm` / `textShadowEm`):
+
+| Stil | Nerede | Dolgu | Kontur | Gölge | Örnek |
+| ---- | ------ | ----- | ------ | ----- | ----- |
+| **Parlak başlık** | renkli zemin, sahne, şerit, düğme | beyaz #FFFFFF | 0,16 em, zeminin kontur rengi (düğmede `kit.buttonColor.<v>.stroke`, şeritte `kit.ribbon.<v>.stroke`, sahnede `ui.ink`); `lineJoin: round` | aynı metin, kontur renginde, **+0,07 em** aşağıda, konturdan önce çizilir | "BÖLÜM 12", "KAZANDIN!", "Ağaç Ev" |
+| **Sayaç** | koyu kapsül, HUD | beyaz | 0,12 em `kit.capsule.textStroke` #141E34 | yok | "1.250", "5", "3/7" |
+| **Panel metni** | krem panel, balon | `ui.ink` #3B2A1A | yok | yok | pencere gövdesi, öğretici balonu |
+| **İkincil** | krem panel | `ui.inkSoft` #6B5440 | yok | yok | "Teklif 1/3", "HAMLE" etiketi |
+
+- Büyük harf yalnız şu öğelerde (`toLocaleUpperCase('tr-TR')`): düğme etiketi, pencere başlığı şeridi, kazanma şeridi,
+  zorluk etiketi. Alan adı ("Ağaç Ev"), sayaç, balon ve gövde metni yazıldığı gibi.
+- Parlak başlıkta en küçük boy `font.size.small` (38 px); 34 px `caption` yalnız panel metni ve sekme etiketinde
+  (kontur küçük boyda harf içini doldurur).
+- Rakamlar: sayaçlar sabit genişlikli hane yuvalarıyla (§8 "Rakamlar"); "Bölüm N" düğmesinde orantılı.
+- Bu tablo §8'deki "beyaz dolgu + 0,12 em koyu kontur + 4 px gölge" cümlesinin v2 hâlidir (başlık ve düğmede kontur
+  0,12 → 0,16 em; gölge 4 px → 0,07 em = 56 px'lik düğme yazısında 4 px, 120 px'lik başlıkta 8 px).
+
 ---
 
 ## 9. İkon dili
+
+> **Faz 2R (v2; R2-08 güncellemesi):** ikonlar design-lead'in elle yazdığı hacimli **SVG**'lerdir (`public/art/icon/*.svg`,
+> `viewBox 0 0 128 128`; ASSET §16), **128 px tek boyda** raster edilip tek atlasa (512×512, 16 yuva) konur; 112/96/64 px
+> kullanımda küçültülür, @2x yoktur (CL-2R-23). Aşağıdaki biçim tarifleri SVG'nin içeriğidir. v1'deki "gradyan yok, 2 ton" kuralı v2'de kalkar: ikon
+> yumuşak hacim, sol üst ışık, beyaz parlama ve kalın koyu kontur taşır (§1 sütun 2). Görsel gelmeden prosedürel yedek
+> v1 kuralıyla (2 ton + parlama hapı + 8 px kontur) çizilir. Sınama: her ikon 64 px'te siluetinden tanınır, yan yana
+> iki ikon aynı ana renk + aynı siluet taşımaz.
+
 
 - **Izgara:** 128×128 tuval, 8 px iç boşluk; ana biçim 112 px'e sığar. Küçük kullanımda (64 px) aynı çizim ölçeklenir.
 - **Kontur:** 8 px `#3B2A1A` (%100), yuvarlak birleşim/uç. 64 px'te 5 px'e iner (en az 4 px).
@@ -491,6 +821,15 @@ Blok ve plan dokuları modla birlikte yeniden pişirilir. Renk adı etiketi bu m
 ---
 
 ## 11. Karakterler
+
+> **Faz 2R (v2; R2-08 güncellemesi, R2-12):** karakterlerin büst ve poz görselleri design-lead'in elle yazdığı **SVG**
+> dosyalarıdır (`public/art/chr/*.svg`; ASSET §16: Tuna büst + Tuna sevinç, Usta Dede büst, Kepçe büst, Gribeton
+> büst); yapay zekâ görsel üretimi yoktur. R2-12 ilkesiyle biçimler basit ve hacimlidir: kapsül/tuğla gövde, büyük
+> göz, her yüzeyde 2 durak gradyan + sol üst parlama + 6 px `#3B2A1A` kontur. Aşağıdaki tarifler (renk, imza siluet,
+> özgünlük listesi §11.8) SVG'nin içeriği ve kabul ölçütüdür: imza renkler `tokens.color.character.*` ile **birebir**
+> (aynı hex). §11.7 yer tutucuları final SVG'lerin iskeletidir. Mağaza sürümü öncesi logo, uygulama simgesi ve 4 ana
+> karakterin insan sanatçıyla yeniden çizimi entrepreneur kararı P-15'tir (proje sahibi onayına; ASSET §0, §16.1).
+
 
 Genel stil: **büyük kafa (boyun %45'i), küçük gövde**, iri gözler (yüz genişliğinin %16'sı), kalın 6 px `#3B2A1A`
 kontur, düz renk + tek gölge tonu, burun küçük yuvarlak. Ten tonları gerçekçi değil, sıcak ve yumuşak. Her karakterin
@@ -679,8 +1018,9 @@ yok), `outfit` rengi ve tek bir imza aksesuarı (fırın küreği, kitap yığı
 | PAW Patrol (Rubble) | sarı kasklı İngiliz buldok inşaat köpeği, kepçeli araç, sırt çantası | Kepçe **sosis köpek**, **turuncu** ve büyük gelen kask, araç/sırt çantası/rozet yok; imza: kulak kaskın altından sarkar, uzun gövde. |
 | Handy Manny | konuşan aletler, alet kutusu | Konuşan alet yok. |
 | Color Block Jam (Rollic) | renkli blokları eşleşen renkli **kapılardan** kaydırarak çıkarma; renkli çerçeveli kapılar | Bizde geçit duvarın içinde bir **kestirmedir**, çıkış değil; kapı rengi yalnız W6 Boya Kapısı'nda ve damla diliyle görünür; diğer geçitler gri/çelik. Mağaza görsellerinde geçit değil **duvar üstü kaldır–aşır–indir** hareketi öne çıkar. |
-| Block Blast (Hungry Studio) | lacivert tahta, neon parlak bloklar, 8×8 ızgara, blok yığını ikonu | Sıcak kum saha baskın; ozalit yalnız 2 sütun; mat bloklar, neon yok; simgede blok yığını yok (ASSET_LIST §11). |
-| Royal Match (Kral Robert) | taç, kırmızı pelerin, kahverengi bıyık, şato sahnesi | Kral/taç/pelerin yok; şato bizde bir festival yapısı, karakteri değil. Ekran düzeni: bizde tahta saha + duvar + şantiye olarak ikiye bölünmüş, üstte yapı panoraması şeridi, sol altta Tuna/Kepçe köşesi. |
+| Block Blast (Hungry Studio) | lacivert tahta, neon parlak bloklar, 8×8 ızgara, blok yığını ikonu | Çivit sahne (R2-12) ama tahta sıcak kum/ahşap saha + ozalit şantiye + beton duvar, iki bölgeli; neon ışıma yok; hücre başına çıkıntı + sembol; simgede blok yığını yok (ASSET_LIST §11). |
+| Block Out! (proje sahibinin stil referansı, R2-12) | mor çerçeveli tek tahta, hücre başına 2×2 küçük çıkıntılı tuğlalar, ok işaretli yön blokları, saydam buz blokları, roket/UFO/su tabancası güçlendiricileri, pembe-mor ödül ekranları | Hücre başına **tek** büyük çıkıntı ve tepesinde **renk sembolü**; ok/yön bloğu yok; tahta saha + duvar + şantiye; güçlendiriciler inşaat aletleri (çekiç, vinç, fırça, mala); paneller krem gövdeli ahşap çerçeve (mor/pembe değil); karakterler bizim (Tuna, Usta Dede, Kepçe, Gribeton). Referans dosyaları depoya girmez, iz sürülmez, kırpılmaz. |
+| Royal Match (Kral Robert) | taç, kırmızı pelerin, kahverengi bıyık, şato sahnesi | Kral/taç/pelerin yok; şato bizde bir festival yapısı, karakteri değil. Ekran düzeni: bizde tahta saha + duvar + şantiye olarak ikiye bölünmüş, üstte yapı panoraması şeridi, sol altta Tuna/Kepçe köşesi. Ana sayfa v2 türün ortak örüntüsünü (üst çubuk, ortada yapı, büyük oyna düğmesi, alt gezinme) kullanır; yapı kasaba arsasında ozalitten inşa edilen bir proje, renkler ve karakterler bizim (§7). |
 | Pinokyo (Geppetto) | beyaz saç, gözlük, beyaz bıyık, yelek | Usta Dede: kasket, mala biçimli küt bıyık, zeytin iş ceketi, şerit metre, imza katlanır metre. |
 | Monopoly (Bay Monopoly) | silindir şapka, beyaz bıyık, baston | Gribeton'da şapka/baston/monokl yok; imza beton blok saç ve dikdörtgen gövde. |
 | Mario | kırmızı şapka, siyah bıyık, tulum | Bıyıklı karakterlerimizde tulum yok; renk ve siluet farklı. |
@@ -689,16 +1029,190 @@ Kural listesi (ASSET_LIST brifine de girer; **marka adı değil öğe tarifi** o
 konuşan makine yok · taç/pelerin yok · karakterlerde harf/logo yok · köpek buldok değil · üst üste renkli küp yığını
 yok · neon parıltı yok.
 
+**Yan yana benzerlik testi (EN-2R-15, BUSINESS §2, R-04):** Faz 2R görsel uygulamasının ilk ekran görüntüleri
+(`npm run screens`, 390×844: ana sayfa, oyun ekranı Bölüm 8, kazanma) türün 3 yaygın oyununun mağaza ekran görüntüleri
+ve R2-12 referansıyla, adları gizlenmiş olarak yan yana gösterilir; 5 kişiye "Hangisi hangi oyunla aynı görünüyor?"
+sorulur. **Eşik:** 5 kişiden ≥ 3'ü ana sayfamızı bir rakiple eşlerse ayırt edici öğe büyütülür: ozalit hayaleti ve
+iskele yapının ≥ %40'ında görünür kalır, "Bölüm N" düğmesine 6 px ozalit kenarı (`board.blueprint` + beyaz kesik iç
+çizgi) eklenir. Oyun ekranı için aynı eşikte çıkıntı çapı ve sembol boyu korunur, saha zemin deseni (delikli pano)
+belirginleştirilir. Maliyet ≈ 0,5 gün; sonuç REVIEW_LOG'a yazılır.
+
 ---
 
-## 12. Görsel doğrulama (Faz 1)
+## 12. Görsel doğrulama (Faz 1 ve Faz 2R)
 
 Tarifler `scratchpad` içinde Chromium ile çizdirilip kontrol edildi (8 blok, 6 şekil, plan hücreleri, `.` ve `?`
 hücreleri, Baloo 2 ile "MİNİK USTA · ÇOK ZOR · ğüşıİöç", 4 karakter yer tutucusu). Bulunan ve düzeltilen sorunlar:
 ortası budaklı ağaç damarı göze benziyordu (budak sağa alındı); Usta Dede'nin dikdörtgen bıyığı sırıtan dişlere
 benziyordu (kıvrımlı bıyık + ayrı ağız); plan sarısı mavi üstünde zeytin rengine dönüyordu (açık altlık).
 
+**Faz 2R (2026-10-07):** `npm run screens` (390×844) çıktıları incelendi: ana sayfa, giriş, Bölüm 1 öğretici, Bölüm 2
+sürükleme ve Mola, Bölüm 3 başlangıç ve ray geçişi, kayıp ve kazanma. Bulgular §1 "v1 → v2 farkı" tablosundadır. v2
+tarifleri `scratchpad` prototipinde (Canvas2D + Baloo 2, Chromium) çizildi: (a) 8 renk × L3, I4, O4, I3, T4, I2, L5
+şekilleri + kaldırılmış blok, (b) 6 düğme varyantı + basılı hal + rozet, (c) oyun ekranı 1080×2337 (hafif öğretici,
+kalan blok çipi, kilitli güçlendirici çubuğu), (d) ana sayfa 1080×2337 (kapsüller, alan şeridi, ilerleme, ozalit
+hayaleti, alt gezinme). Bulunan ve düzeltilen sorunlar: yüzü kaydırma yöntemi yastıkların üst kenarını kırpıyordu
+(yerine kenar başına öteleme, §3A.1 madde 3); parlama elipsi sembolün üst çizgisine değiyordu (merkez 0,17h → 0,13h,
+sembol merkezi 0,50h → 0,54h, boy 0,44c → 0,42c); gradyan durağı %42'de B sembolü 2,9:1'e düşüyordu (%30, §2.5).
+
+**Faz 2R kabul testleri (görsel uygulamanın ilk ekran görüntüleriyle; PL-2R-13, PL-2R-04, DL-2R-17).** Her test 375 pt
+genişlikte, normal görüşte ve deutan + protan simülasyonunda (Machado 2009) 5 kişiyle yapılır; sonuç REVIEW_LOG'a yazılır.
+
+| # | Test | Kurulum | Eşik | Tutmazsa |
+| - | ---- | ------- | ---- | -------- |
+| a | İki blok / tek blok (K-16 şekil okuma) | sahada yan yana iki aynı renkli `D2_0` ile tek `O4`, aynı renkte; 8 rengin her biri | 5/5 kişi, 1 sn içinde doğru | `blockV2.outlinePx` 6 → 8; oluk × 0,88 → × 0,92 |
+| b | Sembol ayırt etme (v1 0,46c → v2 0,42c) | 8 sembol çıkıntı üstünde, karışık sıra, tek tek | 5/5 kişi, 1 sn | `symbolSizeRatio` 0,46'ya döner, `studDiameterRatio` 0,54 → 0,60 |
+| c | Ağır Yük okunurluğu (§6) | Bölüm 8 ve 10 başı; "Hangi nesne plana girmez?" | 5/5 | ikaz bandı iki köşeden bütün üst kenara; kettlebell 40 → 56 px |
+| d | Tutulabilirlik (§3A.2) | Bölüm 3, 6, 8 başı; "Hangisi alınır?" | 4/5, 2 sn | tutulamaz tint #EBEBEB → #D9D9D9 (× 0,85) |
+| e | Geçit açıklığı (§5) | Bölüm 4 ve 9; açıklık dikdörtgeni | sahne pikseli 0 (dolgu yalnız `board.craneSky`) | — |
+| f | Öğretici balonu (UX §13.1) | Bölüm 1–10 her adım, 1080×1920 ve 390×844 | saha hücreleri ve durum şeridiyle kesişim 0 px | UX §13.1 yuva kuralı |
+| g | Yan yana benzerlik (§11.8) | ana sayfa, Bölüm 8, kazanma | 5 kişiden ≤ 2'si rakiple eşler | §11.8 ayırt edici öğeler |
+
 ## 13. Blockout önce kuralı
 
 Her ekran önce gri kutu düzeniyle (`#D9D9D9` bloklar, `#9E9E9E` çerçeve, yalnız metin etiketleri) uygulanır ve ekran
 görüntüsü design-lead onayından geçer; sonra bu belgedeki görsel tarifler uygulanır (tasarım ilkesi 7).
+
+**Faz 2R:** yeni ekranlar (ana sayfa v2, kazanma v2, hafif öğretici) önce blockout ekran görüntüsüyle (390×844 ve
+360×800) incelenir; yerleşim onaylanınca §14 kiti ve §7 görselleri uygulanır. Bloklar ve mevcut ekranların yalnız
+deri değişikliği (v1 → v2) blockout gerektirmez.
+
+---
+
+## 14. UI kiti v2 (Faz 2R)
+
+Bütün öğeler prosedüreldir (Canvas2D, ekran açılışında pişirilir ya da 9-dilim doku). Değerler `tokens.kit.*`.
+Boyutlar UX §0.3'teki dokunma kurallarına uyar (sık hedef ≥ 144 px, diğer ≥ 128 px).
+
+### 14.1 Hacimli düğme (`kit.button`, `kit.buttonColor.<v>`)
+
+Çizim sırası (genişlik w, yükseklik h, köşe r = min(48, 0,32·h)):
+
+| # | Katman | Tarif |
+| - | ------ | ----- |
+| 1 | Düşen gölge | yuvarlak dikdörtgen (x, y + 14 + 8, w, h − 14), siyah α 0,22 (`dropShadowYPx`, `dropShadowAlpha`) |
+| 2 | Kontur | tam dikdörtgen (x, y, w, h), r; dolgu **stroke** |
+| 3 | Kalınlık | 6 px içe (`strokePx`), r − 6; dolgu **lip** |
+| 4 | Yüz | (x + 6, y + 6, w − 12, h − 12 − 14), r − 6; dikey gradyan **top** (0) → **base** (0,55) → base (1) |
+| 5 | Parlama bandı | (x + 20, y + 12, w − 40, yüz yüksekliği × 0,40), köşe max(4, r − 14); beyaz α 0,55 → 0,08 dikey |
+| 6 | Etiket | §8.1 "Parlak başlık" (krem varyantta "Panel metni"); dikeyde yüzün ortası + 4 px |
+
+| Durum | Görsel |
+| ----- | ------ |
+| Normal | yukarıdaki gibi |
+| Basılı | yüz 10 px aşağı iner, kalınlık 14 → 4 px (`pressedLipPx`), ölçek 0,97 (`pressedScale`); gradyan aynı. Süre `duration.buttonPress` 60 ms, bırakınca `buttonRelease` 120 ms 1,04 → 1,00 (JUICE #69, #97) |
+| Pasif | `grey` dörtlüsü, parlama α 0,12 (`disabledGlossAlpha`), etiket α 0,80, dokununca titreme yok |
+| Kilitli | pasif + sağ üstte 48 px `icon_lock`; dokununca `common.unlockAt` balonu (UX §0.3) |
+| Dikkat (yalnız ana sayfa "Bölüm N") | yüzün üstünden sola-sağa çapraz parlama süpürmesi: genişlik w × 0,18, 20° eğik, beyaz α 0,45, 500 ms, 4000 ms'de bir; bant dokusu yüz dikdörtgenine `setCrop` ile kırpılır, dikeyde yüz yüksekliğinin %70'i (köşelerde taşmasın; maske yok, JUICE kural 11). Azaltılmış harekette yok |
+
+Varyant → kullanım §2.6. Tek ekranda **tek yeşil** düğme (birincil eylem, UX §0.2).
+
+### 14.2 Panel (`kit.panel`)
+
+Pencereler, HUD hamle plakası ve kazanma kartı. Katmanlar: düşen gölge (y + 18, siyah α 0,25) → 6 px dış kontur
+#5A3A1E (`outline`) → 14 px ahşap çerçeve, dikey gradyan #FFD27A → #D9933A (`frameTop`, `frameBottom`) → 3 px iç çizgi
+#8A5A26 (`frameInner`) → krem gövde #FFF4D6 (`body`) → gövdenin üst 28 px'inde iç gölge #C99A52 α 0,45 → 0. Köşe 48 px
+(dış), içe doğru her katmanda katman kalınlığı kadar azalır. Gövde iç payı 48 px (`padPx`). Çukur alanlar (hedef kutusu,
+liste satırı) `inset` #FBE7B5, köşe 24, üstte 3 px iç gölge. **HUD varyantı (hedefler paneli):** çerçeve yok, yalnız 6
+px kontur + krem gövde, köşe 32 (tahtanın üstünde daha az ağırlık).
+
+### 14.3 Başlık şeridi — ribbon (`kit.ribbon`)
+
+Pencere başlıkları, ana sayfa alan adı, kazanma "KAZANDIN!". Gövde: yükseklik 104 px, genişlik = yazı + 2 × 64 (en az
+480, en çok 820), köşe 18, 6 px kontur, dikey gradyan **top** → **base** (0,5); üst %35'te beyaz α 0,35 parlama bandı.
+Kuyruklar: iki yanda gövdenin 20 px arkasından çıkan 64 px genişlikli kuyruk, 22 px aşağıda, dış ucunda 28 px "V"
+çentiği, dolgu **dark** + kontur. Yazı: yüksekliğin %56'sı (58 px) "Parlak başlık". Pencerede şerit panelin üst
+kenarına ortalanır ve 52 px (yarısı) taşar. Varyantlar: `orange` (pencere, alan adı), `gold` (kazanma, ödül), `blue`
+(bilgi, kural kartı).
+
+### 14.4 Rozet (`kit.badge`)
+
+**Faz 2R (R2-12): yuvarlatılmış kare** 60×60 px, köşe 16 (`kit.badge.shape` `roundedSquare`, `cornerPx`): 6 px beyaz
+halka (`ring`) + içte dikey gradyan #FF8A7E → #D8362A + halkanın dışında 3 px #5E1410 kontur (alt kenarda +3 px kalın,
+hacim). Sayı 36 px "Parlak başlık". Kilitli adet rozeti (UX §0.3) aynı geometri, dolgu `ui.badgeLocked`. (Eski Ø 60
+daire, `diameterPx` anahtarı kare kenarı olarak okunur.)
+
+### 14.5 Sayaç kapsülü (`kit.capsule`) — üst çubuk
+
+Yükseklik 96, köşe 48; dolgu #141E34 α 0,78 (her zeminde beyaz rakam ≥ 8,1:1, ölçüldü: beyaz gök üstünde 8,1, çimen
+üstünde 11,8); içte 3 px beyaz α 0,22 çizgi. İkon 112 px, kapsülün sol ucundan 16 px dışarı taşar (ikon kapsülün önünde).
+Rakam 52 px "Sayaç" stili, ikonla artı arasında ortalı. **Artı düğmesi** (yalnız altın): Ø 68, yeşil dörtlü, beyaz "+"
+(32×10 çubuklar); dokununca Mağaza. Can kapsülünde sayı yanında yenilenme sayacı ("29:12" ya da "Dolu", `hud.livesFull`)
+`font.size.caption`.
+
+### 14.6 İlerleme çubuğu (`kit.progress`) — kasaba ilerlemesi
+
+Yükseklik 48, köşe 24; iz #3B2A1A + içte 6 px payla beyaz α 0,35; dolgu dikey gradyan #FFE680 → #F0A800; görev sayısı
+kadar dilim çizgisi (3 px `ui.ink` α 0,35); sağ uçta 80 px `icon_star` (yarısı dışarı taşar); ortada "3/7"
+(`common.count`) 38 px "Sayaç".
+
+### 14.7 Alt gezinme (`kit.nav`)
+
+Çubuk h 176 + güvenli alan, dikey gradyan #3A2E7A → #241C52 (Faz 2R, R2-12 çivit arayüz zemini; eski #2A3D66 →
+#1B2843), üst kenarda 6 px #5546A8 çizgi. 5 sekme × 216 px. İkon 112
+px (seçili 132), altında etiket 34 px. **Seçili sekme:** 200×212 karo 24 px yukarı taşar, gradyan #5FA8FF → #2E6FD0, 6 px
+#0B3A6E kontur, etiket beyaz. **Kilitli sekme:** ikon α 0,55 + sağ altında 48 px `icon_lock`, etiket #C9D2E6 (çubukta
+7,1:1). Seçilmemiş açık sekme: ikon α 1, etiket #C9D2E6.
+
+### 14.8 Öğretici balonu (`kit.bubble`, `tutorial.*`)
+
+Beyaz #FFFFFF, 6 px `ui.ink` kontur, köşe 32, düşen gölge y + 8 siyah α 0,18; iç pay 28 / 20 px; metin `font.size.body`
+44 px ağırlık 700 "Panel metni"; tek satır hedeflenir (≤ 6 kelime), en çok 2 satır; genişlik ≤ 640 px. Sol ucunda Usta
+Dede portresi: Ø 128 daire, krem dolgu, 6 px `ui.ink` halka, içinde `chr_dede_bust` kırpımı (yer tutucu: §11.7 SVG
+kafa); balona 24 px kuyrukla bağlanır. **Daire kırpımı çalışma anında maske kullanmaz (CL-2R-26):** portre yüklenince
+bir kez Canvas2D `arc` + `clip` ile 128×128 dokuya pişirilir (halka dahil), sonra sıradan görüntü olarak çizilir. Eldiven: 140×160 `ui_tutorial_glove`, düşen gölge siyah α 0,30 y + 8. Vurgu:
+hedefin çevresinde 8 px beyaz α 0,95 kontur + 18 px beyaz parlama, 1,0 ↔ 1,04 nabız (UX §13.1). **Karartma yok.**
+
+### 14.9 Hedef çipi (oyun HUD'u)
+
+Hedefler panelinde iki çip yan yana: [yapı ikonu 96 px + dilim "1/3"] ve [kalan blok ikonu 96 px + sayı 64 px +
+`hud.blocks` "blok" 34 px]. **Kalan blok ikonu nötrdür (PL-2R-14):** üç hücrelik L, §3A geometrisinde (yastık, çıkıntı,
+yan duvar) ama **krem kit rengi** (`kit.buttonColor.cream`: yüz #FFF4D6, kalınlık #D9B878) + `ui.ink` kontur, **sembol
+yok**, 0,42 ölçek; hiçbir blok rengini ima etmez ve her bölümde aynıdır. Çip tamamlanınca (dilimler bitti / kalan 0)
+ikonun sağ altında yeşil ✓ rozeti (`ghost_badge_ok`, 40 px). Teslim edilmemiş parti rozeti ve en çok 4 çip kuralı UX
+§5.9 madde 2 ve 7.
+
+---
+
+## 15. Efektler v2 (görsel tarif; zamanlama JUICE §8)
+
+| Efekt | Doku / tarif | Kullanım |
+| ----- | ------------ | -------- |
+| **4 köşeli kıvılcım** (`fx_sparkle4`) | 4 uçlu yıldız yolu (uzun eksen 48 px, kısa 16 px), merkez beyaz → kenar **ışıltı** tonu; ölçek 0 → 1,2 → 0, 45° döner | doğru yerleşim (#92), düğme süpürmesi ucu, ödül kapsülleri |
+| **Parlama** (CL-2R-25 kararı) | **Blokta: siluet ADD flaşı** — pişirilmiş siluetin bütününe beyaz ADD, α 0 → 0,6 → 0, 260 ms; eğik bant yok (maske ve ek doku yok). **Düğmede: süpürme** — 20° eğik beyaz bant, genişlik %18, α 0,45, `setCrop`'lu bant dokusu (yüz dikdörtgenine kırpılı; maske yok) | blok yerleşti (#92), dilim (#93), "Bölüm N" düğmesi (#98) |
+| **Işıltı halkası** | siluetin 10 px genişletilmiş pişirilmiş kopyası, **ışıltı** tonunda α 0,35 | kaldırılmış blok (#91) |
+| **Işın (sunburst)** | 12 ışın, merkezden dışa; ışın rengi #FFF3C4 α 0,35, arası saydam; zemin radyal #FFE7A3 → #FF9E55; 0,05 tur/s döner (`kit.sunburst`) | kazanma (#95), sandık |
+| **Yıldız patlaması** | 16 küçük yıldız (`fx_star_small`, 20–36 px) radyal 160–320 px + 1 halka (beyaz 8 px, 0,6 → 1,6 ölçek, α 0,6 → 0) | kazanılan yıldız (#96) |
+| **Konfeti v2** | `fx_confetti_<c>` dikdörtgenine 2 px beyaz α 0,5 parlama şeridi; 3D salınım: x ölçeği cos(t) ile −1…1 | kazanma (#55), dilim (#18) |
+| **Toz** | v1 `fx_dust` aynen | iniş, kazı |
+| **Altın iz** | sikke ve yıldız uçuşunda arkada 6 küçük `fx_gold`, 60 ms arayla, α 0,8 → 0 | #59, #74 |
+
+Bütçe (JUICE §0 kural 4) değişmez: ekranda ≤ 120, patlama başına ≤ 40 parçacık; azaltılmış harekette ≤ %20 ve ışın
+dönmez.
+
+---
+
+## 16. Araştırma ve kaynaklar (Faz 2R, 2026-10-07)
+
+Web araması (WebSearch) ile Royal Match, Block Blast ve benzer premium casual oyunlar (Toon Blast, Gardenscapes) için
+görsel dil, ana sayfa, öğretici ve ödül yaklaşımı tarandı. Yalnız **ilke** alındı; ekran düzeni, karakter, ikon ve logo
+kopyalanmadı (§1 sütun 7, §7 benzerlik sınırları, §11.8). Bulunan kaynakların çoğu ikincil analiz yazısıdır; birincil
+geliştirici belgesi bulunamadı. İlkelerin bir kısmı tür bilgisidir ve bu belgedeki ölçümlerle (prototip, kontrast,
+renk körlüğü) doğrulandı.
+
+| Kaynak | Çıkarılan ilke | Bu belgedeki karşılığı |
+| ------ | -------------- | ---------------------- |
+| [Funovus — Royal Match Dominates Match-3: What Can ALL Designers Learn?](https://www.funovus.com/blogs/royal-match-dominates-match-3-what-can-all-designers-learn/) | Zorlayıcı, uzun "büyük el" öğreticileri yerine erken bölümler o kadar cilalanır ki oyuncu zorlanmadan takılmaz; meta akışı iki eyleme indirgenir (oyna / inşa et); UI sayfaları otomatik geçer; yüksek kontrastlı canlı palet ve ayırt edici şekiller; her dokunuşta haptik | Hafif öğretici (UX §13.1), ana sayfada tek büyük "Bölüm N" + ilerleme (UX §3), §1 sütun 4–5 |
+| [This Week in LiveOps — 5 Simple UX Lessons From Royal Match](https://thisweekinliveops.substack.com/p/5-simple-ux-lessons-from-royal-match) | Sade meta, otomatik yönlendirme, net ilerleme | Ana sayfa durumları ve geçişleri (UX §3) |
+| [Royal Match Breakdown: Part 1 (Pranay Sarepaka)](https://pranaysarepaka.substack.com/p/royal-match-breakdown-part-1) | Ana sayfa = alan yapısı + oyna düğmesi + yıldız ilerlemesi; FTUE'de zorunlu tıklama azaltılır | Alan şeridi + ilerleme çubuğu (§14.6), FTUE (UX §2.2) |
+| [Game Analysis of Royal Match and Toon Blast (Medium)](https://medium.com/@ekinmelissezer/game-analysis-for-royal-match-and-toon-blast-9c4bff8ef48b) | Royal Match ile Toon Blast'ın mekanik, bölüm tasarımı, zorluk ve oyuncu kancası karşılaştırması (yalnız başlık ve özet okundu; çapraz kontrol) | §1, UX §3 |
+| [Block Blast tasarım özeti (cinevva)](https://app.cinevva.com/arcade/block-blast) ve [Blocky Blast Puzzle (seeles.ai)](https://www.seeles.ai/games/puzzle/blocky-blast-puzzle) | Yerleşmiş blok = parlak yuvarlak kare + üstte açık şerit + altta koyu şerit; eğimli kenar (bevel) ve parlama derinlik verir; keskin kenar ve net kontrast hızda okunurluk sağlar | §3A katman 2–6 (yan duvar, gradyan, parlama), §2.5 kontrast ölçümü |
+| [Layer Lab — GUI Ribbon Pack](https://layerlab.itch.io/2d-ribbon-pack-1), [Casual Game Design UI 01](https://kraupin.itch.io/casual-game-design-ui-01), [Unity Asset Store — UI Kit Hyper Casual](https://assetstore.unity.com/packages/2d/gui/ui-kit-hyper-casual-262070) | Casual UI kitlerinin ortak bileşenleri: şerit başlıklar, hacimli düğme + basılı hal, panel + dolgu, çubuklar, rozetler; yumuşak gölge ve ince gradyan | §14 bileşen listesi (kendi ölçü ve renklerimizle; kit görselleri kullanılmadı) |
+| [Toon Blast inceleme (sts.org)](https://auth.sts.org/?p=8341) | Bölüm numarası ve ilerleme taşıyan net bölüm kartı/düğmesi; yıldız, altın ve ilerleme göstergelerinin animasyonlu sunumu | "Bölüm N" düğmesi, ödül kapsülleri (UX §6.1), §15 |
+| Proje sahibinin 9 ekran görüntüsü (R2-12, "Block Out!", `artifacts/reference/owner-2026-10-07/`, git dışı) | Çivit/mor arayüz zemini; doygun ana renkler; çıkıntılı tuğla bloklar; kalın konturlu şeker düğmeler (yeşil ana eylem, kırmızı yuvarlak ×); beyaz kalın yazı + koyu kontur; üst çubuk kapsülleri + yeşil "+"; kırmızı kare rozet; ortada yükseltilmiş ana sekme; bölüm başı penceresi; yükleme ekranında uçuşan tuğlalar | §1, §3A.5 (tek çıkıntı + sembol), §7.1 (çivit sahne), §14.4 (kare rozet), §14.7 (çivit gezinme); kopya yasağı §11.8 |
+
+**Bilinçli farklar:** Royal Match'in kral/şato evreni, mavi-altın marka renkleri ve oda dekorasyon meta'sı yok (bizde
+kasaba arsasında ozalitten inşa); Block Blast'ın koyu lacivert 8×8 tahtası, neon ışıması ve "kombo yazısı" patlamaları
+yok (bizde çivit sahne üstünde sıcak kum/ahşap saha + ozalit şantiye, iki bölgeli tahta, plan dili; R2-12). Proje
+sahibinin referans oyunundan alınmayanlar: hücre başına 2×2 küçük çıkıntı, yön oklu bloklar, buz blokları, oyuncak
+güçlendiriciler, mor/pembe paneller ve bütün karakter, logo ve simgeler (§11.8).

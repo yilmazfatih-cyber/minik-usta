@@ -1,6 +1,6 @@
 # Varlık listesi — Minik Usta
 
-Sahip: design-lead · Durum: Faz 1 revizyonu (2026-10-05; R-04, R-05, R-07, R-14, R-19, R-24 işlendi); Faz 2 boşluğu 2 (2026-10-06) · Görsel
+Sahip: design-lead · Sürüm: **Faz 2R (2026-10-07)** — görsel listesi v2 §16: **elle yazılmış SVG** (R2-08 güncellemesi: Canva ve üretken yapay zekâ yok; 26 varlık, ücret 0), bellek ve indirme bütçesi (CL-2R-23), R2-12 studlu tuğla ve çivit sahne varlıkları, prosedürel v2 varlıkları §16.5; çapraz inceleme kapanışı aynı gün; önceki: Faz 1 revizyonu (2026-10-05; R-04, R-05, R-07, R-14, R-19, R-24), Faz 2 boşluğu 2 (2026-10-06) · Görsel
 tarifler: `docs/ART_DIRECTION.md` · Animasyon/ses: `docs/JUICE.md` · Sahneler: `docs/STORY.md`
 
 ---
@@ -28,8 +28,20 @@ tarifler: `docs/ART_DIRECTION.md` · Animasyon/ses: `docs/JUICE.md` · Sahneler:
   varlık için kaynak dosya (katmanlı SVG/PSD/Krita) + üretim kaydı tutulur (§15). Brif ve negatif istemlerde **marka ya
   da karakter adı geçmez**; yerine öğe tarifi yazılır. Logo ve ana karakterler isim kararıyla birlikte marka başvurusuna
   girer (BUSINESS R-05).
+- **Faz 2R (R2-08 güncellemesi, 2026-10-07; proje sahibi: "canvayı boşver, bu görsellerden oluştur"):** Canva ve
+  bütün üretken yapay zekâ görsel servisleri **kullanılmaz**. Web MVP'nin illüstrasyonları (arka plan, kasaba yapısı,
+  karakter, ikon, logo amblemi) design-lead'in elle yazdığı **SVG** dosyalarıdır (`public/art/**`, §16); bloklar,
+  düğmeler, paneller ve sayaçlar prosedüreldir. Ücret yok, üçüncü taraf araç lisansı yok. **Mağaza sürümü (Aşama 1)
+  öncesi** (entrepreneur kararı P-15, proje sahibi onayına; EN-2R-14): logo amblemi, uygulama simgesi ve 4 ana karakter
+  insan sanatçı tarafından SVG'ler referans alınarak yeniden çizilir; diğer varlıklarda belgelenmiş insan rötuşu yeter
+  (§15). Not: SVG'leri yazan design-lead bir yapay zekâ ajanıdır; bu yüzden "insan katkısı olmayan üretim telif
+  alamaz" sorusu (BUSINESS K58) SVG'ler için de geçerlidir ve P-15'in mağaza öncesi yeniden çizim şartı bu nedenle
+  korunur.
 
-### 0.1 Genel stil brifi (her final görsel brifinin başına eklenir)
+### 0.1 Genel stil brifi — v1 (Faz 2R'de §16.2 ile değişti)
+
+> **Faz 2R:** bu brifteki "no glossy candy look" ve "no gradients except skies" R2-07 ile kaldırıldı. Yeni üretimde
+> §16.2'deki stil öneki ve negatif kullanılır; aşağıdaki metin kayıt için kalır.
 
 > "Polished, tactile casual-game 2D art for adult players on mobile. Warm, bright palette; thick rounded dark-brown
 > outlines (#3B2A1A); flat colors with one soft shadow tone and one white highlight band; rounded corners; materials
@@ -217,7 +229,7 @@ Hikaye 4–5 sahneleri 4 panele indirilir: `ch4_start` 5 → 4, `ch4_end` 5 → 
 | `ui_moves_chip` | 160×96 | prosedürel | prosedürel | kod | Hamle sayacı panelinin minyatürü + "+N" (Baloo 2 800); galibiyet serisi "+N hamle" bonusu (UX §4, JUICE #68). Termos ikonundan ayrıdır. |
 | `ui_booster_slot` | 172×172 | prosedürel | prosedürel | kod | Yuvarlak kare, çukur, adet rozeti / "+" / kilit; kilitli ve adet > 0 ise kilit + köşede gri adet rozeti (Ø 56, `ui.badgeLocked`, beyaz sayı; UX §0.3, META §4). |
 | `ui_tutorial_glove` | 140×160 | SVG | yer tutucu | P0 | Tuna'nın sarı iş eldiveni, işaret parmağı uzatılmış; 2 kare (açık, basılı). Final: "big yellow cartoon work glove pointing with the index finger, thick outline; pressed and released frames." |
-| `ui_spotlight` | — | prosedürel | prosedürel | kod | Karartma + yuvarlak dikdörtgen delikler; maske/Filter yok: delik çevresinde 4 dikdörtgen + 4 çeyrek daire köşe görüntüsü (UX §13.1, JUICE kural 11). |
+| `ui_spotlight` | — | kaldırıldı | — | — | **Faz 2R'de kaldırıldı** (R2-10: karartma ve delik yok; UX §13.1). Yerine `ui_highlight` (§16.5). |
 | `ui_loading_crane` | 96×96 (8 kare) | PNG | yer tutucu | P0 | Bloğu döndüren mini vinç döngüsü. |
 | `ui_progress_crane` | 840×200 | SVG | yer tutucu | P0 | Açılış yükleme vinci: kol + kanca + blok. |
 | `ui_panel_dots` | 24×24 | prosedürel | prosedürel | kod | Ara sahne ilerleme noktaları. |
@@ -239,7 +251,7 @@ thick dark outline, two-tone fill, white highlight pill, no text"):
 | `icon_life_unlimited` | yer tutucu | P0 | `icon_life` kalbi; yıldız yerine ortasında **çizilmiş** kalın beyaz sonsuzluk işareti (yazı ya da font karakteri değil; ∞ Baloo 2 alt kümesinde yok, ART §8). Sınırsız can: üst çubukta süre boyunca kalbin yerine (yanında geri sayım), günlük ödül 7. gün, bölüm / lig sandığı içeriğinde (yanında süre `common.minutes` "{n} dk"; UX §3, §3.1). |
 | `icon_coin` | yer tutucu | P0 | Altın sikke, kabartma mala. |
 | `icon_star` | yer tutucu | P0 | Tombul 5 köşeli yıldız. |
-| `icon_hammer` | yer tutucu | P0 | Ahşap saplı kırmızı başlı çekiç, 20° eğik. |
+| `icon_hammer` | yer tutucu | P0 | Ahşap saplı kırmızı başlı çekiç, 20° eğik. Kullanım: Bölüm 8'den (K-36 Faz 2R: Ağır Yük, kasa, torba, zincir, şantiyedeki moloz ve yapışmış harç; malzeme bloğu kırmaz); dilimde gerekli. Final SVG §16.3. |
 | `icon_crane` | yer tutucu | P0 | Turuncu kanca + halat. |
 | `icon_brush` | yer tutucu | P0 | Ahşap saplı fırça, ucu 3 renk şerit. |
 | `icon_undo` | yer tutucu | P0 | Kıvrık ok, ucunda küçük mala. |
@@ -341,6 +353,13 @@ kararlarından (R-07: 35 kasaba parçası; ifade kapsamı §8; albüm Sonra) son
 | Logo, uygulama ikonu (2 varyant), öne çıkan görsel | — | 4 | P0 (insan sanatçı) |
 | **Toplam** | | **≈ 126** | P0 ≈ 67 · P1 ≈ 56 · P2 ≈ 2,5 |
 
+**Faz 2R yalın sanat yolu (EN-2R-14, BUSINESS §10, P-15; proje sahibi onayına):** web MVP ve Aşama 0'da illüstrasyon
+işi design-lead'in SVG'leridir (≈ 7 tasarım günü: 3 arka plan × 0,5 + yapı 1 + 5 karakter × 0,5 + logo 0,5 + 16 ikon ×
+0,1; ücret 0; §16.3). Mağaza öncesi insan sanatçı yalnız logo amblemi, uygulama simgesi ve 4 ana karakteri yeniden
+çizer (≈ 4 + 16 = 20 g); ara sahne panelleri ve kasaba parçaları SVG + belgelenmiş rötuş. Bu yolla aşağıdaki ≈ 126 g'lik
+talep entrepreneur hesabıyla **≈ 65 g**'e iner ve 0,5 FTE serbest sanatçı kesilir. Aşağıdaki tablo Faz 1 planının
+kaydıdır; P-15 onaylanırsa geçersizdir.
+
 **Kapasite ve pay (BUSINESS §10 ile aynı hesap):** talep ≈ 126 g; kapasite 1,0 FTE × 22 hf + 0,5 FTE × 16 hf = 110 + 40
 ≈ 150 g → **sığar, pay ≈ %16 (≈ 24 g)**. "1,5 FTE ile ≈ 17 hafta" (D-047) iki sanatçının aynı gün başladığı varsayımıyla
 yalnız süre hesabıdır; tampon yokluğu anlamına gelmez. Kritik yol ara sahne panelleri (P1'in yarısı). Yedek plan:
@@ -354,7 +373,129 @@ sayıma girmez.
 Her **final** varlık için bir satır (entrepreneur, fikri mülkiyet). Kaynak dosya `art-source/` altında (depo dışı
 yedekli); bu tablo Faz 5'te `docs/ASSET_PROVENANCE.md` olarak ayrılabilir.
 
-| Varlık | Sürüm | Yazar (insan / araç) | Araç ve rolü (eskiz / final) | Kaynak dosya | Lisans / devir | Tarih |
-| ------ | ----- | -------------------- | ---------------------------- | ------------ | -------------- | ----- |
-| `font_baloo2_latin_tr` | 1 | Ek Type (OFL 1.1) | alt küme: pyftsubset | `fonts/baloo2/` | OFL 1.1, Lisanslar sayfasında | 2026-10-04 |
-| (örnek) `chr_tuna_*` | — | insan sanatçı | eskiz: görsel üretim aracı (yalnız keşif) · final: elle | `art-source/chr_tuna.kra` | iş sözleşmesiyle tam devir | — |
+Sütunlar EN-2R-14 ile genişletildi: **araç + plan**, **tarih**, **insan rötuşu** (var/yok, kim), **ters görsel arama**
+sonucu (Google Lens ya da TinEye, ücretsiz; mağaza öncesi her final illüstrasyon için; benzer görsel bulunursa varlık
+yeniden çizilir).
+
+| Varlık | Sürüm | Yazar (insan / design-lead ajanı) | Araç ve plan (ücret) | Rol (eskiz / web MVP final / mağaza final) | Tarih | İnsan rötuşu (var/yok, kim) | Ters görsel arama (araç, tarih, sonuç) | Kaynak dosya | Lisans / devir |
+| ------ | ----- | --------------------------------- | -------------------- | ------------------------------------------ | ----- | --------------------------- | -------------------------------------- | ------------ | -------------- |
+| `font_baloo2_latin_tr` | 1 | Ek Type (OFL 1.1) | pyftsubset (ücretsiz) | final (alt küme) | 2026-10-04 | yok | — (font) | `fonts/baloo2/` | OFL 1.1, Lisanslar sayfasında |
+| (örnek) `chr_tuna_bust` | 1 | design-lead ajanı | elle SVG, metin düzenleyici (ücret 0) | web MVP final | — | yok | mağaza öncesi | `public/art/chr/chr_tuna_bust.svg` | proje sahibine ait; P-15: mağaza öncesi insan sanatçı yeniden çizimi, iş sözleşmesiyle tam devir |
+
+---
+
+## 16. Faz 2R görsel üretim listesi v2 (R2-07, R2-08 güncellemesi, R2-12)
+
+Sürüm: Faz 2R (2026-10-07), çapraz inceleme kapanışı. Görsel dil ART §1, §3A, §7, §9, §11, §14, §15. Bu bölüm §0.1
+genel brifinin ve §6–§11'deki tek tek brif cümlelerinin **yerine geçer** (çelişkide §16 geçerlidir); eski satırlar Faz
+3 varlıkları için kaynak olarak kalır. **Önceki sürümdeki Canva istemleri (26 istem, 30 çağrı kotası,
+`remove-background`) R2-08 güncellemesiyle kaldırıldı** (CL-2R-24, EN-2R-13, EN-2R-21, EN-2R-22 konusuz kaldı).
+
+### 16.1 Üretim yolu, bütçe ve kayıt
+
+- **Yol (ücret 0):** design-lead SVG'yi elle yazar → `public/art/<kategori>/<kimlik>.svg` (depoya girer) → code-lead
+  boru hattı (TECH §2R.7) kullanım boyutunda raster eder (çalışma anında `load.svg` boyutla ya da derlemede `npm run
+  assets` ile kurulu Chromium'da PNG/WebP; seçim code-lead'in) → ikonlar tek atlasa. Şeffaflık SVG'de doğaldır: zemin
+  çizilmez, **arka plan kaldırma adımı yoktur**. Yeni bağımlılık, hesap, kota ve ağ erişimi gerekmez.
+- **Klasörler:** `public/art/bg/`, `public/art/town/`, `public/art/chr/`, `public/art/icon/`, `public/art/logo/`.
+- **Bellek ve indirme bütçesi (CL-2R-23; TECH §2R.7 ölçüm kapısı):** v2 görsellerinin toplam indirmesi **≤ 900 KB**,
+  toplam doku belleği **≤ 64 MB**. Raster boyutları §16.3'te; tahmin: arka plan 3 × 2,1 MB (0,5 ölçek) + yapı 2 × 2,5 MB
+  (renkli + hayalet) + karakter 5 × ≈ 0,4 MB + logo 0,5 MB + ikon atlası 1,3 MB (512×640, 20 yuva) ≈ **15,2 MB** (aynı
+  anda yüklü en çok ≈ 10 MB: ana sayfa). İndirme: SVG kaynakları toplam ≈ 300 KB (gzip ≈ 90 KB); derlemede raster edilirse WebP q80
+  toplam ≤ 900 KB. **@2x yoktur:** tuval 1080 tasarım pikselinde çizilir, ikonlar 128 px tek boy.
+- **Prosedürel yedek:** her satırın yedeği vardır; SVG yüklenemezse oyun tam görünür (ART §1 sütun 6). Görsel uygulama
+  sırası: önce blockout (ART §13), sonra SVG.
+- **Kayıt (§15):** her SVG için bir satır: varlık, sürüm, yazar (design-lead ajanı / insan), araç ve plan (elle SVG, ücret
+  0), rol, tarih, insan rötuşu, ters görsel arama sonucu (mağaza öncesi), kaynak dosya, lisans/devir notu.
+- **İnsan sanatçı (§0, P-15):** mağaza öncesi logo amblemi, uygulama simgesi ve 4 ana karakter insan sanatçıyla yeniden
+  çizilir (entrepreneur kararı, proje sahibi onayına; EN-2R-14). Web MVP ve Aşama 0'da SVG'ler finaldir.
+
+### 16.2 SVG yazım kuralları (her varlık)
+
+- **Ton:** yetişkin casual oyuncu için premium casual; çocuksu değil (ART §1, EN-2R-12). Dosya adı, `id` ve
+  yorumlarda "kids / toy box / for all ages / family" yok.
+- **Kök:** `<svg xmlns="http://www.w3.org/2000/svg" viewBox="…" width="…" height="…">` (§16.3 viewBox'ı); `width` /
+  `height` = viewBox.
+- **Yasak öğeler:** `<text>`, `<image>` (gömülü bitmap), `<foreignObject>`, `<script>`, `<style>` içinde `@import`,
+  dış `href`, `filter` (bulanıklık dahil), `mask`. İzinli: `path`, temel şekiller, `g`, `defs`, `linearGradient`,
+  `radialGradient`, `clipPath`, `use`. Yazı, harf, rakam ve logo görselde **yoktur** (metin i18n katmanıyla basılır,
+  STORY §0-7).
+- **Hacim tarifi (bloklarla aynı aile, ART §2.5 formülü):** her ana yüzey 2 duraklı dikey `linearGradient` — üst durak
+  **açık** = renk·0,68 + beyaz·0,32, alt durak renk × 0,92; altta iç gölge şeridi renk × 0,68 α 0,35; sol üstte beyaz
+  α 0,45 parlama elipsi; ışık her zaman **sol üstten**. Kontur `#3B2A1A`: karakter ve yapıda 6 px, ikonda 8 px
+  (128 viewBox; 64 px'te 4 px), arka planda **en az 8 px** (0,5 raster sonrası 4 px). En küçük şekil arka planda 24 px.
+- **Palet:** yalnız `tokens.json` renkleri ve yukarıdaki formülle türetilen tonlar. Karakter imza renkleri
+  `color.character.*` ile **birebir** aynı hex. Yeni renk gerekiyorsa önce tokens.json'a eklenir.
+- **Karakterler (R2-12):** basit hacimli biçimler — kapsül/tuğla gövde, büyük göz (yüz genişliğinin %16'sı), tek imza
+  siluet öğesi (ART §11); yüz `<g id="face">` içinde (ifade değişimi yalnız bu grup).
+- **Boyut sınırı (gzip öncesi):** arka plan ≤ 60 KB, yapı ≤ 40 KB, karakter ≤ 20 KB, logo ≤ 15 KB, ikon ≤ 6 KB.
+  Yol koordinatları en çok 1 ondalık.
+- **Özgünlük (ART §11.8):** sarı çocuk kaskı, tulum, buldok, taç/pelerin, konuşan makine, üst üste küp yığını, neon
+  ışıma yok; R2-12 referansından ve rakiplerden iz sürme, kırpma, birebir düzen yok.
+
+**Ortak kabul ölçütleri (her SVG):** (1) yasak öğe yok ve boyut sınırı içinde (`npm run assets` denetler, code-lead);
+(2) renkler palet içinde, imza renkleri birebir; (3) kontur ve ışık yönü kurallara uygun, aynı ailedeki görseller yan
+yana tek oyundan görünür; (4) kullanım boyutunda (ikonda 64 px) siluet tanınır — 3 kişiden 3'ü ikonun adını söyler;
+(5) ART §11.8 ihlali yok. Ölçüt tutmazsa SVG düzeltilir; o zamana kadar prosedürel yedek kalır.
+
+### 16.3 Varlık tablosu (26 SVG)
+
+Raster = oyunun yüklediği doku boyutu; GPU = RGBA bellek. "Faz" sütunu: **2R** dilimde gerekli, **3** Faz 3 ile.
+
+| # | Kimlik (`public/art/…`) | viewBox | Raster / GPU | Kullanım yeri | Kabul ölçütü (ortak ölçütlere ek) | Prosedürel yedek | Faz |
+| - | ----------------------- | ------- | ------------ | ------------- | --------------------------------- | ---------------- | --- |
+| 1 | `bg/bg_home_town` | 0 0 1080 1920 | 540×960, 0,5 ölçek, ×2 çizilir / 2,1 MB; üstte ≤ 480 px prosedürel gök | Ana sayfa (UX §3, ART §7.2) | Orta arsa (x 160–920, y 360–1240) yalnız çimen + çınar; üst 300 ve alt 420 px düşük ayrıntı; 6–12 bina; ortalama HSL doygunluğu blok tabanlarından ≥ %25 düşük | ART §7.4 ch1: gök gradyanı + 3 tepe + 4–6 ev silueti | 2R |
+| 2 | `bg/bg_level_site_edge` | 0 0 120 1920 | 60×960 / 0,23 MB; sağ kenarda yatay aynalanır | Oyun ekranı kenar siluetleri (ART §7.1, R2-12); zemin prosedürel çivit | Yalnız beyaz α 0,06 dolgu (tek renk), alt %40'ta iskele + kule vinç silueti; tahta dikdörtgeniyle kesişmez | yok (zemin yalnız gradyan) | 2R |
+| 3 | `bg/bg_win_plaza` | 0 0 1080 1920 | 540×960 / 2,1 MB | Kazanma katmanı (UX §6.1, ART §7.3) | Merkez (x 240–840, y 440–1040) açık ve sade; bayraklar üst %30'da | `kit.sunburst` ışın + bayrak üçgenleri | 2R |
+| 4 | `town/town_ch1_treehouse` | 0 0 760 820 | 760×820 / 2,5 MB + hayalet dokusu 2,5 MB | Ana sayfa yapısı (UX §3, ART §7.2) | Görev sırası alttan üste (ART §7.2: basamak → platform → duvar → pencere → çatı → ip merdiven + makara yukarıda → bayrak); her görev parçası kendi `<g id="t1">`…`<g id="t7">` grubunda; kırpma durakları `layout.home.ch1CropStops` ile örtüşür | gövde + 3 yaprak dairesi + platform + ozalit hayaleti | 2R |
+| 5 | `chr/chr_tuna_bust` | 0 0 256 320 | 300×375 / 0,45 MB | Oyun köşesi, ana sayfa, ara sahne | `color.character.tuna` birebir; sarı kask ve tulum yok; görünür yaş 10–12 (açık soru ART §11.1); 6 ifade `face` grubu | ART §11.7 Tuna | 2R |
+| 6 | `chr/chr_tuna_cheer` | 0 0 300 400 | 300×400 / 0,48 MB | Kazanma (UX §6.1) | #5 ile aynı karakter (yan yana 2 kişiden 2'si aynı der) | Tuna SVG + eldivenler yukarıda | 2R |
+| 7 | `chr/chr_dede_bust` | 0 0 256 320 | 256×320 / 0,33 MB + portre 128×128 (Canvas2D daire kırpımı, bir kez; ART §14.8) | Öğretici balonu, ara sahne | Kasket #C65A3A, ceket #7A8B4A birebir; katlanır metre görünür; Ø 128 dairede yüz + kasket sığar | ART §11.7 Usta Dede | 2R |
+| 8 | `chr/chr_kepce_bust` | 0 0 320 220 | 300×206 / 0,25 MB | Oyun köşesi, ana sayfa | Kask #FF9A1F, tasma #7FE0C4; sosis köpek oranı (gövde ≥ 2,5 × omuz yüksekliği) | ART §11.7 Kepçe | 2R |
+| 9 | `chr/chr_gribeton_bust` | 0 0 256 320 | 256×320 / 0,33 MB | Ara sahne, rakip satırları | Dikdörtgen siluet, beton blok saç; takım #8C939C; kötü adam ifadesi yok | ART §11.7 Gribeton | 2R |
+| 10 | `logo/logo_emblem` | 0 0 360 360 | 360×360 / 0,52 MB | Açılış logosu (UX §1) | Harf yok (yazı `app.title` kodla, Baloo 2); 48 px'te siluet okunur; küp yığını yok; studlu tek tuğla + vinç kancası + duvar başlığı motifi | `logo_wordmark` yer tutucusu | 2R |
+| 11–26 | `icon/icon_<ad>` (coin, life, star, moves, settings, lock, hammer, crane, brush, undo, thermos, gold_trowel, chest, nav_shop, nav_league, nav_team) | 0 0 128 128 | 128×128 tek boy, **tek atlas 512×512** (16 yuva) / 1,05 MB | Kapsüller, yuvalar, gezinme (ART §9) | Biçim tarifleri önceki sürümle aynı: sikke + mala kabartması (`ui.gold`), kalp + yıldız (`ui.heart`), 5 köşe yuvarlak yıldız (`ui.star`), ok + duvar başlığı (moves; `icon_undo` ile karışmaz), 8 dişli dişli, asma kilit (48 px'te okunur), çekiç kırmızı baş (**Bölüm 8, K-36**: yükü kırar), kanca + halat (vinç, #FF9A1F; kule vinç değil), fırça + iki renk takas oku (brush, K-38), saat yönü tersi kıvrım (undo), termos #2984DE + 2 buhar kıvrımı, altın mala, düz kapaklı alet sandığı (kubbe yok), tente (shop), kupa + mala (league), iki kask (team) | ART §9 v1 prosedürel ikonlar | 2R: coin, life, star, moves, settings, lock, hammer, crane, gold_trowel, chest, nav_shop, nav_league, nav_team · 3: brush, undo, thermos |
+
+**Yeni küçük SVG'ler (R2-12 ve kapanış):** `icon/icon_piggy` (kumbara, kenar ikonu; Faz 4), `icon/icon_kettlebell`
+(Ağır Yük rozeti, 40 px; ART §6), `icon/icon_nextfloor` (32 px "sonraki kat" rozeti; UX §5.9) — atlasın boş yuvalarına
+(16 + 3 = 19 > 16: atlas 512×640, 20 yuva, 1,3 MB).
+
+### 16.4 Üretim sırası (Faz 2R görsel uygulaması)
+
+1. Blockout ekran görüntüleri onayı (ART §13). 2. İkon atlası (#11–#26 + 3 yeni; oyun ekranında en çok görünen). 3.
+Karakterler #5, #7, #8 (oyun köşesi ve öğretici portresi). 4. `town_ch1_treehouse` + `bg_home_town`. 5.
+`bg_level_site_edge`, `bg_win_plaza`, #6, #10. 6. #9 (ara sahne, dilimde en son). Her adımın sonunda `npm run screens`
+incelemesi ve REVIEW_LOG kaydı.
+
+### 16.5 Prosedürel v2 varlıkları (kodla çizilir; keskinlik ve renk körü modu için)
+
+| Ad | Boyut | Tarif | Öncelik |
+| -- | ----- | ----- | ------- |
+| `blk_<şekil>_<W..P>` v2 | şekil kutusu (en çok 480×480, `site.cols` 4'te I4) | ART §3A şeker blok + §3A.5 hücre başına çıkıntı (R2-12; sembol çıkıntı tepesinde); bölüm başında pişirilir | Faz 2R |
+| `blk_gloss_<şekil>` | şekil kutusu | §3A.5 çıkıntı parlama yayı + noktası, renksiz beyaz; yalnız tutulabilir parçanın üstüne konur (DL-2R-17; şekil başına 1, en çok 9) | Faz 2R |
+| `cargo_q9`, `cargo_i5` | 360×360 / 600×120 | Ağır Yük (ART §6, PL-2R-04): çelik #7A7A7A gövde + palet/flanş #3A3A3A + kayış + ikaz bandı + `icon_kettlebell`; çıkıntı ve sembol yok | Faz 2R |
+| `debris_layer_<şekil>` | şekil kutusu | moloz "yanlış yerde" katmanı (ART §6, PL-2R-11): çatlak + toz α ≤ 0,35 + 40 px "↩" rozeti; bayrak kalkınca söner | Faz 3 (Bölüm 17) |
+| `yard_floor` v2 | 120×120 döşeme | delikli pano: v1 zemin + hücre merkezinde Ø 12 delik `board.yardGrid` (ART §2.4, DL-2R-18) | Faz 2R |
+| `ui_yard_preview` | hücre 120 | 4 px beyaz α 0,6 noktalı kontur (sahaya bırakma önizlemesi, UX §5.3) | Faz 2R |
+| `scene_game_bg` | 1080 × ekran yüksekliği | çivit gradyan #3B2C85 → #1F1850 + 120 px ozalit deseni α 0,04/0,07 (ART §7.1, R2-12); `Graphics`, doku değil | Faz 2R |
+| `ui_badge_nextfloor` | 32×32 | "sonraki kat" rozeti: krem daire + `ui.ink` yukarı ok ve kat çizgisi (UX §5.9 madde 3) | Faz 2R |
+| `ui_truck_subbadge` | 40×40 + "+n" | teslim edilmemiş partiler rozeti (UX §5.9 madde 2) | Faz 2R |
+| `blk_glow_<şekil>` | şekil kutusu + 2 × 10 px | kaldırma ışıltı halkası (ART §3A durum tablosu) | Faz 2R |
+| `ui_button_<green/orange/blue/cream/red/grey>` v2 | 9-dilim, köşe ≤ 48 | ART §14.1 (normal + basılı kare) | Faz 2R |
+| `ui_button_shine` | 130×176 | §14.1 parlama süpürmesi bandı (20°, α 0,45) | Faz 2R |
+| `ui_panel` v2, `ui_panel_hud` | 9-dilim, köşe 48 / 32 | ART §14.2 (ahşap çerçeveli / HUD sade) | Faz 2R |
+| `ui_ribbon_<orange/gold/blue>` | 3-dilim (kuyruk + gövde + kuyruk), h 104 | ART §14.3 | Faz 2R |
+| `ui_badge` v2 | 60×60, köşe 16 (R2-12 kare rozet) | ART §14.4 | Faz 2R |
+| `ui_capsule` | 3-dilim, h 96 | ART §14.5 | Faz 2R |
+| `ui_progress_<track/fill>` | 3-dilim, h 48 | ART §14.6 | Faz 2R |
+| `ui_nav_bar`, `ui_nav_tab_selected` | 1080×176 / 200×212 | ART §14.7 | Faz 2R |
+| `ui_tutorial_bubble` v2, `ui_portrait_ring` | 9-dilim köşe 32 / Ø 128 | ART §14.8 (portre `chr_dede_bust` kırpımı) | Faz 2R |
+| `ui_tutorial_glove` | 140×160 | v1 satırı (§10), prosedürel vektör ya da küçük SVG (`public/art/icon/ui_tutorial_glove.svg`, Tuna'nın sarı eldiveni #FFC93C; UX §13.1) | Faz 2R |
+| `ui_highlight` | hedef kutusu + 2 × 26 | 8 px beyaz kontur + 18 px parlama (UX §13.1) | Faz 2R |
+| `ui_blocks_left_icon` | 96×96 (3–4 çipte 72×72) | L3 şeker blok geometrisi, **krem kit rengi + `ui.ink` kontur, sembol yok** (ART §14.9, PL-2R-14) | Faz 2R |
+| `ui_structure_ghost_<ch>` | yapı kutusu | yapı görselinin siluetinden ozalit hayaleti: `board.blueprint` %35 + 4 px beyaz %90 kesik kontur (ART §7.2) | Faz 2R |
+| `fx_sparkle4`, `fx_sunburst`, `fx_ring` | 48×48 / 1080×1080 / 256×256 | ART §15 | Faz 2R |
+| `yard_frame` v2 | 9-dilim, köşe 24 | 20 px ahşap gradyan #E2A653 → #B97A35 + 6 px #5A3A1E kontur + iç gölge (UX §5.8) | Faz 2R |
+| `site_scaffold` v2 | boru 16 × ((Hs + e)·120 + 40; şantiye üstü hava varsa H·120 + 40), kelepçe 24×20 | ART §4 Faz 2R notu, UX §5.8 | Faz 2R |
+
+**Kaldırılan:** `ui_spotlight` (§10) — Faz 2R'de karartma ve delik yok (UX §13.1, R2-10).

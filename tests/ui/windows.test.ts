@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { GameSession, OFFER_MOVES } from '../../src/core/session.ts';
 import { OFFER_ECONOMY, offerModel, offerPrice } from '../../src/ui/offer.ts';
 import { APPROX_SIGN, realMoneyText, realMoneyValue, referencePack } from '../../src/ui/price.ts';
-import { remainingPlanCells } from '../../src/ui/remaining.ts';
+import { remainingBlocks, remainingPlanCells } from '../../src/ui/remaining.ts';
 import { REWARD_ECONOMY, winRewards } from '../../src/ui/rewards.ts';
 import { exitKind, exitLines, lossLines } from '../../src/ui/windowLines.ts';
 import { handMoves, levelFile } from '../core/moves.fixtures.ts';
@@ -140,6 +140,22 @@ describe('UX 7 "Kalan: n hücre" (K-15)', () => {
       seen.push(remainingPlanCells(g.state));
     }
     expect(seen).toEqual([6, 4, 2, 0]);
+  });
+});
+
+describe('ANALYTICS §2 v6 level_end.blocksLeft (UX 5.9, K-48)', () => {
+  it('ANALYTICS v6 blocksLeft counts the blocks not yet locked: one less per correct placement', () => {
+    const lvl = levelFile(1);
+    const g = GameSession.start(lvl);
+    const seen = [remainingBlocks(g.state)];
+    for (const m of handMoves(1)) {
+      g.commit(m);
+      seen.push(remainingBlocks(g.state));
+    }
+    // Faz 2 level 1: 23 blocks, three hand moves, each a correct placement (TECH §2R.2 "N − correctly placed"). The
+    // Faz 2 data has no full cover yet, so 20 blocks stay; the Faz 2R levels end at 0 (K-48; WP-M golden asserts it).
+    expect(seen).toEqual([23, 22, 21, 20]);
+    expect(lvl.data.yard.batches.flatMap((b) => b.pieces)).toHaveLength(23); // D2 help slots are not blocks
   });
 });
 

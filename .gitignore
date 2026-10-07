@@ -5,3 +5,4 @@ coverage
 *.log
 artifacts/harness
 artifacts/perf
+artifacts/reference

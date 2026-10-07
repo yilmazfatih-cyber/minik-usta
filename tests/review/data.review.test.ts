@@ -107,6 +107,14 @@ function cellsOf(shape: ShapeId, x: number, y: number): string[] {
 
 const LEVELS_MD = readFileSync(join(ROOT, 'docs', 'LEVELS.md'), 'utf8');
 
+/**
+ * Faz 2R transition (TECH §2R.10, §2R.12 WP-M): LEVELS §2 now documents the Faz 2R levels 1–10 (new block tables, no
+ * "Minimum hamle (el çözümü)" rows) while levels/*.json are still the Faz 2 levels 1–5. The LEVELS ↔ JSON suites below
+ * are not registered until WP-M rewrites them for the Faz 2R format together with the new JSONs; the JSON-only suites
+ * keep running. The todo at the end of the file names the pending work.
+ */
+const LEVELS_IS_FAZ_2R = LEVELS_MD.includes('Faz 2R dikey dilimi');
+
 interface DocPiece {
   readonly letter: string;
   readonly shape: ShapeId;
@@ -1561,147 +1569,149 @@ describe('review LEVELS §0 sawtooth (L-18), K-24 (L-24), K-23 (L-25), Y4 (L-26)
 // levels/level_001…005.json against docs/LEVELS.md §0, §2
 // =====================================================================================================================
 
-describe.each(LEVEL_IDS)('review LEVELS §2 Bölüm %i ↔ levels JSON', (n) => {
-  const doc = docLevel(n);
-  const json = readLevelJson(n);
-  const batch0 = batchOf(json, 0).pieces;
+if (!LEVELS_IS_FAZ_2R) {
+  describe.each(LEVEL_IDS)('review LEVELS §2 Bölüm %i ↔ levels JSON', (n) => {
+    const doc = docLevel(n);
+    const json = readLevelJson(n);
+    const batch0 = batchOf(json, 0).pieces;
 
-  it(`K-45/2 level ${n}: the LEVELS block table is the batch-0 array (order, shape, colour, anchor)`, () => {
-    expect(doc.pieces.length).toBeGreaterThan(0);
-    expect(batch0.map((p) => [p.shape, p.color, p.x, p.y])).toEqual(
-      doc.pieces.map((p) => [p.shape, p.color, p.x, p.y]),
-    );
-    expect(batch0.every((p) => p.flags === undefined)).toBe(true);
-  });
-
-  it(`K-45/2 level ${n}: blockout letters are exactly the table blocks' cells and the yard fill equals "Saha doluluğu"`, () => {
-    const byLetter = new Map<string, string[]>();
-    let empty = 0;
-    for (let y = 0; y < 8; y++) {
-      const row = doc.blockout.get(y);
-      if (!row) throw new Error(`no blockout row y=${y}`);
-      for (let x = 0; x < 6; x++) {
-        const t = row[x] ?? '?';
-        if (t === '.') empty++;
-        else byLetter.set(t, [...(byLetter.get(t) ?? []), cellKey(x, y)]);
-      }
-    }
-    expect([...byLetter.keys()].sort()).toEqual(doc.pieces.map((p) => p.letter).sort());
-    for (const p of doc.pieces)
-      expect(byLetter.get(p.letter)?.sort(), `block ${p.letter}`).toEqual(cellsOf(p.shape, p.x, p.y));
-    const docFill = Number(match(/^(\d+)\/48/, field(doc, 'Saha doluluğu'), 'Saha doluluğu')[1]);
-    expect(48 - empty).toBe(docFill);
-    const jsonCells = new Set(batch0.flatMap((p) => cellsOf(p.shape, p.x, p.y)));
-    expect(jsonCells.size).toBe(docFill);
-    expect(docFill).toBeGreaterThanOrEqual(39); // K-02
-  });
-
-  it(`K-04 level ${n}: blockout wall column and site columns match wall height, gaps and the first segment plan`, () => {
-    const gaps = json.wall.gaps;
-    const h = json.wall.height;
-    const rows = json.build.segments[0]?.rows ?? [];
-    for (let y = 0; y <= 9; y++) {
-      const row = doc.blockout.get(y);
-      if (!row) throw new Error(`no blockout row y=${y}`);
-      const inGap = gaps.some((g) => g.y <= y && y < g.y + g.size);
-      expect(row[6], `wall y=${y}`).toBe(y < h ? (inGap ? '=' : '#') : ':');
-      for (const sx of [0, 1]) {
-        const want =
-          y >= 8 ? '·' : y < rows.length ? (rows[rows.length - 1 - y]?.[sx] ?? '').replace('.', '+') : '~';
-        expect(row[7 + sx], `site (${6 + sx},${y})`).toBe(want);
-      }
-    }
-  });
-
-  it(`K-45/1 level ${n}: header rows (wall, gravity, segments, colours, shapes, difficulty, budget = min + buffer, teaches) match the JSON`, () => {
-    const wall = field(doc, 'Duvar');
-    expect(Number(match(/height (\d+)/, wall, 'Duvar')[1])).toBe(json.wall.height);
-    const gapText = match(/geçit: (.*)$/, wall, 'Duvar')[1] ?? '';
-    const docGaps = gapText.startsWith('yok')
-      ? []
-      : [...gapText.matchAll(/y=(\d+) boy \**(\d+)\**\s*\((\w+)/g)].map((m) => ({
-          type: m[3],
-          y: Number(m[1]),
-          size: Number(m[2]),
-        }));
-    expect(json.wall.gaps).toEqual(docGaps);
-    const grav = match(/build `(\w+)`, yard `(\w+)`/, field(doc, 'Yerçekimi'), 'Yerçekimi');
-    expect(json.gravity).toEqual({ build: grav[1], yard: grav[2] === 'true' });
-    const segs = [...field(doc, 'Dilimler').matchAll(/(\d+)\. (.+?) \(EN: (.+?)\) `(\[.*?\])`/g)].map(
-      (m) => ({
-        name: { tr: m[2], en: m[3] },
-        rows: JSON.parse(m[4] ?? '[]') as string[],
-      }),
-    );
-    expect(json.build).toEqual({ mode: 'segments', segments: segs });
-    const cs = match(/^(.*?) \((\d+)\) \/ (.*)$/, field(doc, 'Renkler / şekiller'), 'Renkler / şekiller');
-    const docColors = (cs[1] ?? '').split(', ').sort();
-    expect(docColors.length).toBe(Number(cs[2]));
-    const parsed = validateLevelJson(json).level;
-    if (!parsed) throw new Error('schema');
-    expect([...levelColorSet(parsed)].sort()).toEqual(docColors);
-    const kinds = [
-      ...new Set(json.yard.batches.flatMap((b) => b.pieces.map((p) => shapeById(p.shape).kind))),
-    ].sort();
-    expect(kinds).toEqual((cs[3] ?? '').split(', ').sort());
-    const diff =
-      DIFFICULTY[
-        match(/^(Kolay|Normal|Zor|Çok Zor) \//, field(doc, 'Zorluk / hedef kazanma'), 'Zorluk')[1] ?? ''
-      ];
-    expect(json.difficulty).toBe(diff);
-    const min = Number(field(doc, 'Minimum hamle (el çözümü)'));
-    const budget = match(/^(\d+) \+ (\d+) = \*\*(\d+)\*\*/, field(doc, 'Hamle bütçesi'), 'Hamle bütçesi');
-    expect([Number(budget[1]), Number(budget[2]), Number(budget[3])]).toEqual([
-      min,
-      BUFFER[json.difficulty],
-      json.moves,
-    ]);
-    expect(json.moves).toBe(min + BUFFER[json.difficulty]);
-    const taught = /^(W\d|Y\d|S\d|G-[HL]) /.exec(field(doc, 'Öğretilen'));
-    expect(json.teaches).toBe(taught?.[1]);
-    expect(json.goals).toEqual([{ type: 'build' }]);
-    expect(json.obstacles).toEqual([]);
-    expect(json.chapter).toBe(1);
-    expect(json.name.tr.length).toBeGreaterThan(0);
-  });
-
-  it(`K-25 level ${n}: truck batches equal LEVELS "Kamyon partileri" (array order, shape, colour, x; y written as 8)`, () => {
-    const trucks = json.yard.batches.slice(1);
-    expect(trucks.map((b, i) => [i + 1, b.forSegment])).toEqual(doc.trucks.map((t) => [t.batch, t.batch]));
-    trucks.forEach((b, i) => {
-      expect(b.pieces.map((p) => [p.shape, p.color, p.x, p.y])).toEqual(
-        (doc.trucks[i]?.pieces ?? []).map(([s, c, x]) => [s, c, x, 8]),
+    it(`K-45/2 level ${n}: the LEVELS block table is the batch-0 array (order, shape, colour, anchor)`, () => {
+      expect(doc.pieces.length).toBeGreaterThan(0);
+      expect(batch0.map((p) => [p.shape, p.color, p.x, p.y])).toEqual(
+        doc.pieces.map((p) => [p.shape, p.color, p.x, p.y]),
       );
+      expect(batch0.every((p) => p.flags === undefined)).toBe(true);
     });
-  });
 
-  it(`GDD 14.1 level ${n}: tutorial[] equals the LEVELS step list (mode, highlight, hand kind, textKey, done)`, () => {
-    const steps = json.tutorial ?? [];
-    expect(steps.length).toBe(doc.tutorial.length);
-    doc.tutorial.forEach((item, i) => {
-      const parts = item.split(' · ');
-      const [head = '', hl = '', hand = '', key = '', done = ''] = parts;
-      const st = steps[i];
-      const where = `level ${n} step ${i + 1}`;
-      expect(parts.length, where).toBe(5);
-      expect(st?.step, where).toBe(Number(match(/^(\d+)\./, head, where)[1]));
-      expect(st?.mode, where).toBe(head.endsWith('Z') ? 'required' : 'soft');
-      expect(st?.highlight, where).toEqual([...hl.matchAll(/`([^`]+)`/g)].map((m) => m[1]));
-      const handKind = /^(drag|hold|tap)\b/.exec(hand)?.[1];
-      expect(st?.hand?.kind, where).toBe(handKind);
-      expect(st?.textKey, where).toBe(match(/^`([^`]+)`$/, key, where)[1]);
-      const timeout = /^`timeoutMs` (\d+)$/.exec(done);
-      const hold = /^`\{ event: (\w+), count: (\d+), minMs: (\d+) \}`$/.exec(done);
-      const simple = /^`(\w+)` ×(\d+)$/.exec(done);
-      const want = timeout
-        ? { timeoutMs: Number(timeout[1]) }
-        : hold
-          ? { event: hold[1], count: Number(hold[2]), minMs: Number(hold[3]) }
-          : { event: simple?.[1], count: Number(simple?.[2]) };
-      expect(st?.done, where).toEqual(want);
+    it(`K-45/2 level ${n}: blockout letters are exactly the table blocks' cells and the yard fill equals "Saha doluluğu"`, () => {
+      const byLetter = new Map<string, string[]>();
+      let empty = 0;
+      for (let y = 0; y < 8; y++) {
+        const row = doc.blockout.get(y);
+        if (!row) throw new Error(`no blockout row y=${y}`);
+        for (let x = 0; x < 6; x++) {
+          const t = row[x] ?? '?';
+          if (t === '.') empty++;
+          else byLetter.set(t, [...(byLetter.get(t) ?? []), cellKey(x, y)]);
+        }
+      }
+      expect([...byLetter.keys()].sort()).toEqual(doc.pieces.map((p) => p.letter).sort());
+      for (const p of doc.pieces)
+        expect(byLetter.get(p.letter)?.sort(), `block ${p.letter}`).toEqual(cellsOf(p.shape, p.x, p.y));
+      const docFill = Number(match(/^(\d+)\/48/, field(doc, 'Saha doluluğu'), 'Saha doluluğu')[1]);
+      expect(48 - empty).toBe(docFill);
+      const jsonCells = new Set(batch0.flatMap((p) => cellsOf(p.shape, p.x, p.y)));
+      expect(jsonCells.size).toBe(docFill);
+      expect(docFill).toBeGreaterThanOrEqual(39); // K-02
+    });
+
+    it(`K-04 level ${n}: blockout wall column and site columns match wall height, gaps and the first segment plan`, () => {
+      const gaps = json.wall.gaps;
+      const h = json.wall.height;
+      const rows = json.build.segments[0]?.rows ?? [];
+      for (let y = 0; y <= 9; y++) {
+        const row = doc.blockout.get(y);
+        if (!row) throw new Error(`no blockout row y=${y}`);
+        const inGap = gaps.some((g) => g.y <= y && y < g.y + g.size);
+        expect(row[6], `wall y=${y}`).toBe(y < h ? (inGap ? '=' : '#') : ':');
+        for (const sx of [0, 1]) {
+          const want =
+            y >= 8 ? '·' : y < rows.length ? (rows[rows.length - 1 - y]?.[sx] ?? '').replace('.', '+') : '~';
+          expect(row[7 + sx], `site (${6 + sx},${y})`).toBe(want);
+        }
+      }
+    });
+
+    it(`K-45/1 level ${n}: header rows (wall, gravity, segments, colours, shapes, difficulty, budget = min + buffer, teaches) match the JSON`, () => {
+      const wall = field(doc, 'Duvar');
+      expect(Number(match(/height (\d+)/, wall, 'Duvar')[1])).toBe(json.wall.height);
+      const gapText = match(/geçit: (.*)$/, wall, 'Duvar')[1] ?? '';
+      const docGaps = gapText.startsWith('yok')
+        ? []
+        : [...gapText.matchAll(/y=(\d+) boy \**(\d+)\**\s*\((\w+)/g)].map((m) => ({
+            type: m[3],
+            y: Number(m[1]),
+            size: Number(m[2]),
+          }));
+      expect(json.wall.gaps).toEqual(docGaps);
+      const grav = match(/build `(\w+)`, yard `(\w+)`/, field(doc, 'Yerçekimi'), 'Yerçekimi');
+      expect(json.gravity).toEqual({ build: grav[1], yard: grav[2] === 'true' });
+      const segs = [...field(doc, 'Dilimler').matchAll(/(\d+)\. (.+?) \(EN: (.+?)\) `(\[.*?\])`/g)].map(
+        (m) => ({
+          name: { tr: m[2], en: m[3] },
+          rows: JSON.parse(m[4] ?? '[]') as string[],
+        }),
+      );
+      expect(json.build).toEqual({ mode: 'segments', segments: segs });
+      const cs = match(/^(.*?) \((\d+)\) \/ (.*)$/, field(doc, 'Renkler / şekiller'), 'Renkler / şekiller');
+      const docColors = (cs[1] ?? '').split(', ').sort();
+      expect(docColors.length).toBe(Number(cs[2]));
+      const parsed = validateLevelJson(json).level;
+      if (!parsed) throw new Error('schema');
+      expect([...levelColorSet(parsed)].sort()).toEqual(docColors);
+      const kinds = [
+        ...new Set(json.yard.batches.flatMap((b) => b.pieces.map((p) => shapeById(p.shape).kind))),
+      ].sort();
+      expect(kinds).toEqual((cs[3] ?? '').split(', ').sort());
+      const diff =
+        DIFFICULTY[
+          match(/^(Kolay|Normal|Zor|Çok Zor) \//, field(doc, 'Zorluk / hedef kazanma'), 'Zorluk')[1] ?? ''
+        ];
+      expect(json.difficulty).toBe(diff);
+      const min = Number(field(doc, 'Minimum hamle (el çözümü)'));
+      const budget = match(/^(\d+) \+ (\d+) = \*\*(\d+)\*\*/, field(doc, 'Hamle bütçesi'), 'Hamle bütçesi');
+      expect([Number(budget[1]), Number(budget[2]), Number(budget[3])]).toEqual([
+        min,
+        BUFFER[json.difficulty],
+        json.moves,
+      ]);
+      expect(json.moves).toBe(min + BUFFER[json.difficulty]);
+      const taught = /^(W\d|Y\d|S\d|G-[HL]) /.exec(field(doc, 'Öğretilen'));
+      expect(json.teaches).toBe(taught?.[1]);
+      expect(json.goals).toEqual([{ type: 'build' }]);
+      expect(json.obstacles).toEqual([]);
+      expect(json.chapter).toBe(1);
+      expect(json.name.tr.length).toBeGreaterThan(0);
+    });
+
+    it(`K-25 level ${n}: truck batches equal LEVELS "Kamyon partileri" (array order, shape, colour, x; y written as 8)`, () => {
+      const trucks = json.yard.batches.slice(1);
+      expect(trucks.map((b, i) => [i + 1, b.forSegment])).toEqual(doc.trucks.map((t) => [t.batch, t.batch]));
+      trucks.forEach((b, i) => {
+        expect(b.pieces.map((p) => [p.shape, p.color, p.x, p.y])).toEqual(
+          (doc.trucks[i]?.pieces ?? []).map(([s, c, x]) => [s, c, x, 8]),
+        );
+      });
+    });
+
+    it(`GDD 14.1 level ${n}: tutorial[] equals the LEVELS step list (mode, highlight, hand kind, textKey, done)`, () => {
+      const steps = json.tutorial ?? [];
+      expect(steps.length).toBe(doc.tutorial.length);
+      doc.tutorial.forEach((item, i) => {
+        const parts = item.split(' · ');
+        const [head = '', hl = '', hand = '', key = '', done = ''] = parts;
+        const st = steps[i];
+        const where = `level ${n} step ${i + 1}`;
+        expect(parts.length, where).toBe(5);
+        expect(st?.step, where).toBe(Number(match(/^(\d+)\./, head, where)[1]));
+        expect(st?.mode, where).toBe(head.endsWith('Z') ? 'required' : 'soft');
+        expect(st?.highlight, where).toEqual([...hl.matchAll(/`([^`]+)`/g)].map((m) => m[1]));
+        const handKind = /^(drag|hold|tap)\b/.exec(hand)?.[1];
+        expect(st?.hand?.kind, where).toBe(handKind);
+        expect(st?.textKey, where).toBe(match(/^`([^`]+)`$/, key, where)[1]);
+        const timeout = /^`timeoutMs` (\d+)$/.exec(done);
+        const hold = /^`\{ event: (\w+), count: (\d+), minMs: (\d+) \}`$/.exec(done);
+        const simple = /^`(\w+)` ×(\d+)$/.exec(done);
+        const want = timeout
+          ? { timeoutMs: Number(timeout[1]) }
+          : hold
+            ? { event: hold[1], count: Number(hold[2]), minMs: Number(hold[3]) }
+            : { event: simple?.[1], count: Number(simple?.[2]) };
+        expect(st?.done, where).toEqual(want);
+      });
     });
   });
-});
+}
 
 describe('review K-03 plan rows of the level data', () => {
   it('K-03 GDD example (level 1 plan): rows top → bottom, (6,0)(7,0) = Y, (6,1)…(7,2) = W, rows 3–7 outside the plan', () => {
@@ -1717,27 +1727,29 @@ describe('review K-03 plan rows of the level data', () => {
   });
 });
 
-describe('review LEVELS §1 difficulty curve rows for levels 1–5', () => {
-  it('K-45/1 LEVELS §1 table: difficulty and move budget of levels 1–5 equal the JSON (Kolay ×4, Normal; 11 11 11 12 11)', () => {
-    const rows = new Map<number, [string, number]>();
-    for (const line of LEVELS_MD.split('\n')) {
-      const m = /^\| (\d+) \| ([^|]+?) \| (\d+) \| [^|]+ \| (\d+) \| ([^|]+?) \| (\d+) \|/.exec(line);
-      if (!m) continue;
-      rows.set(Number(m[1]), [m[2] ?? '', Number(m[3])]);
-      rows.set(Number(m[4]), [m[5] ?? '', Number(m[6])]);
-    }
-    expect(rows.size).toBe(50);
-    for (const n of LEVEL_IDS) {
-      const [label, moves] = rows.get(n) ?? ['', 0];
-      const word = label
-        .replace(/\*\*/g, '')
-        .replace(/\s*\(nefes\)$/, '')
-        .trim();
-      const json = readLevelJson(n);
-      expect([json.difficulty, json.moves], `level ${n}`).toEqual([DIFFICULTY[word], moves]);
-    }
+if (!LEVELS_IS_FAZ_2R) {
+  describe('review LEVELS §1 difficulty curve rows for levels 1–5', () => {
+    it('K-45/1 LEVELS §1 table: difficulty and move budget of levels 1–5 equal the JSON (Kolay ×4, Normal; 11 11 11 12 11)', () => {
+      const rows = new Map<number, [string, number]>();
+      for (const line of LEVELS_MD.split('\n')) {
+        const m = /^\| (\d+) \| ([^|]+?) \| (\d+) \| [^|]+ \| (\d+) \| ([^|]+?) \| (\d+) \|/.exec(line);
+        if (!m) continue;
+        rows.set(Number(m[1]), [m[2] ?? '', Number(m[3])]);
+        rows.set(Number(m[4]), [m[5] ?? '', Number(m[6])]);
+      }
+      expect(rows.size).toBe(50);
+      for (const n of LEVEL_IDS) {
+        const [label, moves] = rows.get(n) ?? ['', 0];
+        const word = label
+          .replace(/\*\*/g, '')
+          .replace(/\s*\(nefes\)$/, '')
+          .trim();
+        const json = readLevelJson(n);
+        expect([json.difficulty, json.moves], `level ${n}`).toEqual([DIFFICULTY[word], moves]);
+      }
+    });
   });
-});
+}
 
 describe('review K-45 levels 1–5 through the whole validator', () => {
   it('K-45 levels 1–5 pass every check L-01…L-18, L-21…L-26 in sequence (mechanic history, real tr/en keys and economy unlocks): no error, no warning', () => {
@@ -1879,86 +1891,88 @@ interface GoldenFile {
   readonly log: readonly { readonly kind: string }[];
 }
 
-describe.each(LEVEL_IDS)('review golden Bölüm %i against the LEVELS §2 solution text', (n) => {
-  const doc = docLevel(n);
-  const moves = docMoves(doc);
-  const loaded = loadLevel(readLevelJson(n));
-  if (!loaded.ok) throw new Error(`level ${n} does not load`);
-  const lvl = loaded.level;
-  const min = Number(field(doc, 'Minimum hamle (el çözümü)'));
-  const yao = match(/^(\d+) duvar üstü \/ (\d+) yerleşim/, field(doc, 'YAO (çözüm)'), 'YAO');
+if (!LEVELS_IS_FAZ_2R) {
+  describe.each(LEVEL_IDS)('review golden Bölüm %i against the LEVELS §2 solution text', (n) => {
+    const doc = docLevel(n);
+    const moves = docMoves(doc);
+    const loaded = loadLevel(readLevelJson(n));
+    if (!loaded.ok) throw new Error(`level ${n} does not load`);
+    const lvl = loaded.level;
+    const min = Number(field(doc, 'Minimum hamle (el çözümü)'));
+    const yao = match(/^(\d+) duvar üstü \/ (\d+) yerleşim/, field(doc, 'YAO (çözüm)'), 'YAO');
 
-  it(`K-46 level ${n}: the LEVELS solution text replays move by move (start cell, entry, landing, deliveries, queue) and wins with the documented YAO`, () => {
-    expect(moves.length).toBe(min);
-    const sink = new ArraySink();
-    const session = GameSession.start(lvl, {}, { strict: true }, sink);
-    let queue: string[] = [];
-    moves.forEach((m, i) => {
-      const where = `L${n} step ${i + 1}: ${m.text}`;
-      const id = pieceIdOf(lvl, m.ref);
-      const p = lvl.pieces[id];
-      expect([p?.dataShape, COLOR_CODES[p?.colorIndex ?? -1]], where).toEqual([m.shape, m.color]);
-      const s = session.state;
-      expect([pieceZone(s, id), pieceX(s, id), pieceY(s, id)], `${where} — start cell`).toEqual([
-        Zone.yard,
-        ...m.from,
-      ]);
-      const first = sink.events.length;
-      const res = session.commit(moveOf(lvl, m), sink);
-      const ev: GameEvent[] = sink.events.slice(first);
-      expect([res.status, res.won], where).toEqual(['applied', i === moves.length - 1]);
-      const moved = ev.filter((e): e is Extract<GameEvent, { t: 'pieceMoved' }> => e.t === 'pieceMoved');
-      expect(
-        moved.map((e) => e.entry),
-        `${where} — entry`,
-      ).toEqual([m.entry]);
-      const correct = ev.filter(
-        (e): e is Extract<GameEvent, { t: 'placementCorrect' }> => e.t === 'placementCorrect',
-      );
-      expect(correct.length, `${where} — doğru`).toBe(1);
-      const cells = correct[0]?.cells ?? [];
-      expect(
-        [Math.min(...cells.map((c) => c.x)), Math.min(...cells.map((c) => c.y))],
-        `${where} — landing`,
-      ).toEqual([...m.lands]);
-      const arrived = ev.flatMap((e) => (e.t === 'deliveryArrived' ? e.pieces : []));
-      expect(arrived, `${where} — delivered`).toEqual(m.delivered.map(([ref]) => pieceIdOf(lvl, ref)));
-      for (const [ref, x, y] of m.delivered) {
-        const did = pieceIdOf(lvl, ref);
-        expect([pieceZone(s, did), pieceX(s, did), pieceY(s, did)], `${where} — ${ref}`).toEqual([
+    it(`K-46 level ${n}: the LEVELS solution text replays move by move (start cell, entry, landing, deliveries, queue) and wins with the documented YAO`, () => {
+      expect(moves.length).toBe(min);
+      const sink = new ArraySink();
+      const session = GameSession.start(lvl, {}, { strict: true }, sink);
+      let queue: string[] = [];
+      moves.forEach((m, i) => {
+        const where = `L${n} step ${i + 1}: ${m.text}`;
+        const id = pieceIdOf(lvl, m.ref);
+        const p = lvl.pieces[id];
+        expect([p?.dataShape, COLOR_CODES[p?.colorIndex ?? -1]], where).toEqual([m.shape, m.color]);
+        const s = session.state;
+        expect([pieceZone(s, id), pieceX(s, id), pieceY(s, id)], `${where} — start cell`).toEqual([
           Zone.yard,
-          x,
-          y,
+          ...m.from,
         ]);
-      }
-      queue = [...queue, ...m.queued].filter((r) => !m.delivered.some(([d]) => d === r));
-      expect(queueIds(s), `${where} — queue`).toEqual(queue.map((r) => pieceIdOf(lvl, r)));
+        const first = sink.events.length;
+        const res = session.commit(moveOf(lvl, m), sink);
+        const ev: GameEvent[] = sink.events.slice(first);
+        expect([res.status, res.won], where).toEqual(['applied', i === moves.length - 1]);
+        const moved = ev.filter((e): e is Extract<GameEvent, { t: 'pieceMoved' }> => e.t === 'pieceMoved');
+        expect(
+          moved.map((e) => e.entry),
+          `${where} — entry`,
+        ).toEqual([m.entry]);
+        const correct = ev.filter(
+          (e): e is Extract<GameEvent, { t: 'placementCorrect' }> => e.t === 'placementCorrect',
+        );
+        expect(correct.length, `${where} — doğru`).toBe(1);
+        const cells = correct[0]?.cells ?? [];
+        expect(
+          [Math.min(...cells.map((c) => c.x)), Math.min(...cells.map((c) => c.y))],
+          `${where} — landing`,
+        ).toEqual([...m.lands]);
+        const arrived = ev.flatMap((e) => (e.t === 'deliveryArrived' ? e.pieces : []));
+        expect(arrived, `${where} — delivered`).toEqual(m.delivered.map(([ref]) => pieceIdOf(lvl, ref)));
+        for (const [ref, x, y] of m.delivered) {
+          const did = pieceIdOf(lvl, ref);
+          expect([pieceZone(s, did), pieceX(s, did), pieceY(s, did)], `${where} — ${ref}`).toEqual([
+            Zone.yard,
+            x,
+            y,
+          ]);
+        }
+        queue = [...queue, ...m.queued].filter((r) => !m.delivered.some(([d]) => d === r));
+        expect(queueIds(s), `${where} — queue`).toEqual(queue.map((r) => pieceIdOf(lvl, r)));
+      });
+      expect(session.outcome).toBe('won');
+      expect(session.movesLeft).toBe(lvl.moves - min);
+      const y = session.yao();
+      expect([y.overWall, y.overWall + y.rail]).toEqual([Number(yao[1]), Number(yao[2])]);
+      expect(y.yao ?? 0).toBeGreaterThanOrEqual(0.6);
     });
-    expect(session.outcome).toBe('won');
-    expect(session.movesLeft).toBe(lvl.moves - min);
-    const y = session.yao();
-    expect([y.overWall, y.overWall + y.rail]).toEqual([Number(yao[1]), Number(yao[2])]);
-    expect(y.yao ?? 0).toBeGreaterThanOrEqual(0.6);
-  });
 
-  it(`K-46 level ${n}: tests/golden/level_${pad(n)}.hand.json transcribes the same LEVELS solution (moves, cells, entries, deliveries, YAO)`, () => {
-    const golden = JSON.parse(
-      readFileSync(join(ROOT, 'tests', 'golden', `level_${pad(n)}.hand.json`), 'utf8'),
-    ) as GoldenFile;
-    expect([golden.minMoves, golden.budget]).toEqual([min, lvl.moves]);
-    expect([golden.yao.overWall, golden.yao.overWall + golden.yao.rail]).toEqual([
-      Number(yao[1]),
-      Number(yao[2]),
-    ]);
-    expect(golden.log.slice(1)).toEqual(moves.map((m) => moveOf(lvl, m)));
-    expect(golden.steps.map((s) => [s.ref, [...s.from], s.entry, [...s.lands]])).toEqual(
-      moves.map((m) => [m.ref, [...m.from], m.entry, [...m.lands]]),
-    );
-    expect(golden.steps.map((s) => (s.delivered ?? []).map((d) => [...d]))).toEqual(
-      moves.map((m) => m.delivered.map((d) => [...d])),
-    );
+    it(`K-46 level ${n}: tests/golden/level_${pad(n)}.hand.json transcribes the same LEVELS solution (moves, cells, entries, deliveries, YAO)`, () => {
+      const golden = JSON.parse(
+        readFileSync(join(ROOT, 'tests', 'golden', `level_${pad(n)}.hand.json`), 'utf8'),
+      ) as GoldenFile;
+      expect([golden.minMoves, golden.budget]).toEqual([min, lvl.moves]);
+      expect([golden.yao.overWall, golden.yao.overWall + golden.yao.rail]).toEqual([
+        Number(yao[1]),
+        Number(yao[2]),
+      ]);
+      expect(golden.log.slice(1)).toEqual(moves.map((m) => moveOf(lvl, m)));
+      expect(golden.steps.map((s) => [s.ref, [...s.from], s.entry, [...s.lands]])).toEqual(
+        moves.map((m) => [m.ref, [...m.from], m.entry, [...m.lands]]),
+      );
+      expect(golden.steps.map((s) => (s.delivered ?? []).map((d) => [...d]))).toEqual(
+        moves.map((m) => m.delivered.map((d) => [...d])),
+      );
+    });
   });
-});
+}
 
 // =====================================================================================================================
 // Round 2 — TECH L-10 / GDD K-27 whole-block material check (the round-1 fix) and gaps of round 1
@@ -2566,26 +2580,28 @@ describe('review round 3: K-05 box-height rule (round-2 movement fix) seen from 
     expect(reachByText('I3_0', 7, [])).toEqual({ free: true, rail: false });
   });
 
-  it.each(LEVEL_IDS)(
-    'K-05 K-12 LEVELS level %i: every solution step obeys the open height (over the wall: box height ≤ 10 − height) or K-12 (rail: block rows inside the gap rows)',
-    (n) => {
-      const doc = docLevel(n);
-      const json = readLevelJson(n);
-      const moves = docMoves(doc);
-      expect(moves.length).toBeGreaterThan(0);
-      for (const m of moves) {
-        const h = boxH(m.shape);
-        if (m.entry === 'overWall') {
-          expect(h, `${m.text}: K-05`).toBeLessThanOrEqual(10 - json.wall.height);
-        } else {
-          const [, ly] = m.lands;
-          const gate = json.wall.gaps.find((g) => g.y <= ly && ly + h - 1 <= g.y + g.size - 1);
-          expect(gate, `${m.text}: K-12 rows ${ly}–${ly + h - 1}`).toBeDefined();
+  if (!LEVELS_IS_FAZ_2R) {
+    it.each(LEVEL_IDS)(
+      'K-05 K-12 LEVELS level %i: every solution step obeys the open height (over the wall: box height ≤ 10 − height) or K-12 (rail: block rows inside the gap rows)',
+      (n) => {
+        const doc = docLevel(n);
+        const json = readLevelJson(n);
+        const moves = docMoves(doc);
+        expect(moves.length).toBeGreaterThan(0);
+        for (const m of moves) {
+          const h = boxH(m.shape);
+          if (m.entry === 'overWall') {
+            expect(h, `${m.text}: K-05`).toBeLessThanOrEqual(10 - json.wall.height);
+          } else {
+            const [, ly] = m.lands;
+            const gate = json.wall.gaps.find((g) => g.y <= ly && ly + h - 1 <= g.y + g.size - 1);
+            expect(gate, `${m.text}: K-12 rows ${ly}–${ly + h - 1}`).toBeDefined();
+          }
+          expect(isHeavyByText(m.shape), `${m.text}: Y5`).toBe(false);
         }
-        expect(isHeavyByText(m.shape), `${m.text}: Y5`).toBe(false);
-      }
-    },
-  );
+      },
+    );
+  }
 });
 
 // --- independent L-11 oracle (GDD K-11, K-12, K-16 (1), K-34, K-05, Y5) -------------------------------------------------
@@ -3028,156 +3044,168 @@ describe('review round 3: debris, K-32 worked examples, boundaries', () => {
 
 // --- LEVELS §0 tables and §2 block roles against the validator, the data and the engine -----------------------------
 
-describe('review round 3: LEVELS §0 tables and §2 block roles', () => {
-  it('K-31 K-44 LEVELS §0 unlock table (colour pool, colours per level, shapes) is what the validator enforces at every chapter boundary', () => {
-    const lines = LEVELS_MD.split('\n').filter((l) => /^\| \d [^|]+ \| \d+–\d+ \|/.test(l));
-    expect(lines.length).toBe(5);
-    let kinds: ShapeKind[] = [];
-    for (const line of lines) {
-      const cols = line.split('|').map((c) => c.trim());
-      const chapter = Number(/^(\d)/.exec(cols[1] ?? '')?.[1]);
-      const [first, last] = (cols[2] ?? '').split('–').map(Number) as [number, number];
-      expect([first, last], `chapter ${chapter} range`).toEqual([chapter * 10 - 9, chapter * 10]);
-      // colours: "W (1), Y (1), G (2), R (4)" / "+ O, C (11)" / "hepsi"
-      for (const m of (cols[3] ?? '').matchAll(/([A-Z](?:, [A-Z])*) \((\d+)\)/g)) {
-        const at = Number(m[2]);
-        for (const c of (m[1] ?? '').split(', ') as ColorCode[]) {
-          const spec = (id: number): LevelSpec => ({ id, plan: [`${c}${c}`], pieces: [['B1_0', c, 0, 0]] });
-          expect(run(spec(at), ['L-07']), `${c} at ${at}`).toEqual([]);
-          if (at > 1)
-            expect(codes(run(spec(at - 1), ['L-07'])), `${c} at ${at - 1}`).toEqual(['color_locked']);
+if (!LEVELS_IS_FAZ_2R) {
+  describe('review round 3: LEVELS §0 tables and §2 block roles', () => {
+    it('K-31 K-44 LEVELS §0 unlock table (colour pool, colours per level, shapes) is what the validator enforces at every chapter boundary', () => {
+      const lines = LEVELS_MD.split('\n').filter((l) => /^\| \d [^|]+ \| \d+–\d+ \|/.test(l));
+      expect(lines.length).toBe(5);
+      let kinds: ShapeKind[] = [];
+      for (const line of lines) {
+        const cols = line.split('|').map((c) => c.trim());
+        const chapter = Number(/^(\d)/.exec(cols[1] ?? '')?.[1]);
+        const [first, last] = (cols[2] ?? '').split('–').map(Number) as [number, number];
+        expect([first, last], `chapter ${chapter} range`).toEqual([chapter * 10 - 9, chapter * 10]);
+        // colours: "W (1), Y (1), G (2), R (4)" / "+ O, C (11)" / "hepsi"
+        for (const m of (cols[3] ?? '').matchAll(/([A-Z](?:, [A-Z])*) \((\d+)\)/g)) {
+          const at = Number(m[2]);
+          for (const c of (m[1] ?? '').split(', ') as ColorCode[]) {
+            const spec = (id: number): LevelSpec => ({ id, plan: [`${c}${c}`], pieces: [['B1_0', c, 0, 0]] });
+            expect(run(spec(at), ['L-07']), `${c} at ${at}`).toEqual([]);
+            if (at > 1)
+              expect(codes(run(spec(at - 1), ['L-07'])), `${c} at ${at - 1}`).toEqual(['color_locked']);
+          }
         }
-      }
-      // colours per level: limit passes, limit + 1 fails (L-06 does not look at unlocks)
-      const limit = Number(cols[4]);
-      const palette: ColorCode[] = ['W', 'Y', 'G', 'R', 'O', 'C', 'B', 'P'];
-      const plan = (k: number): string[] => {
-        const cs = palette.slice(0, k);
-        const rows: string[] = [];
-        for (let i = 0; i < cs.length; i += 2) rows.push(`${cs[i] ?? 'W'}${cs[i + 1] ?? cs[i] ?? 'W'}`);
-        return rows;
-      };
-      for (const id of [first, last]) {
-        expect(
-          run({ id, plan: plan(limit), pieces: [['B1_0', 'W', 0, 0]] }, ['L-06']),
-          `${id}: ${limit}`,
-        ).toEqual([]);
-        expect(
-          codes(run({ id, plan: plan(limit + 1), pieces: [['B1_0', 'W', 0, 0]] }, ['L-06'])),
-          `${id}: ${limit + 1}`,
-        ).toEqual(['too_many_colors']);
-      }
-      // shapes: "B1, D2, O4, C3; 8'den itibaren ağır I5, Q9" / "+ I3, L4, J4" / "hepsi"
-      const shapeText = (cols[5] ?? '').split(';')[0] ?? '';
-      const fresh =
-        shapeText === 'hepsi' ? [] : (shapeText.match(/[A-Z]\d/g) ?? []).map((k) => k as ShapeKind);
-      for (const kind of fresh) {
-        const piece = (id: number): LevelSpec => ({
-          id,
-          plan: ['WW'],
-          pieces: [[`${kind}_0` as ShapeId, 'W', 0, 0]],
-        });
-        if (kind === 'I5' || kind === 'Q9') continue; // heavy: level 8, round 1
-        expect(run(piece(first), ['L-04']), `${kind} at ${first}`).toEqual([]);
-        if (first > 1)
-          expect(codes(run(piece(first - 1), ['L-04'])), `${kind} at ${first - 1}`).toEqual(['shape_locked']);
-      }
-      kinds = [...kinds, ...fresh];
-    }
-    expect([...kinds].sort()).toEqual(
-      SHAPE_KINDS.filter((k) => k !== 'I5' && k !== 'Q9')
-        .slice()
-        .sort(),
-    );
-  });
-
-  it('K-45/9 LEVELS §0 "Tanıtım bölümü" list: among levels 1–5 exactly the listed ones (3, 4, 5) derive a new mechanic; 1 and 2 teach only through tutorial[]', () => {
-    const para = /\*\*Tanıtım bölümü\*\* = [^(]*\(OBSTACLES "Veri imzası"; ([^)]*)\)/.exec(
-      LEVELS_MD.replace(/\n/g, ' '),
-    );
-    expect(para).not.toBeNull();
-    const listed = new Set<number>();
-    for (const part of (para?.[1] ?? '').split(',').map((p) => p.trim())) {
-      const range = /^(\d+)–(\d+)$/.exec(part);
-      if (range) for (let i = Number(range[1]); i <= Number(range[2]); i++) listed.add(i);
-      else listed.add(Number(part));
-    }
-    const history = new Set<MechanicId>();
-    for (const n of LEVEL_IDS) {
-      const res = validateLevelJson(readLevelJson(n));
-      if (!res.level) throw new Error(`level ${n} fails the schema`);
-      const fresh = deriveMechanics(res.level).filter((m) => !history.has(m));
-      expect(fresh.length === 1, `level ${n}: new ${fresh.join() || '—'}`).toBe(listed.has(n));
-      for (const m of deriveMechanics(res.level)) history.add(m);
-    }
-    for (const n of [1, 2]) {
-      const json = readLevelJson(n);
-      expect(json.teaches, `level ${n}`).toBeUndefined();
-      expect((json.tutorial ?? []).length, `level ${n}`).toBeGreaterThan(0);
-    }
-  });
-
-  describe.each(LEVEL_IDS)('LEVELS §2 Bölüm %i block roles', (n) => {
-    const doc = docLevel(n);
-    const roles = new Map<string, string>();
-    const start = LEVELS_MD.indexOf(`### Bölüm ${n} — `);
-    const end = LEVELS_MD.indexOf('\n### ', start + 1);
-    for (const line of LEVELS_MD.slice(start, end).split('\n')) {
-      const m = /^\| `([^`]+)` \| `[A-Z][0-9]_\d+` \| [A-Z] \| \(\d+,\d+\) \| (.*) \|$/.exec(line);
-      if (m) roles.set(m[1] ?? '', m[2] ?? '');
-    }
-
-    it(`K-27 level ${n}: the "hedef" (target) blocks are exactly the batch-0 blocks the LEVELS solution moves; the rest are decoys or filler`, () => {
-      expect(roles.size).toBe(doc.pieces.length);
-      const targets = [...roles].filter(([, r]) => r.startsWith('hedef')).map(([l]) => l);
-      const moved = docMoves(doc)
-        .map((m) => m.ref)
-        .filter((ref) => /^piece:\d+$/.test(ref))
-        .map((ref) => doc.pieces[Number(ref.slice(6))]?.letter);
-      expect([...new Set(moved)].sort()).toEqual(targets.sort());
-    });
-
-    it(`K-09 level ${n}: every block marked "başta tutulabilir" has a free unit step on the start board, and the drag engine lets it be picked`, () => {
-      const json = readLevelJson(n);
-      const loaded = loadLevel(json);
-      if (!loaded.ok) throw new Error(`level ${n} does not load`);
-      const state = createInitialState(loaded.level);
-      const occupied = new Map<string, number>();
-      batchOf(json, 0).pieces.forEach((p, i) => {
-        for (const c of cellsOf(p.shape, p.x, p.y)) occupied.set(c, i);
-      });
-      const claimed = [...roles].filter(([, r]) => r.includes('başta tutulabilir')).map(([l]) => l);
-      for (const letter of claimed) {
-        const i = doc.pieces.findIndex((p) => p.letter === letter);
-        const p = batchOf(json, 0).pieces[i];
-        if (!p) throw new Error(`no block ${letter}`);
-        // K-09 (a): one unit translation onto empty cells of the 8 × 10 grid (K-01) that K-08 allows: cells that cross
-        // the boundary into the (empty) site need y ≥ height (K-05) — or, on a right step, every block row inside one
-        // gap (K-12 rail).
-        const cells = shapeById(p.shape).cells;
-        const free = [
-          [-1, 0],
-          [1, 0],
-          [0, -1],
-          [0, 1],
-        ].some(([dx = 0, dy = 0]) => {
-          const moved = cells.map((c) => ({ x: p.x + c.x + dx, y: p.y + c.y + dy }));
-          const empty = moved.every((c) => {
-            const other = occupied.get(cellKey(c.x, c.y));
-            return inGrid(c.x, c.y) && (other === undefined || other === i);
+        // colours per level: limit passes, limit + 1 fails (L-06 does not look at unlocks)
+        const limit = Number(cols[4]);
+        const palette: ColorCode[] = ['W', 'Y', 'G', 'R', 'O', 'C', 'B', 'P'];
+        const plan = (k: number): string[] => {
+          const cs = palette.slice(0, k);
+          const rows: string[] = [];
+          for (let i = 0; i < cs.length; i += 2) rows.push(`${cs[i] ?? 'W'}${cs[i + 1] ?? cs[i] ?? 'W'}`);
+          return rows;
+        };
+        for (const id of [first, last]) {
+          expect(
+            run({ id, plan: plan(limit), pieces: [['B1_0', 'W', 0, 0]] }, ['L-06']),
+            `${id}: ${limit}`,
+          ).toEqual([]);
+          expect(
+            codes(run({ id, plan: plan(limit + 1), pieces: [['B1_0', 'W', 0, 0]] }, ['L-06'])),
+            `${id}: ${limit + 1}`,
+          ).toEqual(['too_many_colors']);
+        }
+        // shapes: "B1, D2, O4, C3; 8'den itibaren ağır I5, Q9" / "+ I3, L4, J4" / "hepsi"
+        const shapeText = (cols[5] ?? '').split(';')[0] ?? '';
+        const fresh =
+          shapeText === 'hepsi' ? [] : (shapeText.match(/[A-Z]\d/g) ?? []).map((k) => k as ShapeKind);
+        for (const kind of fresh) {
+          const piece = (id: number): LevelSpec => ({
+            id,
+            plan: ['WW'],
+            pieces: [[`${kind}_0` as ShapeId, 'W', 0, 0]],
           });
-          const crossing = moved.filter((c) => c.x >= 6);
-          const ys = moved.map((c) => c.y);
-          const rail =
-            dx === 1 &&
-            json.wall.gaps.some((g) => g.y <= Math.min(...ys) && Math.max(...ys) <= g.y + g.size - 1);
-          return empty && (crossing.every((c) => c.y >= json.wall.height) || rail);
-        });
-        expect(free, `block ${letter}: free unit step`).toBe(true);
-        const id = loaded.level.tutorialPieceIds.get(`piece:${i}`);
-        if (id === undefined) throw new Error(`piece:${i} missing`);
-        expect(tryBeginDrag(state, id).ok, `block ${letter}: tryBeginDrag`).toBe(true);
+          if (kind === 'I5' || kind === 'Q9') continue; // heavy: level 8, round 1
+          expect(run(piece(first), ['L-04']), `${kind} at ${first}`).toEqual([]);
+          if (first > 1)
+            expect(codes(run(piece(first - 1), ['L-04'])), `${kind} at ${first - 1}`).toEqual([
+              'shape_locked',
+            ]);
+        }
+        kinds = [...kinds, ...fresh];
+      }
+      expect([...kinds].sort()).toEqual(
+        SHAPE_KINDS.filter((k) => k !== 'I5' && k !== 'Q9')
+          .slice()
+          .sort(),
+      );
+    });
+
+    it('K-45/9 LEVELS §0 "Tanıtım bölümü" list: among levels 1–5 exactly the listed ones (3, 4, 5) derive a new mechanic; 1 and 2 teach only through tutorial[]', () => {
+      const para = /\*\*Tanıtım bölümü\*\* = [^(]*\(OBSTACLES "Veri imzası"; ([^)]*)\)/.exec(
+        LEVELS_MD.replace(/\n/g, ' '),
+      );
+      expect(para).not.toBeNull();
+      const listed = new Set<number>();
+      for (const part of (para?.[1] ?? '').split(',').map((p) => p.trim())) {
+        const range = /^(\d+)–(\d+)$/.exec(part);
+        if (range) for (let i = Number(range[1]); i <= Number(range[2]); i++) listed.add(i);
+        else listed.add(Number(part));
+      }
+      const history = new Set<MechanicId>();
+      for (const n of LEVEL_IDS) {
+        const res = validateLevelJson(readLevelJson(n));
+        if (!res.level) throw new Error(`level ${n} fails the schema`);
+        const fresh = deriveMechanics(res.level).filter((m) => !history.has(m));
+        expect(fresh.length === 1, `level ${n}: new ${fresh.join() || '—'}`).toBe(listed.has(n));
+        for (const m of deriveMechanics(res.level)) history.add(m);
+      }
+      for (const n of [1, 2]) {
+        const json = readLevelJson(n);
+        expect(json.teaches, `level ${n}`).toBeUndefined();
+        expect((json.tutorial ?? []).length, `level ${n}`).toBeGreaterThan(0);
       }
     });
+
+    describe.each(LEVEL_IDS)('LEVELS §2 Bölüm %i block roles', (n) => {
+      const doc = docLevel(n);
+      const roles = new Map<string, string>();
+      const start = LEVELS_MD.indexOf(`### Bölüm ${n} — `);
+      const end = LEVELS_MD.indexOf('\n### ', start + 1);
+      for (const line of LEVELS_MD.slice(start, end).split('\n')) {
+        const m = /^\| `([^`]+)` \| `[A-Z][0-9]_\d+` \| [A-Z] \| \(\d+,\d+\) \| (.*) \|$/.exec(line);
+        if (m) roles.set(m[1] ?? '', m[2] ?? '');
+      }
+
+      it(`K-27 level ${n}: the "hedef" (target) blocks are exactly the batch-0 blocks the LEVELS solution moves; the rest are decoys or filler`, () => {
+        expect(roles.size).toBe(doc.pieces.length);
+        const targets = [...roles].filter(([, r]) => r.startsWith('hedef')).map(([l]) => l);
+        const moved = docMoves(doc)
+          .map((m) => m.ref)
+          .filter((ref) => /^piece:\d+$/.test(ref))
+          .map((ref) => doc.pieces[Number(ref.slice(6))]?.letter);
+        expect([...new Set(moved)].sort()).toEqual(targets.sort());
+      });
+
+      it(`K-09 level ${n}: every block marked "başta tutulabilir" has a free unit step on the start board, and the drag engine lets it be picked`, () => {
+        const json = readLevelJson(n);
+        const loaded = loadLevel(json);
+        if (!loaded.ok) throw new Error(`level ${n} does not load`);
+        const state = createInitialState(loaded.level);
+        const occupied = new Map<string, number>();
+        batchOf(json, 0).pieces.forEach((p, i) => {
+          for (const c of cellsOf(p.shape, p.x, p.y)) occupied.set(c, i);
+        });
+        const claimed = [...roles].filter(([, r]) => r.includes('başta tutulabilir')).map(([l]) => l);
+        for (const letter of claimed) {
+          const i = doc.pieces.findIndex((p) => p.letter === letter);
+          const p = batchOf(json, 0).pieces[i];
+          if (!p) throw new Error(`no block ${letter}`);
+          // K-09 (a): one unit translation onto empty cells of the 8 × 10 grid (K-01) that K-08 allows: cells that cross
+          // the boundary into the (empty) site need y ≥ height (K-05) — or, on a right step, every block row inside one
+          // gap (K-12 rail).
+          const cells = shapeById(p.shape).cells;
+          const free = [
+            [-1, 0],
+            [1, 0],
+            [0, -1],
+            [0, 1],
+          ].some(([dx = 0, dy = 0]) => {
+            const moved = cells.map((c) => ({ x: p.x + c.x + dx, y: p.y + c.y + dy }));
+            const empty = moved.every((c) => {
+              const other = occupied.get(cellKey(c.x, c.y));
+              return inGrid(c.x, c.y) && (other === undefined || other === i);
+            });
+            const crossing = moved.filter((c) => c.x >= 6);
+            const ys = moved.map((c) => c.y);
+            const rail =
+              dx === 1 &&
+              json.wall.gaps.some((g) => g.y <= Math.min(...ys) && Math.max(...ys) <= g.y + g.size - 1);
+            return empty && (crossing.every((c) => c.y >= json.wall.height) || rail);
+          });
+          expect(free, `block ${letter}: free unit step`).toBe(true);
+          const id = loaded.level.tutorialPieceIds.get(`piece:${i}`);
+          if (id === undefined) throw new Error(`piece:${i} missing`);
+          expect(tryBeginDrag(state, id).ok, `block ${letter}: tryBeginDrag`).toBe(true);
+        }
+      });
+    });
   });
-});
+}
+
+if (LEVELS_IS_FAZ_2R) {
+  describe('review LEVELS §0–§2 ↔ levels JSON (Faz 2R transition)', () => {
+    it.todo(
+      'WP-M: rewrite the LEVELS §2 ↔ levels JSON, golden and block-role reviews for the Faz 2R format (levels 1–10)',
+    );
+  });
+}

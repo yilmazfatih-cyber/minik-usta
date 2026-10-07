@@ -464,3 +464,104 @@ Karar: Faz 2 sonunda proje, proje sahibinin açtığı `yilmazfatih-cyber/minik-
 Gerekçe: Proje sahibi ayrı repo ve GitHub Pages yayını istedi (D-001'deki geçici çözüm). Ajan tanımları repo kökünde olduğu için Claude Code oturumlarında doğrudan görünür.
 Etkilenen: D-001 (yerine geçer), CLAUDE.md, docs/BRIEF.md notu, .github/workflows/
 
+### D-073 — Tam örtü ve kazanma (K-47, K-48)
+Durum: KABUL     Sahip: orkestratör + product-lead     Tarih: 2026-10-07
+Karar: Her bölümde renk başına blok arzı = plan talebi; şaşırtma blok yok; kazanma = bütün dilimler + ek hedefler tamam ve sahada/kuyrukta/elde malzeme bloğu kalmamış. Plan şantiyeyi tam kaplar (`.` yok; S2 Plan Boşluğu "Sonra").
+Gerekçe: Proje sahibinin Faz 2 geri bildirimi (R2-01): "bölüm sonuna tüm bloklar kullanılmış olmalı", "alan sürekli doldurulmalı".
+Etkilenen: GDD K-15, K-27, K-28, K-47, K-48; OBSTACLES S2; LEVELS
+
+### D-074 — Değişken boyut ve saha doluluğu (K-49, K-02)
+Durum: KABUL     Sahip: product-lead     Tarih: 2026-10-07
+Karar: Saha Wy×Hy ve şantiye Ws×Hs bölüm verisidir (Wy+Ws ≤ 8, H ≤ 8). Saha boş hücresi 2 ≤ E ≤ ⌊0,4·C⌋. Bölüm 1–10'da saha 4×4…6×5; 6×8 Faz 3'ün çok dilimli bölümlerine kalır.
+Gerekçe: R2-02: proje sahibi "bu 2 değişken olabilir" dedi; tam örtüde kaydırma alanı gerekir.
+Etkilenen: GDD K-01…K-05, K-49; LEVELS; UX §5.8
+
+### D-075 — Kilitlenme kurtarması Söküm (K-30)
+Durum: KABUL     Sahip: product-lead + entrepreneur     Tarih: 2026-10-07
+Karar: Tam örtüde çıkmaz oluşabilir. D1 yeniden dizme; D2/D3 (D3 MVP'de zorunlu) tespit edilince son yerleşim tek adımda geri alınır (Söküm), harcanan hamle iade edilmez. Kamyon Yardımı blok yaratmaz; yeniden kesme yok.
+Gerekçe: Tasarlanan bulmacayı bozmadan oyuncuyu kurtarır; product-lead ve entrepreneur aynı görüşte. Proje sahibine bilgi olarak sunulur.
+Etkilenen: GDD K-30, K-35 adım 12; TECH §2R; ANALYTICS v6
+
+### D-076 — Tam örtüyle uyumlu güçlendiriciler ve fiyatlar
+Durum: KABUL     Sahip: product-lead + entrepreneur     Tarih: 2026-10-07
+Karar: Çekiç yalnız engelleri kırar (K-36); Altın Mala sahadaki bloğu doğru yerine koyar (K-33); Boya Fırçası eşit hücreli iki bloğun rengini takas eder (K-38); Vinç genişlik ≤ Ws (K-37). Fiyatlar: Boya Fırçası 450, Mala Başlangıcı 450, Çekiç 600; bant kuralı: oyun öncesi ≤ 180, bölüm içi 150–450 altın/hamle, 150'nin katları.
+Gerekçe: R2-05: malzeme yaratan/yok eden her sistem tam örtüyü bozar.
+Etkilenen: GDD K-33, K-36…K-38, K-54; META; economy.json; BUSINESS
+
+### D-077 — Galibiyet serisi kademeleri
+Durum: KABUL     Sahip: product-lead     Tarih: 2026-10-07
+Karar: Kademe 2 = +1 mala +1 hamle; kademe 3 = +1 mala +2 hamle; her kademe 5 hamleden az.
+Gerekçe: Mala değeri ≈ 2,5 hamleye çıktı (yeni K-33).
+Etkilenen: META §5, economy.json v3
+
+### D-078 — Engel yeniden tanımları
+Durum: KABUL     Sahip: product-lead     Tarih: 2026-10-07
+Karar: Y5 Ağır Yük (I5/Q9, renksiz, malzeme değil, sahada kalabilir, havaya kalkmaz); S4 moloz renkli malzeme bloğu; S2 Sonra; S9 Geniş Şantiye Faz 3 (ilk bölüm 12).
+Gerekçe: R2-01/R2-05 uyumu.
+Etkilenen: OBSTACLES, GDD K-44/K-48
+
+### D-079 — Bölüm 1–10 öğretim sırası
+Durum: KABUL     Sahip: product-lead     Tarih: 2026-10-07
+Karar: 1 kaldır–taşı–indir, 2 şekil/gölge, 3 kazı, 4 W1, 5 S1, 6 W2, 7 taşınan malzeme, 8 Y5 + Çekiç, 9 W3, 10 final + Vinç.
+Gerekçe: R2-03/R2-06: kazı ve kaydırma en geç Bölüm 3'te başlar.
+Etkilenen: LEVELS §2
+
+### D-080 — Hamle bütçesi formülü (K-52)
+Durum: KABUL     Sahip: product-lead     Tarih: 2026-10-07
+Karar: moves = min + T + a; T: Kolay max(6,⌈0,5·min⌉), Normal max(4,⌈0,35·min⌉), Zor max(3,⌈0,2·min⌉), Çok Zor max(2,⌈0,12·min⌉); |a| ≤ max(1,⌊0,1·min⌋). Tanıtım bölümünün tamponu bir alt zorluktan alınır.
+Gerekçe: R2-04: hamle sayısı solver'ın en kısa çözümünden türetilir.
+Etkilenen: GDD K-52, LEVELS
+
+### D-081 — Bulmaca zorunlulukları (K-50, K-51)
+Durum: KABUL     Sahip: product-lead     Tarih: 2026-10-07
+Karar: id ≥ 3: ilk gereken blok başta tutulamaz (firstNeedDepth ≥ 1) ve en kısa çözüm en az 1 kaydırma içerir; Kolay/Normal'de ✓-tuzağı yasak. Ölçütleri solver hesaplar.
+Gerekçe: R2-03: "ihtiyacımız olan blok direkt en üstte olmamalı, diğer blokları kaydırmalıyız".
+Etkilenen: GDD K-50, K-51; TECH §2R solver
+
+### D-082 — Hafif öğretici (K-53)
+Durum: KABUL     Sahip: design-lead + product-lead     Tarih: 2026-10-07
+Karar: Karartma, spot ışığı ve girdi kilidi yok; el animasyonu + kenarda balon; bölüm başına ≤ 2 yumuşak adım; balon ≤ 6 kelime; 4 sn hareketsizlik kuralı. Anahtarlar mekanik bazlı `tut.m.*`; adım verisinin tek kaynağı bölüm JSON `tutorial[]`.
+Gerekçe: R2-10: "öğretici ekranı tüm oyunu kaplıyor".
+Etkilenen: GDD K-53, UX §13, STORY §6A, tokens.tutorial
+
+### D-083 — Görsel dil v2
+Durum: KABUL     Sahip: design-lead     Tarih: 2026-10-07
+Karar: Taban renk hex'leri ve renk körü sembolleri korunur; şeker blok (yastık, parlama, yan duvar) + hücre başına tek büyük çıkıntı; çivit oyun zemini; hacimli kit (kontur + alt kalınlık); kalın beyaz yazı + koyu kontur. Hedef ifade: "yetişkin casual oyuncu için premium casual; çocuksu değil".
+Gerekçe: R2-07 ve proje sahibinin referans ekranları (R2-12); referanstaki 2×2 küçük çıkıntı özgünlük için alınmadı.
+Etkilenen: ART_DIRECTION v2, tokens.json blockV2/kit
+
+### D-084 — Görseller kendi çizimimiz: SVG + prosedürel
+Durum: KABUL     Sahip: orkestratör     Tarih: 2026-10-07
+Karar: Canva ve üretken yapay zekâ servisleri kullanılmaz. Karakter, arka plan, simge ve logo `public/art/**` altında design-lead'in SVG'leridir; blok, düğme, panel prosedüreldir. Bütçe: indirme ≤ 900 KB, doku belleği ≤ 64 MB. Proje sahibinin referans görüntüleri (başka bir ticari oyun) yalnız stil kılavuzudur, kopyalanmaz, repoya girmez. Mağaza sürümünde insan sanatçı kararı Faz 5'e kadar açık (P-15).
+Gerekçe: Proje sahibi "canvayı boşver, bu görsellerden oluştur" ve "en ucuz/ücretsiz" dedi; telif ve mağaza riski.
+Etkilenen: R2-08, R2-12, CLAUDE.md sahiplik, ASSET_LIST §16, TECH §2R.6
+
+### D-085 — Uyarlanır hücre boyu 120–144 px
+Durum: KABUL     Sahip: code-lead + design-lead     Tarih: 2026-10-07
+Karar: R2-02'deki "hücre 120 px korunur" = en az 120 px; tahta izin verirse 144 px'e kadar büyür (tokens layout.adaptive.cellMaxPx).
+Gerekçe: Küçük tahtalarda (4×4) boş alan ve dokunma alanı.
+Etkilenen: UX §5.8, TECH §2R, tokens
+
+### D-086 — Faz 2R uygulama düzeni
+Durum: KABUL     Sahip: orkestratör     Tarih: 2026-10-07
+Karar: İki kod şeridi: çekirdek + araç (A→B/C→D→P→E→M→K) ve görünüm + meta (F, J, G, H, I, L, O); paketler ayrık dosya alanlarında. Bölüm 1–10 JSON'ları product-lead tarafından solver ile yazılır.
+Gerekçe: Kritik yolu kısaltır; ek ücret yok.
+Etkilenen: TECH §2R.12
+
+### D-087 — Tuna'nın görsel yaşı
+Durum: KABUL     Sahip: design-lead     Tarih: 2026-10-07
+Karar: Çizimlerde 10–12 yaş görünümü; yaş hiçbir metinde geçmez (D-044). Proje sahibi itiraz ederse değişir.
+Gerekçe: Çocuk ürünü izlenimini azaltır (BUSINESS S8).
+Etkilenen: ART §11.1, public/art
+
+### D-088 — Faz 2R dilim kapsamı
+Durum: KABUL     Sahip: product-lead     Tarih: 2026-10-07
+Karar: Dilimde görev sistemi yok, mağaza kilitli, yalnız Bölüm 10 sandığı; ana sayfa ilerlemesi = tamamlanan bölüm, her kazanma yapıya bir kat ekler; 10'dan sonra 1–10 tekrar döngüsü.
+Gerekçe: Dikey dilimi küçük tutar; meta Faz 4'te.
+Etkilenen: META §10, UX §3
+
+### D-089 — Erken kayıp penceresi
+Durum: RET     Sahip: product-lead     Tarih: 2026-10-07
+Karar: Hamle bitmeden "kazanamazsın" penceresi açılmaz.
+Gerekçe: Kazanma hâlâ mümkünken yolu kesebilir ve +5 teklifini öne çekerek satış baskısı yaratır (R-15).
+Etkilenen: DL-2R-13

@@ -1,6 +1,6 @@
 # İş planı
 
-Sahip: entrepreneur · Durum: Faz 1 v2 (revizyon turu; orkestratör kararları OR-01…OR-24 uygulandı; son tutarlılık turu 2026-10-05: D-038, D-042, D-043, D-047, D-061, D-067'ye eşitlendi; son tutarlılık turu 3, 2026-10-06: §5.2 değer etiketi kuralı, §6.4 olay listesi, §10 TECH §14 değerleri) · Tarih: 2026-10-04
+Sahip: entrepreneur · Durum: Faz 2R (2026-10-07; R2-01…R2-11: §2 v2 görsel benzerlik kuralı, §3 S8, §4.4 E5/E6 + E12–E14, §5.4 fiyat bandı ve Faz 2R fiyatları, §6.2 KPI, §8 Kapı 0, §10 Faz 2R etkisi ve yalın sanat yolu, §11 R-21…R-24, §12.4 kesme sırası, §13 P-14…P-17, §14 K55–K58) · Önceki: Faz 1 v2 (revizyon turu; orkestratör kararları OR-01…OR-24 uygulandı; son tutarlılık turu 2026-10-05: D-038, D-042, D-043, D-047, D-061, D-067'ye eşitlendi; son tutarlılık turu 3, 2026-10-06: §5.2 değer etiketi kuralı, §6.4 olay listesi, §10 TECH §14 değerleri) · Tarih: 2026-10-04
 Girdi: `docs/BRIEF.md` (§1, §4, §10, §11, §13, §15), `docs/META.md`, `docs/TECH_DESIGN.md` §14, inceleme kutusu yorumları.
 Fiyatlar bu belgenindir; oyun içi altın miktarları product-lead'indir. OR-16 gereği ortak değerler (Köprü tavanı, kumbara,
 +5 basamakları, Usta Sandığı) META / `config/*.json` ile **aynı sayıdır**; ayrışırsa META geçerlidir ve bu belge düzeltilir.
@@ -33,6 +33,7 @@ Fiyatlar bu belgenindir; oyun içi altın miktarları product-lead'indir. OR-16 
 | Soft launch      | Web kapalı test (TR) → Android TR + Filipinler (tutma) → iOS+Android Kanada/Avustralya/Yeni Zelanda (gelir) → global karar. 4 karar kapısı.                                                                      |
 | İçerik           | 50 bölüm + Usta Modu (MVP, proje sahibi onayı bekliyor). Global lansman kapısı ≥ 150 bölüm. Mağaza sürümünden sonra 2 haftada 10 bölüm (ilk 6 hafta), sonra 2 haftada 20 bölüm. |
 | Ekip ve bütçe    | 6,7 FTE, ≈ 10 ay (43 hafta), global lansman kararına kadar ≈ $277 bin (tahmin). Yalın senaryo: 3,5 FTE, 14 ay, ≈ $180 bin (tahmin). |
+| Faz 2R           | Tam örtüyle güçlendirici fiyatları: Çekiç 600 (değişmez), Boya Fırçası 600 → **450**, Mala Başlangıcı 600 → **450**; fiyat bandı kuralı §5.4. Etik ekleri E12 (hedefsiz güçlendirici satılmaz), E13 (+5 yalnız kanıtlı çözülebilir durumda), E14 (seri kademesi < 5 hamle). AI görselleri web MVP'de final; mağaza öncesi logo, simge ve 4 ana karakter insan sanatçı (P-15). Faz 2R kesme sırası §12.4. |
 | En kritik 5 risk | (1) Çocuğa yönelik sayılma, (2) IP benzerliği (Bob the Builder "Scoop", "Little Builder", Block Blast, Color Block Jam), (3) Köprü'de sömürücü tasarım ve bot aldatması, (4) 50 bölümün kısa içerik pisti, (5) düşük seviye Android'de web performansı. |
 
 ---
@@ -104,11 +105,11 @@ her bölümde gerçek bir yapı inşa ettiğin yetişkin bulmaca oyunudur.
 | Boyut            | Minik Usta                                       | Block Blast                     | Royal Match                       | Color Block Jam            |
 | ---------------- | ------------------------------------------------ | ------------------------------- | --------------------------------- | -------------------------- |
 | Çekirdek hareket | Kaldır → duvarın üstünden aşır → indir (düşüş)   | Sürükle-bırak, satır temizle    | Dokun-eşleştir                    | Kaydır, kapıdan çıkar      |
-| Bölüm hedefi     | Renk planına göre yapı inşa et                   | Puan (sonsuz)                   | Engel temizle                     | Tahtayı boşalt             |
+| Bölüm hedefi     | Renk planına göre yapı inşa et; sahadaki bütün bloklar kullanılır (tam örtü, GDD K-47/K-48) | Puan (sonsuz)                   | Engel temizle                     | Tahtayı boşalt             |
 | Meta             | Kasaba + 5 hikaye bölümü; yapılar bölümden gelir | Yok                             | Görevlerle kale/dekor              | Doğrulanmadı               |
 | Para modeli      | IAP + isteğe bağlı ödüllü reklam                 | Reklam ağırlıklı [K6]           | Yalnız IAP [K11]                  | Hibrit [K7]                |
 
-**Beş farklılaştırıcı**
+**Altı farklılaştırıcı**
 
 1. **İmza hareket "yukarı–aşağı"** (YAO ≥ %60): rakiplerin hiçbirinde yok; reklam kreatifinin ve mağaza videosunun kalbi.
 2. **Her bölüm somut bir yapı parçası:** ilerleme gözle görülür; Block Blast'ta ilerleme yok.
@@ -117,14 +118,25 @@ her bölümde gerçek bir yapı inşa ettiğin yetişkin bulmaca oyunudur.
 4. **Sıcak, yerel ama evrensel dünya:** aile firmasını yeniden açma, dede–torun bağı, kasaba komşuluğu, Gribeton mizahı.
    Hipotez: 35+ oyuncuya nostalji olarak hitap eder.
 5. **Okunabilir derinlik:** renk + şekil + erişim + yerçekimi; bölüm 1–3 dakika.
+6. **"Her blok bir yere ait" (Faz 2R, tam örtü):** gereken blok derinde, üstündekiler kaydırılır (kazı, GDD K-51);
+   bölüm sahada tek blok kalmadan biter ("saha temiz" anı, JUICE #94). Block Blast'ın rastgele sonsuz akışından ve Color
+   Block Jam'in "kapıdan çıkar" hedefinden ayrı bir paketleme bulmacası tatmini; mağaza kısa açıklamasında ve kreatif 8'de
+   kullanılır (STORE_LISTING). Hipotez: Kapı 0 anketinde ölçülür (§8).
 
 **Benzerlikten kaçınma kuralları** (design-lead revizyonuyla uyumlu; ART_DIRECTION uygular):
 
 - **Royal Match / Royal Kingdom:** taç, kral, kraliyet mavisi + altın palet, "Royal" kelimesi, lav teması ve Lava Quest'in
   görsel dili kullanılmaz. Sallanan Köprü kendi dünyasında kalır (nehir, simit, tahta köprü). Hikaye 5 "Festival Şatosu":
   taç, arma ve kraliyet altını kenar süsü yok; şato renkli bloklardan bir "festival kalesi", ışıklar sıcak sarı ip lambalar.
-- **Block Blast:** koyu lacivert tahta + parlak neon blok görünümü kullanılmaz. Saha sıcak kum/ahşap zeminli kalır (brief §11.3).
-  Ozalit mavisi yalnız 2 şantiye sütununda (tahtanın ≈ %24'ü); bloklar mat, neon/parıltı yok; mağaza görsellerinde sıcak saha baskın.
+- **Block Blast:** koyu lacivert tahta + neon ışıyan blok görünümü kullanılmaz. Saha sıcak kum/ahşap zeminli kalır (brief §11.3).
+  Ozalit mavisi yalnız şantiye sütunlarında (tahtanın %24–%47'si, `site.cols` 2–4; ART §7.4). **Faz 2R (R2-07):** "bloklar mat"
+  kuralı kalktı; bloklar parlak ve hacimli ("şeker blok", ART §3A) ama **gündüz sahnesinde, koyu zemin ve neon ışıma
+  olmadan**, her hücrede sembolle. Mağaza görsellerinde sıcak saha ve gündüz şantiye sahnesi baskın.
+- **Ana sayfa (Faz 2R, R2-09):** üst çubuk + ortada yapı + büyük oyna düğmesi + alt gezinme türün ortak düzenidir; ayırt
+  edici öğe yapının kasaba arsasında **ozalitten inşa edilmesi**dir (ART §7.2). Yan yana karşılaştırmaya (aşağıda) ana
+  sayfa da girer; 5 kişiden ≥ 3'ü ana sayfayı bir rakibe benzetirse ozalit hayaleti ve arsa ögesi büyütülür.
+- **"Royal Match / Block Blast düzeyi" (R2-07)** yalnız iç kalite çıtasıdır: mağaza metninde, anahtar kelimede, reklam
+  kreatifinde ve basın metninde rakip adıyla kıyas yapılmaz [K29 §2.3.7].
 - **Yan yana karşılaştırma (R-04 azaltması):** ana ekran, oyun ekranı, Hikaye 5 arka planı, simge ve ilk ekran görüntüsü
   Royal Match, Block Blast ve Color Block Jam ekranlarıyla yan yana konur; Faz 4 sonunda ve mağaza gönderiminden önce.
 - **Color Block Jam:** mağaza görsellerinde ve videoda geçit değil **duvar üstü** hareket öne çıkar; geçitler kestirmedir.
@@ -175,7 +187,7 @@ istemlerinden "toy box / toy-like" çıkar, yerine "polished, tactile casual-gam
 | S5  | Simge                    | Simgede karakter ve kask yok; simge = imza hareket: sarı-siyah ikaz şeritli duvar + kesik çizgili yay + duvarın üstünden aşan tek blok, sıcak gökyüzü zemini. Öne çıkan görsel (D-043, ASSET §11 `store_feature_graphic`): sol yarı kaldır–aşır–indir anı (saha, duvar, yaylı iz); sağ yarı tamamlanmış yetişkin dünyası yapısı (deniz feneri ya da mahalle fırını, ağaç ev değil); Tuna küçük ve köşede. Simge A/B testi Sonra, yalnız 18+ hedeflemeyle. | design-lead, entrepreneur |
 | S6  | Mağaza                   | Kategori Bulmaca/Puzzle. "Eğitim", "Aile", "Kids" seçilmez; Apple Kids kategorisi ve Google Teacher Approved başvurusu yapılmaz [K29][K31].                                                                                                                                                                                                                  | entrepreneur              |
 | S7  | Mağaza                   | Play Console hedef yaş grubu: yalnız "18 ve üzeri".                                                                                                                                                                                                                                                                                                         | entrepreneur              |
-| S8  | Mağaza                   | Metin ve anahtar kelimede "çocuk, kids, toddler, eğitici, okul öncesi" yok. İlk ekran görüntüsü = oyun tahtası + tamamlanan yapı; karakter ikincil.                                                                                                                                                                                                         | entrepreneur              |
+| S8  | Mağaza                   | Metin ve anahtar kelimede "çocuk, kids, toddler, eğitici, okul öncesi" yok; Faz 2R'den itibaren "her yaşa, tüm aile, for all ages, family-friendly" de yok (karma kitle sinyali [K31]; R2-07'deki "her yaşa premium casual" yalnız iç sanat tanımıdır). İlk ekran görüntüsü = oyun tahtası + tamamlanan yapı; karakter ikincil.                                                                                                                                                                                                         | entrepreneur              |
 | S9  | Gizlilik                 | Gizlilik politikası: "Hizmet 13 yaş altına (AB'de ülkenin GDPR Madde 8 yaşının altına) yönelik değildir."                                                                                                                                                                                                                                                   | entrepreneur              |
 | S10 | UA                       | Kullanıcı edinme reklamları yalnız 18+ (tercihen 25+) hedeflemeyle; "made for kids" envanteri ve çocuk kanalları hariç; çocuk influencer yok.                                                                                                                                                                                                               | entrepreneur              |
 | S11 | Oyun içi reklam          | Mediation'da maksimum reklam içerik derecesi aile dostu (G/PG); kumar, alkol, flört kategorileri engelli.                                                                                                                                                                                                                                                  | code-lead                 |
@@ -240,13 +252,16 @@ bildirimi gelirse: sanat ve mağaza materyalleri yeniden incelenir, hukuki gör�
 | E2  | Tek para birimi (altın). Altınla satılan her öğenin fiyatının altında ikinci satır gerçek para karşılığı: "≈ 81 TL" / "≈ $1.79"; `font.size.caption`, asla altın fiyatından büyük değil; renk UX §0.3 `PriceLabel` kuralına göre (renkli düğmede (turuncu, yeşil) `ui.ink`, krem zeminde `ui.inkSoft`; her durumda ≥ 4,5:1, ART §2.3). Oran **tek kaynaktan**: referans paket `coins_1000` (Avuç) birim fiyatı (`economy.json → priceDisplay.referenceSku`; ayrı kur alanı yok, ayrışma olmasın). Web MVP: dil TR → TL, EN → USD; değer JSON'daki paket fiyatından, `Intl.NumberFormat` ile, TL tam sayıya / USD 2 haneye yuvarlanır, yanında E9 etiketi. Mağaza sürümü: aynı paketin faturalama SDK'sından gelen yerel mikro-birim fiyatı. | [K35][K40]  |
 | E3  | Para birimi boşluğu yok: en sık harcama (+5 hamle, 900) en küçük pakete (1.000) sığar; oyuncu ihtiyacından çok fazla altın almaya zorlanmaz.                                                                                                                            | [K40]       |
 | E4  | Bölüm içinde **kendiliğinden açılan** satış penceresi yok; sistem teklifi yalnız kayıp ekranında ve mağazada. Oyuncunun kendi başlattığı "+" alımı (bölüm içi güçlendirici yuvası adet 0 iken, bölüm öncesi yuvalar) serbesttir: hiçbir zaman otomatik açılmaz, bölümü duraklatır, fiyat + gerçek para karşılığı (E2) + eşit boyutlu "Hayır, teşekkürler" içerir (UX §4 mini satın alma; metin STORY §7.3 `lose.decline` ile aynı). | —           |
-| E5  | Teklif penceresinde bütün seçenekler **eşit boyutta** (UX "Hamleler bitti": üç seçenek 920×152, alt alta: "+5 hamle ● 900", "Reklam izle · +5 hamle", "Hayır, teşekkürler" (`lose.decline`)); hiyerarşi yalnız renkle. Suçlayıcı ya da aciliyet metni yok ("Az kaldı!", "Vazgeçiyorum, kaybetmek istiyorum" gibi); yalnız nötr bilgi satırı ("2 hücre kaldı"), vurgusuz ve animasyonsuz. | [K41]       |
-| E6  | Kayıp anındaki hamle fiyatı (900 / 5 = 180 altın/hamle) oyun öncesi planlı alımdan (Termos 450 / 3 = 150 altın/hamle) ucuz değildir; dürtüsel harcama ödüllendirilmez.                                                                                                  | —           |
+| E5  | Teklif penceresinde bütün seçenekler **eşit boyutta** (UX "Hamleler bitti": üç seçenek 920×152, alt alta: "+5 hamle ● 900", "Reklam izle · +5 hamle", "Hayır, teşekkürler" (`lose.decline`)); hiyerarşi yalnız renkle. Suçlayıcı ya da aciliyet metni yok ("Az kaldı!", "Vazgeçiyorum, kaybetmek istiyorum" gibi); yalnız nötr bilgi satırı (Faz 2R: "Kalan: 3 blok", `lose.blocksLeft`; tam örtüde hücre değil blok sayılır), vurgusuz ve animasyonsuz. | [K41]       |
+| E6  | Kayıp anındaki hamle fiyatı (900 / 5 = 180 altın/hamle) oyun öncesi planlı alımdan ucuz değildir; dürtüsel harcama ödüllendirilmez. Faz 2R genel biçimi: her oyun öncesi güçlendiricinin altın/hamle değeri ≤ 180 (Termos 450 / 3 = 150; Mala Başlangıcı 450 / ≈ 2,5 = 180; §5.4 fiyat bandı). | —           |
 | E7  | Oyuncunun kendi belirlediği aylık harcama limiti ayarı.                                                                                                                                                                                                                | Sonra (mağaza sürümü) |
 | E8  | Bot zorluğu, bot elenme zamanları ve havuz bölüşümü oyuncunun ödeme geçmişinden bağımsızdır. Bot simülasyonu saf modül (`src/services/events/botSim.ts`; imza TECH §11.2). Girdi: Köprü'de yalnız `(eventId, t_0, t, L_0)` + `config/events.json` + bölüm zorluk tablosu (META §6.2; `eventId` = katılım dakikası + etkinlik sıra numarası, `L_0` = katılım anındaki sıradaki bölüm); Lig'de yalnız `(weekId, groupId, joinAt, t, tier)` + `config/events.json` (META §7.1/§7.3). `installId` yalnız `groupId = hash32(weekId, installId)` hesabında kullanılır; ödeme, cüzdan ve satın alma verisi girmez. Denetim: ESLint `no-restricted-imports` (economy, save, satın alma, reklam, analytics importu yasak); iki-kayıt eşitlik testi (aynı etkinlik ve aynı `installId`; 0 ↔ 50 satın alma, 0 ↔ 1 M altın, +5 kullanmış ↔ kullanmamış → bot sıralamaları birebir aynı; TECH §11.2 "E8 bot standings are independent of purchases"); `event_join` olayında `botSimVersion` + `seedHash`. Lig ve hafta sonu çarpanları botlara da uygulanır. | OR-14        |
 | E9  | Web MVP mağazasında "Test sürümü — ödeme alınmaz" etiketi.                                                                                                                                                                                                             | [K29 §2.3.1] |
 | E10 | Günlük ödül döngüsü bir gün kaçırılınca **sıfırlanmaz, durur** (PEGI: ödüllendiren giriş sistemi PEGI 7, kaçırılan girişi cezalandıran PEGI 12). Takvimde kaçırılan gün "bekliyor" (saat simgesi) gösterilir; sıfırlama animasyonu yok. | [K42]       |
 | E11 | +5 teklif penceresinde galibiyet serisi kaybı yazılmaz ve gösterilmez; seri sıfırlanması yalnız sonuç penceresinde bildirilir (kayıp kaçınma baskısını teklif anından ayırır; META §5'e öneri). `m = 0` cezasız çıkışta seri bonusu tüketilmez. | —           |
+| E12 | (Faz 2R) **Hedefsiz güçlendirici satılmaz.** Bölümde o an geçerli hedefi olmayan bölüm içi güçlendiricinin yuvası gri kalır, "+" mini satın alma gösterilmez, `offer_shown` gönderilmez. Çekiç: GDD K-36 hedef kümesi (Ağır Yük, kasa, torba, zincir, şantiyedeki moloz, yapışmış harç) boş. Boya Fırçası: sahada hücre sayısı eşit, rengi farklı iki uygun malzeme bloğu yok (K-38). Durum önceliği: kilitli > hedefsiz > adet 0. | —           |
+| E13 | (Faz 2R) **+5 yalnız kanıtlı çözülebilir durumda sunulur.** "Hamleler bitti" penceresi, kilitlenme denetimi (GDD K-30 D1–D3) sayaç 0 iken de çalıştıktan ve gerekirse Söküm uygulandıktan **sonra** açılır; D3b "bilinmiyor" ise pencere açılmadan önce en yakın kanıtlı duruma dönülür. Çıkmaz bir durumda altın ya da reklam bedelli uzatma satılmaz; bilgi satırı (E5) Söküm sonrası durumu gösterir. | —           |
+| E14 | (Faz 2R) **Seri bonusu kurtarma satışının gerekçesi olmaz.** Her galibiyet serisi kademesinin değeri < bir +5 teklifinin değeri (5 hamle); Altın Mala ≈ 2,5 hamle sayılır (META §4.1, Faz 3 bot ölçümüyle güncellenir). Faz 2R önerim: kademe 3 = +1 Mala +2 hamle (≈ 4,5). | —           |
 
 ### 4.5 Sallanan Köprü: "+5 hamle elenmeyi önler" kaldıracının etik değerlendirmesi
 
@@ -358,19 +373,27 @@ Normal, 4 Zor, 4 Çok Zor; ≈ 60 altın/galibiyet) eşik 1.000'e **17. galibiye
 
 ### 5.4 Altınla satılan öğeler (META / `economy.json` ile aynı)
 
-| Öğe                            | Altın | ≈ USD | ≈ TL | Not                                                 |
-| ------------------------------ | ----- | ----- | ---- | --------------------------------------------------- |
-| +5 hamle (1. teklif)           | 900   | 1,79  | 81   | Royal Match kıyası: ekstra hamle 900, sonraki > 2.000 [K15] |
-| +5 hamle (2. teklif)           | 1.350 | 2,69  | 121  | ×1,5                                                |
-| +5 hamle (3. teklif, son)      | 1.800 | 3,58  | 162  | ×2; 4. teklif yok                                   |
-| Tam can (5)                    | 900   | 1,79  | 81   | Royal Match kıyası: can 900 altın [K15]             |
-| Geri Al                        | 300   | 0,60  | 27   |                                                     |
-| Çekiç                          | 600   | 1,19  | 54   |                                                     |
-| Boya Fırçası                   | 600   | 1,19  | 54   |                                                     |
-| Vinç                           | 900   | 1,79  | 81   | En güçlü bölüm içi güçlendirici                      |
-| Termos (+3 hamle, oyun öncesi) | 450   | 0,90  | 40   | E6                                                  |
-| Mala Başlangıcı                | 600   | 1,19  | 54   |                                                     |
-| Açık Kepenk                    | 600   | 1,19  | 54   |                                                     |
+| Öğe                            | Altın | ≈ USD | ≈ TL | Değer ≈ hamle (META §4.1) | Altın / hamle | Not                                                 |
+| ------------------------------ | ----- | ----- | ---- | ------------------------- | ------------- | --------------------------------------------------- |
+| +5 hamle (1. teklif)           | 900   | 1,79  | 81   | 5                         | 180           | Royal Match kıyası: ekstra hamle 900, sonraki > 2.000 [K15] |
+| +5 hamle (2. teklif)           | 1.350 | 2,69  | 121  | 5                         | 270           | ×1,5                                                |
+| +5 hamle (3. teklif, son)      | 1.800 | 3,58  | 162  | 5                         | 360           | ×2; 4. teklif yok                                   |
+| Tam can (5)                    | 900   | 1,79  | 81   | —                         | —             | Royal Match kıyası: can 900 altın [K15]             |
+| Geri Al                        | 300   | 0,60  | 27   | 1 (Söküm sonrası 2)       | 150–300       | Faz 2R: Söküm'ü de geri alır (K-39)                  |
+| Çekiç                          | 600   | 1,19  | 54   | 2–3 engelli bölümde; 0 engelsiz (satılmaz, E12) | 200–300 | Faz 2R: malzeme kırmaz (K-36); fiyat değişmez |
+| Boya Fırçası                   | **450** | 0,90 | 40  | 1–2                       | 225–450       | Faz 2R: renk takası (K-38); 600 → 450 (600'de 300–600, bandın üstü) |
+| Vinç                           | 900   | 1,79  | 81   | 2–4                       | 225–450       | En güçlü bölüm içi güçlendirici                      |
+| Termos (+3 hamle, oyun öncesi) | 450   | 0,90  | 40   | 3                         | 150           | E6                                                  |
+| Mala Başlangıcı                | **450** | 0,90 | 40  | ≈ 2,5                     | 180           | Faz 2R: Mala blok yerleştirir (K-33); 600 → 450 (600'de 240 altın/hamle, E6'yı bozuyordu) |
+| Açık Kepenk                    | 600   | 1,19  | 54   | bölüme bağlı (ölçülmedi)  | —             | W4/W7 olmayan bölümde seçilemez                      |
+
+**Fiyat bandı kuralı (Faz 2R, R2-05; product-lead ile ortak karar, D-076 önerisi):** "değer" = aynı işi hamleyle yapmanın
+maliyeti (META §4.1; Faz 2R'de karalama çözücüsü, Faz 3'te LEVEL_REPORT "güçlendirici başına kazanılan hamle medyanı").
+(1) Oyun öncesi güçlendirici ≤ 180 altın/hamle (E6). (2) Bölüm içi güçlendirici, değer aralığının iki ucunda da 150–450
+altın/hamle içinde (bağlamda kullanılır, kesinlik değeri taşır; Faz 1 ızgarası bu banda göre kuruluydu). (3) Fiyatlar 150'nin
+katıdır (mevcut ızgara). (4) Faz 3 ölçümü değeri bandın dışına iterse fiyat bir 150 adımı kayar; kayma META §3.2,
+`economy.json` ve bu tabloya aynı turda yazılır. Faz 2R kararı: **Çekiç 600, Boya Fırçası 450, Mala Başlangıcı 450;
+diğerleri değişmez.** USD/TL karşılıkları Avuç birim fiyatıyla hesap (E2).
 
 **Ödemeyen oyuncu ölçütü (OR-16; META §9 ile ortak).** Alt sınır (adalet tabanı): kazanılan altınla ödemeyen oyuncu her
 10 bölümde en az 1 kez +5 alabilir (META §9: ≈ 1.030–1.130 altın / 10 bölüm; alt uç da ≥ 900 → karşılanıyor). Eski üst
@@ -382,6 +405,9 @@ dönüşümü reklam tavanı belirler ve aynı altın tavanı farklı kazanma or
   değer kaybeder; 10 bölüm boyunca < 200 → hayal kırıklığı riski.
 - (b) Ödemeyen oyuncuda **kayıp kurtarma karışımı**: altınla %15–25, reklamla %30–40, kurtarılmayan %40–50.
 
+Faz 2R notu (META §9): K-52 tamponuyla Bonus İnşaat düştü; 1–50 tahmini ≈ 985–1.085 altın / 10 bölüm, taban (≥ 900)
+korunuyor (alt uç tabanın %9 üstünde; Faz 3 simülasyonunda < 900 çıkarsa META §9 ayar kuralı gibi önce bölüm sandığı
+altını artırılır).
 Faz 3 bot raporuna iki sütun (product-lead + code-lead): "altın / 10 bölüm" ve "+5 sonrası kazanma oranı" (hedef %70–85).
 50'den sonra alt sınırı Usta Sandığı korur (§9.2). Ölçüm olayları: `coin_source`, `coin_sink`, `event_continue`, `offer_result`
 (`docs/ANALYTICS.md`).
@@ -415,8 +441,11 @@ Faz 3 bot raporuna iki sütun (product-lead + code-lead): "altın / 10 bölüm" 
 | Medyan oturum süresi                           | ≥ 7 dk             | ≥ 9 dk       | < 5 dk                 | [K22]                                 |
 | Oturum / DAU / gün                             | ≥ 3                | ≥ 4          | < 2                    | [K22]                                 |
 | Oynanan bölüm / DAU / gün                      | ≥ 8                | ≥ 12         | < 5                    | tahmin; LEVELS'taki kısa bölümlere göre yükseltildi (6/8 → 8/12) |
-| Bölüm süresi (medyan, `level_end.durationMs`)  | 1–10: 45–75 sn · 11–30: 75–120 sn · 31–50: 100–180 sn | aynı | Bandın %30 altı | tahmin; LEVELS §0'a öneri |
-| Öğretici tamamlama (Bölüm 1–5)                 | ≥ %90              | ≥ %93        | < %80                  | tahmin                                |
+| Bölüm süresi (medyan, `level_end.durationMs`)  | 1–4: 20–50 sn · 5–10: 40–90 sn · 11–30: 75–120 sn · 31–50: 100–180 sn | aynı | Bandın %30 altı | tahmin; Faz 2R: 1–10 bandı LEVELS §2 `min` 3–13 hamle × 5 sn + israf payıyla yeniden hesaplandı |
+| Öğretici tamamlama (Bölüm 1–5)                 | ≥ %90              | ≥ %93        | < %80                  | tahmin; Faz 2R tanımı: Bölüm 1–5'in her `tutorial_step` adımı `done` ile biten kurulum oranı (adımlar kilitlemez, K-53) |
+| Öğretici adımı tekrar görünme (`tutorial_step.shows`, medyan) | ≤ 2     | ≤ 2          | > 3 (o adım yeniden yazılır) | tahmin; hafif öğretici (R2-10) anlaşılırlık ölçüsü |
+| Söküm / deneme (`level_end.teardowns`, medyan) | Kolay/Normal 0 · Zor/Çok Zor ≤ 1,0 | aynı | Zor/Çok Zor > 1,5 | tahmin; GDD K-30, K-51; aşılırsa bölüm tamponu +1 ya da tuzak kaldırılır (product-lead) |
+| D3b "bilinmiyor" sonucu / denetlenen durum     | ≤ %1               | ≤ %1         | > %3                   | tahmin; E13 güvencesinin maliyeti (code-lead düğüm bütçesi) |
 | İlk gün Bölüm 10'a ulaşan kurulum              | ≥ %55              | ≥ %60        | < %40                  | tahmin                                |
 | Ödeyen oranı (kohort, D30 kümülatif)           | ≥ %1,5             | ≥ %2,5       | < %0,8                 | [K13]                                 |
 | ARPDAU (IAP + reklam, tier-1)                  | ≥ $0,08            | ≥ $0,12      | < $0,05                | [K12] kıyasıyla, tahmin               |
@@ -445,7 +474,8 @@ Faz 3 bot raporuna iki sütun (product-lead + code-lead): "altın / 10 bölüm" 
   purchase (sahte), event_join, event_eliminated, star_spent, life_lost) + ek olaylar `offer_result`, `ad_rewarded`,
   `coin_source` / `coin_sink`, `event_continue`, `event_end` (ANALYTICS v1; pano 6 tamamlama oranı), `store_open`,
   `chest_open`, `session_end`, `settings_changed`, `level_resume`, `level_resume_invalid`, `save_corrupt` (ANALYTICS v2,
-  F-1), `level_load_failed`, `cutscene_missing` (ANALYTICS v3; UX §4 ve §8 hata durumları) = **26 MVP olayı**. Mağaza
+  F-1), `level_load_failed`, `cutscene_missing` (ANALYTICS v3; UX §4 ve §8 hata durumları), `deadlock_teardown`, `nav_tap`
+(ANALYTICS v6, Faz 2R) = **28 MVP olayı**. Mağaza
   sürümünde `age_gate_result` (yalnız kova: `<13`, `13-17`, `18+`) ve `consent_result`. Bu liste ANALYTICS §2'nin
   özetidir; ayrışırsa ANALYTICS §2 geçerlidir.
 - code-lead TECH_DESIGN §11.4 tip birliğini bu tablodan üretir ve tablodaki her olayın kodda var olduğunu bir testle
@@ -516,7 +546,7 @@ alanlarda (code-lead şeması).
 
 | Kapı                | Geç (hepsi)                                                                                                                                                       | Uzat                                          | Durdur                                                     |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------- |
-| Kapı 0 (0 → 1)      | Kritik hata 0; 4× CPU yavaşlatmada ≥ 50 FPS; ilk açılış → Bölüm 1 ≤ 10 sn (brief §14); katılımcıların ≥ %70'i ankette kaldır–indir hareketini "tatmin edici" bulur (tahmin eşik); Bölüm 1–10 kazanma oranları LEVEL_REPORT hedefinden ±10 puan içinde | Eşiklerden 1'i kaçarsa: 1 tur (2 hafta)       | Anket < %50 → çekirdek his yeniden tasarlanır (proje sahibine) |
+| Kapı 0 (0 → 1)      | Kritik hata 0; 4× CPU yavaşlatmada ≥ 50 FPS; ilk açılış → Bölüm 1 ≤ 10 sn (brief §14); katılımcıların ≥ %70'i ankette kaldır–indir hareketini "tatmin edici" bulur (tahmin eşik); Bölüm 1–10 kazanma oranları LEVEL_REPORT hedefinden ±10 puan içinde; Faz 2R ekleri (tahmin eşik): görsel kalite anket ortalaması ≥ 4,0 / 5 (R2-07), "öğretici oyunumu böldü" diyen ≤ %20 (R2-10), "kazı/kaydırma bulmacası ilginç" diyen ≥ %60 (R2-03) | Eşiklerden 1'i kaçarsa: 1 tur (2 hafta)       | Anket < %50 → çekirdek his yeniden tasarlanır (proje sahibine) |
 | Kapı 1 (1 → 2)      | D1 ≥ %38, D7 ≥ %14, öğretici ≥ %90, çökme < %0,5, ANR < %0,2                                                                                                      | D1 %30–38: en fazla 2 iterasyon × 2 hafta     | 2 iterasyon sonra D1 < %30                                 |
 | Kapı 2 (2 → 3)      | D30 ≥ %5, ödeyen ≥ %1,5, ARPDAU ≥ $0,08, en az 1 kanalda öngörülen LTV180/CPI ≥ 1,0, içerik ≥ 150 bölüm, etik metrikleri eşik içinde                              | 1 eşik kaçarsa: 4 hafta                       | ARPDAU < $0,05 ve ödeyen < %0,8                             |
 | Kapı 3 (global)     | Tier-1'de en az 1 kanalda LTV180/CPI ≥ 1,2; marka başvuruları yapılmış; derecelendirmeler, KVKK/GDPR belgeleri tamam; EventService backend hazır (değilse etiketli botla devam) | —                                     | —                                                          |
@@ -603,6 +633,28 @@ TECH §14 ve bu bölümdeki değerlerdir.)
 | Mağaza sürümü paketi | Capacitor, yaş ekranı + CMP, gerçek IAP/reklam, hukuk, derecelendirme, paket kimliği | ≈ 3 hf (tahmin) | Aşama 0 ile paralel | +1 hf takvime eklendi (yukarıda) |
 | Test cihazları | code-lead: perf ölçümü Faz 2 çıkışında gerçek düşük seviye Android'de | — | — | Cihazlar **Faz 2 başında** alınır; R-09 haftalık ölçüm Faz 2'den başlar |
 
+**Faz 2R etkisi (2026-10-07; tahmin, code-lead TECH §14 deltası gelince kesinleşir):**
+
+| Kalem | Etki | Takvim karşılığı |
+| --- | --- | --- |
+| Faz 2R'nin kendisi (tam örtü, değişken boyut, solver öne alındı, D1/D2/D3a, Söküm, blok v2, UI kiti, ana sayfa v2, hafif öğretici, kazanma v2, Bölüm 1–10, AI varlık boru hattı) | Faz 2'nin yeniden yapılan bölümü; g net TECH §14'e yazılmadı | 43 haftalık plandaki **4 haftalık genel tampondan** düşer. Faz 2R tamponlu süresi > 4 hf olursa Aşama 0 başlangıcı kayar ve §12.3 B planı değerlendirmesi Faz 3 başına çekilir |
+| Solver Faz 3'ten Faz 2R'ye | Faz 3'teki 32,5 g net'in solver kısmı Faz 2R'ye geçer (toplam değişmez) | Faz 3 kısalır; miktar TECH §14.2 deltasından |
+| Bölüm 11–50'nin §2.0 yöntemiyle yeniden tasarımı (LEVELS §3 notu) | Faz 1 taslakları geçersiz; bölüm başına tasarım + solver yinelemesi artar | Faz 3 içerik kalemi; bölüm başına gün product-lead + code-lead Faz 3 başında ölçer (ilk 5 bölüm); > 1,5 g/bölüm ise B planı tetiği erken incelenir |
+| D3b (cihazda bütçeli erişim denetimi) | Bölüm 1–10'da `deadRate` = 0 ve ✓-tuzağı yok → dilimde tetiklenmez | **Faz 3'e** (§12.4); Faz 2R'den düşer |
+
+**Yalın sanat yolu (P-15; R2-08 "ücretsiz/ucuz" isteğiyle; tahmin):** ASSET §14 talebi ≈ 126 sanatçı-günü. İnsan sanatçı
+yalnız fikri mülkiyeti kritik varlıklarda kalır: 4 ana karakter (16 g) + logo, simge, öne çıkan görsel (4 g) = 20 g.
+Ara sahne panelleri (47), kasaba parçaları + tabanlar (40), arka plan katmanları (15), yan karakter ve figüranlar (9) AI
+üretimi + belgelenmiş insan rötuşu (≈ 0,25 g/varlık, tahmin) ≈ 28 g; ikon ve engel görselleri (≈ 66) prosedürel ya da AI
++ rötuş ≈ 16,5 g. Toplam ≈ 65 g (−%48). Kapasite 1,0 FTE sanatçıyla (110 g) karşılanır; **Faz 3'te başlayan 0,5 FTE serbest
+sanatçı kalemi kesilir** (60.000 TL × ≈ 4 ay ≈ 240.000 TL ≈ $5.000, hesap). Koşul: AI ile 47 panelde karakter tutarlılığı
+sağlanamazsa (2 kişilik okuma testinde aynı karakter denmezse) paneller insan sanatçıya döner: +≈ 35 g (47 × 1 − 47 × 0,25),
+toplam ≈ 100 g; yine 1,0 FTE kapasitesine (110 g) sığar, 0,5 FTE kesintisi geçerli kalır (pay ≈ %9).
+**AI üretim maliyeti:** Canva Free planda aylık en çok 20 AI kullanımı, Pro'da 200 Premium kullanım [K56]; arka plan
+kaldırıcı Pro özelliği [K57]. Faz 2R (≤ 30 çağrı) iki ayda Free planla ücretsiz yapılabilir (ASSET §16.1'e öneri:
+1. ay 20, 2. ay 10; arka plan kaldırma kod boru hattında). Faz 3–5 varlıkları (≈ 130 varlık + yeniden üretim) için 1–2 ay
+Canva Pro gerekir; fiyat doğrulanmadı → "Yazılım" kalemindeki $3.000'ın içinde sayıldı (tahmin).
+
 **Maaş kıyası:** Türkiye 2026 oyun geliştirici ortalaması 83.700 TL/ay (aralık 45.300–147.600), oyun tasarımcısı ortalaması
 70.000 TL (aralık 38.000–110.000), animasyon ve görsel tasarım uzmanı ortalaması 46.000 TL [K50]. Kaynakta net/brüt
 ayrımı belirsiz. İşveren maliyeti = kaynak değerinin ≈ 1,6 katı (vergi + SGK, tahmin).
@@ -650,23 +702,27 @@ ayrımı belirsiz. İşveren maliyeti = kaynak değerinin ≈ 1,6 katı (vergi +
 | R-01   | Çocuğa yönelik ya da karma kitle sayılma (COPPA faktörleri [K33], 2025 değişikliği [K34], Play "istemeden hitap" denetimi [K31], Brezilya ECA Digital [K45])                                  | 3 | 5 | 15   | §3 S1–S15                                                                                                                                                                     | entrepreneur, design-lead     | Mağaza bildirimi; yaş ekranında < 13 oranı > %5       |
 | R-02   | Bob the Builder benzerliği: çocuk inşaatçı + kask; Kepçe → "Scoop" çevirisi; vinç karakteri (Lofty); HIT/Mattel oyun yazılımında tescilli [K48]                                               | 2 | 5 | 10   | §2 kuralları; EN ad listesi incelemesi; karakter siluet yan yana testi                                                                                                         | design-lead                   | Faz 1 sanat incelemesi                               |
 | R-03   | "Little Builder" EN adı: ≥ 4 mağaza uygulaması (çocuk inşaat oyunları), Fox & Sheep "Little Builders" (2–6 yaş), USPTO "LITTLE BUILDER" tescili (oyuncak bloklar) — NAMING.md                | 4 | 4 | 16   | EN'de kullanma; NAMING.md ilk 3'ten seç                                                                                                                                       | entrepreneur                  | İsim kararı (Faz 1 sonu)                             |
-| R-04   | Royal Match / Block Blast / Color Block Jam görsel-mekanik benzerliği → Apple 4.1 taklit, 2.3.7 meta veri reddi [K29]                                                                          | 3 | 4 | 12   | §2 kuralları; ekran görüntüsü yan yana karşılaştırma; rakip adı anahtar kelimede yok                                                                                           | design-lead, entrepreneur     | Mağaza incelemesi reddi                              |
+| R-04   | Royal Match / Block Blast / Color Block Jam görsel-mekanik benzerliği → Apple 4.1 taklit, 2.3.7 meta veri reddi [K29]. Faz 2R: parlak "şeker blok" + Royal Match örüntüsünde ana sayfa benzerlik yüzeyini büyüttü (R2-07, R2-09) | 3 | 4 | 12   | §2 kuralları (v2: koyu zemin/neon yok, ozalitten inşa); ekran görüntüsü yan yana karşılaştırma Faz 2R ekranlarıyla da; rakip adı anahtar kelimede ve kreatifte yok                                                                                           | design-lead, entrepreneur     | Mağaza incelemesi reddi; yan yana testte 5 kişiden ≥ 3 "benziyor" |
 | R-05   | Marka tescili: ad tescil edilemez ya da itiraz gelir; "usta / builder / block" tanımlayıcı → zayıf koruma                                                                                      | 3 | 4 | 12   | İsim kararından sonra 2 hafta içinde vekil araması; TÜRKPATENT + EUIPO + USPTO sınıf 9 ve 41 başvurusu; ayırt edici ad                                                          | entrepreneur                  | Vekil araması sonucu                                 |
-| R-06   | Sömürücü tasarım (Köprü'de kayıp kaçınma, artan +5 fiyatı, gizli gerçek para) → CPC ilkeleri [K40], FTC HoYoverse [K35], Digital Fairness Act önerisi (2026 Q3 bekleniyordu [K41]), PEGI 2026 [K42], yorum itibarı | 3 | 4 | 12 | §4.4–4.5                                                                                                                                                         | entrepreneur, product-lead    | Etik koruma panosu (§6.2)                            |
+| R-06   | Sömürücü tasarım (Köprü'de kayıp kaçınma, artan +5 fiyatı, gizli gerçek para) → CPC ilkeleri [K40], FTC HoYoverse [K35], Digital Fairness Act önerisi (2026 Q3 bekleniyordu [K41]), PEGI 2026 [K42], yorum itibarı; Faz 2R: seri değeri (Mala ≈ 2,5 hamle) +5 değerini aşarsa kayıp kaçınma büyür | 3 | 4 | 12 | §4.4–4.5 (Faz 2R: E12–E14)                                                                                                                                                         | entrepreneur, product-lead    | Etik koruma panosu (§6.2)                            |
 | R-07   | Botların gerçek oyuncu sanılması → aldatma iddiası, güven kaybı; emsal Skillz–AviaGames [K46]                                                                                                  | 2 | 4 | 8    | §4.6 B seçeneği (Köprü + Lig, "çırak" rozeti); mağaza metninde "gerçek oyuncu" iddiası yok; E8 kod denetimi (saf modül, import yasağı, iki-kayıt eşitlik testi) | entrepreneur, code-lead       | Yorumlarda "bot" şikâyeti                            |
 | R-08   | Loot box / kumar kuralları: Belçika ücretli loot box'ı yasa dışı sayar, Hollanda koşullu [K44]; Brezilya yasağı [K45]; mağazalar oran açıklaması ister [K29 §3.1.1][K32]; PEGI 16 [K42]      | 2 | 5 | 10   | E1: ücretli rastgele öğe hiç yok; sandık sabit içerikli ve satılmaz                                                                                                             | product-lead, entrepreneur    | Ekonomi tasarım incelemesi                           |
 | R-09   | Düşük seviye Android'de Phaser/WebView performansı: forumlarda Capacitor/WebView'de 10–30 FPS raporları (eski cihaz, eski kaynaklar) [K47]; imza hareket için dokunuş→hareket 1 kare şartı | 3 | 5 | 15   | Performans bütçesi (çizim çağrısı, parçacık, doku atlası), WebGL, referans düşük seviye cihazda Faz 2'den itibaren haftalık ölçüm (cihazlar Faz 2 başında), "azaltılmış efekt" modu, Aşama 1 öncesi cihaz matrisi; başarısızsa yerel sarmalayıcı değerlendirmesi (Sonra) | code-lead | 4× CPU'da < 50 FPS; vitals [K28]           |
 | R-10   | İçerik pisti kısa: 50 bölüm ≈ 2,5–3,5 saat; medyan oyuncu 7–9, ilk %25 3–4 günde bitirir (§9.1, tahmin) → D7/D30 düşer; Usta Modu "Sonra" kalırsa etkinlikler de durur | 4 | 4 | 16   | §9.2: Usta Modu MVP (onay bekliyor) ya da yedek tekrar kuralı; Usta Sandığı; ≥ 150 bölüm kapısı; araçla üretim | product-lead, entrepreneur    | Bölüm 50'ye ulaşanların D+3 kaybı                    |
 | R-11   | UA maliyeti ve doygun pazar; ABD iOS'ta LTV180 < CPI (§6.3); büyük rakiplerin reklam harcaması [K5]                                                                                            | 4 | 4 | 16   | Kreatif IPM, ASO/organik, TR topluluğu; Kapı 3 LTV/CPI ≥ 1,2                                                                                                                   | entrepreneur                  | Aşama 2 LTV eğrisi                                   |
-| R-12   | Düşüş/yerçekimi mekaniklerinin "haksız" algılanması (rüzgâr, cam, 700 ms ağır yerçekimi) → olumsuz yorum, D1 düşüşü                                                                            | 3 | 3 | 9    | Düşüş gölgesi her zaman doğru (K-18); ağır yerçekimi 1.400 ms erişilebilirlik seçeneği (OR-11); Aşama 0 anketinde "haksızlık" sorusu; kayıp nedeni analitiği                                                                             | product-lead, design-lead     | Kayıp nedeni dağılımı                                |
+| R-12   | Düşüş/yerçekimi mekaniklerinin "haksız" algılanması (rüzgâr, cam, 700 ms ağır yerçekimi) → olumsuz yorum, D1 düşüşü                                                                            | 3 | 3 | 9    | Düşüş gölgesi her zaman doğru (K-18); ağır yerçekimi 1.400 ms erişilebilirlik seçeneği (OR-11); Aşama 0 anketinde "haksızlık" sorusu; kayıp nedeni analitiği; Faz 2R Söküm algısı R-23'te                                                                             | product-lead, design-lead     | Kayıp nedeni dağılımı                                |
 | R-13   | KVKK/GDPR: SDK'larla yurt dışı aktarım (standart sözleşme, 5 iş günü bildirim [K38]); GDPR Madde 8 yaşları 13–16 [K36]; 7578 sayılı Kanun derecelendirme şartı [K39]                            | 3 | 3 | 9    | Web MVP'de SDK yok; mağaza sürümünden önce hukuk paketi (§10)                                                                                                                  | entrepreneur, code-lead       | Mağaza sürümü kontrol listesi                        |
-| R-14   | Kapsam şişmesi (Takım/Kulüp, gerçek backend, sezon kartı, Albüm; revizyon turunda MVP'ye eklenenler: bölüm içi devam, Usta Modu, servis arayüzleri) → Faz 3–4 gecikmesi | 4 | 3 | 12   | §12 kesme çizgisi; her öneriye MVP/Sonra etiketi; eklenenlerin maliyeti TECH §14 kalemlerinde, Faz 2–5 toplamı 22 hf içinde (§10 mutabakatı) | entrepreneur                  | REVIEW_LOG'da etiketsiz özellik önerisi              |
+| R-14   | Kapsam şişmesi (Takım/Kulüp, gerçek backend, sezon kartı, Albüm; revizyon turunda MVP'ye eklenenler: bölüm içi devam, Usta Modu, servis arayüzleri) → Faz 3–4 gecikmesi | 4 | 3 | 12   | §12 kesme çizgisi; her öneriye MVP/Sonra etiketi; eklenenlerin maliyeti TECH §14 kalemlerinde, Faz 2–5 toplamı 22 hf içinde (§10 mutabakatı). Faz 2R kapsamı ayrı kayıt R-24 | entrepreneur                  | REVIEW_LOG'da etiketsiz özellik önerisi              |
 | R-15   | 26 engel tipi × 50 bölüm Faz 3'ü uzatır; en pahalıları S5/S6 (solver fazı) ve G-L yönlendirmesi (iki aşamalı commit + solver dallanması) | 3 | 3 | 9    | §12.3 B planı (yalnız S6, sonra S5; 7 bölüm) + G-L yedeği (yalnız yavaş düşüş)                                                    | product-lead, code-lead       | Faz 3 > 2 hafta kayma                                |
 | R-16   | İmza hareketin pazarda karşılık bulmaması (yeni mekanik riski)                                                                                                                                | 2 | 5 | 10   | Faz 2 dikey dilimde ≥ 10 dış oyuncu testi; Kapı 0 anket eşiği                                                                                                                  | entrepreneur, product-lead    | Kapı 0 anketi                                        |
 | R-17   | TL kuru ve mağaza fiyat kademesi değişimi TR fiyatlarını aşındırır                                                                                                                            | 4 | 2 | 8    | 6 ayda bir TR fiyat incelemesi; App Store Türkiye fiyat güncellemeleri izlenir [K52]                                                                                           | entrepreneur                  | Kur değişimi > %15                                   |
 | R-18   | Ödüllü reklamlarda uygunsuz içerik (çocuk erişimi + marka)                                                                                                                                    | 2 | 3 | 6    | S11                                                                                                                                                                            | code-lead, entrepreneur       | Kullanıcı şikâyeti                                   |
 | R-19   | İstanbul'da işe alım rekabeti (Dream, Peak, Rollic) ekip maliyetini artırır [K18][K54]                                                                                                       | 3 | 3 | 9    | Uzaktan ekip, serbest sanat, net kapsam                                                                                                                                        | entrepreneur                  | İşe alım süresi > 6 hafta                            |
 | R-20   | Paket kimliği (iOS bundle ID, Android `applicationId`) yayından sonra değiştirilemez ve Play URL'sinde görünür; isim kararı gecikirse ya da çocuk sinyalli kimlik seçilirse kalıcı olur | 2 | 3 | 6 | NAMING §6: kimlik isim kararından sonra, ilk mağaza yüklemesinden (Faz 5 `npx cap init`) önce; yalnız `[a-z0-9.]`, "kids/little/minik" yok; kod içi kimlikler kod adı olarak kalır | entrepreneur, code-lead | Faz 5 başında isim kararı yoksa |
+| R-21   | (Faz 2R) Yapay zekâ görsellerinin fikri mülkiyeti: Canva AI çıktısı kullanıcınındır ve her yasal amaçla kullanılabilir ama risk kullanıcıdadır, çıktı benzersiz değildir, marka olarak kullanıma uygun olmayabilir [K55]; ABD'de yalnız yapay zekâyla üretilen eser telif alamaz (Thaler v. Perlmutter; Yüksek Mahkeme 2 Mart 2026'da incelemeyi reddetti) [K58] → logo ve karakter taklitlerine karşı koruma zayıf, marka itirazı, model çıktısının mevcut bir karaktere benzemesi | 3 | 4 | 12 | P-15: web MVP ve Aşama 0'da AI final; mağaza öncesi logo, simge ve 4 ana karakter insan sanatçı (D-043 korunur); diğer bitmaplerde belgelenmiş insan rötuşu; ASSET §15 üretim kaydı (araç, plan, istem, tarih, rötuş); her final AI görseli için ücretsiz ters görsel arama + ART §11.8 yan yana kontrol; logo için marka vekili araması (R-05). Türk hukukunda (FSEK) yalnız AI üretimi eserin korunması belirsiz: hukuki görüş mağaza öncesi (değerlendirme, kaynak doğrulanmadı) | entrepreneur, design-lead | Aşama 1 mağaza paketi kontrol listesi |
+| R-22   | (Faz 2R) "Ücretsiz üretim" varsayımının tutmaması: Canva Free aylık 20 AI kullanımı [K56]; arka plan kaldırıcı Pro [K57]; konteynerden www.canva.com erişimi egress proxy'ye takıldı (2026-10-07, bu oturumda WebFetch) | 4 | 2 | 8 | 1. ay ≤ 20 çağrı önceliklendirme, arka plan kaldırma kod boru hattında (düz #DDDDDD zemin, kenardan dolgu), indirme gerekirse proje sahibinin cihazından; her varlığın prosedürel yedeği (ART §1 sütun 6) | design-lead, code-lead, entrepreneur | Canva kalan kullanım < 5 ya da indirme hatası |
+| R-23   | (Faz 2R) Tam örtü + Söküm'ün "haksız" algılanması ve +5 teklifinin çözülemez durumda açılması (sayaç 0'da kilitlenme denetimi atlanıyordu, GDD K-30) → olumsuz yorum, iade, etik ihlal (R-06 ile ilişkili) | 3 | 4 | 12 | E13 (denetim tekliften önce, teklif yalnız kanıtlı çözülebilir durumda); Kolay/Normal ✓-tuzağı 0 (K-51); Söküm/deneme KPI (§6.2); `deadlock_teardown` olayı; Usta Dede satırı `tut.ctx.teardown` | product-lead, code-lead, entrepreneur | Söküm/deneme Zor > 1,5; "haksız" anket cevabı > %20 |
+| R-24   | (Faz 2R) Faz 2R kapsamının Faz 3–5 takvimini kaydırması: solver öne alındı, değişken boyut, v2 görsel dili, ana sayfa, 10 bölüm; 11–50'nin yeniden tasarımı | 4 | 3 | 12 | §12.4 kesme sırası; D3b Faz 3'e; Faz 2R g net TECH §14'e; tampon tüketimi haftalık izlenir | entrepreneur, code-lead | Faz 2R tamponlu süresi 4 haftayı aşarsa |
 
 **En kritik 5 risk:** R-01 (çocuğa yönelik sayılma), R-02 + R-03 + R-04 (IP benzerliği, tek başlıkta), R-06 + R-07
 (Köprü'de sömürücü tasarım ve bot aldatması, tek başlıkta), R-10 (içerik pisti), R-09 (düşük seviye Android performansı).
@@ -680,7 +736,14 @@ R-11 (UA ekonomisi) skor olarak eşit ama Faz 1 kararlarıyla değil Kapı 3 ile
 
 | Özellik                                                                 | Etiket   | Not                                                         |
 | ----------------------------------------------------------------------- | -------- | ----------------------------------------------------------- |
-| Çekirdek oynanış K-01…K-46 (GDD), 26 engel, 50 bölüm                     | MVP      | Brief; K-34 Alttan Üste (OR-01), K-35 hamle sonu hattı dahil |
+| Çekirdek oynanış K-01…K-53 (GDD), 26 engel, 50 bölüm                     | MVP      | Brief; K-34 Alttan Üste (OR-01), K-35 hamle sonu hattı dahil; Faz 2R: tam örtü K-47/K-48, değişken boyut K-49, bulmaca ölçütleri ve zorunlulukları K-50/K-51, hamle bütçesi K-52, hafif öğretici K-53. Engel sayısı 26 kalır: S2 MVP dışı, S9 eklendi |
+| Kilitlenme: D1 yeniden dizme, D2 renk dengesi, D3a döşeme denetimi, Söküm (Faz 2R, K-30) | MVP (Faz 2R) | Kamyon Yardımı artık blok yaratmaz |
+| D3b bütçeli erişim denetimi (cihazda çözücü) + E13 teklif koşulu        | MVP (Faz 3) | Bölüm 1–10'da `deadRate` = 0, dilimde tetiklenmez; ilk ✓-tuzaklı Zor bölümden önce hazır |
+| S9 Geniş Şantiye                                                          | MVP (Faz 3) yalnız veri | Yalnız `site.cols ≥ 3` verisi ve mevcut çizimle; ek kod ya da sanat gerekirse Sonra (Hikaye 6+) |
+| S2 Plan Boşluğu (`.` pencere/kapı hücreleri)                              | Sonra    | R2-01; geri dönüşü proje sahibine açık soru (product-lead); 8 bölüm (13, 16, 23, 38, 43, 44, 45, 50) dolu desenle kurulur |
+| Görsel dil v2 (şeker blok, UI kiti, 3 sahne), ana sayfa v2, kazanma v2, hafif öğretici | MVP (Faz 2R) | R2-07, R2-09, R2-10; kesme sırası §12.4 |
+| Yapay zekâ görselleri (Canva, ≤ 30 çağrı)                                  | MVP (web) | P-15; mağaza öncesi logo, simge, 4 ana karakter insan sanatçı |
+| Görev + yıldız harcama ana sayfada                                        | MVP (Faz 4) | Faz 2R'de yedek: her kazanma yapıya bir kat (UX §3) |
 | 4 bölüm içi + 3 oyun öncesi güçlendirici, Usta Serisi / Altın Mala       | MVP      | Brief                                                       |
 | Kasaba ekranı + 5 hikaye bölümünün görevleri                             | MVP      | Brief                                                       |
 | Hikaye ara sahneleri (bölüm başı/sonu, 3–6 panel)                        | MVP      | Brief                                                       |
@@ -736,6 +799,24 @@ olarak taşınır. product-lead LEVELS §3 tablolarına "bağımlı engeller" s�
 **G-L yedeği (B planından ayrı, kendi tetiği):** hafif yerçekiminde düşerken yönlendirme (iki aşamalı commit + solver
 dallanması) Faz 3'ün ilk haftasındaki ölçümde code-lead tahmininin 2 katını aşarsa yalnız yavaş düşüş kalır; etkilenen
 bölümler 23 ve 49. Girdi biçimi design-lead, kural product-lead (OR-10).
+
+### 12.4 Faz 2R kesme sırası (R-24; tetik: code-lead'in Faz 2R tamponlu tahmini 4 haftayı aşarsa ya da Faz 2R'nin 3. haftası sonunda kalan iş > 1 hafta)
+
+**Korunan çekirdek (kesilmez; proje sahibinin beş isteği):** tam örtü (K-47/K-48) ve bölüm sonunda boş saha; değişken boyut
+(K-49); çevrimdışı solver + K-50/K-51/K-52 ölçütleri; D1/D2/D3a + Söküm; Bölüm 1–10; blok v2 çizici (ART §3A); UI kitinin
+düğme, panel, kapsül ve şerit bileşenleri; ana sayfa v2 iskeleti (üst çubuk, yapı + ilerleme, "Bölüm N", alt gezinme);
+hafif öğretici (K-53, UX §13.1); kazanma katmanı ve "saha temiz" anı (JUICE #94).
+
+| Sıra | Ertelenen | Gittiği yer | Kazanç (tahmin) |
+| --- | --- | --- | --- |
+| 1 | D3b cihazda bütçeli erişim denetimi | Faz 3 (§12.1) | dilimde tetiklenmediği için oyuncu farkı 0 |
+| 2 | JUICE §8 v2 olaylarından #94 ve kazanma katmanı dışındakiler (ana sayfa giriş/çıkış, yapı açılışı #102, ödül sayma vb.) | Faz 5 cila | code-lead tahmini |
+| 3 | Ana sayfa bulut paralaksı ve kenar ikonları | Faz 4 | code-lead tahmini |
+| 4 | AI görsellerinin 2. ay partisi (Faz 3 güçlendirici ikonları, kilitli sekme ikonları) | Faz 3 | prosedürel yedek kalır |
+| 5 | Kazanma v2'nin tam ekran ışın + karakter katmanı → yalnız şerit + kart | Faz 4 | code-lead tahmini |
+
+Kural: her erteleme REVIEW_LOG'da "Sonra (Faz N)" etiketiyle yazılır (§12.2); sıra 1–3 proje sahibine sorulmadan
+uygulanabilir (oyuncunun gördüğü dilim değişmez ya da yalnız cila azalır), 4–5 proje sahibinin onayıyla.
 
 ---
 
@@ -831,6 +912,30 @@ Karar: iOS bundle ID ve Android `applicationId` isim kararından sonra, ilk mağ
 Gerekçe: Kimlik yayından sonra değişmez ve Play URL'sinde görünür; isim değişikliği kayıt göçü gerektirmemeli.
 Etkilenen: NAMING §6, TECH_DESIGN §13, i18n
 
+### P-14 — Faz 2R güçlendirici fiyatları ve fiyat bandı kuralı (R2-05; product-lead D-076 ile ortak)
+Durum: ÖNERİ     Sahip: entrepreneur (fiyat) + product-lead (miktar, etki)     Tarih: 2026-10-07
+Karar: Çekiç 600 (değişmez), Boya Fırçası 600 → 450, Mala Başlangıcı 600 → 450; diğer fiyatlar değişmez. Fiyat bandı: oyun öncesi ≤ 180 altın/hamle (E6), bölüm içi 150–450 altın/hamle, fiyatlar 150'nin katı; Faz 3 LEVEL_REPORT ölçümü bandın dışına iterse bir adım kayar. E12: hedefsiz güçlendirici satılmaz.
+Gerekçe: Tam örtüyle Çekiç'in kullanım alanı daraldı (engelli bölümlerde 2–3 hamle → 200–300), Fırça'nın değeri düştü (1–2 hamle; 600'de bandın üstü), Mala'nın değeri ≈ 5 kat arttı (Mala Başlangıcı 600'de 240 altın/hamle, E6'yı bozar).
+Etkilenen: META §3.2, §4.1, §9; config/economy.json (`paintBrush.price`, `trowelStart.price`); UX §4, §5.1 ("+" durumu)
+
+### P-15 — Yapay zekâ görselleri: kullanım sınırı ve mağaza öncesi insan sanatçı (R2-08)
+Durum: ÖNERİ (proje sahibine)     Sahip: entrepreneur + design-lead     Tarih: 2026-10-07
+Karar: Web MVP ve Aşama 0'da Canva AI görselleri final sayılır. Mağaza sürümünden (Aşama 1) önce logo amblemi, uygulama simgesi ve 4 ana karakter insan sanatçı tarafından AI görseli referans alınarak yeniden çizilir; diğer bitmaplerde belgelenmiş insan rötuşu yeterlidir. Her AI varlığı ASSET §15'e araç, plan (Free/Pro), istem, tarih ve rötuş bilgisiyle yazılır; mağaza öncesi ters görsel arama yapılır. Yalın sanat yolu (§10): 0,5 FTE serbest sanatçı kalemi kesilir.
+Gerekçe: Canva AI çıktısı kullanıcıya ait ama benzersiz değil ve marka olarak kullanıma uygun olmayabilir [K55]; ABD'de yalnız AI ile üretilen eser telif alamaz [K58]; logo ve karakterler marka varlığıdır (R-05, R-21). Proje sahibinin "en ucuz / ücretsiz" isteği AI'yı geri kalan her yerde kullanarak karşılanır.
+Etkilenen: ASSET_LIST §0, §14, §15, §16; ART §11; BUSINESS §10
+
+### P-16 — Faz 2R kesme sırası (R-24)
+Durum: ÖNERİ     Sahip: entrepreneur (+ code-lead süre)     Tarih: 2026-10-07
+Karar: §12.4 tablosu. D3b Faz 3'e alınır (dilimde tetiklenmez). Korunan çekirdek kesilmez.
+Gerekçe: Faz 2R, 43 haftalık plandaki 4 haftalık genel tampondan yer; 11–50 yeniden tasarımı Faz 3'ü büyütüyor.
+Etkilenen: TECH_DESIGN §14, ROADMAP, JUICE §8, UX §3
+
+### P-17 — +5 teklifi yalnız kanıtlı çözülebilir durumda (E13; product-lead K-29/K-30 ile)
+Durum: ÖNERİ     Sahip: entrepreneur (etik) + product-lead (kural) + code-lead (uygulama)     Tarih: 2026-10-07
+Karar: Sayaç 0 olduğunda kilitlenme denetimi (K-30 D1–D3) teklif penceresinden önce çalışır; çıkmazsa Söküm uygulanır (hamle harcamaz); D3b "bilinmiyor" ise en yakın kanıtlı duruma dönülür; pencere ancak bundan sonra açılır. Test: "E13 out-of-moves offer only on proven-solvable state".
+Gerekçe: Önceki sıra (önce teklif, ödeme, sonra adım 12) oyuncuya çıkmaz durumu "Kalan: 1 blok" bilgisiyle satıyordu.
+Etkilenen: GDD K-29, K-30, E-42; config/economy.json `outOfMoves._doc`; TECH_DESIGN §9.7
+
 ---
 
 ## 14. Kaynaklar
@@ -894,3 +999,13 @@ Erişim tarihi hepsi için 2026-10-04. Yöntem: **WS** = arama sonucu özeti (bi
 | K52  | App Store Türkiye TL fiyatları ve düşük kademeler             | https://www.teknoblog.com/app-store-turkiye-subesinde-fiyatlar-turk-lirasi-cinsinden-gosterilmeye-basladi/ ; https://blog.gsmarena.com/apple-raising-app-store-prices-countries-introducing-new-low-cost-tiers | WS |
 | K53  | EUIPO ve USPTO başvuru ücretleri                              | https://www.tramatm.com/trademark-questions-and-answers/cost-of-trademark-registration/what-is-the-price-for-1-trademark-class-in-the-eu ; https://ip-coster.com/News/global_intellectual_property_fee_updates/471 | WS |
 | K54  | Türk oyun ekosistemi 2025, Dream Games yatırımı               | https://mobidictum.com/appmagic-turkiye-mobile-gaming-landscape-2026/ ; https://respawn.outlookindia.com/gaming/gaming-news/how-turkish-mobile-gaming-exploded-into-a-27b-global-powerhouse | WS |
+
+Faz 2R kaynakları (erişim 2026-10-07; www.canva.com bu oturumda egress proxy tarafından engellendi, Canva sayfaları
+yalnız arama özetinden okundu):
+
+| Kod  | Konu | URL | Yöntem |
+| ---- | ---- | --- | ------ |
+| K55  | Canva AI Ürün Şartları: çıktı kullanıcıya ait, her yasal amaçla kullanım riski kullanıcıda, çıktı benzersiz değil, marka olarak uygun olmayabilir (marka vekili önerilir) | https://www.canva.com/policies/ai-product-terms ; https://terms.law/ai-output-rights/canva/ | WS |
+| K56  | Canva AI kullanım hakları: Free ve Pro Lite aylık en çok 20 Standard ya da Premium AI kullanımı; Pro aylık 200 Premium; aylık sıfırlanır | https://www.canva.com/help/ai-access/ | WS |
+| K57  | Canva Background Remover yalnız Pro (üçüncü taraf incelemeler; Free AI kredi sayıları kaynaklar arasında tutarsız, planlamada K56 esas) | https://www.aiworthit.com/blog/canva-ai-review ; https://pasqualepillitteri.it/en/news/601/canva-ai-magic-studio-guide ; https://fast.io/resources/canva-ai-review-2026 | WS |
+| K58  | Thaler v. Perlmutter: D.C. Circuit 18 Mart 2025; ABD Yüksek Mahkemesi 2 Mart 2026'da incelemeyi reddetti; insan katkısı olmadan AI üretimi eser telif alamaz | https://www.mayerbrown.com/zh-hans/insights/publications/2026/03/supreme-court-denies-review-in-ai-authorship-case ; https://www.hklaw.com/en/insights/publications/2026/03/the-final-word-supreme-court-refuses-to-hear-case-on-ai-authorship ; https://www.reedsmith.com/our-insights/blogs/viewpoints/102mlpl/supreme-court-denies-certiorari-in-thaler-v-perlmutter-human-only-rule-for-ai/ | WS |

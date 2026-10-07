@@ -115,8 +115,8 @@ const codeParams = (specs: Readonly<Record<string, ParamSpec>>): Params =>
 describe('ANALYTICS §2 ↔ TECH 11.4 union', () => {
   const table = parseTable();
 
-  it('ANALYTICS §2 table parses into the expected 28 events', () => {
-    expect(table.size).toBe(28);
+  it('ANALYTICS §2 table parses into the expected 30 events (v6: 28 MVP + 2 store version)', () => {
+    expect(table.size).toBe(30);
     expect(table.get('offer_result')).toHaveProperty('placement');
     expect(table.get('level_end')?.['yao']).toEqual({ kind: 'int', min: 0, max: 100, nullable: false });
     expect(table.get('offer_shown')?.['offerIndex']).toEqual({ kind: 'int', min: 1, max: 3, nullable: true });
@@ -224,7 +224,8 @@ describe('Analytics service (TECH 11.4)', () => {
       [1, 1005, 1850],
     ]);
     expect(seen).toEqual(['app_open', 'coin_source']);
-    for (let i = 0; i < 600; i++) a.track({ name: 'tutorial_step', level: 1, step: i });
+    for (let i = 0; i < 600; i++)
+      a.track({ name: 'tutorial_step', level: 1, step: i, shows: 1, msToDone: 0 });
     expect(a.recent()).toHaveLength(500);
     expect(a.recent()[0]?.seq).toBe(102);
   });

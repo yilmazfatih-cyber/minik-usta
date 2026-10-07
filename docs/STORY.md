@@ -1,6 +1,9 @@
 # Hikaye ve karakterler — Minik Usta
 
-Sahip: design-lead · Durum: Faz 1 revizyonu (2026-10-04; R-07, R-08, R-09, R-14, R-15, R-19, R-24 işlendi); Faz 2
+Sahip: design-lead · Sürüm: **Faz 2R (2026-10-07)** — öğretici metinleri ≤ 6 kelime, mekanik bazlı `tut.m.*` (§6A), ana
+sayfa ve HUD v2 anahtarları (§7.7); **çapraz inceleme kapanışı** (aynı gün: bütün `tut.ctx.*` / `tut.meta.*` TR ve EN
+≤ 6 kelime, yeni `tut.m.park` / `carry` / `carryNow`, `tut.ctx.teardown`, `booster.*.noTarget`, Faz 2R kurallarına göre
+`tut.m.heavy` / `hammer` / `gap`, `booster.hint.trowel` / `brush`, `win.clear`, `lose.blocksLeft`); önceki: Faz 1 revizyonu (2026-10-04; R-07, R-08, R-09, R-14, R-15, R-19, R-24); Faz 2
 metin satırları (2026-10-06; §7.3 `lose.adToday`, §7.5 `exit.*` / `resume.strip`, yeni §7.6; tur 2: §6 `tut.ctx.resume`) · Kaynak:
 `docs/BRIEF.md` §9 · Görünüm: `docs/ART_DIRECTION.md` §11 · Öğretici yerleşimi: `docs/UX_FLOWS.md` §13
 
@@ -17,7 +20,8 @@ metin satırları (2026-10-06; §7.3 `lose.adToday`, §7.5 `exit.*` / `resume.st
    olduğu anlar vardır (bölüm 5'te gri temel). Asla tuzak kurmaz, sabote etmez, cezalandırılmaz.
 3. **Çocuk karakter ≠ çocuk dili.** Hedef kitle yetişkin casual oyuncu (brif §15-8); cümleler kısa ve esprili, bebeksi
    değil.
-4. **Kısa:** konuşma balonu en fazla 2 satır (TR ≤ 12 kelime); Usta Dede ipucu TR ≤ 8 kelime.
+4. **Kısa:** konuşma balonu en fazla 2 satır (TR ≤ 12 kelime); Usta Dede ipucu ve öğretici balonu **TR ve EN ≤ 6 kelime**
+   (Faz 2R, R2-10; `{ok}`, `{n}` gibi yer tutucular birer kelime sayılır).
 5. **Cinsiyet nötr Tuna:** TR'de sorun yok. EN metinlerde Tuna için **he/she/his/her kullanılmaz**; isim, "you" ya da
    "they" kullanılır. Dede Tuna'ya "evlat" (EN "kiddo") der.
 6. **EN adlandırma (BUSINESS P-6 ile uyumlu):** "Little Builder" ve "Scoop" EN metinde **kullanılmaz** (Bob the
@@ -389,10 +393,14 @@ maliyetler META ile aynıdır (hikaye bölümü başına toplam 10 ★ = 10 böl
 
 ## 6. Usta Dede'nin ipucu satırları
 
-TR ≤ 8 kelime. Kimlikler `UX_FLOWS.md` §13 ile birebir (tek küme `tut.l{n}.{konu}`, `tut.ctx.*`, `tut.meta.*`; R-08).
+**Faz 2R:** Bölüm 1–10 öğreticisi §6A'daki `tut.m.*` satırlarını kullanır (≤ 6 kelime). Bu tablodaki `tut.l*` satırları
+i18n dosyalarında durduğu için metinleri değişmeden kalır (test kaynağı); code-lead i18n'i §6A'ya geçirince Bölüm 1–10
+satırları (`tut.l1.*`…`tut.l10.*`) silinir (`tut.l8.heavy` ve `tut.l8.hammer` Faz 2R kurallarıyla çelişir, dilimde
+**hiç** kullanılmaz), 11–50 satırları Faz 3'te §6A biçimine çevrilir. **`tut.ctx.*` ve `tut.meta.*` satırları Faz 2R
+kapanışında TR ve EN ≤ 6 kelimeye kısaltıldı** (PL-2R-10; aynı balonu kullanırlar; sayım: boşlukla ayrılan her öğe,
+`{n}` / `{ok}` = 1 kelime, kesme işaretli EN kısaltma = 1 kelime). Eski kural: TR ≤ 8 kelime. Kimlikler `UX_FLOWS.md` §13 ile birebir (tek küme `tut.l{n}.{konu}`, `tut.ctx.*`, `tut.meta.*`; R-08).
 Terim "blok"; renk adı yok; kural doğruluğunu product-lead doğrular (GDD K-xx sütunu). Bölüm 1–10'da hangi satırın
-hangi adımda çıktığı LEVELS §2 `tutorial[]` verisindedir (ör. Bölüm 3 ve 9'un ilk adımı `tut.l1.match`, Bölüm 4'ün
-2. adımı `tut.ctx.support`); bu tablo yalnız metni tanımlar.
+hangi adımda çıktığı LEVELS §2 `tutorial[]` verisindedir (Faz 2R: yalnız `tut.m.*`, §6A); bu tablo yalnız metni tanımlar.
 
 | Kimlik | TR | EN | Kural |
 | ------ | -- | -- | ----- |
@@ -444,28 +452,62 @@ hangi adımda çıktığı LEVELS §2 `tutorial[]` verisindedir (ör. Bölüm 3 
 | `tut.l35.mortar` | Harçlı blok yanlış yere düşerse yapışır. | A mortar block sticks if it lands in the wrong spot. | Y8 |
 | `tut.l37.elevator` | İskele iner çıkar. Geçide göre ayarla. | The scaffold moves. Time it with the gap. | S6 |
 | `tut.l38.balloon` | Balonlu blok düşmez, tavana yükselir! | Balloon blocks don't fall. They rise to the ceiling! | S8 |
-| `tut.ctx.streak` | Hatasız {n} doğru, Altın Mala getirir! | Get {n} right in a row for a Golden Trowel! | K-33 (`{n}` = `combo.correctPlacementsPerTrowel`) |
-| `tut.ctx.goldtrowel` | Altın Mala'yla parlayan bir hücreye dokun. | Tap a glowing cell with the Golden Trowel. | K-33, K-34 |
+| `tut.ctx.streak` | Hatasız {n} doğru, Altın Mala getirir! | {n} right placements: Golden Trowel! | K-33 (`{n}` = `combo.correctPlacementsPerTrowel`) |
+| `tut.ctx.goldtrowel` | Mala ile sahadaki bloğa dokun. | Trowel: tap a block to place. | K-33 Faz 2R (mala sahadaki bloğu P konumuna koyar) |
 | `tut.ctx.bounce.color` | Renk uymadı, blok geri döndü. | Wrong color, so it bounced back. | K-16, K-17 |
 | `tut.ctx.bounce.window` | Orası pencere, boş kalmalı. | That's a window. It stays empty. | S2, K-17 |
 | `tut.ctx.bounce.offplan` | Plan dışına inşa edilmez. | Nothing gets built outside the plan. | K-16, K-17 |
 | `tut.ctx.support` | Önce alttaki boşluğu doldur, evlat. | Fill the gap below first, kiddo. | K-34 (R-01; GDD K-34 kanca, LEVELS B4 adım 2) |
-| `tut.ctx.tootall` | Bu blok çok uzun, üstten geçemez. | Too tall to pass over the top. | K-05 |
-| `tut.ctx.lastmoves` | Son beş hamle! Acele etme, düşün. | Five moves left! Think, don't rush. | — |
-| `tut.ctx.queue` | Sahada yer aç, kamyon boşaltsın. | Make room so the truck can unload. | K-26 |
-| `tut.ctx.reshuffle` | Sıkıştık! Kamyon sahayı yeniden diziyor. | We're stuck! The truck is rearranging the yard. | K-30 D3; D1 ikinci dalı (zincir/ıslaklık yok ya da hâlâ D1) |
-| `tut.ctx.truckhelp.material` | Malzeme eksikti. Kamyon getirdi! | We were short on material. The truck brought more! | K-30 D2 |
-| `tut.ctx.truckhelp.free` | Kamyon yardım etti, bloklar serbest. Devam! | The truck helped, the blocks are free. Carry on! | K-30 D1 (yalnız zincir/ıslaklık kalkıp D1 çözüldüyse) |
-| `tut.ctx.blocked` | Bu blok şimdi kımıldamaz. Çevresine bak. | That one can't move yet. Look around it. | K-09 |
-| `tut.ctx.resume` | Tahta bıraktığın gibi duruyor, evlat. | The board is just as you left it, kiddo. | K-43 (R-13); başlık `resume.title`'ı tekrarlamaz (§7.5) |
-| `tut.meta.bridge` | {n} bölümü art arda kazan, köprüyü geç! | Win {n} in a row to cross the bridge! | META §6 (`{n}` = `events.json → wobblyBridge.planks`) |
-| `tut.meta.league` | Usta Ligi: her hafta en iyiler yükselir. | Builder League: the best move up each week. | META §7 |
+| `tut.ctx.tootall` | Bu blok çok uzun, üstten geçemez. | Too tall to pass over. | K-05 |
+| `tut.ctx.lastmoves` | Hamleler azaldı, sakin düşün. | Few moves left. Think it through. | UX §5.1 az hamle uyarısı (DL-2R-19; eski "Son beş hamle!" tetik değiştiği için kalktı) |
+| `tut.ctx.queue` | Sahada yer aç, kamyon boşaltsın. | Make room for the truck. | K-26 |
+| `tut.ctx.reshuffle` | Sıkıştık! Kamyon sahayı yeniden diziyor. | Stuck! The truck reshuffles the yard. | K-30 D1 (zincir/ıslaklık yok ya da kalktıktan sonra hâlâ D1) |
+| `tut.ctx.truckhelp.material` | ~~Malzeme eksikti. Kamyon getirdi!~~ | ~~We were short on material. The truck brought more!~~ | **Faz 2R'de kaldırıldı** (R2-05, K-30: Kamyon Yardımı blok yaratmaz); i18n'den code-lead siler |
+| `tut.ctx.truckhelp.free` | Kamyon yardım etti, bloklar serbest. Devam! | Truck helped. Blocks are free! | K-30 D1 (yalnız zincir/ıslaklık kalkıp D1 çözüldüyse) |
+| `tut.ctx.teardown` | Çıkmaz oldu, son bloğu söktük. | Dead end, so we undid that. | K-30 Söküm (her Söküm'de 1,2 s; "bir kez" kuralının istisnası; UX §13.1, JUICE #107) |
+| `tut.ctx.blocked` | Bu blok şimdi kımıldamaz. Çevresine bak. | It can't move yet. Look around. | K-09 |
+| `tut.ctx.resume` | Tahta bıraktığın gibi duruyor, evlat. | Just as you left it, kiddo. | K-43 (R-13); başlık `resume.title`'ı tekrarlamaz (§7.5) |
+| `tut.meta.bridge` | {n} bölüm art arda: köprüyü geç! | Win {n} straight, cross the bridge! | META §6 (`{n}` = `events.json → wobblyBridge.planks`) |
+| `tut.meta.league` | Ligde her hafta en iyiler yükselir. | Top builders move up each week. | META §7 |
 | `tut.meta.chest` | {n} bölüm tamam! Sandığı aç. | {n} levels done! Open the chest. | META §8.2 (`{n}` = `levelChest.everyLevels`) |
-| `tut.meta.daily` | Her gün uğra, hediyen hazır. | Drop by every day for a gift. | META |
+| `tut.meta.daily` | Her gün uğra, hediyen hazır. | Drop by daily for a gift. | META |
 | `tut.meta.shop` | Mağazada altın ve paketler var. | The shop has coins and bundles. | — |
-| `tut.meta.piggy` | Kazandıkça kumbara dolar. | Your brick bank fills as you win. | META |
+| `tut.meta.piggy` | Kazandıkça kumbara dolar. | Your brick bank fills with wins. | META |
 
 ---
+
+### 6A. Öğretici balonları v2 — mekanik bazlı (Faz 2R)
+
+Balon başına **en çok 6 kelime** (TR ve EN). Anahtar mekaniği adlandırır, bölüm numarasını değil (bölüm sırası
+product-lead'in R2-03 yeniden tasarımında değişebilir; UX §13.1, ÖNERİ). Terim "blok", renk adı yok. "Eski anahtar"
+sütunu i18n geçişi içindir.
+
+| Kimlik | TR | EN | Eski anahtar | Kural |
+| ------ | -- | -- | ------------ | ----- |
+| `tut.m.lift` | Bloğu duvarın üstünden taşı! | Lift the block over the wall! | `tut.l1.lift` | K-11 |
+| `tut.m.drop` | Bırak, kendisi yerine düşer. | Let go and it drops. | `tut.l1.drop` | K-11 |
+| `tut.m.match` | Plandaki renge uyanı seç. | Pick the one matching the plan. | `tut.l1.match` | K-16 |
+| `tut.m.pattern` | Plan alttan üste dolar. | The plan fills bottom up. | `tut.l2.pattern` | K-31, K-34 |
+| `tut.m.shadow` | Gölgede {ok} varsa yer doğru. | {ok} on the shadow: right spot. | `tut.l2.shadow` | K-18 |
+| `tut.m.useall` | Bütün bloklar plana girecek. | Every block goes into the plan. | — (yeni, R2-01) | R2-01 |
+| `tut.m.dig` | Üsttekini sahada kenara çek. | Move the top one aside. | `tut.l7.dig` | K-10 |
+| `tut.m.free` | Şimdi alttakini taşı! | Now carry the one below! | `tut.l7.free` | K-09 |
+| `tut.m.gap` | Alttakini geçitten kaydır! | Slide the bottom one through! | `tut.l3.gap` | K-12 (Faz 2R: geçidin dilimdeki değeri gömülü alt bloğa kestirmedir, DL-2R-07; "rayda kalır" iddiası kalktı) |
+| `tut.m.rail` | Sıradakini raydakinin üstünden aşır. | Lift the next one over it. | `tut.l3.rail` | K-12 |
+| `tut.m.segments` | Kat bitince şantiye kayar. | Finish a floor, the site moves. | `tut.l5.segments` | K-22 |
+| `tut.m.truck` | Kamyon yeni blok getirdi! | The truck brought new blocks! | `tut.l5.truck` | K-25 |
+| `tut.m.highwall` | Duvar yüksek: en tepeden aşır! | High wall: lift it higher! | `tut.l6.crane` | K-05 |
+| `tut.m.park` | Üsttekini yükseğe park et. | Park the top one up high. | — (yeni, LEVELS B6 adım 1) | K-10 |
+| `tut.m.carry` | Bu blok sonraki kat için. | This one's for the next floor. | — (yeni, LEVELS B7 adım 1) | K-27 |
+| `tut.m.carryNow` | Şimdi sırası geldi! | Now it's this one's turn! | — (yeni, LEVELS B7 adım 2) | K-27 |
+| `tut.m.heavy` | Ağır yük plana girmez: kenara kaydır. | Heavy cargo stays out. Slide it. | `tut.l8.heavy` | Y5, K-10, K-48 (PL-2R-04; Ağır Yük'e "blok" denmez) |
+| `tut.m.hammer` | Çekiç blok kırmaz, yükü kırar. | Hammer smashes cargo, never blocks. | `tut.l8.hammer` | K-36 (Faz 2R; PL-2R-03) |
+| `tut.m.narrow` | Dar geçitten tek sıra geçer. | Narrow gaps take one row. | `tut.l9.narrow` | W3, K-12 |
+| `tut.m.cranebooster` | Vinç gömülü bloğu da taşır. | The Crane moves buried blocks too. | `tut.l10.crane` | K-37 |
+| `tut.meta.task` | Yıldızla yapıya yeni kat ekle. | Add a floor with a star. | — (yeni) | META §1 |
+
+`tut.l4.window` ve `tut.l4.above` (pencere `.` hücresi) karşılıksızdır: R2-01 gereği `.` hücresi MVP'de yok. Bölüm 1–10
+öğretici verisi (`LevelData.tutorial[].textKey`) bu anahtarlara geçer (product-lead); i18n geçişi code-lead.
 
 ## 7. Diğer kısa metinler
 
@@ -570,6 +612,7 @@ değilse `league.bonus.levels.some` (`{list}` = `difficulty.*` adları "/" ile, 
 | `lose.retry` | Tekrar dene | Try again |
 | `lose.streak` | Galibiyet serin sıfırlandı. | Your win streak was reset. |
 
+**Faz 2R:** `lose.left` kullanılmaz; yerine §7.7 `lose.blocksLeft` (PL-2R-06); i18n'den code-lead siler.
 Kaldırılanlar: `lose.tuna` ("Az kaldı!" satın alma penceresinde baskı yaratıyordu; yerine Tuna yalnız "kararlı" ifade),
 `lose.giveup` ("Give up" suçlayıcı ton; yerine `lose.decline`) ve `lose.bridge` ("Devam etmezsen bu turdan çıkarsın."
 kayıp penceresinde kural satırıydı; BUSINESS §4.5-4 ve R-15 gereği kural yalnız `bridge.rule_card.*` ve (i) panelinde).
@@ -713,10 +756,13 @@ Faz 2 dikey diliminin (TECH §14.1 #12) bütün görünen metinleri §7.3, §7.5
 | `hud.moves` | Hamle | Moves |
 | `hud.streak` | Usta Serisi | Builder Streak |
 | `truck.queue` | Kamyonda: {n} | On the truck: {n} |
-| `booster.hint.trowel` | Parlayan bir hücreye dokun. | Tap a glowing cell. |
+| `booster.hint.trowel` | Yerleştirilecek bloğa dokun. | Tap the block to place. |
 | `booster.hint.hammer` | Kırmak istediğine dokun. | Tap what you want to smash. |
-| `booster.hint.crane` | Taşımak istediğin bloğa dokun. | Tap the block you want to move. |
-| `booster.hint.brush` | Boyamak istediğin bloğa dokun. | Tap the block you want to paint. |
+| `booster.hint.crane` | Taşımak istediğin bloğa dokun. | Tap a block to move. |
+| `booster.hint.brush` | Yer değiştirecek iki bloğa dokun. | Tap two blocks to swap. |
+| `booster.hammer.noTarget` | Burada kırılacak yük yok. | Nothing to smash here. |
+| `booster.brush.noTarget` | Renk takası için eş blok yok. | No matching pair to swap. |
+| `booster.trowel.noTarget` | Şu an yerleşecek blok yok. | No block fits right now. |
 | `pause.title` | Mola | Paused |
 | `pause.exit` | Bölümden çık | Leave level |
 | `settings.sound` | Ses | Sound |
@@ -745,9 +791,13 @@ Kullanım ve sayılar (D-017; sayılar config'ten, metne sabit yazılmaz):
 - `truck.queue` `{n}` = kamyon kuyruğundaki **blok** sayısı (GDD K-26; hücre ya da parti değil); `n = 0` iken çip
   gizlidir, metin "0" göstermez (UX §5.1, JUICE #20, #88). `hud.moves` hamle sayacının altındaki etiket; `hud.streak`
   Usta Serisi şeridinin etiketi (UX §5.1).
-- `booster.hint.*`: UX §5.2 madde 1 açıklama şeridi; yanında `common.cancel` (× ile). Faz 2'de yalnız `.trowel` (K-33,
-  Altın Mala seçimi); `.hammer`, `.crane`, `.brush` güçlendiricileriyle birlikte kullanılır. İlk Altın Mala seçiminde
-  Usta Dede balonu `tut.ctx.goldtrowel` ayrıca çıkar; şerit her seçimde görünür.
+- `booster.hint.*`: UX §5.2 madde 1 açıklama şeridi; yanında `common.cancel` (× ile). Faz 2R: `.trowel` (K-33; mala
+  önce sahadaki bloğu seçer, sonra P konumu) ve `.hammer` (K-36, Bölüm 8) dilimde; `.crane` Bölüm 10; `.brush` (K-38,
+  iki bloğun renk takası) Faz 3. İlk Altın Mala seçiminde Usta Dede balonu `tut.ctx.goldtrowel` ayrıca çıkar; şerit her
+  seçimde görünür.
+- `booster.<hammer|brush>.noTarget`: hedefsiz yuvaya dokununca yuvanın üstünde 1,2 s balon (UX §0.3, JUICE #108;
+  BUSINESS E12: bu durumda "+" ve satın alma yok). `booster.trowel.noTarget`: mala seçimi açıldığında `P`'si olan saha
+  bloğu yoksa şeridin metni (UX §5.2). Hepsi ≤ 6 kelime, renk adı yok; Ağır Yük'e "yük" denir.
 - `pause.*`, `settings.*`, `common.on` / `.off`: Duraklat penceresi (UX §5.1) başlık `pause.title` (devam açılışında
   `resume.title`), birincil `common.continue`, üç anahtar satırı, alt satırda `pause.exit` (→ çıkış onayı). Ayarlar
   ekranı (UX §11) aynı `settings.*` satır adlarını kullanır.
@@ -763,3 +813,50 @@ Kullanım ve sayılar (D-017; sayılar config'ten, metne sabit yazılmaz):
   (UX §2.1, §8). `home.play` `{n}` = sıradaki bölüm; Bölüm düğmesi (`upper` ile "BÖLÜM 12"; UX §3 ve Faz 2 asgari ana
   ekranı, UX §6). `story.sign`: giriş Panel 3 tabelasının metin katmanı (§0-7, §4.0); `upper` ile çizilir (TR "MİNİK
   USTA İNŞAAT", EN "TUNA & CO.").
+
+### 7.7 Faz 2R — ana sayfa v2, HUD v2 ve kazanma v2 metinleri
+
+Ekran yerleşimi UX §3 (ana sayfa), §5.9 (HUD), §6.1 (kazanma). Sekme adları ve alan adları kısa, tek kelime ya da iki
+kelimedir; renk adı yok.
+
+| Kimlik | TR | EN |
+| ------ | -- | -- |
+| `nav.shop` | Mağaza | Shop |
+| `nav.league` | Lig | League |
+| `nav.home` | Ana Sayfa | Home |
+| `nav.team` | Takım | Team |
+| `nav.album` | Albüm | Album |
+| `town.ch1.title` | Ağaç Ev | Tree House |
+| `town.ch2.title` | Mahalle Fırını | Neighborhood Bakery |
+| `town.ch3.title` | Okul Kütüphanesi | School Library |
+| `town.ch4.title` | Fener ve Köprü | Lighthouse and Bridge |
+| `town.ch5.title` | Festival Şatosu | Festival Castle |
+| `hud.blocks` | blok | blocks |
+| `hud.livesFull` | Dolu | Full |
+| `settings.title` | Ayarlar | Settings |
+| `win.clear` | Bütün bloklar yerinde! | Every block in place! |
+| `lose.blocksLeft` | Kalan: {n} blok | Blocks left: {n} |
+| `common.notEnoughCoins` | Altın yetmiyor | Not enough coins |
+| `chest.preview` | {n} bölüm sonra açılır | Opens in {n} levels |
+
+Kullanım:
+
+- `nav.*`: alt gezinme sekme etiketleri (UX §3); kilitli sekmede etiket aynen kalır, dokununca `common.comingSoon`
+  "Yakında" balonu (§7.5).
+- `town.ch<n>.title`: ana sayfa alan şeridi (UX §3), `upper` **uygulanmaz** (alan adı yazıldığı gibi; ART §8.1). EN
+  adları çalışma çevirisidir (STORY §4.2'deki "Neighborhood Bakery" ile aynı).
+- `hud.blocks`: hedefler panelindeki kalan blok çipinin etiketi (UX §5.9); sayı ayrı çizilir, ek bağlanmaz (§0-9).
+- `hud.livesFull`: can kapsülünde can tam iken geri sayımın yerine (UX §3).
+- `settings.title`: ana sayfadaki ayar dişlisinin açtığı pencerenin başlığı (Faz 2R'de ses / müzik / titreşim satırları;
+  UX §3).
+- `win.clear`: K-48 sağlanınca (son doğru yerleşim ya da E-27'de son Çekiç vuruşu) 600 ms görünen altın şerit (UX §5.9
+  madde 5, JUICE #94). TR ve EN aynı şeyi söyler: bütün **malzeme blokları** yerinde; sahada Ağır Yük, kasa ya da torba
+  kalabileceği için "saha temiz" denmez (PL-2R-07).
+- `lose.blocksLeft`: kayıp Pencere 1'de kalan blok bilgisi (UX §5.9 madde 6, KABUL PL-2R-06); `{n}` = `N − doğru
+  yerleşmiş malzeme bloğu` (UX §5.9 madde 1). EN biçimi "Blocks left: {n}" tekil/çoğul sorununu önler (n = 1'de "1
+  blocks" yazılmaz). `lose.left` (hücre) Faz 2R'de kullanılmaz.
+- `common.notEnoughCoins`: Mağaza kilitliyken (Faz 2R dilimi, META §10) altın yetmeyen satın alma düğmesinin yerindeki
+  gri pasif düğme (UX §3, §3.1, §4, §7); dokunuş hiçbir yere gitmez.
+- `chest.preview`: ana sayfadaki bölüm sandığı ikonuna dolmadan dokununca açılan önizleme penceresinin satırı (UX §3.1);
+  `{n}` = sandığa kalan bölüm; ek bağlanmaz (§0-9).
+

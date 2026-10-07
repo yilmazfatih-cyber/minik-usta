@@ -179,13 +179,38 @@ describe('i18n files (TECH 11.5)', () => {
     }
   });
 
-  it('D-017 every text is verbatim from STORY 4.0 / 6 / 7 and the OBSTACLES info cards', () => {
+  /**
+   * Faz 2R transition (TECH §2R.10, §2R.12 WP-L): STORY already describes Faz 2R behavior for these keys, while the
+   * Faz 2 code still runs the old mechanic (Golden Trowel picks a front cell; truck help D2 delivers B1 material).
+   * Their texts change together with the behavior (WP-C Golden Trowel, WP-D Söküm), then the list is emptied and the
+   * strict test's `it.fails` mark is dropped.
+   */
+  const PENDING_FAZ_2R = ['booster.hint.trowel', 'tut.ctx.goldtrowel', 'tut.ctx.truckhelp.material'];
+
+  it.fails('D-017 every text is verbatim from STORY 4.0 / 6 / 7 and the OBSTACLES info cards', () => {
     const source = new Map([...storyTableTexts(), ...prologueTexts(), ...obstacleCards()]);
     for (const key of trKeys) {
       const doc = source.get(key);
       expect(doc, `${key} has no TR/EN source line in STORY or OBSTACLES`).toBeDefined();
       expect([lookupText(tr, key), lookupText(en, key)], key).toEqual(doc);
     }
+  });
+
+  it('D-017 every text is verbatim from STORY 4.0 / 6 / 7 and the OBSTACLES info cards, except the Faz 2R pending keys', () => {
+    const source = new Map([...storyTableTexts(), ...prologueTexts(), ...obstacleCards()]);
+    const differing: string[] = [];
+    for (const key of trKeys) {
+      const doc = source.get(key);
+      expect(doc, `${key} has no TR/EN source line in STORY or OBSTACLES`).toBeDefined();
+      const ours = [lookupText(tr, key), lookupText(en, key)];
+      if (PENDING_FAZ_2R.includes(key)) {
+        if (JSON.stringify(ours) !== JSON.stringify(doc)) differing.push(key);
+        continue;
+      }
+      expect(ours, key).toEqual(doc);
+    }
+    // Every pending key still differs; a key that already matches must leave the list.
+    expect(differing).toEqual(PENDING_FAZ_2R);
   });
 
   it('TECH 14.1 Phase 2 keys: level 1-5 tutorial textKeys and teaches cards resolve in both languages', () => {

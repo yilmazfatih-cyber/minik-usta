@@ -1,5 +1,5 @@
 /**
- * Analytics (docs/TECH_DESIGN.md §11.4; docs/ANALYTICS.md §2 v5, §3).
+ * Analytics (docs/TECH_DESIGN.md §11.4, §2R.16; docs/ANALYTICS.md §2 v6, §3).
  *
  * `ANALYTICS_EVENTS` is the runtime copy of the ANALYTICS §2 table — event names, parameter names, types, enum values,
  * int ranges and `| null` — and `AnalyticsEvent` is DERIVED from it, so code and table cannot drift apart silently:
@@ -59,11 +59,11 @@ const OFFER_FIELDS = {
   priceCoins: nullable(int()),
 };
 
-/** ANALYTICS §2 v5 table, row by row (tests compare both ways). */
+/** ANALYTICS §2 v6 table (Faz 2R), row by row (tests compare both ways). */
 export const ANALYTICS_EVENTS = {
   app_open: {},
   save_corrupt: { stage: en('parse', 'migrate', 'validate'), recovered: en('backup', 'defaults') },
-  tutorial_step: { level: int(), step: int() },
+  tutorial_step: { level: int(), step: int(), shows: int(), msToDone: int() },
   level_start: { level: int(), attempt: int(), mode: MODE, preBoosters: int() },
   level_end: {
     level: int(),
@@ -76,11 +76,23 @@ export const ANALYTICS_EVENTS = {
     extensions: int(0, 3),
     exitFree: bool(),
     truckHelps: int(),
+    teardowns: int(),
+    blocksLeft: int(),
+  },
+  deadlock_teardown: {
+    level: int(),
+    cause: en('color_balance', 'tiling', 'access', 'unknown_before_offer'),
+    movesLeft: int(),
+    piecesReturned: int(),
   },
   level_resume: { level: int(), movesMade: int() },
   level_resume_invalid: { level: int(), movesMade: int(), cause: en('level_hash', 'rules_version', 'both') },
   level_load_failed: { level: int(), stage: en('schema', 'logic'), code: nullable(str()) },
-  booster_used: { booster: en(...BOOSTER_IDS), level: int() },
+  booster_used: {
+    booster: en(...BOOSTER_IDS),
+    level: int(),
+    target: nullable(en('cargo', 'crate', 'cementBag', 'chain', 'siteDebris', 'stuckMortar', 'block')),
+  },
   offer_shown: { ...OFFER_FIELDS },
   offer_result: { ...OFFER_FIELDS, result: en('coins', 'ad', 'free', 'declined', 'unavailable') },
   purchase: {
@@ -149,6 +161,7 @@ export const ANALYTICS_EVENTS = {
   store_open: {
     source: en('nav', 'coin_plus', 'piggy', 'out_of_moves', 'bridge_loss', 'lives_zero', 'booster_plus'),
   },
+  nav_tap: { tab: en('shop', 'league', 'home', 'team', 'album'), locked: bool() },
   chest_open: { chest: en('level', 'league', 'master'), contentId: str() },
   session_end: { durationMs: int(), levelsPlayed: int() },
   settings_changed: {

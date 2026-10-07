@@ -22,7 +22,7 @@
 | Ajan           | Karar alanı                                                                 | Sahip olduğu dosyalar                                                                                   |
 | -------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `product-lead` | Kurallar, mekanikler, engeller, 50 bölüm, zorluk eğrisi, meta, oyun dengesi | `docs/GDD.md`, `docs/OBSTACLES.md`, `docs/LEVELS.md`, `docs/META.md`, `levels/*.json`, `config/*.json`  |
-| `design-lead`  | Görsel yön, UI/UX, animasyon ve his, hikaye, karakterler, asset listesi     | `docs/ART_DIRECTION.md`, `docs/UX_FLOWS.md`, `docs/JUICE.md`, `docs/STORY.md`, `docs/ASSET_LIST.md`, `src/theme/tokens.json` |
+| `design-lead`  | Görsel yön, UI/UX, animasyon ve his, hikaye, karakterler, asset listesi     | `docs/ART_DIRECTION.md`, `docs/UX_FLOWS.md`, `docs/JUICE.md`, `docs/STORY.md`, `docs/ASSET_LIST.md`, `src/theme/tokens.json`, `public/art/**` (SVG çizimler, R2-08) |
 | `code-lead`    | Teknik mimari, tüm kod, araçlar, testler, performans                        | `docs/TECH_DESIGN.md`, `docs/LEVEL_REPORT.md` (üretilen), `src/**` (tokens.json hariç), `tools/**`, `tests/**`, `package.json`, tüm yapılandırma |
 | `entrepreneur` | Pazar, konumlandırma, monetizasyon ve fiyatlar, KPI, LiveOps, kapsam, hukuk | `docs/BUSINESS.md`, `docs/NAMING.md`, `docs/STORE_LISTING.md`, `docs/ANALYTICS.md` (code-lead ile)     |
 | Orkestratör    | Fazlar, çatışma çözümü, karar günlüğü                                       | `CLAUDE.md`, `docs/BRIEF.md`, `docs/DECISIONS.md` (herkes ÖNERİ ekleyebilir), `.claude/agents/*`        |

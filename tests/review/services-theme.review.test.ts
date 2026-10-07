@@ -557,6 +557,9 @@ describe('analytics union = ANALYTICS §2 v5 (TECH 11.4)', () => {
       extensions: 3,
       exitFree: true,
       truckHelps: 0,
+      // ANALYTICS v6 (Faz 2R)
+      teardowns: 0,
+      blocksLeft: 4,
     };
     expect(validateEvent(end)).toEqual([]);
     expect(validateEvent({ ...end, yao: 101 })).not.toEqual([]);
@@ -2338,6 +2341,9 @@ describe('round 3: K-43 atomic writes and the pending home windows (GDD K-43, TE
       extensions: decision.inLevel.offersUsed,
       exitFree: false,
       truckHelps: 0,
+      // ANALYTICS v6 (Faz 2R): a win leaves no block.
+      teardowns: 0,
+      blocksLeft: 0,
     };
     expect(validateEvent(end)).toEqual([]);
     expect(r.events).toEqual([{ name: 'level_resume', level: 12, movesMade: 35 }]);

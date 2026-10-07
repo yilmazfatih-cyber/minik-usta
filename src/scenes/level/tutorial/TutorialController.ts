@@ -43,8 +43,11 @@ export interface TutorialHost {
   hooks(): MoveHooks;
   /** GDD §14.1/2: `seenContextTips.<topic>` (written at once). */
   markContextTip(topic: string): void;
-  /** A step ended (completed or skipped): ANALYTICS `tutorial_step`. */
-  stepEnded(step: number, skipped: boolean): void;
+  /**
+   * A step ended (completed or skipped): ANALYTICS `tutorial_step`. `msToDone` = animation time from the step's show to
+   * its end (ANALYTICS §2 v6).
+   */
+  stepEnded(step: number, skipped: boolean, msToDone: number): void;
 }
 
 export interface ShownStep {
@@ -347,7 +350,7 @@ export class TutorialController {
 
   #complete(now: number, skipped: boolean): void {
     const step = this.steps[this.#index];
-    if (step) this.#host.stepEnded(step.step, skipped);
+    if (step) this.#host.stepEnded(step.step, skipped, Math.max(0, Math.round(now - this.#since)));
     this.#next(now);
   }
 

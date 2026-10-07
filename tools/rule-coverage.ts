@@ -13,7 +13,9 @@
  *   names; a note in no cell is phase 3;
  * - E-xx (GDD §13): phase = the largest phase of the K-xx and obstacle ids of the row (rule column + text); a row that
  *   names Sallanan Köprü / Usta Ligi or whose rule column has META is phase 4 (§14.3).
- * `--phase N` checks the ids of phase ≤ N; without it every id. Exit 1 when an id has no test whose name contains it
+ * - Phase "2R" (TECH §2R.11, Faz 2R): the F token `2R` is a phase between 2 and 3 (value 2.5). An E row or a `[kural]`
+ *   N-note tagged "(Faz 2R" is at least phase 2R. `--phase 2` does not require 2R ids; `--phase 2R` does.
+ * `--phase N|NR` checks the ids of phase ≤ N; without it every id. Exit 1 when an id has no test whose name contains it
  * (`(^|[^\w-])ID(?!\d)`), 2 on a document or argument error.
  *
  * Options: `--list <file>` reads a saved `vitest list --json` instead of running vitest; `--print` lists the required
@@ -36,6 +38,22 @@ export interface RuleId {
 
 export class CoverageError extends Error {}
 
+/** Faz 2R phase (TECH §2R.11): after phase 2, before phase 3. */
+export const PHASE_2R = 2.5;
+const FAZ_2R_TAG = /\(Faz 2R\b/;
+
+/** A phase token: `2` → 2, `2R` → 2.5 (TECH §12.4 F column, `--phase` argument). Null when the text has none. */
+export function parsePhase(text: string): number | null {
+  const m = /(\d)(R?)/.exec(text);
+  if (!m) return null;
+  return Number(m[1]) + (m[2] === 'R' ? PHASE_2R - 2 : 0);
+}
+
+/** Printable phase: 2.5 → "2R". */
+export function phaseLabel(phase: number): string {
+  return Number.isInteger(phase) ? String(phase) : `${Math.floor(phase)}R`;
+}
+
 /** K-xx → first phase of the TECH §12.4 F column. */
 export function kPhases(tech: string): Map<string, number> {
   const out = new Map<string, number>();
@@ -45,8 +63,8 @@ export function kPhases(tech: string): Map<string, number> {
     for (let i = 1; i + 2 < cells.length; i++) {
       const id = /^K-\d\d$/.exec(cells[i] ?? '')?.[0];
       if (!id) continue;
-      const f = /\d/.exec(cells[i + 2] ?? '')?.[0];
-      if (f !== undefined) out.set(id, Number(f));
+      const f = parsePhase(cells[i + 2] ?? '');
+      if (f !== null) out.set(id, f);
     }
   }
   return out;
@@ -70,14 +88,18 @@ export function obstacleFirstLevels(obstacles: string): Map<string, number> {
   return out;
 }
 
-/** Phase of an obstacle: the vertical slice (levels 1–5) is phase 2, the rest phase 3 (TECH §12.2). */
-export const obstaclePhase = (firstLevel: number): number => (firstLevel <= 5 ? 2 : 3);
+/**
+ * Phase of an obstacle (TECH §12.2, §2R.11): the Faz 2 slice (levels 1–5) is phase 2, the Faz 2R slice adds levels 6–10
+ * (phase 2R: W2, Y5, W3), the rest is phase 3.
+ */
+export const obstaclePhase = (firstLevel: number): number =>
+  firstLevel <= 5 ? 2 : firstLevel <= 10 ? PHASE_2R : 3;
 
 /** `[kural]` N-notes of OBSTACLES "Notlar": id → note text. */
 export function ruleNotes(obstacles: string): Map<string, string> {
   const out = new Map<string, string>();
-  for (const m of obstacles.matchAll(/^- \*\*(N\d+)\*\* \[kural\] — (.*)$/gm))
-    out.set(m[1] ?? '', m[2] ?? '');
+  for (const m of obstacles.matchAll(/^- \*\*(N\d+)\*\* \[kural\]( \(Faz 2R\))? — (.*)$/gm))
+    out.set(m[1] ?? '', `${m[2] ?? ''}${m[3] ?? ''}`.trim());
   return out;
 }
 
@@ -142,7 +164,8 @@ export function ruleIds(docs: { gdd: string; tech: string; obstacles: string }):
     const ks = [...text.matchAll(/K-\d\d/g)].map((m) => kp.get(m[0]) ?? 2);
     const cellPhases = (cells.get(id) ?? []).map(([a, b]) => Math.max(op.get(a) ?? 3, op.get(b) ?? 3));
     const fromCells = cellPhases.length > 0 ? Math.min(...cellPhases) : 3;
-    out.push({ id, kind: 'N', phase: Math.max(fromCells, ...ks) });
+    const tagged = FAZ_2R_TAG.test(text) ? PHASE_2R : 0;
+    out.push({ id, kind: 'N', phase: Math.max(fromCells, tagged, ...ks) });
   }
 
   for (const [id, row] of edgeRows(docs.gdd)) {
@@ -154,7 +177,8 @@ export function ruleIds(docs: { gdd: string; tech: string; obstacles: string }):
       ...[...row.text.matchAll(/K-\d\d/g)].map((m) => kp.get(m[0]) ?? 2),
       ...[...row.text.matchAll(/\b(W\d|Y\d|S\d|G-[HL])\b/g)].map((m) => op.get(m[1] ?? '') ?? 3),
     ];
-    out.push({ id, kind: 'E', phase: phases.length > 0 ? Math.max(...phases) : 2 });
+    const base = phases.length > 0 ? Math.max(...phases) : 2;
+    out.push({ id, kind: 'E', phase: FAZ_2R_TAG.test(row.text) ? Math.max(base, PHASE_2R) : base });
   }
   return out;
 }
@@ -198,9 +222,9 @@ function arg(argv: readonly string[], name: string): string | null {
 
 function main(argv: readonly string[]): number {
   const p = arg(argv, '--phase');
-  const phase = p === null ? null : Number(p);
-  if (phase !== null && (!Number.isInteger(phase) || phase < 1)) {
-    process.stderr.write('rule-coverage: --phase needs a positive integer\n');
+  const phase = p === null ? null : /^[1-9]R?$/.test(p) ? parsePhase(p) : NaN;
+  if (phase !== null && !Number.isFinite(phase)) {
+    process.stderr.write('rule-coverage: --phase needs a positive integer, optionally followed by R (2R)\n');
     return 2;
   }
   try {
@@ -217,7 +241,7 @@ function main(argv: readonly string[]): number {
     }
     const titles = vitestTitles(arg(argv, '--list'));
     const missing = missingIds(ids, titles, phase);
-    const scope = phase === null ? 'all phases' : `phase ≤ ${phase}`;
+    const scope = phase === null ? 'all phases' : `phase ≤ ${phaseLabel(phase)}`;
     const count = (k: IdKind): number => required.filter((r) => r.kind === k).length;
     if (missing.length > 0) {
       process.stderr.write(

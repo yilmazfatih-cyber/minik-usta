@@ -955,7 +955,9 @@ describe('review: TECH 12.2 test:rules --phase 2 (rule coverage of the Phase 2 s
       for (let i = 1; i + 2 < cells.length; i++) {
         const id = /^K-\d\d$/.exec(cells[i] ?? '')?.[0];
         if (!id) continue;
-        const f = Number(/\d/.exec(cells[i + 2] ?? '')?.[0]);
+        // TECH 2R.11: an F token "2R" is a phase between 2 and 3, so it is not a Phase 2 rule.
+        const tok = /(\d)(R?)/.exec(cells[i + 2] ?? '');
+        const f = tok ? Number(tok[1]) + (tok[2] === 'R' ? 0.5 : 0) : NaN;
         if (f <= 2) out.push(id);
       }
     }
@@ -985,13 +987,14 @@ describe('review: TECH 12.2 test:rules --phase 2 (rule coverage of the Phase 2 s
     return out;
   }
 
-  it('TECH 14.1 every Phase 2 rule id (K-xx with F ≤ 2, W1, S1, S2 and the 9 E rows) is in at least one test name', () => {
+  it('TECH 14.1 every Phase 2 rule id (K-xx with F ≤ 2, W1, S1, S2 and the 8 E rows) is in at least one test name', () => {
     const rules = phase2Rules();
     expect(rules).toEqual(expect.arrayContaining(['K-01', 'K-19', 'K-29', 'K-43', 'K-45', 'K-46']));
     expect(rules).not.toContain('K-20');
     expect(rules).not.toContain('K-30');
     const edges = phase2EdgeCases();
-    expect(edges).toEqual(['E-01', 'E-03', 'E-06', 'E-21', 'E-27', 'E-28', 'E-30', 'E-34', 'E-38']);
+    // Faz 2R (TECH 12.2): E-27 now names K-30 and moved to phase 3.
+    expect(edges).toEqual(['E-01', 'E-03', 'E-06', 'E-21', 'E-28', 'E-30', 'E-34', 'E-38']);
     const titles = testTitles();
     const missing = [...rules, 'W1', 'S1', 'S2', ...edges].filter(
       (id) => !titles.some((t) => new RegExp(`(^|[^\\w-])${id}(?!\\d)`).test(t)),

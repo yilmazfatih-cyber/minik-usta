@@ -1,6 +1,8 @@
 # Analytics planı
 
-Sahip: entrepreneur + code-lead · Durum: §2 olay tablosu v5 (2026-10-06, son tutarlılık turu 3: `store_open.source` +=
+Sahip: entrepreneur + code-lead · Durum: §2 olay tablosu v6 Faz 2R (2026-10-07; entrepreneur ad + amaç, tip birliği
+code-lead'in: +`deadlock_teardown`, +`nav_tap`, `level_end` +`teardowns` +`blocksLeft`, `booster_used` +`target`,
+`tutorial_step` +`shows` +`msToDone`; BUSINESS §6.2 Faz 2R KPI'ları, E12, E13); v5 (2026-10-06, son tutarlılık turu 3: `store_open.source` +=
 `coin_plus`, `piggy`, `bridge_loss`; UX mağaza girişlerinin tamamı eşlendi); v4 (2026-10-05, son tutarlılık turu 2:
 `level_start.mode` / `level_end.mode` += `replay` (D-026 yedeği, `masterMode.variant`); v3: 2026-10-05, son tutarlılık turu: `star_spent.task` =
 `economy.json` görev `id`'si, günlük reklam yerleşimi iki olayda `daily_double`, `offer` +`daily_double`,
@@ -31,13 +33,14 @@ Değişiklik: entrepreneur (ad, amaç) + code-lead (tip). Tipler: `int`, `str`, 
 | --- | --- | --- | --- |
 | `app_open` | — | MVP | Tutma |
 | `save_corrupt` | `stage` enum(parse, migrate, validate), `recovered` enum(backup, defaults) | MVP | TECH §11.1 kayıt kurtarma; `defaults` = ilerleme kaybı (BUSINESS §8 Kapı 0 "kritik hata 0") |
-| `tutorial_step` | `level` int, `step` int | MVP | FTUE hunisi |
+| `tutorial_step` | `level` int, `step` int, `shows` int (≥ 1), `msToDone` int | MVP | FTUE hunisi; Faz 2R hafif öğretici anlaşılırlığı (BUSINESS §6.2 `shows` medyanı ≤ 2) |
 | `level_start` | `level` int, `attempt` int, `mode` enum(story, master, replay), `preBoosters` int | MVP | Bölüm hunisi |
-| `level_end` | `level` int, `mode` enum(story, master, replay), `result` enum(win, lose, quit), `movesLeft` int, `wrongPlacements` int, `yao` int (0–100), `durationMs` int, `extensions` int (0–3), `exitFree` bool, `truckHelps` int | MVP | Zorluk, bölüm süresi bandı; cezasız çıkış (GDD K-43/2); kilitlenme sıklığı ↔ LEVEL_REPORT |
+| `level_end` | `level` int, `mode` enum(story, master, replay), `result` enum(win, lose, quit), `movesLeft` int, `wrongPlacements` int, `yao` int (0–100), `durationMs` int, `extensions` int (0–3), `exitFree` bool, `truckHelps` int, `teardowns` int, `blocksLeft` int | MVP | Zorluk, bölüm süresi bandı; cezasız çıkış (GDD K-43/2); kilitlenme sıklığı ↔ LEVEL_REPORT; Faz 2R Söküm / deneme KPI'ı ve kayıpta kalan blok dağılımı |
+| `deadlock_teardown` | `level` int, `cause` enum(color_balance, tiling, access, unknown_before_offer), `movesLeft` int, `piecesReturned` int | MVP | GDD K-30 Söküm (D2 / D3a / D3b) ve E13 teklif öncesi dönüş; Söküm haksızlık riski (BUSINESS R-23) |
 | `level_resume` | `level` int, `movesMade` int | MVP | OR-13 bölüm içi devam |
 | `level_resume_invalid` | `level` int, `movesMade` int, `cause` enum(level_hash, rules_version, both) | MVP | GDD K-43/4, E-45 geçersiz deneme; güncelleme kaynaklı iptal sıklığı |
 | `level_load_failed` | `level` int, `stage` enum(schema, logic), `code` str \| null | MVP | UX §4 hata durumu ("Bu bölüm hazırlanamadı" → Ana ekran); TECH §8.3 yükleme anı denetimi; sahada bozuk bölüm verisi (BUSINESS §8 Kapı 0 "kritik hata 0") |
-| `booster_used` | `booster` enum(economy.json güçlendirici kimlikleri), `level` int | MVP | Ekonomi |
+| `booster_used` | `booster` enum(economy.json güçlendirici kimlikleri), `level` int, `target` enum(cargo, crate, cementBag, chain, siteDebris, stuckMortar, block) \| null | MVP | Ekonomi; Faz 2R Çekiç hedef dağılımı (BUSINESS §5.4 fiyat bandı, Çekiç hedefli bölüm oranı) |
 | `offer_shown` | `offer` enum(continue, life, booster_plus, starter, piggy, pack, daily_double), `placement` enum(out_of_moves, bridge_loss, lives_zero, daily_double, in_level_plus, pre_level_plus, shop), `offerIndex` int (1–3) \| null, `priceCoins` int \| null | MVP | Teklif hunisi |
 | `offer_result` | `offer_shown` alanları + `result` enum(coins, ad, free, declined, unavailable) | MVP | Kurtarma karışımı (BUSINESS §5.4 b) |
 | `purchase` | `sku` enum(coins_1000, coins_2750, coins_6000, coins_13000, coins_35000, coins_75000, starter, piggy_break), `fake` bool | MVP | Monetizasyon |
@@ -52,6 +55,7 @@ Değişiklik: entrepreneur (ad, amaç) + code-lead (tip). Tipler: `int`, `str`, 
 | `cutscene_missing` | `scene` str (STORY sahne kimliği: `story.prologue`, `story.ch{n}.start`, `story.ch{n}.end`) | MVP | UX §8 hata durumu (sahne verisi yoksa atlanır); eksik içerik paketi |
 | `life_lost` | `level` int | MVP | Can ekonomisi |
 | `store_open` | `source` enum(nav, coin_plus, piggy, out_of_moves, bridge_loss, lives_zero, booster_plus) | MVP | Mağaza hunisi |
+| `nav_tap` | `tab` enum(shop, league, home, team, album), `locked` bool | MVP (Faz 2R) | Alt gezinme; kilitli sekmeye ("Yakında") talep sinyali — Mağaza/Lig açılış zamanlaması ve Takım/Albüm kapsam kararı için (BUSINESS §12.2) |
 | `chest_open` | `chest` enum(level, league, master), `contentId` str | MVP | E1 sabit içerik |
 | `session_end` | `durationMs` int, `levelsPlayed` int | MVP | Oturum süresi, bölüm / DAU |
 | `settings_changed` | `key` enum(sound, music, haptics, lang, colorblind, reduceMotion, heavyGravitySlow), `value` str | MVP | Erişilebilirlik kullanımı |
@@ -88,6 +92,24 @@ Değişiklik: entrepreneur (ad, amaç) + code-lead (tip). Tipler: `int`, `str`, 
   bozulmaz); diğer her durumda `false`. Kayıp oranı ve zorluk panosunda `exitFree = true` denemeler kayıp sayılmaz.
 - `level_end.truckHelps` = bu denemede çalışan Kamyon Yardımı sayısı (GDD K-30); Geri Al ile geri alınan yardım düşülür
   (E-37). LEVEL_REPORT'un "Kamyon Yardımı sayısı" sütunuyla bölüm başına karşılaştırılır (BUSINESS §6.4 pano 3).
+- **Faz 2R değer tanımları (v6, 2026-10-07):**
+  - `level_end.truckHelps` = bu denemede çalışan Kamyon Yardımı sayısı (Faz 2R: D1 yeniden dizme + Söküm; B1 teslimatı
+    ve yeniden şekillendirme yok, GDD K-30). `level_end.teardowns` = bunların Söküm olanları (`teardowns ≤ truckHelps`).
+    Geri Al ile geri alınan Söküm iki sayaçtan da düşülür (K-39).
+  - `level_end.blocksLeft` = bitişte sahada + kuyrukta + elde + teslim edilmemiş partilerde kalan malzeme bloğu sayısı
+    (Ağır Yük, kasa, torba sayılmaz; GDD K-48). Kazanmada 0. Kayıp penceresindeki `lose.blocksLeft` ile aynı sayıdır.
+  - `deadlock_teardown`: her Söküm'de bir kez. `cause`: `color_balance` = D2, `tiling` = D3a, `access` = D3b çıkmazı,
+    `unknown_before_offer` = sayaç 0'da D3b "bilinmiyor" döndüğü için teklif penceresinden önce yapılan dönüş (BUSINESS
+    E13). `movesLeft` Söküm sonrası sayaç (iade yok); `piecesReturned` = sahaya dönen blok sayısı. Geri Al bu Söküm'ü geri
+    alırsa yeni olay gönderilmez; `level_end` sayaçları düşülür.
+  - `booster_used.target`: Çekiç'te K-36 hedef türü (`cargo` = Y5 Ağır Yük, `crate`, `cementBag`, `chain`, `siteDebris`,
+    `stuckMortar`); Vinç, Boya Fırçası ve Altın Mala'da `block`; Geri Al ve oyun öncesi güçlendiricilerde `null`. Hedefsiz
+    güçlendiricide (E12) "+" gösterilmediği için `offer_shown { offer: booster_plus }` de gönderilmez.
+  - `tutorial_step`: adımın `done` olayıyla bitince bir kez (K-53; gizlenme ve yeniden görünme olay üretmez). `shows` =
+    adımın kaç kez göründüğü (ilk görünme dahil, UX §13.1 yeniden belirme sayılır), `msToDone` = ilk görünmeden `done`'a
+    kadar geçen süre. Adım `done` olmadan bölüm biterse olay gönderilmez (huni bunu kayıp olarak gösterir).
+  - `nav_tap`: alt gezinmede bir sekmeye her dokunuşta. `locked = true` dokunuşlar "Yakında" balonunu açar ve
+    `store_open` üretmez.
 - `level_resume_invalid`: açılışta `inLevel`, `levelHash` ya da `rulesVersion` uyuşmazlığıyla geçersiz sayılınca bir
   kez (GDD K-43/4, TECH §11.1 `voidAttempt`). `movesMade` `level_resume` ile aynı tanımdır. Deneme oynanmamış
   sayıldığından bu denemede `level_end`, `level_resume`, `life_lost` ve `event_eliminated` gönderilmez; bölüm hunisinde
@@ -103,6 +125,11 @@ Değişiklik: entrepreneur (ad, amaç) + code-lead (tip). Tipler: `int`, `str`, 
 - `save_corrupt`: kayıt yüklemesinde ana kayıt `stage` adımında (JSON parse → migration → şema doğrulama) başarısız
   olunca bir kez. `recovered = backup`: yedekten kuruldu; `defaults`: yedek de bozuk, varsayılanlarla başladı (ilerleme
   kaybı). Bozuk metin gönderilmez; yalnız yerelde (`minikusta.save.corrupt`) kalır.
+
+**Kapı 0 veri toplama (Faz 2R notu, ücretsiz yol):** web MVP'de olaylar yalnız yerel halka tampondadır; Kapı 0'ın
+"Bölüm 1–10 kazanma oranı ±10 puan" ve FTUE ölçütleri (BUSINESS §8) test oyuncularından toplanmalıdır. Öneri (code-lead
+ile; sunucu ve SDK yok): Ayarlar > "Geri bildirim" düğmesi tampondaki olayları kişisel veri içermeyen JSON olarak panoya
+kopyalar; Kapı 0 anketinde yapıştırma alanı. Maliyet: tahmin ≤ 0,5 g.
 
 ## §3 Ortak parametreler
 

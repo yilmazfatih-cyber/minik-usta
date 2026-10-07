@@ -1,6 +1,6 @@
 # Meta sistemler ve ekonomi
 
-Sahip: product-lead · Sürüm: Faz 1 revizyonu (2026-10-04; R-07, R-09, R-13–R-17; tutarlılık denetimi tur 1, 2026-10-05) · Kaynak: `docs/BRIEF.md` §10, `docs/BUSINESS.md` §4–§5
+Sahip: product-lead · Sürüm: Faz 2R (2026-10-07; R2-05 güçlendirici yeniden tanımları ve denge etkisi, §4.1; seri bonusu §5; çapraz inceleme kapanışı: Fırça ve Mala Başlangıcı 450 (D-076), seri kademe 3, `movesSpent`, Usta Modu tamponu, §10 dilim kapsamı) · Önceki: Faz 1 revizyonu (2026-10-04; R-07, R-09, R-13–R-17; tutarlılık denetimi tur 1, 2026-10-05) · Kaynak: `docs/BRIEF.md` §10, `docs/BUSINESS.md` §4–§5
 Makine okunur karşılıklar: `config/economy.json`, `config/events.json` (bu belgeyle birebir; çelişkide bu belge geçerlidir
 ve JSON düzeltilir).
 
@@ -61,7 +61,7 @@ kazanılınca oynayabilir. Görev adları ve sahne metinleri design-lead'indir (
 |---|---|
 | Azami can | 5 |
 | Yenilenme | 30 dakikada 1, cihaz saatiyle; saat geri alınırsa yenileme o ana kadar durur (saat hilesi koruması yöntemi code-lead'in) |
-| Can düşme | Bölüm başlarken 1 can **ayrılır**; kazanınca ve `m = 0` çıkışında iade edilir. Kayıp (K-29 teklif reddi) ya da `m ≥ 1` iken onaylı çıkış → ayrılan can gider. Uygulamanın kapanması kayıp **değildir**: bölüm kaldığı yerden sürer, can ayrılmış kalır (GDD K-43, R-13) |
+| Can düşme | Bölüm başlarken 1 can **ayrılır**; kazanınca ve `movesSpent = 0` çıkışında iade edilir (GDD §0, K-43; Söküm `movesSpent`'i düşürmez). Kayıp (K-29 teklif reddi) ya da `movesSpent ≥ 1` iken onaylı çıkış → ayrılan can gider. Uygulamanın kapanması kayıp **değildir**: bölüm kaldığı yerden sürer, can ayrılmış kalır (GDD K-43, R-13) |
 | Can 0 | Bölüm başlatılamaz; pencere: "Tam can — 900 altın" · "Bekle (geri sayım)" · ödüllü reklam +1 can (günde 2, §3.3) |
 | Sınırsız can | **MVP.** Sandık/ödülden gelen süreli durum (15 / 30 / 60 dk); süre içinde can ayrılmaz |
 | Tam doldurma fiyatı | 900 altın (5 cana tamamlar) |
@@ -76,7 +76,7 @@ kazanılınca oynayabilir. Görev adları ve sahne metinleri design-lead'indir (
 |---|---|---|
 | Kazanma | zorluğa göre | Kolay 20 · Normal 30 · Zor 50 · Çok Zor 75 |
 | Bonus İnşaat | kalan hamle başına, en çok 10 hamle sayılır | 3 / hamle (en çok 30) |
-| Kalan Altın Mala | kazanınca elde kalan her mala | 10 / mala |
+| Kalan Altın Mala | kazanınca elde kalan her mala | 10 / mala (Faz 2R: mala ≈ 2,5 hamle değerinde, §4.1; 10 altın ≥ 2,5 × 3 Bonus İnşaat altını, değişmedi) |
 | Kayıp | — | 0 |
 
 Örnek: Normal bölüm 4 hamle ve 1 malayla kazanıldı → 30 + 12 + 10 = 52 altın.
@@ -88,12 +88,16 @@ kazanılınca oynayabilir. Görev adları ve sahne metinleri design-lead'indir (
 | +5 hamle (kayıp anında) | 900 → 1.350 → 1.800 | Fiyat teklif numarasına göre (`n` = 1, 2, 3). Deneme başına en çok 3 teklif; **reklamla alınan +5 de sayılır** (R-15); reklam alternatifi yalnız 1. teklifte (§3.3); 4. yok. Ömürde ilk teklif ücretsiz ("Usta Dede'den hediye", teklif 1'e sayılır; **MVP**). Köprü'de aynı fiyat + tur tavanı 4.050 (§6.1) |
 | Tam can | 900 | |
 | Geri Al | 300 | |
-| Çekiç | 600 | |
-| Boya Fırçası | 600 | |
+| Çekiç | 600 | Faz 2R: değişmez (Ağır Yüklü bölümde 2–3 hamle → 200–300 altın/hamle) |
+| Boya Fırçası | 450 | Faz 2R (D-076, entrepreneur): renk takası ≈ 1–2 hamle → 225–450 altın/hamle (bölüm içi bandı 150–450) |
 | Vinç | 900 | |
 | Termos (+3 hamle) | 450 | 150/hamle < 180/hamle (+5 teklifi) — E6 |
-| Mala Başlangıcı | 600 | |
+| Mala Başlangıcı | 450 | Faz 2R (D-076, entrepreneur): +1 Altın Mala ≈ 2,5 hamle → 180 altın/hamle (oyun öncesi tavanı ≤ 180, E6) |
 | Açık Kepenk | 600 | W4/W7 olmayan bölümde seçilemez (GDD K-40) |
+
+**Fiyat bandı kuralı (entrepreneur, BUSINESS §5.4, P-14; denge onayı product-lead):** oyun öncesi güçlendirici ≤ 180
+altın/hamle; bölüm içi güçlendirici 150–450 altın/hamle; bütün altın fiyatları 150'nin katı. Faz 3 LEVEL_REPORT'taki
+"güçlendirici başına kazanılan hamle" medyanı bandın dışına çıkarsa fiyat bir 150 adımı kayar.
 
 Başlangıç cüzdanı: **500 altın**, 5 can, güçlendirici yok (açılışta ücretsiz denemeler gelir).
 
@@ -127,31 +131,57 @@ booster grant is kept and free trials add". Sunum (kilitli yuvada adet rozeti) d
 
 | Güçlendirici | Tür | Açılış | Ücretsiz deneme | Öğretici bağlamı |
 |---|---|---|---|---|
-| Çekiç | bölüm içi | 8 | 3 | Ağır paleti kır (isteğe bağlı kısayol) |
-| Vinç | bölüm içi | 10 | 2 | Gömülü bloğu döndürüp şantiyeye koy |
+| Çekiç | bölüm içi | 8 | 3 | Ağır Yük'ü kır (isteğe bağlı kısayol; Faz 2R: malzeme bloğu kırılmaz, GDD K-36) |
+| Vinç | bölüm içi | 10 | 2 | Gömülü bloğu döndürüp şantiyeye koy (değişmedi) |
 | Termos | oyun öncesi | 12 | 3 | Bölüm öncesi yuvası vurgulanır |
 | Geri Al | bölüm içi | 13 | 3 | Kepenk kaçırılınca son hamleyi geri al |
 | Mala Başlangıcı | oyun öncesi | 16 | 2 | |
 | Açık Kepenk | oyun öncesi | 20 | 2 | Bölüm 20'de kepenk + kayar kapı |
-| Boya Fırçası | bölüm içi | 22 | 2 | Boya kapısıyla birlikte |
+| Boya Fırçası | bölüm içi | 22 | 2 | Boya kapısıyla birlikte; Faz 2R: **renk takası** (iki eşit hücreli bloğun rengi yer değiştirir, GDD K-38) |
 
 ---
 
+### 4.1 Faz 2R güçlendirici değişiklikleri ve denge etkisi (R2-05; fiyatlar entrepreneur'ün, miktar product-lead'in)
+
+Tam örtü (GDD K-47) blok yaratan/yok eden her etkiyi kaldırdı. "Değer" = aynı işi hamleyle yapmanın maliyeti
+(karalama çözücüsü, Faz 2R Bölüm 1–10; Faz 3 bot ölçümüyle güncellenir). Referans: +5 teklifi 900 altın = 180 altın/hamle;
+Termos 450 = 150 altın/hamle.
+
+| Öğe | Faz 1 | Faz 2R (GDD) | Değer (hamle) | Denge etkisi ve miktar kararı |
+|---|---|---|---|---|
+| Çekiç | herhangi bir saha bloğunu yok eder; eksik malzemeyi Kamyon Yardımı `B1` olarak geri verirdi | yalnız Ağır Yük, kasa, torba, zincir; şantiyedeki moloz/harçlı bloğu sahaya indirir; malzeme kırılmaz (K-36) | Ağır Yüklü bölümde 2–3 (Bölüm 8: 8 → 5); hedefsiz bölümde **0** (yuva hedefsiz, "+" yok, GDD K-54) | Kullanım alanı daraldı: engelli bölümlere yoğunlaşır (8, 10; Faz 3'te kasa 11–12, moloz 17, torba 18, zincir 24, harç 35). **Tasarım kuralı (EN-2R-05):** 11–50'de Çekiç hedefli bölüm ≥ 20 (%50; LEVELS §3 Faz 2R notu madde 9). Faz 3 sonunda oran < %50 ise günlük ödül 2. gün (§8.1) ve Usta Sandığı (§8.5) Çekiç'i → Geri Al olur. Ücretsiz deneme 3 ve açılış 8 değişmez (Bölüm 8 dersi Çekiç'le kısalır). Fiyat **600 (değişmez)**. |
+| Altın Mala | 1 plan hücresini blok olmadan doldurur | sahadaki (gömülü olabilir) bir malzeme bloğunu doğru konumuna koyar (K-33) | 1 yerleşim + o bloğun kazısı ≈ **2,5** (Faz 1: ≈ 0,5) | Kombo eşiği 4 değişmez (`correctPlacementsPerTrowel`; bölüm başına değişmez, GDD K-52). Değer 5 kat arttığı için galibiyet serisi mala miktarı azaltıldı (§5). Mala Başlangıcı (oyun öncesi) +1 mala, değer ≈ 2,5 hamle; fiyat **450** (180 altın/hamle). |
+| Boya Fırçası | bir bloğu istenen renge boyar | iki eşit hücreli bloğun rengini takas eder (K-38); takas döşeme çıkmazı üretecekse yapılmaz | 1–2 (kazı kısayolu ya da şekil düzeltme) | Faz 1'deki "eksik rengi tamamla" gücü yok; değeri düştü. Ücretsiz deneme 2 değişmez. Fiyat **450** (D-076). |
+| Vinç | değişmedi | saha hedefinde döndürmez; döşeme çıkmazı üreten hedef geçersiz (K-37) | 2–4 | Değer değişmez; fiyat 900 değişmez. |
+| Geri Al | son hamleyi geri alır | ek: Söküm'ü de geri alır ve iade edilmeyen hamleyi geri verir (K-39) | 1 (+1 Söküm sonrası) | Değeri biraz arttı; miktar değişmez. |
+| Kamyon Yardımı | D2 eksik renk için ücretsiz `B1`; D3 yeniden şekillendirme | D1 yeniden dizme + **Söküm** (çıkmaza sokan son eylemi tek adımda geri alır; hamle ve kullanılan güçlendirici iade edilmez; sayaç 0 iken +5 penceresinden önce çalışır, K-29, K-30) | Söküm oyuncuya 1 hamle kaybettirir | Ücretsiz "hediye blok" kaynağı kalktı; çıkmaz artık sessiz kayıp değildir (fairness), bedeli 1 hamledir. +5 penceresi tespit edilmiş çıkmazda açılmaz (BUSINESS E13). +5 talebini artırması beklenmez (Kolay/Normal'de tuzak yok, K-51; Zor/Çok Zor'da Söküm/deneme medyanı ≤ 1,0, K-51 madde 2). |
+| +5 hamle, Termos, Açık Kepenk | değişmedi | değişmedi | 5 / 3 / — | — |
+
+Ölçüm: Faz 3 bot raporu (LEVEL_REPORT) güçlendirici başına "kazanılan hamle" medyanını yazar (code-lead); bu tablo o
+ölçümle güncellenir. Değişiklikler `config/economy.json` sürüm 3'te (`boosters.*.effect`, `winStreak.tiers`).
+
 ## 5. Galibiyet serisi
 
-- Açılış 15. Seri sayacı `s` = art arda kazanılan bölüm sayısı (Usta Modu dahil, **MVP**). Kayıp (K-29) ve `m ≥ 1` iken
-  onaylı çıkış `s = 0` yapar; `m = 0` iken çıkış seriyi bozmaz ve verilen başlangıç bonusu **tüketilmez** (bir sonraki
+- Açılış 15. Seri sayacı `s` = art arda kazanılan bölüm sayısı (Usta Modu dahil, **MVP**). Kayıp (K-29) ve
+  `movesSpent ≥ 1` iken onaylı çıkış `s = 0` yapar; `movesSpent = 0` iken çıkış seriyi bozmaz ve verilen başlangıç bonusu **tüketilmez** (bir sonraki
   girişte aynen verilir; GDD K-43, E-41). Uygulama kapanması seriyi bozmaz (K-43).
 - "Hamleler bitti" (+5 teklif) penceresinde seri kaybı yazılmaz ve gösterilmez; seri sıfırlanması yalnızca sonuç
   penceresinde bildirilir (entrepreneur önerisi KABUL).
 - Bölüm başında bonus `s`'ye göre uygulanır (oyun öncesi güçlendiricilerle toplanır, GDD K-40):
 
-| Kademe | Koşul | Başlangıç bonusu |
-|---|---|---|
-| 0 | s = 0 | — |
-| 1 | s = 1 | +1 Altın Mala |
-| 2 | s = 2 | +1 Altın Mala, +2 hamle |
-| 3 | s ≥ 3 | +2 Altın Mala, +3 hamle |
+| Kademe | Koşul | Başlangıç bonusu (Faz 2R) | Değer ≈ hamle (Faz 2R / Faz 1) |
+|---|---|---|---|
+| 0 | s = 0 | — | 0 / 0 |
+| 1 | s = 1 | +1 Altın Mala | 2,5 / 0,5 |
+| 2 | s = 2 | +1 Altın Mala, +1 hamle (Faz 1: +2 hamle) | 3,5 / 2,5 |
+| 3 | s ≥ 3 | +1 Altın Mala, +2 hamle (Faz 1: +2 mala, +3 hamle) | 4,5 / 4 |
+
+Faz 2R gerekçesi: Altın Mala gömülü bir bloğu doğrudan yerleştirdiği için değeri ≈ 2,5 hamleye çıktı (§4.1). Eski
+miktarlarla kademe 3 ≈ 8 hamle değerinde olur, ödeyen ve ödemeyen oyuncuyu bot hedeflerinden (kademe 0) çok uzaklaştırırdı.
+**Kural (BUSINESS E14, EN-2R-03):** her kademenin değeri bir +5 teklifinin değerinden (5 hamle) **küçüktür**; böylece
+seriyi korumak tek başına +5 satın almayı rasyonel kılmaz. Kademe 3 = +1 mala +2 hamle ≈ 4,5 < 5; kademe sırası korunur
+(0 < 2,5 < 3,5 < 4,5) ve kademe 3 Faz 1'den (4) yalnız ≈ 0,5 hamle yukarıdadır. Faz 3 bot ölçümünde Mala değeri 2,5'ten
+saparsa kademeler aynı kuralla yeniden hesaplanır.
 
 - Bölüm öncesi pencerede 3 kademeli gösterge görünür. Bot kazanma oranı hedefleri (LEVELS) **kademe 0** ile ölçülür;
   seri bonusu ustalık ödülüdür.
@@ -170,7 +200,7 @@ booster grant is kept and free trials add". Sunum (kilitli yuvada adet rozeti) d
 | Katılım | Etkinlik ikonundan "Katıl" (kural kartı: kaybedersen elenirsin, +5 hamleyle devam edebilirsin, havuz, süre) |
 | Katılımcılar | Oyuncu + 99 bot ("Renkli Tepe çırakları"; açıkça bot etiketli, adlar STORY `npc.apprentice.*`, gerçek insan adı yok; Köprü ekranında etiket + kural kartı — BUSINESS P-5, R-14) |
 | Tahta sayısı | 7. Katılımdan sonra **başlatılan** her kazanılmış bölüm = +1 tahta |
-| Elenme | Kayıp (K-29'da teklif reddi) ya da `m ≥ 1` iken onaylı çıkış → oyuncu suya düşer, simitle kıyıya yüzer, elenir. Uygulama kapanması elemez (K-43). Kayıp/elenme ekranında kalan oyuncu sayacı ve baskı metni gösterilmez (R-15) |
+| Elenme | Kayıp (K-29'da teklif reddi) ya da `movesSpent ≥ 1` iken onaylı çıkış → oyuncu suya düşer, simitle kıyıya yüzer, elenir. Uygulama kapanması elemez (K-43). Kayıp/elenme ekranında kalan oyuncu sayacı ve baskı metni gösterilmez (R-15) |
 | +5 hamle | Elenmeyi önler; fiyat etkinlik dışıyla aynı (900/1.350/1.800, deneme başına en çok 3, reklam dahil). **Tur harcama tavanı: 4.050 altın** (= 900 + 1.350 + 1.800, tek denemenin tam eskalasyonu; R-16, BUSINESS ile ortak değer; `events.json → wobblyBridge.bridgeSpendCapCoins`). Altın seçeneği yalnızca `tur harcaması + fiyat ≤ 4.050` iken etkindir; değilse altın seçeneği etkin değildir (sunum UX §7: gri düğme + `lose.bridgeCap`). Reklam seçeneği tavandan bağımsızdır, ama yalnız 1. teklifte vardır (§3.3); tavan doluyken 2. ve 3. teklifte yalnız ret seçeneği kullanılabilir (GDD K-29) |
 | Süre | Katılımdan itibaren 6 saat (`durationMinutes 360`). Süre içinde başlatılan bölüm, süre dolduktan sonra bitse de sayılır |
 | Süre dolarsa (7 tahta yok) | Ödül yok; "Süre doldu" (elenme mesajı değil) |
@@ -312,7 +342,8 @@ Lig çarpanı (yalnızca altına uygulanır): Bronz ×1 · Gümüş ×1,5 · Alt
 |---|---|---|---|---|---|---|---|
 | Ödül | 50 altın | 1 Çekiç | 75 altın | 1 Termos | 100 altın | 1 Geri Al | 200 altın + 1 Vinç + 15 dk sınırsız can |
 
-Ödüllü reklamla ×2 (yalnızca altın; günde 1; §3.3).
+Ödüllü reklamla ×2 (yalnızca altın; günde 1; §3.3). Faz 3 sonunda Çekiç hedefli bölüm oranı < %50 ise (§4.1) 2. günün
+ödülü 1 Geri Al olur.
 
 ### 8.2 Bölüm sandığı
 
@@ -358,12 +389,15 @@ gelir; JSON'daki USD/TRY yalnızca MVP gösterimi içindir.
 ### 8.5 İçerik sonu (50'den sonra): Usta Modu — **MVP (onay bekliyor)** (R-17; öneri P-8, entrepreneur destekliyor)
 
 - 11–50. bölümler sırayla, sonra yeniden 11: `11, 12, …, 50, 11, …` (`masterMode.levels`).
-- Hamle bütçesi `solver minimumu + 2` (bütün zorluklarda); yıldız yok.
+- Hamle bütçesi `solver minimumu + max(2, ⌈0,12 · min⌉)` (bütün zorluklarda; GDD K-52 Çok Zor tamponu; min ≤ 16 iken
+  +2 ile aynıdır, min 36'da +5; EN-2R-06); yıldız yok. `economy.json → masterMode.movesBuffer` = 2 (taban),
+  `movesBufferRatio` = 0,12.
 - Altın ödülü, kumbara katkısı, lig puanı ve bot zorluğu (§6.2 `d_k`) bölümün **özgün** zorluk etiketinden hesaplanır
   (bütçe daralması enflasyon yaratmaz).
 - Galibiyetler galibiyet serisine, Sallanan Köprü'ye ve Usta Ligi'ne sayılır.
 - Bölüm sandığı yerine her 10 Usta Modu galibiyetinde **Usta Sandığı**: 250 altın + 1 Çekiç (sabit içerik, açmadan önce
-  görünür; E1). Altın miktarı Faz 3'te §9 "ayar kuralı" ile kesinleşir.
+  görünür; E1). Altın miktarı Faz 3'te §9 "ayar kuralı" ile kesinleşir. Faz 3 sonunda Çekiç hedefli bölüm oranı < %50 ise
+  (§4.1) sandıktaki Çekiç → Geri Al.
 - "Yeni bölümler yolda" bandı ana ekranda kalır. Giriş kartı metni design-lead'in ("Usta Modu: bildiğin bölümler, daha
   az hamle." önerisi).
 - **Yedek kural (D-026; proje sahibi Usta Modu için "Sonra" derse, `economy.json → masterMode.variant: "replay"`):**
@@ -393,7 +427,8 @@ gelir; JSON'daki USD/TRY yalnızca MVP gösterimi içindir.
 | Usta Ligi | 10 bölümde ≈ 0,3 hafta × 60 | 20 |
 | **Toplam (1–50)** | | **≈ 1.030–1.130** |
 
-Usta Modu (50 sonrası): bölüm sandığı yerine Usta Sandığı (250); bütçe `min + 2` olduğu için bonus ≈ 1 hamle → galibiyet
+Usta Modu (50 sonrası): bölüm sandığı yerine Usta Sandığı (250); bütçe `min + max(2, ⌈0,12·min⌉)` olduğu için (11–50'de
+min ≈ 12–36 → tampon 2–5) bonus ≈ 1 hamle → galibiyet
 10 × (37 + 3) = 400 (taban ortalaması 11–50 = 37: 31 Normal · 5 Zor · 4 Çok Zor), mala ≈ 30 → 400 + 30 + 250 + 90 +
 50–150 + 20 = **≈ 840–940 / 10 galibiyet** (tahmin; Faz 3 ölçer, taban için aşağıya bakın). Yedek kural (§8.5,
 `variant: "replay"`): 370 + 0 + 250 + 90 + 50–150 + 20 ≈ 780–880 → ayar kuralıyla Usta Sandığı 300–400 altın.
@@ -423,6 +458,46 @@ bantları):**
 Kumbara kaynak değildir (yalnızca satın alımla açılır): 10 galibiyet × ≈ 60 ≈ 600 altın / 10 bölüm birikir (§8.3:
 1.850 altın / 31 galibiyet ≈ 60); 1.000 eşiğine 17. galibiyette (Bölüm 36) ulaşır (§8.3).
 
+**Faz 2R notu (K-52 tamponu):** hamle tamponu artık bölüm uzunluğuyla orantılıdır; verimli oyuncunun kalan hamlesi
+Faz 1 tahmini 5 yerine ≈ 3,5 hamle olabilir → galibiyet satırı 10 × (35 + 10,5) ≈ 455 → **toplam (1–50) ≈ 985–1.085**;
+taban (≥ 900) korunur. Faz 3 ekonomi simülasyonu kesinleştirir. Fiyat kararı (entrepreneur, D-076, BUSINESS §5.4):
+Çekiç 600 (değişmez; Ağır Yüklü bölümde 2–3 hamle = 200–300 altın/hamle), Boya Fırçası 600 → 450 (1–2 hamle = 225–450
+altın/hamle; Termos ile aynı **altın** fiyatı, hamle başı fiyatı Termos'unkinden (150) yüksektir), Mala Başlangıcı
+600 → 450 (≈ 2,5 hamle = 180 altın/hamle, E6). Tanıtım bölümlerinin (5, 6, 8, 9) tamponu Kolay satırından geldiği için
+(GDD K-52) 1–10'da kalan hamle ortalaması ≈ +1 artar; galibiyet satırı bunu ≈ +3 altın/bölüm olarak karşılar, taban
+değişmez.
+
 **Bonuslar ve güçlendirici kaynakları (10 bölüm başına):** sandık ≈ 3,2 güçlendirici (§8.2: 2 + 2 + 2 + 3 + 7 = 16 / 5
 sandık), günlük ≈ 0,9 (döngüde 4 güçlendirici / 7 gün × ≈ 1,5 gün), lig ≈ 0,1; ücretsiz denemeler (toplam 17) yalnızca
 açılışta. Açılmadan gelen güçlendiriciler envanterde birikir (§4).
+
+---
+
+## 10. Faz 2R dikey dilim kapsamı (Bölüm 1–10; PL-2R-18, EN-2R-16)
+
+Proje sahibinin "en ucuz olabiliyorsa ücretsiz" isteğiyle dilim, META'nın en ucuz alt kümesini taşır. Aşağıdaki kurallar
+**yalnız Faz 2R dilimi** içindir; Faz 4'te bu belgenin §1–§9 kuralları yürürlüğe girer ve bu bölüm kalkar. Sunum
+design-lead'in (UX §3, §6).
+
+| Öğe | Dilimde | Kural |
+|---|---|---|
+| Yıldız | Var | Bir bölüm **ilk kez** kazanılınca 1 ★; sayaç üst çubukta görünür. Tekrar kazanma yıldız vermez. |
+| Kasaba görevleri, yıldız harcama | Yok (Faz 4) | Görev baloncuğu ve görev penceresi yok. Ana sayfadaki Ağaç Ev'in inşa ilerlemesi = ilk kez kazanılmış farklı bölüm sayısı / 10 (her ilk kazanma yapıya bir kat ekler). |
+| Ara sahneler | Var | `story.prologue` §1'deki gibi (ilk açılış). `story.ch1.start`, Bölüm 1 ilk kez kazanıldıktan sonraki **ilk ana sayfa girişinden önce** oynar; `story.ch1.end`, Bölüm 10 ilk kez kazanıldıktan sonraki ilk ana sayfa girişinden önce oynar. Her biri bir kez; "Geç" ile atlanan görülmüş sayılır; bir giriş en çok bir sahne oynatır (§1). |
+| Can | Var | §2 aynen (5 can, 30 dk, tam doldurma 900 altın, reklamla +1 can günde 2). |
+| Altın kazanma | Var | §3.1 aynen (kazanma tabanı, Bonus İnşaat, kalan mala). |
+| +5 teklifi | Var | GDD K-29 ve §3.2–§3.3 aynen (900 / 1.350 / 1.800, reklam yalnız 1. teklifte, ömrün ilk teklifi ücretsiz). |
+| Mağaza | Kilitli | Alt gezinmede kilitli sekme ("yakında"). Altın yetmediğinde +5 ve can pencerelerinde "Altın al" düğmesi yerine aynı yerde, aynı boyda pasif "Altın yetmiyor" düğmesi (STORY anahtarı design-lead'in); üst çubuktaki altın "+" dokununca "Yakında" balonu açar. Reklam seçeneği ve ömrün ilk ücretsiz teklifi değişmez. |
+| Bölüm içi güçlendiriciler | Var (Çekiç 8, Vinç 10) | §4 açılışları ve ücretsiz denemeleri aynen; GDD K-54 yuva durumları. Adet 0 yuvasında "+" ve satın alma penceresi dilimde **yok** (Faz 4); yuva "adet 0" görünümündedir. |
+| Oyun öncesi güçlendiriciler | Yok | Açılışları (12, 16, 20) dilim dışındadır; bölüm öncesi pencerede yuvalar gösterilmez. |
+| Usta Serisi ve Altın Mala | Var | GDD K-33 aynen (Bölüm 1'den). |
+| Galibiyet serisi | Yok | Açılış 15 (§5). |
+| Bölüm sandığı | Var (yalnız 10) | İlerleme halkası Bölüm 1'den görünür ("n/10"), içerik açılmadan önce görünür (§8.2: 200 altın + 1 Çekiç + 1 Termos; Termos kilitli adet rozetiyle envantere eklenir, §4). Bölüm 10 ilk kez kazanılınca bir kez açılır. |
+| Günlük ödül, Sallanan Köprü, Usta Ligi, kumbara | Yok | Kenar ikonları dilimde gösterilmez. |
+| Bölüm 10'dan sonra | 1–10 döngüsü | "Oyna" sırasıyla 1, 2, …, 10, 1, … oynatır (§8.5 `replay` yedeğinin 1–10 karşılığı): hamle = LEVELS'taki özgün bütçe; yıldız yok; altın = yalnız kazanma tabanı (Bonus İnşaat ve kalan mala altını yok; mala oyunda kazanılır ve kullanılır); öğretici yok (GDD K-53 madde 6); can, +5 teklifi ve kayıp kuralları aynen; sandık yeniden açılmaz. |
+
+**Örnek:** Oyuncu ilk açılışta prologu izler → Bölüm 1'i kazanır (1 ★, 20 altın + bonus) → ana sayfaya dönerken
+`story.ch1.start` oynar → Ağaç Ev 1/10 katta. Bölüm 10'u kazanır → sandık açılır (200 altın, 1 Çekiç, 1 Termos) → ana
+sayfaya dönerken `story.ch1.end` oynar → "Oyna" artık "Bölüm 1"i gösterir; bu tekrar 11 hamleyle oynanır, kazanılınca
+yalnız 20 altın verir, yıldız ve öğretici yoktur.
+

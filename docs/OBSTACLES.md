@@ -1,6 +1,6 @@
 # Engel kütüphanesi
 
-Sahip: product-lead · Sürüm: Faz 1 revizyonu (2026-10-04; R-08, R-10, R-21; tutarlılık denetimi tur 1, 2026-10-05) · Kaynak: `docs/BRIEF.md` §7, `docs/GDD.md`
+Sahip: product-lead · Sürüm: Faz 2R (2026-10-07; R2-01 tam örtü, R2-02 değişken boyut, R2-05 çelişen sistemler; çapraz inceleme kapanışı: Y5 saha içinde kalır, W1/Y5 kartları, W6 jokerli D3a, S9 ilk bölüm 12, veri imzası tablosu) · Önceki: Faz 1 revizyonu (2026-10-04; R-08, R-10, R-21; tutarlılık denetimi tur 1, 2026-10-05) · Kaynak: `docs/BRIEF.md` §7, `docs/GDD.md`
 
 Her engel: kimlik, bölge, kural (kodlanabilir), veri parametreleri, ilk bölüm, bilgi kartı metni (TR/EN, en çok 12 kelime).
 Genel kurallar (yol, düşüş, doğrulama, hamle sonu hattı) GDD'dedir; burada yalnızca engele özel olan yazılır.
@@ -12,24 +12,65 @@ dokununca ya da ilk karşılaşmada kartta görür). Anahtar `obs.{id}.desc`; `i
 Usta Dede satırları STORY §6'dadır (`tut.l{n}.{konu}`, design-lead). Kurallar: terim "blok" (parça değil); renk adı
 yok (renk körlüğü); bölüme göre değişen sayılar `{n}` yer tutucusuyla (ör. kepenk periyodu, platform dönüşü).
 **Duvar:** saha ile şantiye arasındaki sıfır genişlikli sınırdır (GDD §0, K-04; R-03).
+**Koordinatlar (Faz 2R):** bu belgedeki sayısal koordinatlar varsayılan boyuttadır (saha 6×8, şantiye 2×8, duvar sınırı
+x=5|6, Vinç Alanı y=8–9). Genel hâlleri GDD §0 ve K-49'dadır: saha x ≤ Wy−1, y ≤ Hy−1; şantiye x ≥ Wy; Vinç Alanı
+y = H, H+1; `H = max(Hy, Hs + eMax)`.
+
+## Faz 2R uyum tablosu (tam örtü K-47/K-48 ve değişken boyut K-49)
+
+"Tam örtü" sütunu: kural bir malzeme bloğunu yaratıyor, yok ediyor ya da kalıcı kullanılamaz bırakıyor mu? "Boyut"
+sütunu: kural sabit koordinata bağlı mı? Uyumsuzlar yeniden tanımlandı ya da MVP dışı bırakıldı (R2-05).
+
+| Kimlik | Tam örtü | Değişken boyut | Durum (Faz 2R) |
+|---|---|---|---|
+| W1 Sabit Geçit | ✓ (blok taşır) | ✓ geçit satırı < `height` ≤ H | Değişmedi; ilk bölüm 3 → **4** |
+| W2 Yüksek Duvar | ✓ | **Değişti:** imza `height = H` (eski `= 8`) | Genelleştirildi |
+| W3 Dar Geçit | ✓ | ✓ | Değişmedi |
+| W4 Kepenk | ✓ | ✓ | Değişmedi (Faz 3) |
+| W5 Kayar Kapı | ✓ | ✓ (`range[1] + size ≤ height − 1`) | Değişmedi (Faz 3) |
+| W6 Boya Kapısı | ⚠ istenmeyen boyama renk başına arzı bozar | ✓ | **Uyarlandı:** tasarımda boyama arzın parçasıdır; D2 W6'lı bölümde çalışmaz; döşenemez bir durum üreten istenmeyen boyamayı jokerli K-30 D3a yakalar → Söküm (Faz 3) |
+| W7 Kilitli Geçit | ✓ | ✓ | Değişmedi (Faz 3) |
+| W8 Rüzgâr Fanı | ✓ | ✓ (kayma şantiye sütunları içinde) | Değişmedi (Faz 3) |
+| Y1 Ahşap Kasa | ✓ (malzeme değil, sahada kalabilir) | ✓ | Değişmedi (Faz 3) |
+| Y2 Çimento Torbası | ✓ (malzeme değil) | ✓ | Değişmedi (Faz 3) |
+| Y3 Zincir | ⚠ komşusu kalmayan zincirli blok hiç çözülemezdi | ✓ | **Uyarlandı:** komşusuz kalan zincir kendiliğinden kalkar (E-53) |
+| Y4 Islak Beton | ✓ | ✓ | Değişmedi (Faz 3) |
+| Y5 Ağır Malzeme | ✗ şantiyeye giremeyen blok tam örtüyü bozuyordu | ✓ | **Yeniden tanımlandı: Ağır Yük** — I5/Q9 malzeme değildir, renksizdir, yalnız saha içinde kayar (havaya kalkmaz), sahada kalabilir; Çekiç yok eder |
+| Y6 Saha Yerçekimi | ✓ | ✓ | Değişmedi (Faz 3) |
+| Y7 Altın Vida | ✓ | ✓ | Değişmedi (Faz 3) |
+| Y8 Harçlı Blok | ✓ (yapışan blok malzemedir, taşınır) | ✓ | Değişmedi; Çekiç yapışmayı çözer (K-36) |
+| S1 Kayan Şantiye | ✓ (taşınan malzeme serbest, K-27) | ✓ dilim Ws×Hs | Değişmedi |
+| S2 Plan Boşluğu | ✗ "plan şantiyeyi tamamen kaplar" kararıyla çelişir | — | **MVP dışı** (R2-01); doğrulayıcı `.`'yı reddeder; geri getirmek proje sahibi kararı |
+| S3 Cam Blok | ✓ (kırılan cam sahaya döner, yok olmaz) | ✓ | Değişmedi (Faz 3) |
+| S4 Moloz | ✗ "hiçbir yerde doğru olamaz" bloğu sahada kalıcı kalıyordu | ✓ | **Yeniden tanımlandı:** moloz renkli bir malzeme bloğudur, yalnız başlangıç konumunda yanlıştır; taşınınca kullanılır |
+| S5 Döner Platform | ✓ | ✓ | Değişmedi (Faz 3) |
+| S6 Asansör İskele | ✓ | **Değişti:** `H = max(Hy, Hs + b)`, `Hs + b ≤ 8` | Genelleştirildi (Faz 3) |
+| S7 Gizli Plan | ✓ | ✓ | Değişmedi (Faz 3) |
+| S8 Balonlu Blok | ✓ | ✓ | Değişmedi; S2 olmadan şantiyedeki anlamı daralır (yalnız sütun tepesine doğru), Faz 3'te yeniden değerlendirilir |
+| S9 Geniş Şantiye (yeni) | ✓ | Ws ≥ 3 | **Yeni imza**; ilk bölüm 12 (Faz 3); kapsam MVP (Faz 3), yalnız veri |
+| G-H, G-L | ✓ | ✓ (yönlendirme şantiye sütunları içinde) | Değişmedi (Faz 3) |
 
 ---
 
 ## Duvar (W)
 
 ### W1 — Sabit Geçit
-- **Bölge:** duvar · **İlk bölüm:** 3
+- **Bölge:** duvar · **İlk bölüm:** 4 (Faz 2R: kazı 3. bölüme alındı)
 - **Kural:** Duvarda her zaman açık boşluk. Satırları tamamen geçide sığan blok tamamen sahadaki bir konumdan sağa
   ötelenerek ray kipine girer (GDD K-12); şantiyede bırakılınca düşmez.
 - **Veri:** `wall.gaps[] = { y, size, type: "static" }`; kısıt `y + size ≤ height − 1`.
-- **Bilgi kartı** (`obs.w1.desc`): TR "Geçitten giren blok düşmez, bıraktığın yerde kalır." · EN "Blocks sent through a gap don't fall; they stay put."
+- **Bilgi kartı** (`obs.w1.desc`, Faz 2R): TR "Geçit alttaki bloğa kestirme yol açar." · EN "Gaps are a shortcut for bottom blocks."
+  Gerekçe (DL-2R-07): plan şantiyeyi tam kapladığı ve K-34 her yerleşimin altını dolu istediği için MVP'de "düşmez"in
+  gözlenebilir bir etkisi yoktur; geçidin oyuncuya değeri gömülü alt bloğa yatay kestirmedir. "Raydan konan blok düşmez"
+  kuralı (GDD K-12) aynen geçerlidir.
 
-### W2 — Yüksek Duvar
+### W2 — Yüksek Duvar (Faz 2R)
 - **Bölge:** duvar · **İlk bölüm:** 6
-- **Kural:** `height = 8`. Sınır y=0–7 arası kapalıdır (geçitler hariç); serbest kipte yalnızca Vinç Alanı
-  (y=8–9) üzerinden geçilir. Sonuç: sınırı geçen sütunundaki dikey hücre dizisi 2'den uzun bloklar (I3_0, I4_0, L4_0 …)
-  duvarı aşamaz (GDD K-05). Düşüş mesafesi uzar (cam için önemli).
-- **Veri:** `wall.height: 8`.
+- **Kural:** `height = H` (tahta yüksekliği, K-49; varsayılan 8). Sınır y=0…H−1 arası kapalıdır (geçitler hariç); serbest
+  kipte yalnızca Vinç Alanı (y = H, H+1) üzerinden geçilir. Sonuç: kutu yüksekliği 2'den büyük bloklar (I3_0, I4_0,
+  L4_0 …) duvarı aşamaz (GDD K-05). Düşüş mesafesi uzar (cam için önemli). Saha Hy < H ise blok sahanın tepesinden en az
+  H − Hy + 1 satır kaldırılır ("yukarı" hareketi belirginleşir; LEVELS Bölüm 6: Hy = 5, H = 7).
+- **Veri:** `wall.height: H` (ör. Bölüm 6'da 7).
 - **Bilgi kartı** (`obs.w2.desc`): TR "Duvar çok yüksek! Bloğu en tepeye kaldırıp öyle aşır." · EN "The wall is tall! Lift the block to the very top."
 
 ### W3 — Dar Geçit
@@ -74,6 +115,14 @@ yok (renk körlüğü); bölüme göre değişen sayılar `{n}` yer tutucusuyla 
   kapısına girildiyse **son girilenin** rengi geçerlidir (GDD E-39). Blok şantiyeye bırakılsa da sahaya geri çekilse de boya kalıcıdır; iptalde boya olmaz. Bayraklar korunur
   (cam camdır). Sürükleme sırasında blok kapıdayken yeni rengini gösterir (önizleme). Hamle kaydında `via` alanı
   (son girilen boya kapısının geçit indeksi) tutulur (öneri P-6, S-21).
+  **Faz 2R (tam örtü):** boyama renk başına arzı değiştirir; bu yüzden boya kapılı bölümde K-47 eşitliği toplam hücre
+  sayısında aranır ve tasarlanan boyamalar solver çözümünün parçasıdır (renk başına eşitliği solver kanıtlar). Tasarım
+  dışı bir boyama bir rengi fazla, birini eksik bırakır. W6'lı bölümde K-30 D2 çalışmaz (renk başına arz ile talep
+  tasarım gereği baştan farklıdır); D3a boyanabilir blokları **joker** sayar (kutu yüksekliği bir boya kapısının `size`'ından
+  büyük olmayan bloğun rengi = kendi rengi ya da bu kapıların renklerinden biri). Boyama döşenemez bir durum ürettiyse
+  D3a çıkmaz der → Söküm o hamleyi geri alır (hamle iade edilmez); yeniden boyanarak düzeltilebilecek bir boyama Söküm'e
+  gitmez. Gölge/önizleme boyanmış rengi gösterdiği için bilgi gizlenmez. Faz 3'te bölüm verisi yazılırken
+  yeniden değerlendirilir; MVP'de kalır.
 - **Veri:** `{ type: "paint", y, size, color }`.
 - **Örnek:** Kırmızı boya kapısı y=2. (4,2)'deki `B1` Y geçide girip sahada (5,6)'ya bırakılır → `B1` R, 1 hamle.
 - **Bilgi kartı** (`obs.w6.desc`): TR "Boya kapısına giren blok kapının rengini alır." · EN "A block that enters the paint gate takes its color."
@@ -124,6 +173,8 @@ yok (renk körlüğü); bölüme göre değişen sayılar `{n}` yer tutucusuyla 
 - **Bölge:** saha · **İlk bölüm:** 24
 - **Kural:** `chained` bayraklı blok oyuncu tarafından tutulamaz, Vinçle seçilemez, ama saha yerçekimiyle düşer. Kasa ile
   aynı komşuluk kuralıyla bir kez tetiklenince zincir kalkar (`clear/chain` 1 sayılır). Çekiç zinciri kırar, bloğu değil.
+  **Faz 2R (tam örtü):** hamle sonu adım 5'te zincirli bloğun 4-komşularında hiç blok, Ağır Yük, kasa ya da torba
+  kalmamışsa zincir kendiliğinden kalkar ve sayılır (GDD E-53); aksi halde blok hiç çözülemez, saha boşalamazdı (K-48).
 - **Veri:** `PiecePlacement.flags: ["chained"]`.
 - **Örnek:** Zincirli `O4` (0,0); (2,0)'daki blok taşınır → (2,0) zincirlinin komşusu (1,0)'a bitişik → zincir kalkar.
 - **Bilgi kartı** (`obs.y3.desc`): TR "Zincirli bloğun komşusunu oynat, zincir çözülsün." · EN "Move a neighbor to free the chained block."
@@ -132,19 +183,33 @@ yok (renk körlüğü); bölüme göre değişen sayılar `{n}` yer tutucusuyla 
 - **Bölge:** saha · **İlk bölüm:** 28
 - **Kural:** `wet` bayraklı blokta sayaç `wetMoves` (1–5) görünür. Sayaç > 0 iken tutulamaz, Vinçle seçilemez. Her hamle
   sonunda (adım 10) 1 azalır; o hamlede kamyonla gelen ıslak blok azalmaz. 0 olunca bayrak kalkar. Saha yerçekimiyle
-  düşer. Çekiç bloğu kırar.
+  düşer. (Faz 2R) Çekiç ıslak malzeme bloğunu kıramaz (tam örtü, GDD K-36); blok kuruyunca kullanılır.
 - **Veri:** `flags: ["wet"], wetMoves: N`.
 - **Örnek:** wetMoves 2; hamle 1 sonu 1, hamle 2 sonu 0 → 3. hamlede tutulabilir.
 - **Bilgi kartı** (`obs.y4.desc`): TR "Islak beton kurusun; sayaç sıfır olunca kullanabilirsin." · EN "Wet concrete must dry; use it when the counter hits zero."
 
-### Y5 — Ağır Malzeme
+### Y5 — Ağır Yük (Faz 2R; eski adı Ağır Malzeme)
 - **Bölge:** saha · **İlk bölüm:** 8
-- **Kural:** Genişliği ≥ 3 olan her yönelim ve I5, Q9 her zaman. Duvar sınırını geçemez (ne serbest ne ray kipinde);
-  yalnızca sahada ve saha üstü Vinç Alanı'nda (x ≤ 5) sürüklenir. Çekiçle kırılır. Vinç güçlendiricisi I5/Q9 dışındakileri
-  genişliği ≤ 2 yönelime döndürüp şantiyeye koyabilir (GDD K-37).
-- **Veri:** şekil kimliği (`I5_0`, `Q9_0`, `L4_90` …).
-- **Örnek:** `I5_0` (0,7)–(4,7) yukarı kaldırılıp (1,8)'de bırakılamaz (K-05 iptal); (0,7)'den (1,7)'ye kaydırılır (5,7 boşsa) → 1 hamle.
-- **Bilgi kartı** (`obs.y5.desc`): TR "Ağır malzeme duvarı geçemez. Kenara çek ya da kır." · EN "Heavy material can't cross the wall. Move it or smash it."
+- **Kural (Faz 2R, tam örtü):** I5 ve Q9 şekilli parçalar (her yönelim) **Ağır Yük**tür: malzeme değildir, renk taşımaz
+  (verideki `color` yok sayılır), arz/talep ve kazanma sayımlarına girmez (GDD K-44, K-47, K-48). Duvar sınırını hiçbir
+  kipte geçemez ve **yalnız saha içinde** sürüklenir: her ara konumda bütün hücreleri x ≤ Wy−1 ve y ≤ Hy−1'dir; saha
+  üstü havaya ve Vinç Alanı'na kalkmaz, diğer blokların üstünden atlamaz (GDD K-08; DL-2R-08). Sahaya bırakılması
+  kaydırma hamlesidir (1 hamle). Bölüm sonunda sahada kalabilir. Çekiç tek vuruşta yok eder (GDD K-36); Vinç sahada
+  taşır (döndürmez), şantiyeye koyamaz (K-37). Eski kuraldaki "genişliği ≥ 3 olan yönelimler ağırdır" maddesi kalktı:
+  malzeme bloklarının genişliği ≤ Ws olmalıdır (`piece_too_wide`), daha geniş yönelim yalnız Ws ≥ 3 bölümlerde kullanılır
+  (S9).
+  **Sunum olayı:** `blockedCargo { pieceId }` — yük tutulurken parmak hedefi ilk kez saha dışına (x ≥ Wy ya da y ≥ Hy)
+  çıktığında, tutuş başına en çok 1 kez (GDD K-44; sunum design-lead'in: sınırda "dur" çentiği, çarpma esnemesi, hafif
+  haptik). Oyuncuya görünen metinde Ağır Yük'e "blok" denmez ve kalan blok sayısına girmez.
+  **Tasarım rolü:** kazı bulmacasında "kapak": gerekli blokların üstünü örter; kaymak için yanında yük boyunda serbest
+  sütun (Q9 için 3 hücre, sütun yönünde) ya da serbest satır (I5) gerekir, çünkü yük havadan atlayamaz (LEVELS Bölüm 8,
+  10; §2.0 madde 3e).
+- **Veri:** `PiecePlacement` şekli `I5_0` ya da `Q9_0` (`I5_90/270` yasak, K-44); `color` isteğe bağlı ve yok sayılır.
+- **Örnek:** Bölüm 8: `Q9_0` (0,2) iki sütun sağa (2,2)'ye kaydırılır → altındaki `O4` R'nin üstü açılır (1 hamle). Çekiç'le
+  kırılırsa hamle harcanmaz. Varsayılan boyutta `I5_0` (0,7)–(4,7) yukarı tutulamaz (y = 8 saha dışı); (0,7)'den (1,7)'ye
+  kaydırılır ((5,7) boşsa) → 1 hamle. Bölüm 8 başında yük (0,2)'den tutulup parmak duvarın ötesine (x ≥ 6) götürülürse
+  yük çapa (1,2)'de durur (sağ kenarı x = 3; sağında `d` ve `e` var), `blockedCargo` bir kez yayınlanır.
+- **Bilgi kartı** (`obs.y5.desc`, Faz 2R): TR "Ağır yük plana girmez. Kenara kaydır ya da kır." · EN "Cargo isn't part of the plan. Slide it aside or smash it."
 
 ### Y6 — Saha Yerçekimi
 - **Bölge:** saha · **İlk bölüm:** 14
@@ -167,8 +232,8 @@ yok (renk körlüğü); bölüme göre değişen sayılar `{n}` yer tutucusuyla 
   hücre) ise geri sekmez, **yapışır** (kilitli değildir). Bir hücresi plan dışındaysa normal geri seker (öneri P-2b); yapışmış blok böyle bırakılırsa başlangıç konumuna döner
   ve yapışık kalır (GDD K-17). Yapışmış blok
   sürüklenebilir; iptal olmayan her hamlesi 2 hamle yer (cam da kırılırsa 3; maliyetler toplanır, GDD K-07; kırılan
-  yapışmış cam blok sahaya döner ve yapışma kalkar, GDD K-17). Çekiçle kırılır, Boya Fırçası ile boyanırsa ve yeni renkle
-  doğruysa kilitlenir, Vinçle taşınır. Yapışmış blok dilimin tamamlanmasını engeller (GDD K-15) ve üstüne doğru
+  yapışmış cam blok sahaya döner ve yapışma kalkar, GDD K-17). (Faz 2R) Çekiç yapışmayı çözer ve bloğu sahaya indirir (blok yok
+  olmaz, GDD K-36); Boya Fırçası artık yalnız sahadaki blokların rengini takas eder ve yapışmış bloğu hedefleyemez (K-38); Vinçle taşınır. Yapışmış blok dilimin tamamlanmasını engeller (GDD K-15) ve üstüne doğru
   yerleşim yapılamaz (K-34); bir `.` hücresine yapışmışsa o `.` hücresi K-34'te "dolu" sayılmaz, o sütunda üstündeki her
   yerleşim `support` nedeniyle hatalıdır (GDD E-43). Doğru yerleşirse normal kilitlenir.
 - **Veri:** `flags: ["mortar"]`.
@@ -185,12 +250,15 @@ yok (renk körlüğü); bölüme göre değişen sayılar `{n}` yer tutucusuyla 
 - **Veri:** `build.segments[]`, `yard.batches[]` (`forSegment` = dilim indeksi).
 - **Bilgi kartı** (`obs.s1.desc`): TR "Bu kat bitince şantiye kayar, kamyon malzeme getirir." · EN "Finish this floor; the site slides and the truck delivers."
 
-### S2 — Plan Boşluğu
-- **Bölge:** şantiye · **İlk bölüm:** 4
+### S2 — Plan Boşluğu — **MVP DIŞI (Faz 2R, R2-01)**
+- **Durum:** Proje sahibinin "şantiye alanı sürekli doldurulmalı" kararıyla plan şantiyeyi tamamen kaplar (GDD K-15);
+  doğrulayıcı `.`'yı reddeder (`plan_has_window`). Aşağıdaki kural yalnız proje sahibi S2'yi geri getirirse geçerlidir
+  (ÖNERİ: Faz 3'te hikaye bölümü 3+ için "pencere" olarak; tam örtü `.` hücrelerini talepten çıkarır, R2-01 ile çelişmez
+  ama "alan tam dolu" görüntüsünü bozar — proje sahibi kararı). Eski ilk bölüm 4'tü; Bölüm 4 artık W1'i öğretir.
+- **Bölge:** şantiye · **İlk bölüm:** — (MVP'de yok)
 - **Kural:** `.` hücresi boş kalmalıdır; bloğun herhangi bir hücresi `.` üstüne gelirse hatalı yerleşim. K-34'te `.`
   yalnızca boşken dolu sayılır (içinde moloz S4 ya da yapışmış harçlı blok Y8 varsa sayılmaz; GDD K-34, E-43). `.`
-  üstündeki hücre şu yollarla dolar: ray (W1), iki sütuna köprü kuran 2 geniş blok (duvar üstü), balon (S8), Altın
-  Mala, Vinç.
+  üstündeki hücre şu yollarla dolar: ray (W1), iki sütuna köprü kuran 2 geniş blok (duvar üstü), balon (S8), Vinç.
 - **Veri:** `rows` içinde `.`.
 - **Örnek:** Plan sütun 7: y0 W, y1 `.`, y2 W. `B1` W sütun 7'ye bırakılır → (7,1)'e düşer → hatalı.
 - **Bilgi kartı** (`obs.s2.desc`): TR "Taralı hücre boş kalmalı. Üstünü geçitten ya da köprüyle doldur." · EN "Keep hatched cells empty. Fill above them via a gap or bridge."
@@ -207,19 +275,23 @@ yok (renk körlüğü); bölüme göre değişen sayılar `{n}` yer tutucusuyla 
 - **Örnek:** normal; cam `D2_90` (6,8)'de bırakılır, iniş (6,3) → d=5 > 3 → kırılır. (6,6)'ya indirilip bırakılırsa d=3 → sağlam.
 - **Bilgi kartı** (`obs.s3.desc`): TR "Cam kırılır! Bloğu aşağı indir, sonra bırak." · EN "Glass breaks! Lower the block before you let go."
 
-### S4 — Moloz
+### S4 — Moloz (Faz 2R: yeniden tanımlandı)
 - **Bölge:** şantiye · **İlk bölüm:** 17
-- **Kural:** Bölüm başında dilimin şantiye alanında duran bloklar; hiçbir yerde doğru olamaz (GDD K-16). Tutulabilir
-  (serbest kipte; bütün satırları bir geçitteyse ve geçit o an açıksa ray kipinde de — GDD K-12'nin tek istisnası).
-  Sahaya bırakılınca (1 hamle; sürükleme ya da Vinç) `clear/debris` 1 sayılır ve sahada sıradan, kullanılamaz bir blok
-  olur. Şantiyede başka yere bırakılırsa hatalı → başlangıcına döner. Altı boşalsa da düşmez. Şantiyedeyken Çekiç kırar
-  (sayılır). Her moloz en çok 1 kez sayılır (GDD K-41): sahaya taşınmış moloz Çekiç'le kırılınca yeniden sayılmaz.
-  Dilim, alanında moloz varken tamamlanmaz. Moloz malzeme arzı değildir: K-27 ve K-30 D2
-  sayımlarında sahada da, kuyrukta da sayılmaz (GDD E-44). Bir `.` hücresindeki moloz o hücreyi K-34'te "dolu" yapmaz
-  (GDD K-34, E-43). Moloz şantiyeden alınırken (6,y)/(7,y) başlangıç hücreleri sahadaki (5,y) engellerine komşu
-  sayılmaz (duvar sınırı; GDD §0, E-46).
+- **Kural (Faz 2R, tam örtü):** Moloz, bölüm başında dilimin şantiye alanında **yanlış yerde** duran, renkli bir
+  **malzeme bloğudur** (Bay Gribeton'un ekibinin bıraktığı). Arz sayılır (K-47); bölüm sonunda kullanılmış olmalıdır.
+  Başlangıç konumunda K-16'ya göre doğru olamaz (renk ya da K-34 desteği tutmaz; doğrulayıcı `debris_correct_at_start`).
+  Tutulabilir (serbest kipte; bütün satırları bir geçitteyse ve geçit o an açıksa ray kipinde de — GDD K-12'nin tek
+  istisnası). İlk kez başlangıç konumundan ayrıldığında (sahaya yerleşim, şantiyede başka bir yere **doğru** yerleşim,
+  Vinç ya da Çekiç) `clear/debris` 1 sayılır ve `debris` bayrağı kalkar; artık sıradan malzeme bloğudur. Şantiyede başka
+  bir yere hatalı bırakılırsa başlangıcına döner (K-17). Altı boşalsa da düşmez. Dilim, alanında moloz varken tamamlanmaz
+  (alan tam örtülemez). Moloz o dilimde ya da sonraki bir dilimde doğru yerleşebilir (taşınan malzeme). Moloz şantiyeden
+  alınırken başlangıç hücreleri sahadaki (x = Wy−1) engellere komşu sayılmaz (duvar sınırı; GDD §0, E-46). Çekiç molozu
+  yok etmez, sahaya indirir (K-36).
 - **Veri:** `build.debris[] = { shape, color, x, y, segment? }` (`segment` isteğe bağlı, verilmezse 0; P-5, GDD §14, K-45/7).
-- **Bilgi kartı** (`obs.s4.desc`): TR "Eski moloz yolu tıkıyor. Önce onu sahaya taşı." · EN "Old rubble is in the way. Move it out first."
+  Renk zorunludur ve K-31 renk kümesine girer.
+- **Örnek:** Dilim 0 planı alttan `RR`, `WW`; molozu `D2_90` W (6,0)'da (alt satır R → yanlış). Oyuncu onu sahaya taşır
+  ("1/1"), sonra `D2_90` R'yi (6,0)'a, ardından aynı W bloğunu (6,1)'e koyar.
+- **Bilgi kartı** (`obs.s4.desc`): TR "Bu blok yanlış yerde. Kaldır, doğru yerine sonra koy." · EN "This block is in the wrong spot. Lift it and place it later."
 
 ### S5 — Döner Platform
 - **Bölge:** şantiye · **İlk bölüm:** 31
@@ -233,6 +305,8 @@ yok (renk körlüğü); bölüme göre değişen sayılar `{n}` yer tutucusuyla 
 - **Bölge:** şantiye · **İlk bölüm:** 37
 - **Kural:** `build.elevator` (GDD K-24); her iki modla birleşebilir. Adım 10'da önce `e + dir` aralık dışındaysa yön
   döner, sonra `e += dir` (W5 ile aynı ping-pong); başlangıçta sınırda ve dışarı bakan `dir` geçerli veridir.
+  **Faz 2R (boyut):** plan şantiyeyi tamamen kapladığı için (Hs satır) çerçevenin yükselebileceği boşluk tahta
+  yüksekliğinden gelir: `H = max(Hy, Hs + b)` ve `Hs + b ≤ 8` (`elevator_overflow`, GDD K-24, K-49).
 - **Veri:** `build.elevator: { range: [a, b], start, dir }`.
 - **Bilgi kartı** (`obs.s6.desc`): TR "İskele her hamlede bir sıra iner çıkar. Geçide dikkat!" · EN "The scaffold moves one row each move. Mind the gap!"
 
@@ -245,7 +319,10 @@ yok (renk körlüğü); bölüme göre değişen sayılar `{n}` yer tutucusuyla 
 
 ### S8 — Balonlu Blok
 - **Bölge:** şantiye ve saha · **İlk bölüm:** 38
-- **Kural:** `balloon` bayraklı blok bırakılınca yükselir. Sahada: üstündeki ilk dolu hücreye ya da y=7'ye kadar.
+- **Faz 2R notu:** S2 (`.`) MVP dışı olduğundan şantiyede doğru balon yerleşimi yalnız bir sütunun tepe hücresidir (normal
+  düşüşle de aynı yere inilir); balonun ayırt edici rolü sahada (saha yerçekimiyle yükselme) kalır. Faz 3'te S2 kararına
+  göre yeniden değerlendirilir. Sahada tavan y = Hy−1'dir.
+- **Kural:** `balloon` bayraklı blok bırakılınca yükselir. Sahada: üstündeki ilk dolu hücreye ya da y=Hy−1'e (varsayılan 7) kadar.
   Şantiyede serbest kipte: bırakma yüksekliğinden bağımsız olarak sütunlarının **tavanına** asılır; tavan = aktif dilimin
   plan tepesi (bloğun en üst hücresi satır `h + e − 1`; öneri P-3); bloğun sütunlarında siluet tavana ulaşmışsa blok siluetin üstünde
   kalır (plan dışı → hatalı). Rayda bırakılan balon hareket etmez. Saha yerçekimi açıkken adım 6'da yükselir. Rüzgâr
@@ -257,6 +334,21 @@ yok (renk körlüğü); bölüme göre değişen sayılar `{n}` yer tutucusuyla 
 - **Örnek:** Plan h=6, sütun 7: y0–y3 dolu, y4 `.`, y5 W boş. `B1` W balon sütun 7'ye bırakılır → (7,5)'e asılır → doğru.
   Normal `B1` W aynı yerde (7,4) `.` hücresine düşerdi → hatalı.
 - **Bilgi kartı** (`obs.s8.desc`): TR "Balonlu blok yukarı süzülür ve tavana asılır." · EN "Balloon blocks float up and hang from the ceiling."
+
+### S9 — Geniş Şantiye (YENİ, Faz 2R, R2-02)
+- **Bölge:** şantiye · **İlk bölüm:** 12 (Faz 3; hikaye bölümü 2'nin imzasız tek bölümü, LEVELS §3 madde 7) ·
+  **Kapsam:** MVP (Faz 3) — yalnız veridir (`site.cols ≥ 3`, K-49; yerleşim ve prosedürel blok çizimi zaten genel).
+  Ek kod ya da sanat gerektirirse etiket "Sonra (Hikaye 6+)" olur ve 12 imzasız kalır (EN-2R-08). Engel sayısı 26
+  kalır (S2 MVP dışı).
+- **Kural:** `site.cols = Ws ≥ 3`. Plan Ws sütundur; genişliği ≤ Ws olan yönelimler (ör. `L4_90`, `T4_90`, hikaye bölümü
+  2+) şantiyeye girebilir. Duvar sınırı x = Wy−1 | Wy kalır; Wy + Ws ≤ 8 (`board_too_wide`). Rüzgâr (W8) ve G-L
+  yönlendirmesi şantiye sütunları içinde 1 sütun kaydırır; 2 genişlikli blok da yönlendirilebilir (genişliği Ws olan
+  yönlendirilemez).
+- **Neden 1–10'da yok:** hikaye bölümü 1'de en çok 3 renk vardır; 3 sütunlu bir planda dikey `D2` ve `C3` bloklarının
+  rengi, aynı renkte başka bir dikey hücre çiftiyle her zaman çakıştı ve Normal bölümde yasak olan ✓-tuzakları (K-51)
+  doğdu (LEVELS §2.0 tuzak kaynağı; karalama çözücüsüyle 2 tasarımda doğrulandı). Hikaye bölümü 2'deki 4 renkle kurulur.
+- **Veri:** `site: { cols: 3 | 4, rows }`.
+- **Bilgi kartı** (`obs.s9.desc`): TR "Şantiye genişledi! Geniş bloklar artık sığar." · EN "The site is wider! Wide blocks fit now."
 
 ### G-H — Ağır yerçekimi
 - **Bölge:** şantiye · **İlk bölüm:** 15
@@ -279,13 +371,15 @@ yok (renk körlüğü); bölüme göre değişen sayılar `{n}` yer tutucusuyla 
 ## Veri imzası (mekanik türetme; GDD K-45/9, R-21)
 
 `levels:validate` her bölümün mekanik kümesini aşağıdaki imzalardan türetir; "yeni mekanik" = önceki bölümlerin
-kümelerinde olmayan imza. İmzası olmayan öğretimler (kaldır–taşı–indir, gölge, kazı K-10, `clear`/`collect` hedef
-türleri, güçlendirici açılışları) yalnızca `tutorial` adımlarıyla ifade edilir.
+kümelerinde olmayan imza. İmzası olmayan öğretimler (kaldır–taşı–indir, gölge, kazı K-10, taşınan malzeme K-27,
+`clear`/`collect` hedef türleri, güçlendirici açılışları) yalnızca `tutorial` adımlarıyla ifade edilir. Faz 2R
+değişiklikleri: W1 ilk bölüm 4; W2 imzası `height = H`; Y5 imzası I5/Q9; S2 MVP dışı (tablo altı notu); S9 yeni (12).
+"İlk bölüm" sütunu her satırda bir tamsayıdır (`mechanics.test`, `rule-coverage` sayı olarak okur).
 
 | Mekanik | Veri imzası | İlk bölüm |
 |---|---|---|
-| W1 | bir geçitte `type = "static"` | 3 |
-| W2 | `wall.height = 8` | 6 |
+| W1 | bir geçitte `type = "static"` | 4 |
+| W2 | `wall.height = H` (H = max(Hy, Hs + eMax), K-49; varsayılan 8) | 6 |
 | W3 | herhangi bir geçitte `size = 1` (tipten bağımsız, N2) | 9 |
 | W4 | `type = "shutter"` | 13 |
 | W5 | `type = "slider"` | 16 |
@@ -296,12 +390,11 @@ türleri, güçlendirici açılışları) yalnızca `tutorial` adımlarıyla ifa
 | Y2 | `cement_bag` | 18 |
 | Y3 | herhangi bir blokta (parti 0 ya da k) `chained` | 24 |
 | Y4 | `wet` | 28 |
-| Y5 | herhangi bir blokta ağır şekil (GDD K-44) | 8 |
+| Y5 | herhangi bir partide `I5_*` ya da `Q9_*` (Ağır Yük, GDD K-44) | 8 |
 | Y6 | `gravity.yard = true` | 14 |
 | Y7 | `screw` | 19 |
 | Y8 | `mortar` | 35 |
 | S1 | `build.mode = "segments"` ve dilim sayısı ≥ 2 | 5 |
-| S2 | herhangi bir planda `.` | 4 |
 | S3 | `glass` | 21 |
 | S4 | `build.debris[]` dolu | 17 |
 | S5 | `build.mode = "carousel"` | 31 |
@@ -311,9 +404,16 @@ türleri, güçlendirici açılışları) yalnızca `tutorial` adımlarıyla ifa
 | S8 | `balloon` | 38 |
 | G-H | `gravity.build = "high"` | 15 |
 | G-L | `gravity.build = "low"` | 23 |
+| S9 | `site.cols ≥ 3` | 12 |
+
+**MVP dışı imzalar** (tabloya girmez; araçlar bu satırı okumaz — CL-2R-12): S2 Plan Boşluğu, imza "herhangi bir planda
+`.`"; doğrulayıcı `plan_has_window` ile reddeder. Proje sahibi S2'yi geri getirirse ilk bölüm numarasıyla tabloya
+döner.
 
 Denetim (product-lead, LEVELS §2–§3 üzerinden elle): 50 bölümün her birinde türetilen yeni mekanik ≤ 1 ve `teaches`
-alanlarıyla birebir. Bölüm 4'ün geçidi boy 2'dir (R-21), bu yüzden W3 ilk kez 9'da görünür.
+alanlarıyla birebir. Faz 2R Bölüm 1–10 türetilen yeni mekanikler: 4 → W1, 5 → S1, 6 → W2, 8 → Y5, 9 → W3; 1, 2, 3, 7, 10
+yeni imza içermez (öğretimleri `tutorial` ile: kaldır–taşı–indir, şekil/gölge, kazı, taşınan malzeme, final). Bölüm
+4'ün geçidi boy 2'dir, bu yüzden W3 ilk kez 9'da görünür (R-21). Bölüm 10'da W1/W3 yoktur (LEVELS §4).
 
 ## Aynı bloktaki bayrak birleşimleri
 
@@ -409,10 +509,19 @@ tasarım notu, test gerektirmez.
 - **N41** [kural] — Gizli `?` hücresine düşecek gölge her zorlukta nötrdür; Boya Kapısı rengi ipucu olarak tasarlanabilir.
 - **N42** [kural] — Döner platform ve kayan şantiyede teslim partisi dilim tamamlanma sayısına bağlıdır (K-23, K-25).
 - **N43** [kural] — Saha yerçekimi açıkken kamyon blokları da oturmuş sahaya düşer; teslimat sahayı yeniden oynatmaz.
+- **N44** [kural] (Faz 2R) — S9 Geniş Şantiye matriste ayrı satır/sütun almaz: bütün engellerle `·`'dır (kuralları
+  sütun sayısından bağımsızdır), şu iki not dışında: W8 ve G-L kaymaları şantiye sütunları (x = Wy … Wy+Ws−1) içinde
+  kalır; genişliği Ws olan blok kaymaz.
+- **N45** [kural] (Faz 2R) — Y5 Ağır Yük + kamyon (S1): parti bloğu Ağır Yük yüzünden sahaya düşemezse kuyrukta bekler
+  (GDD E-54); Ağır Yük kaydırılınca o hamlenin 9. adımında düşer.
+- **N46** [kural] (Faz 2R) — Y5 + Y1/Y2: kasa, torba ve Ağır Yük malzeme değildir; üçü de bölüm sonunda sahada kalabilir
+  (GDD K-48). Ağır Yük taşınırken başlangıç hücrelerine komşu kasa/torba/zincir K-35 adım 5 ile etkilenir.
+- **N47** [kural] (Faz 2R) — S4 Moloz + S1: moloz arza sayıldığı için taşınan malzeme olabilir: dilim 0'daki moloz
+  dilim 1'de doğru yerleşebilir (K-27 madde "taşınan malzeme").
 
 ### İmkânsız çiftler
 
 - **—1** — Aynı bölümde tek `build.mode` olur (segments ya da carousel).
 - **—2** — Aynı bölümde tek `gravity.build` değeri olur.
 
-Kullanılmayan not yok; her `Nxx` en az bir hücrede geçer. Matris, `docs/OBSTACLES.md` üretilirken bir betikle kontrol edildi: 26 engel, 325 çift, her çift tam bir kod taşır.
+Kullanılmayan not yok; her `N01…N43` en az bir hücrede geçer; N44–N47 (Faz 2R) matris dışı genel notlardır. Matris, `docs/OBSTACLES.md` üretilirken bir betikle kontrol edildi: 26 engel, 325 çift, her çift tam bir kod taşır.

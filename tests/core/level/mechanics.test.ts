@@ -26,10 +26,25 @@ function signatureRows(): [string, number][] {
 const B1: ['B1_0', 'W', number, number][] = [['B1_0', 'W', 0, 0]];
 
 describe('K-45/9 mechanic signatures (OBSTACLES "Veri imzası")', () => {
-  it('K-45/9 signature table equals the OBSTACLES rows (ids, order, first level)', () => {
+  // Faz 2R transition (TECH §2R.10): OBSTACLES already carries the Faz 2R table (W1 first level 4, S2 out of the MVP,
+  // S9 `site.cols ≥ 3` at 12), while the code and levels/*.json are still Faz 2 (old level 4 teaches S2). WP-B switches
+  // `MECHANICS` and the schema together; the strict test below then passes and its `it.fails` mark must be dropped.
+  it.fails('K-45/9 signature table equals the OBSTACLES rows (ids, order, first level)', () => {
     const rows = signatureRows();
     expect(rows).toHaveLength(27);
     expect(MECHANICS.map((m) => [m.id, m.firstLevel])).toEqual(rows);
+    expect(MECHANICS.map((m) => m.id)).toEqual([...MECHANIC_IDS]);
+  });
+
+  it('K-45/9 signature table differs from OBSTACLES only by the Faz 2R delta (W1 4, S2 out, S9 12; WP-B)', () => {
+    const rows = signatureRows();
+    expect(rows).toHaveLength(27);
+    const code = MECHANICS.map((m) => [m.id, m.firstLevel] as [string, number]);
+    const faz2r = code
+      .filter(([id]) => id !== 'S2')
+      .map(([id, first]): [string, number] => (id === 'W1' ? [id, 4] : [id, first]))
+      .concat([['S9', 12]]);
+    expect(faz2r).toEqual(rows);
     expect(MECHANICS.map((m) => m.id)).toEqual([...MECHANIC_IDS]);
   });
 

@@ -281,6 +281,9 @@ describe('Level attempt record (K-28, K-29, K-43; TECH 11.1, ANALYTICS 2)', () =
     expect(streakTierOf(5, 9)).toBe(0);
     expect(streakTierOf(15, 1)).toBe(1);
     expect(streakTierOf(15, 7)).toBe(3);
-    expect(streakBonusOf(3)).toEqual({ moves: 3, trowels: 2 });
+    // Faz 2R (META 5, economy.json v3, EN-2R-03 / BUSINESS E14): tier 2 = +1 trowel +1 move,
+    // tier 3 = +1 trowel +2 moves (every tier is worth less than one +5 offer).
+    expect(streakBonusOf(2)).toEqual({ moves: 1, trowels: 1 });
+    expect(streakBonusOf(3)).toEqual({ moves: 2, trowels: 1 });
   });
 });

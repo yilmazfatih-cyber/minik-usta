@@ -704,8 +704,8 @@ export class LevelScene extends Phaser.Scene {
       dragRules: () => this.hooks.drag ?? {},
       hooks: () => this.hooks,
       markContextTip: (topic) => appSave().markContextTip(topic),
-      stepEnded: (step) => {
-        if (this.replaying === null) this.attempt?.tutorialStep(step);
+      stepEnded: (step, _skipped, msToDone) => {
+        if (this.replaying === null) this.attempt?.tutorialStep(step, msToDone);
       },
     });
   }

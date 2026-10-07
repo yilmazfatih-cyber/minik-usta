@@ -9,7 +9,7 @@
   },
   "booster": {
     "hint": {
-      "brush": "Boyamak istediğin bloğa dokun.",
+      "brush": "Yer değiştirecek iki bloğa dokun.",
       "crane": "Taşımak istediğin bloğa dokun.",
       "hammer": "Kırmak istediğine dokun.",
       "trowel": "Parlayan bir hücreye dokun."
@@ -130,7 +130,7 @@
       "desc": "Taralı hücre boş kalmalı. Üstünü geçitten ya da köprüyle doldur."
     },
     "w1": {
-      "desc": "Geçitten giren blok düşmez, bıraktığın yerde kalır."
+      "desc": "Geçit alttaki bloğa kestirme yol açar."
     }
   },
   "pause": {
@@ -188,7 +188,7 @@
         "window": "Orası pencere, boş kalmalı."
       },
       "goldtrowel": "Altın Mala'yla parlayan bir hücreye dokun.",
-      "lastmoves": "Son beş hamle! Acele etme, düşün.",
+      "lastmoves": "Hamleler azaldı, sakin düşün.",
       "queue": "Sahada yer aç, kamyon boşaltsın.",
       "reshuffle": "Sıkıştık! Kamyon sahayı yeniden diziyor.",
       "resume": "Tahta bıraktığın gibi duruyor, evlat.",

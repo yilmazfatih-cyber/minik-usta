@@ -74,6 +74,8 @@ export const HIGHLIGHT_PATTERNS = [
   'front',
   'panorama',
   'goals',
+  // Faz 2R (UX §13.1, CL-2R-21): the blocks-left chip alone; `goals` is the whole panel.
+  'blocks',
   'moves',
   'truck',
   'streak',

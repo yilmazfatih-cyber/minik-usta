@@ -1,6 +1,12 @@
 # Teknik tasarım
 
-Sahip: code-lead · Durum: **Faz 1 revizyonu (orkestratör kararları R-01…R-24 uygulandı; onay bekliyor)** · Tarih: 2026-10-04,
+Sahip: code-lead · Sürüm: **Faz 2R (2026-10-07)** — çapraz inceleme kapanışı: §2R GDD/UX/ASSET kapanışlarına eşitlendi
+(kural kararları kesinleşti ve politika sabitleri kalktı §2R.0; uyarlanır hücre boyu ve web geri koruması §2R.1;
+`tut_hand_invalid` L-35 §2R.3, §2R.5; Söküm tek adım + `movesSpent` + adım 12 perf kapısı §2R.4; SVG görsel boru hattı
+§2R.6; iş paketleri son hali ve kesme sırası §2R.12; yeni §2R.15 sunum kancaları ve §2R.16 analytics v6 + geri bildirim
+dışa aktarımı), §12.4 K-54 satırı, §13 Android hareket dışlama, yeni §14.0 Faz 2R takvimi ve Faz 3–5 düşümleri · İlk
+2R sürümü (aynı gün): §2R "Faz 2R teknik deltası" eklendi (R2-01…R2-11: değişken boyut, tam örtü, solver öne alındı,
+Söküm, görsel v2, ana sayfa v2, hafif öğretici; iş kırılımı §2R.12), §12.4 K-47…K-53 satırları · Önceki durum: **Faz 1 revizyonu (orkestratör kararları R-01…R-24 uygulandı; onay bekliyor)** · Tarih: 2026-10-04,
 tamamlama 2026-10-05 (GDD/OBSTACLES/META'nın 2026-10-05 metnine eşitlendi; tutarlılık denetimi tur 1 bulguları işlendi:
 UX §13.1, tokens `layout`/`check`/`physics`/`audio`, ART §3–§4, ANALYTICS §2 ile hizalama; tur 2: K-34 yanlış nesneli
 `.` hücresi (E-43), K-30 D2 arzı ve adım 12 yardım teslimatı (E-23, E-44), teklif sonrası adım 12 (K-29, E-42), K-07
@@ -24,7 +30,7 @@ kapsamı, L-11 boya kapısı satırı (§8.3), §10.1 EXPAND sıkıştırması, 
 iki katmanı (§10.2), UX §0.1 karar (b) (§10.1), STORY §7.3 / §7.5 / §7.6 anahtarları (§11.5), Faz 2 asgari ana ekran
 (§14.1 #12))
 Kaynaklar: `docs/BRIEF.md` (§4, §5, §7, §12), `CLAUDE.md`, `docs/DECISIONS.md`, `docs/review_inbox/_orchestrator_rulings.md`.
-Kurallar için bağlayıcı kaynak **`docs/GDD.md` (K-01…K-46, K-35 hamle sonu hattı, §14.1 öğretici kuralları, E-01…E-47)** ve `docs/OBSTACLES.md`'dir
+Kurallar için bağlayıcı kaynak **`docs/GDD.md` (K-01…K-54, K-35 hamle sonu hattı, §14.1 öğretici kuralları, E-01…E-61; Faz 2R farkı §2R)** ve `docs/OBSTACLES.md`'dir
 (W1…W8, Y1…Y8, S1…S8, G-H, G-L, etkileşim notları N1…N43, veri imzası tablosu); bu belge kuralı değiştirmez, nasıl
 uygulanacağını yazar (R-02). Ölçüler ve görsel değerler `src/theme/tokens.json`'dan okunur (R-04). §16'daki S-1…S-38'in
 hepsi GDD/META'da yanıtlandı (§16.2). Önerilen kararlar §17'de **P-n** numarasıyla durur (DECISIONS.md'ye orkestratör taşır).
@@ -418,6 +424,860 @@ cihaz ile sunucuyu ayırırdı, §15 R-19); `-1` ile `4294967295` aynı kelimedi
 `hash32(1, 2, 3)` = `42c6bcb5`, `hash32(3, 2, 1)` = `cec9e51a`, `hash32(4004, 0, 0)` = `21c3c899`, `hash32(4004, 1, 0)` =
 `b59541db`, `hash32(4004, 0, 1)` = `386c1552`, `hash32(2026, 123456789)` = `0ae84c9a`, `hash32(-1)` =
 `hash32(4294967295)` = `c569aed7`. Sunucu (Faz 5+) aynı vektörleri geçmeden sürüm adını kullanamaz.
+
+---
+
+## 2R. Faz 2R teknik deltası (2026-10-07; çapraz inceleme kapanışıyla eşitlendi)
+
+**Kaynak:** orkestratör kararları R2-01…R2-12 (`docs/review_inbox/_orchestrator_rulings_2R.md`; R2-08 güncellemesi "Canva
+yok, SVG" ve R2-12 sahip referansları dahil), GDD Faz 2R kapanışı (K-47…K-54, "(Faz 2R)" başlıklı değişen kurallar,
+E-23…E-61), OBSTACLES Faz 2R uyum tablosu ve veri imzası, LEVELS §0, §2.0 ve Bölüm 1–10, META §4.1, §5, §10, UX §3,
+§5.2, §5.8–§5.10, §6.1, §13, ART §3A, §7, §14, §15, JUICE §8, ASSET §16 (SVG), `tokens.json` v2. Benim inceleme
+yorumlarım `docs/review_inbox/code-lead-2R-review.md`'de (CL-2R-01…31), bana gelen yorumların kapanışı
+`docs/review_inbox/code-lead-2R-closure.md`'dedir; product-lead ve design-lead kapanışları aynı klasörde.
+
+**Okuma kuralı:** Bu bölüm önceki bölümlerin üstüne yazılan farktır. Çelişki varsa §2R geçerlidir. İlgili bölüm (§2,
+§4, §8, §9, §10, §11.4, §12) kendi iş paketi bitince bu farka göre yeniden yazılır.
+
+### 2R.0 İlkeler ve sabit kararlar
+
+1. **Tek kural motoru (§9.1) korunur.** Oyun, solver, D3a, öğretici eldiven denetimi ve Bölüm 1–10 golden testleri aynı
+   `applyMove`'u çağırır. Ayrı bir "solver kuralı" yazılmaz.
+2. **Azami çerçeve kodlaması.** Kodlamalar (sürükleme düğüm kodu, Zobrist konum tablosu) 8 × 10'luk azami çerçevede
+   kalır. Bölge anlamı (saha, şantiye, duvar sınırı, saha üstü hava, şantiye üstü hava, Vinç Alanı) bölüm geometrisinden
+   (`lvl.geo`) gelir. Gerekçe: K-49 sınırları (`Wy + Ws ≤ 8`, `H ≤ 8`) azami çerçeveye sığar; kodlamayı değişken yapmak
+   330 kullanım yerine ek olarak düğüm kodu ve karma testlerini de değiştirirdi.
+3. **Yeni bağımlılık yok, ücretli araç yok.** Çalışma anında da geliştirmede de yeni paket eklenmez. SVG denetimi, SVG →
+   WebP raster ve ikon atlası paketleme Playwright'ın kurulu Chromium'u (`/opt/pw-browsers/chromium`) içinde Canvas2D ile
+   yapılır. Canva, Gemini ya da başka üretken yapay zekâ servisi kullanılmaz (R2-08 güncellemesi); görsellerin hepsi
+   prosedürel kod ya da design-lead'in elle yazdığı SVG'dir. Proje sahibinin isteği: "en ucuz, mümkünse ücretsiz".
+4. **`RULES_VERSION` 1 → 2.** K-43 madde 4 gereği eski `inLevel` kaydı cezasız kapanır (§2R.10).
+5. **Gerçek zaman yalnız sunumdadır.** Öğretici zamanlayıcıları, takılma nabzı ve animasyonlar sahnededir. Çekirdek saf
+   ve belirlenimci kalır. D3a'nın bütçesi süre değil açılım sayısıdır.
+6. **Kural kararları kesinleşti** (product-lead kapanışı, 2026-10-07): Söküm tek adımdır ve `m` dahil bütün çekirdek
+   durumu geri yükler, çıkış cezası ayrı `movesSpent` sayacına bakar (CL-2R-01); D3b çalışma anı araması değil solver
+   tablosudur (CL-2R-02); D3a 20 000 açılımla sınırlıdır, parti uygunluğu ve W6 jokeri vardır (CL-2R-03); W6'lı bölümde D2
+   çalışmaz (CL-2R-04); güçlendirici ve Altın Mala hedefleri D3a ile ön denetlenir (CL-2R-05); adım 12 sayaç 0 iken de
+   çalışır (CL-2R-06). İnceleme turunda önerdiğim `core/policy.ts` politika sabitleri bu yüzden **yazılmaz**. Tek ayar
+   sabiti GDD'deki sayıdır: `D3A_MAX_EXPANSIONS = 20 000` (`core/deadlock.ts`).
+
+### 2R.1 Değişken boyut: sabitlerden bölüm geometrisine (K-49)
+
+```ts
+// src/core/geometry.ts (yeni, saf)
+export const MAX_COLS = 8;              // azami çerçeve: K-49 Wy + Ws ≤ 8
+export const MAX_ROWS = 10;             // azami çerçeve: H ≤ 8, + 2 Vinç Alanı satırı
+export interface BoardGeo {
+  readonly wy: number; readonly hy: number;  // saha Wy × Hy
+  readonly ws: number; readonly hs: number;  // şantiye Ws × Hs
+  readonly eMax: number;                     // asansör aralığının üst ucu b; asansör yoksa 0 (K-24)
+  readonly h: number;                        // H = max(hy, hs + eMax)
+  readonly rows: number;                     // h + 2 (Vinç Alanı dahil)
+  readonly cols: number;                     // wy + ws
+  readonly siteX: number;                    // = wy (ilk şantiye sütunu)
+  readonly boundaryX: number;                // = wy − 1 (sınır boundaryX | siteX)
+  readonly craneRow: number;                 // = h
+  readonly yardBits: number;                 // (1 << wy) − 1
+  readonly siteBits: number;                 // ((1 << ws) − 1) << wy
+  readonly rowMaskAll: number;               // (1 << rows) − 1
+}
+export function makeGeo(p: { wy: number; hy: number; ws: number; hs: number; eMax: number }): BoardGeo;
+export const DEFAULT_GEO: BoardGeo;     // 6, 8, 2, 8, eMax 0 → h 8, rows 10 (bugünkü sabitler)
+```
+
+**Sabit → geometri eşlemesi** (`src/core/coords.ts` bugün 13 sabit dışa aktarıyor):
+
+| Eski sabit | Yeni kaynak | Not |
+| --- | --- | --- |
+| `GRID_COLS` 8, `GRID_ROWS` 10, `GRID_CELLS` | `MAX_COLS`, `MAX_ROWS` (kodlama) · `geo.cols`, `geo.rows` (geçerlilik) | düğüm kodu `(mode·10 + iy)·8 + ix` aynı kalır |
+| `BOARD_ROWS` 8 | `geo.h` | |
+| `CRANE_ROW` 8 | `geo.craneRow` | K-05 |
+| `YARD_COLS` 6 | `geo.wy` | |
+| `SITE_X` 6, `SITE_COLS` 2 | `geo.siteX`, `geo.ws` | |
+| `BOUNDARY_X` 5 | `geo.boundaryX` | sınır `boundaryX \| siteX` |
+| `YARD_CELLS`, `SEGMENT_CELLS` | `geo.wy · geo.rows`, `geo.ws · geo.hs` | |
+| `ROW_MASK_ALL` | `geo.rowMaskAll` | |
+| `YARD_OCC_ROWS` (state.ts) | `geo.rows` | |
+| (yeni) | `geo.hy`, `isYardAir`, `isSiteAir` | saha üstü hava (K-05, K-07 satır 3), şantiye üstü hava (K-03) |
+
+**Uygulama:**
+
+- `coords.ts`'deki her fonksiyon ilk parametre olarak `geo` alır: `isYardCell(geo, x, y)`, `isSiteCell`, `isCraneCell`,
+  `sideOf`, `straddlesBoundary(geo, ix, w)`, `openFreeMask(geo, height)`, `closedBoundaryMask(geo, height, openGapRows)`,
+  `neighbors4(geo, x, y)` … Eski sabitler `coords.ts` dışında **ithal edilemez**. Bunu ESLint `no-restricted-imports`
+  kuralı zorlar ve bu WP-A'nın kabul ölçütüdür. Değişecek kullanım: 24 dosyada 330 yer (placement 51, movement 50,
+  coords 50, grid 36, gravity 28, state 23, level/logic 18, ascii 18, scenes/level/hitTest 11, plan 8, BoardView 7, hash
+  7, delivery 6, combo 5, …). Sayısal kalıntılar da ayrıca taranır (`10 − h`, `x ≤ 5`, `y ≤ 7` gibi); WP-A'nın son
+  adımında `grep` kapısı çekirdekte 5–10 arası sayı sabitlerini listeler ve her biri ya geometriye bağlanır ya da yorumla
+  gerekçelendirilir.
+- `CompiledLevel.geo` (`level/compile.ts`) dondurulmuştur. Her yerden `s.lvl.geo` ile okunur. Sıcak yolda modül sabiti
+  yerine bir alan okunur; fark `vitest bench` ile ölçülür (beklenen < %2).
+- **Durum dizileri** (§2.4'ün farkı): `yardOcc` = `wy × rows` (satır adımı `wy`); `siteOcc` = `S × ws × hs`; `filled` ve
+  `wrongOcc` = `S × ws` maske (hs ≤ 8 bit); `revealed` = `S` (ws·hs ≤ 32 bit, `>>> 0` ile işaretsiz okunur). D2 `B1`
+  yardım yuvaları kalkar, yani `counts.pieces` = yalnız statik parçalar. Başlığa `movesSpent` (K-43, §2R.4) eklenir.
+  Bölüm 10'da tampon ≈ 180 Int32 (≈ 0,7 KB); bugün varsayılan boyutta 2–4 KB. Hamle başı kopya ucuzlar.
+- **Duvar sınırı:** `boundaryX | siteX`. Kapalı satır maskesi `geo.rows` bitliktir. Komşuluk sınırı aşmaz (E-46):
+  `neighbors4` `sideOf(geo, x)` ile.
+- **Ağır Yük düğümleri (K-08, K-44, DL-2R-08):** cargo parçasının her serbest düğümünde bütün hücreler `x ≤ wy − 1` ve
+  `y ≤ hy − 1`'dir (bugün `ix + w ≤ 6`). Saha üstü hava, Vinç Alanı, sınır ve ray düğümleri cargo için hiç üretilmez;
+  böylece "havadan atlama" olmaz ve bırakma her zaman kaydırmadır. Sürükleme oturumu, parmak hedefi `p` ilk kez saha
+  dışına (`x ≥ wy` ya da `y ≥ hy`) çıktığında tutuş başına bir kez `blockedCargo` sinyali verir (§2R.15).
+- **Hava bölgeleri:** Serbest düğüm geçerliliği malzeme bloğunda değişmez, hava boş hücredir. Bırakma
+  sınıflandırmasında (K-07 satır 2/3) bütün hücreler `x ≤ wy − 1` iken herhangi biri `y ≥ hy` ise sonuç iptaldir (E-56).
+  Şantiyede inişin bir hücresi `y ≥ hs + e` ise bu `outside`'tır (K-16 koşul 1; mevcut neden).
+- **Düşüş kaynakları** (K-17 adım 2, K-25 teslimat): başlangıç satırı `y0 = rows − boy`. Aday kabul edilir ⇔ bütün
+  hücreler `y ≤ hy − 1` (E-57). Aday sütunlar `0 … wy − w`. Balon tavanı sahada `hy − 1`, şantiyede `hs + e − 1`.
+- **Karma** (§2.6'nın farkı): Konumlar azami çerçevededir. Saha `y·8 + x` (0…79), şantiye `80 + seg·32 + sy·4 + sx`
+  (80…239), kuyruk `240 + i`. `ZOBRIST_SEED` değişmez. Konum uzayı değiştiği için bütün golden karmaları bir kez
+  değişir; bu, `RULES_VERSION` 2 ile aynı anda olur.
+- **Ek A ASCII:** İsteğe bağlı başlık satırı eklenir: `size 4x4|2x5 H5`. Başlık yoksa varsayılan 6×8 | 2×8 kabul edilir;
+  bu sayede eski fikstürler değişmeden okunur. Satırlar `rows − 1 … 0` sırasındadır. Saha üstü hava ve şantiye üstü hava
+  `·` ile gösterilir (LEVELS §0 gösterimiyle aynı).
+- **Yerleşim** (`theme/layout.ts`): `boardLayout(tokens, geo, viewport)` UX §5.8 formüllerini uygular:
+  `boardW = cols·c + wallW`, yatay ortalama, alt kenar `boardBottomY`'ye çapalı, satır sayısı = `geo.rows`. Saha
+  çerçevesi `hy`, ozalit `hs + e`, duvar `height` satır yüksekliğindedir; şantiye üstü hava `board.blueprintDeep` düz
+  dolgu, iskele H'ye kadar (UX §5.8 bölge tablosu). Açık yükseklik işareti `(h + 2) − height`. Sürükleme eşlemesinde
+  duvar kesri `s = clamp((ax − (wy − w)) / w, 0, 1)`.
+- **Uyarlanır hücre boyu (DL-2R-14):** hücre `c` bölüm başında bir kez, cihazdan bağımsız (FIT bütçesiyle) hesaplanır:
+
+  ```
+  c = max(120, min(cellMaxPx, ⌊960 / cols / 12⌋·12, ⌊1200 / (h + 2) / 12⌋·12))
+  ```
+
+  - 960 = 1080 − 2 × 60 yatay bütçe (iki yanda en az 60 px: `minSideMarginPx` 30 + çerçeve/iskele payı); 1200 =
+    `board.boardBottomY` 1488 − `top.groupBottomY` 264 − `board.minGapTopPx` 24 (FIT'te vinç alanı HUD'un altında kalır).
+    12'nin katı: 360 px genişlikte hücre kenarı tam 4 CSS px'in katıdır, pişirilen dokular tam pikselde kalır.
+  - `cellMaxPx` = `layout.adaptive.cellMaxPx` (design-lead token'ı). Token yoksa 120 kabul edilir ve formül her bölümde
+    120 verir; bu, R2-02'nin bugünkü metnidir ("hücre 120 px korunur"). Orkestratör DL-2R-14 önerisini (120 alt
+    sınırdır) kabul edip design-lead token'ı 144 yazınca kod değişmez.
+  - Sonuç (`cellMaxPx` 144): B1–B5, B7, B9 → 144 (360 px'te 48 CSS px); B6 → 132 (44 CSS px); B8, B10 ve varsayılan
+    6×8 | 2×8 → 120 (40 CSS px).
+  - Ölçek `k = c / 120`: `grid.wallW`, `touch.hitSlopPx`, `blockV2` piksel değerleri (kontur, eğim, çıkıntı, sembol) ve
+    `adaptive.yardHolePx` × k. `yardFramePx`, `siteScaffoldPx`, HUD, kit ve öğretici değerleri değişmez. Örnek: B1'de
+    `boardW = 6 × 144 + 72 = 936`, iki yanda 72 px.
+  - Maliyet: blok dokuları k² ile büyür (144'te × 1,44); Bölüm 1–10'da en çok 9 blok dokusu, toplam < 1 MB GPU.
+  - FIT notu (design-lead kararı): FIT'te öğretici balonunun üst yuvası (y 280–430) vinç alanıyla kesişir: B4 ve B9'da
+    (H 6, c 144) vinç alanı y 336'da başlar; B6'da kesişme c = 120 iken de vardı (y 408; c = 132 ile y 300). UX §13.1 sert
+    koşulu vinç alanını saymıyor; EXPAND profillerinde (390×844, 360×800) tahta 208–240 px aşağı kaydığı için kesişme
+    yok. Balon sürükleme sırasında α 0,35'e iner ve dokunuş almaz. design-lead vinç alanını sert koşula eklerse formülün
+    dikey bütçesi `1200 − 166` (balon + boşluk) olur ve B4/B9 120'ye döner; kod tek fonksiyonda değişir.
+  - Testler: "UX 5.8 cell size B1–B10" (`boardLayout` saf; beklenen tablo yukarıda), "UX 5.8 board fits FIT and EXPAND
+    for every K-49 geometry" (8 geometri × 4 profil); ekran görüntüsü kapısı: 360×800'de B1 bloğu ≥ 48 CSS px
+    (`tools/screens.ts` ölçer; yalnız `cellMaxPx` 144 iken).
+- **Web geri hareketi (DL-2R-16'nın web karşılığı):** Android Chrome'da hareketle gezinme açıkken sol kenardan içeri
+  çekiş tarayıcıda "geri"dir ve sayfadan çıkarır; 8 sütunlu tahtada (B8, B10) saha sütun 0'ın sol kenarı ekran
+  kenarından 10 CSS px uzaktadır. Web'de sistem hareketini dışlayan bir API yoktur. Önlem: oyuncunun ilk dokunuşunda
+  (kullanıcı etkinleşmesiyle; Chrome etkinleşmesiz eklenen geçmiş kayıtlarını geri tuşunda atlar) `history.pushState`
+  ile tek bir koruyucu kayıt eklenir; `popstate` gelince oyun duraklatma penceresini açar ve kaydı yeniler. Sistem
+  dokunuşu alırsa gelen `pointercancel` sürüklemeyi iptal eder (K-07, hamle harcanmaz). Maliyet ≈ 0,1 g (WP-G). Test:
+  "UX 5.8 popstate opens pause instead of leaving" (Playwright, harness).
+- **Testler:** Geometri kümesi `G = {4×4|2×5, 4×4|2×6, 4×5|2×5, 4×5|2×7, 6×5|2×6, 6×8|2×8, 5×7|3×7, 4×6|4×6}` (Bölüm
+  1–10'un beş boyutu + varsayılan + S9 + 4 sütunlu şantiye) üzerinde parametreli değişmez testleri koşar (§12.4:
+  çakışma yok, sayım korunur, `encodeState`/`decodeState` gidiş-dönüş, `replay` = canlı oturum, kenar modeli
+  eşdeğerliği). Test adları "K-49 …" (E-56 "K-49 yard air drop cancels", E-57 "K-49 yard air truck candidate
+  rejected"). Ağır Yük: "K-44 cargo never leaves the yard while dragged". Mevcut testler varsayılan geometriyle
+  değişmeden koşar: fikstür kurucusu `yard`/`site` almazsa 6, 8, 2, 8 kullanır.
+
+### 2R.2 Tam örtü (K-47, K-48), kural değişiklikleri ve şema
+
+- **Derleme** (`level/compile.ts`): Her parçanın sınıfı `material` ya da `cargo` olur (cargo = I5/Q9, K-44).
+  `CompiledLevel`'a renk başına `supply[c]` ve `demand[c]` (`?` çözülmüş rengiyle), `demandBySegment[k][c]`,
+  `supplyByBatch[k][c]` (moloz dilimine eklenir) ve `materialCount` = N (K-47) eklenir.
+- **Kazanma `isLevelWon(s)`** (K-48): bütün dilimler tamam ∧ ek hedefler tamam ∧ `zone ∈ {yard, queue, pending}` olan
+  **malzeme** parçası yok. Cargo, kasa ve torba sayılmaz. "Elde blok" hamle sonu denetiminde yoktur, çünkü sürükleme
+  oturumu çekirdek durumu değildir.
+- **Korunum testi** "K-47 conservation": 20 bölüm × 500 seed'li rastgele eylem dizisi (sürükleme ve güçlendiriciler).
+  Her adımda `Σ kalan arz = Σ kalan talep` ve W6'sız bölümde renk bazında eşitlik tutmalı.
+- **Kalan blok** `blocksLeft(s) = N − doğru yerleşmiş malzeme bloğu sayısı` (UX §5.9 madde 1, PL-2R-06; saf sorgu,
+  µs). Elde tutulan blok ayrıca sayılmaz; Söküm ve Geri Al değeri kendiliğinden artırır; değer 0 ⇔ bütün dilimler tamam
+  (K-47 madde 5). Aynı fonksiyon kalan blok çipini, kayıp penceresindeki `lose.blocksLeft`'i ve
+  `level_end.blocksLeft`'i besler (§2R.16).
+- **Moloz (S4):** `debris` bayrağı moloz ilk kez yerinden ayrılınca kalkar ve o anda `clear/debris` sayılır. Başlangıç
+  denetimi `debris_correct_at_start`'tır. K-16 koşul 2'nin kodu silinir; `verdict.reasons` sırasında `debris` ve
+  `window` ölü kalır, etkin sıra `outside → color → support` (K-34 kanca 2; test "K-34 hook 2 debris and window never
+  produced").
+- **Ağır Yük (Y5):** cargo sınıfı, `colorIndex = −1`, renk kümesine girmez, yalnız saha içinde taşınır (§2R.1), Çekiç
+  hedefidir, Vinç onu hiç döndürmez. Eski "w ≥ 3 ağırdır" dalı (§3.2) silinir. Malzeme bloğunun genişliği `ws`'yi aşamaz
+  (`piece_too_wide`).
+- **Y3 kendiliğinden çözülme** (E-53): adım 5'in sonunda, komşusu kalmayan zincir için `chainReleased` ve `clear/chain`.
+- **Güçlendiriciler** (`core/boosters.ts`, mini hat; hamle harcamaz, `m` ve `movesSpent` artmaz):
+  - Çekiç hedef kümesi (K-36): `cargo`, kasa, torba, zincir, şantiyedeki moloz ve yapışmış harç. Moloz ve harç K-17 adım
+    2 sırasıyla sahaya iner. Malzeme bloğu kırılmaz.
+  - Altın Mala `P` kümesi (K-33): aktif dilimde her sütunda bloğun alt profili sütun yüksekliğine eşit ve renkler
+    eşleşiyor. Erişim yok sayılır.
+  - Fırça (K-38): iki blokta renk takası; hücre sayıları eşit ve renkler farklı olmalı.
+  - Vinç (K-37): şantiye hedefinde yönelim yalnız doğru konum için değişir ve genişlik ≤ `ws`; saha hedefinde döndürme
+    yok; Ağır Yük hiç döndürülmez.
+  - Geri Al (K-39): Söküm'ü de geri alır (§2R.4); `movesSpent` 1 düşer.
+  - **Ön denetim** (K-33, K-37, K-38; CL-2R-05): eylemin sonucu kopya tamponda uygulanır. D3a "çıkmaz" derse hedef
+    geçersizdir: işlem yapılmaz, güçlendirici harcanmaz (E-60). Maliyet: kopya + D3a ≤ 0,2 ms. Ön denetim yuva durumunu
+    etkilemez; yalnız dokunulan hedefte uygulanır (K-54).
+  - Söküm güçlendiriciyi iade etmez: envanter meta kayıttadır, çekirdek tamponunda değildir; Söküm yalnız tamponu
+    geri yükler (K-30).
+- **zod şeması** (`level/schema.ts`, §8.2'nin farkı):
+
+| Alan | Faz 2R | Doğrulama kodu |
+| --- | --- | --- |
+| `yard.cols`, `yard.rows` | isteğe bağlı; varsayılan 6, 8 | `size_out_of_range`, `board_too_wide` |
+| `site: { cols, rows }` | isteğe bağlı; varsayılan `{ cols: 2, rows: 8 }` | aynı |
+| `PiecePlacement.color` | I5/Q9'da isteğe bağlı ve yok sayılır; diğer şekillerde zorunlu (`superRefine`) | `schema_invalid` |
+| Parti k ≥ 1, `y` | `= yard.rows` (Hy; yok sayılır) | `batch_invalid` |
+| `build.segments[].rows` | tam `site.rows` satır, satır başına tam `site.cols` karakter; `.` yok | `plan_size`, `plan_has_window` |
+| `tutorial` | en çok 2 öğe; `mode` isteğe bağlı, yalnız `'soft'` (başka değer ya da spot alanı → `tut_blocking`); `done` ve `startOn` yalnız olay (`timeoutMs` → `schema_invalid`, CL-2R-10, PL-2R-16) | `tut_too_many_steps`, `tut_blocking`, `schema_invalid` |
+| `tutorial[].done`, `startOn` (`TutCond`) | GDD §14.1/3 kapalı sözlüğü; Faz 2R ekleri: `boosterUsed` olayı (Vinç yerleşimi `placementCorrect` üretmez), `piece: '<vurgu kimliği>'` süzgeci (yalnız `yardMove`, `placementCorrect`; `at` ile birlikte yazılabilir), `startOn: { event: 'segmentDone' }` | `schema_invalid` |
+| `tutorial[].highlight` | UX §13.1 sözlüğü + `blocks` (yalnız kalan blok çipi, CL-2R-21); `goals` = panelin tamamı | `tut_highlight_invalid` (mevcut kod) |
+| `tutorial[].hand.path` | GDD §14 "`hand.path` anlamı"; denetim solver aşamasında (§2R.5) | `tut_hand_invalid` |
+| `tutorial[].textKey` | regex `^tut\.(l\d{1,2}\|m\|ctx)\.[a-z][A-Za-z0-9]*$` (GDD §14.1/1) | `tut_key_missing` |
+| `targets` (isteğe bağlı; oyun okumaz; LEVELS §0'da kabul) | K-50 hedef bantları: `{ minShifts?, firstNeedDepth?, choices0?, deadRate?: [alt, üst] }` | `metric_out_of_band` (§2R.3) |
+
+`targets` alanı LEVELS §2'deki hedef aralıkların makine okunur kopyasıdır; yazarı product-lead'dir (P-2R-4, LEVELS §0).
+
+### 2R.3 Doğrulayıcı kodları (K-45 Faz 2R; §8.3'ün farkı)
+
+| L | K-45 | `code` | Denetim | Aşama | Ciddiyet |
+| --- | --- | --- | --- | --- | --- |
+| L-03 | 2 | `yard_fill_high`, `yard_fill_low` | `E = Wy·Hy − F`; `2 ≤ E ≤ ⌊0,4·Wy·Hy⌋`; F = malzeme + cargo + kasa + torba hücresi | validate | error |
+| L-04 | 5 | `shape_forbidden`, `shape_locked`, `piece_too_wide` | I5/Q9 yalnız id ≥ 8 ve sahada; malzeme yönelim genişliği ≤ Ws; w ≥ 3 "ağır" kuralı kalktı | validate | error |
+| L-05 | 4 | `plan_size` (eski `row_width`), `plan_has_window`, `elevator_overflow` | her dilim Hs × Ws; `.` yok; `Hs + b ≤ 8` | validate | error |
+| L-10 | 8 | `cover_prefix_short` (eski `material_short`) | `segments` ∧ W6 yok: her k, c için birikimli talep ≤ birikimli arz (moloz dahil, cargo hariç) | validate | error |
+| L-11 | 8 | `untileable` (CL-2R-09) | başlangıç durumunda D3a (§2R.4) "çıkmaz"; "bilinmiyor" bu kodu üretmez | validate | error |
+| L-13 | 7 | `debris_misplaced` | moloz şantiyede (x ≥ Wy), kendi dilim alanında, çakışmasız | validate | error |
+| L-16 | 10 | `too_many_new_mechanics`, `teaches_mismatch` | imza tablosu OBSTACLES Faz 2R: W1 4, W2 `height = H`, Y5 I5/Q9, S9 `site.cols ≥ 3` (12); S2 tablodan çıktı (CL-2R-12) | validate | error |
+| L-28 | 2 | `size_out_of_range`, `board_too_wide` | K-49: Wy 3–6, Hy 4–8, Hs 4–8, Ws 2–3 (hikaye bölümü 1–3) / 2–4 (4–5); Wy + Ws ≤ 8 | validate | error |
+| L-29 | 7 | `debris_correct_at_start` | moloz başlangıç konumunda K-16'ya göre doğru değil | validate | error |
+| L-30 | 8 | `cover_mismatch` | renk başına toplam arz = toplam talep; W6'lı bölümde toplam hücre | validate | error |
+| L-31 | 10 | `tut_too_many_steps`, `tut_blocking` | ≤ 2 adım; `mode` ≠ `'soft'` ya da spot alanı var | validate | error |
+| L-19 | 9 | `unsolvable`, `unused_block`, `moves_budget` (eski `moves_buffer_low`), `yao_low` | solver; K-52: `moves ∈ [min + T − A, min + T + A]` ∧ `moves − min ≥ taban`, A = max(1, ⌊0,1·min⌋); tanıtım bölümünde T ve taban bir alt zorluğun satırından (DL-2R-05) | solve | error |
+| L-27 | 9 | `trap_in_easy` (Kolay/Normal, error), `trap_warn` (Zor/Çok Zor, warn), `trap_scan_incomplete` (warn) | K-51 madde 2; eski `trap_dead_end` ve `trap_budget` bu kodlara indirgendi | solve | error / warn |
+| L-32 | 9 | `puzzle_first_reachable`, `puzzle_no_shift` | id ≥ 3: `firstNeedDepth ≥ 1`, `minShifts ≥ 1` (K-51 madde 1) | solve | error |
+| L-33 | 9 | `metric_out_of_band` | `targets` bantları (K-51 madde 3) | solve | warn |
+| L-34 | 9 | `batch_queued` | kanonik çözümde kuyrukta bekleyen kamyon bloğu; `tools/levels-allow.json` ile bölüm bölüm susturulur (`{ "10": ["batch_queued"] }`, E-54) | solve | warn |
+| L-35 | 10 | `tut_hand_invalid` (DL-2R-01) | `drag`/`hold` eldiveni GDD §14 "`hand.path` anlamı"nı bozuyor: `path[0]` vurgulu bloğun hücresi değil, ardışık noktalar aynı satır/sütunda değil, ara çapa `R` dışında, son konum iptal, `drag`'in son konumu bir en kısa çözümün ilk hamlesi değil | solve | error |
+
+L-35 K-45 madde 10'dadır ama kanonik çözüme ve mesafe tablosuna (`dist`) ihtiyaç duyduğu için `levels:solve`
+aşamasında koşar; adımın başladığı durum kanonik çözüm oynatılarak bulunur (`startOn` olan adımda olayın ilk
+gerçekleştiği durum). Değişmeyenler: L-01, L-02 (koordinat sınırları `geo`'dan), L-06…L-09, L-12 (`0 ≤ x ≤ Wy − w`,
+`y = Hy`), L-14, L-15, L-17 (Faz 2R sözlüğüyle), L-18, L-20…L-26. Silinenler: L-17'nin "zorunlu adım" dalları (`GDD
+14.1/4a`). Her yeni kod için `tests/level/invalid/` altında bir geçersiz fikstür bulunur; test adı `"K-45/<madde> <code>
+…"`, bulmaca kodlarında `"K-51 <code> …"`.
+
+### 2R.4 Kilitlenme (K-30): D1, D2, D3a, D3b solver tablosu, Söküm
+
+Modül `src/core/deadlock.ts` (yeni, saf):
+
+```ts
+export type TeardownCause = 'color' | 'tiling' | 'access';       // GDD K-30 `teardown.cause` (D2, D3a, D3b)
+export const ANALYTICS_CAUSE = { color: 'color_balance', tiling: 'tiling', access: 'access' } as const; // ANALYTICS v6
+export interface DeadTable { readonly complete: boolean; has(lo: number, hi: number): boolean }
+export function noMoves(s: GameState): boolean;                   // D1: K-09 (a)–(d), sayaç koşulu (e) yok sayılır
+export function detectDeadlock(s: GameState, ctx: { table: DeadTable | null }): TeardownCause | null; // D2 → D3a → D3b
+export function tileRemaining(s: GameState, budget = D3A_MAX_EXPANSIONS): 'ok' | 'dead' | 'unknown';
+export const D3A_MAX_EXPANSIONS = 20_000;
+```
+
+- **Adım 12 sırası (K-30, K-35):** bölüm kazanılmadıysa her zaman çalışır.
+  - Sayaç > 0: D1 → D2 → D3 (D3a, sonra D3b). D1 yardım yaptıysa D3 o yardımdan sonraki durumda denetlenir.
+  - Sayaç 0: D1 çalışmaz; D2 → D3 → gerekiyorsa Söküm; ardından K-29 penceresi açılır (E-58).
+  - +5 kabulünden sonra, hamle olmadan: yalnız D1 bir kez (D1 yardım yaptıysa ardından D3) (K-29, E-42).
+- **D1 (`noMoves`):** her parça için K-09 (a)–(d) denetimi (µs). Yardım: önce zincir ve ıslaklık kalkar, sonra saha
+  yeniden dizilir (§9.7'deki yapıcı algoritma; şaşırtma ve `reshape` dalları yok; şekil, renk ve sayı korunur). Sonuç
+  D3a ile ve "1 hamlede en az bir doğru yerleşim" denetimiyle doğrulanır. RNG tampondaki seed'li RNG'dir. D1 Söküm
+  değildir; `teardown` olayı üretmez.
+- **D2 (`color`):** renk başına kilitsiz malzeme arzı (saha, kuyruk, teslim edilmemiş parti, şantiyedeki moloz ve
+  yapışmış harç) ile doğru dolu olmayan plan hücresi sayısı karşılaştırılır. **W6'lı bölümde D2 çalışmaz** (CL-2R-04);
+  istenmeyen boyamayı jokerli D3a yakalar.
+- **D3a (`tiling`), kesin döşeme, `tileRemaining`:**
+  1. **Girdi.** Kalan dilimler: `segments` kipinde aktif dilimden sona doğru; `carousel` kipinde her dilim bağımsız ama
+     aynı blok havuzuyla. Her dilimin sütun yükseklik profili `filled` maskesinden alınır (K-34 gereği dolu hücreler
+     alttan kesintisizdir). Kalan malzeme blokları çoklu küme olarak sınıflara ayrılır: (şekil, renk, `availableFrom`).
+     Teslim edilmemiş parti k'nin (k ≥ 1) blokları `availableFrom = k`'dir, yani yalnız 0 tabanlı dilim indeksi ≥ k olan
+     dilimlere atanabilir; sahadaki ve kuyruktaki bloklarda 0. **W6 jokeri:** boya kapılı bölümde kutu yüksekliği bir
+     boya kapısının `size`'ını aşmayan bloğun renk kümesi = kendi rengi ∪ o kapıların renkleri.
+  2. **Arama.** Aktif dilimde en alçak sütun seçilir (eşitlikte en soldaki), sütun `c`, satır `h_c`. Bu hücreyi örten
+     blok şöyle olmalıdır: `c` sütunundaki alt hücresi `h_c`'de ve her sütundaki alt hücresi o sütunun yüksekliğinde. Bu
+     K-34'tür; açık gökyüzü kendiliğinden sağlanır. Adaylar: sınıf × sabit yönelim × bloğun `c`'yi örttüğü yatay
+     kaymalar, plan renkleriyle eşleşenler. Dilim dolunca sonrakine geçilir.
+  3. **Not defteri.** Anahtar sayısaldır, dizge kurulmaz: (dilim indeksi, sütun profili `Σ h_i·9^i`, sınıf sayaçlarının
+     karışık tabanlı sayısı) → iki 32 bit şeritli açık adresli tablo (`Int32Array`, 4 096 yuva, belirlenimci sıra).
+  4. **Belirlenimci bütçe.** Açılım sayacı `D3A_MAX_EXPANSIONS`. Sayaç dolarsa sonuç `unknown` olur, çıkmaz sayılmaz.
+     Deneme sırası sabittir (sınıf indeksi, kayma); sonuç cihazdan bağımsızdır.
+  5. **Ne zaman çalışır?** Yalnız doğru yerleşim, kamyon teslimatı, güçlendirici ya da Altın Mala içeren eylemlerde ve
+     ön denetimde. Saha hamleleri tersinirdir ve döşemeyi değiştirmez.
+- **D3b (`access`), solver tablosu** (CL-2R-02; GDD K-30 "Faz 2R: çalışma anı araması kaldırıldı"):
+  - Dosya: `src/generated/deadlock/level_NNN.json` =
+    `{ levelHash, rulesVersion, solverVersion, complete, entries }`. `entries` sıralı 64 bit Zobrist değerlerinin
+    base64 dizisidir.
+  - İçerik: solver'ın sürükleme hamleleriyle açtığı uzayda çıkmaz olup çıkmaz olmayan bir durumdan tek eylemle girilen
+    durumlar. Tam uzay tamamlanmadıysa `complete: false` olur ve yalnız bulunan girişler yazılır.
+  - Yükleme: bölüm JSON'uyla aynı tembel `import.meta.glob` parçası. `levelHash` ya da `rulesVersion` uymazsa tablo
+    yok sayılır ve geliştirme kipinde konsola uyarı düşer. Liste yoksa, uymazsa ya da durum listede değilse sonuç
+    "çıkmaz değil"dir (güçlendirici ya da Mala sonrası durumlar dahil; GDD'deki bilinen sınır).
+  - Bakış: ikili arama, ≤ 0,05 ms. Bölüm 1–10'da tablo boştur (LEVELS §2: hepsinde `deadRate = 0`).
+  - **Kesme 1 (§2R.12):** tablo yayımı (`--emit-tables`, yükleyici, bakış; 0,5 g) Faz 3'e kayar. O zamana kadar
+    `levels:check` kapısı: tablosuz yayımlanan bölümde solver `deadRate = 0` bulmalıdır, yoksa çıkış 1 (araç kuralı;
+    yeni K-45 kodu değil). Test "K-30 levels 1–10 need no dead table".
+- **Söküm** (tek adım; GDD K-30):
+  - Tetikleyen eylemler: sürükleme hamlesi, bölüm içi güçlendirici, Altın Mala. Her biri adım 12'ye eylem öncesi
+    tamponu `ApplyOptions.preAction` ile verir; oturum bu kopyayı Geri Al için zaten alıyor, ek kopya yok.
+  - Çıkmaz bulunursa: `buf.set(preAction)`; ardından `movesLeft` ve `movesSpent` eylem sonrası değerlerine yazılır,
+    `combo = 0` olur. Geri gelenler tamponun parçası olduğu için kendiliğinden döner: blok konumları ve renkleri, dilimler,
+    kuyruk ve teslim imleci, kasa katları, hedef sayaçları, açılan `?`, Altın Mala sayısı, `m` ve `m`'den hesaplanan
+    zamanlayıcılar (W4, W5, S6, Y4), `t`, `e` (E-59). Envanter meta kayıttadır, iade edilmez.
+  - Olay `teardown { toTurn, pieces[], cause }` paketin **son** olayıdır (§2R.15); analytics `deadlock_teardown`
+    (§2R.16). Söküm YAO'ya, Usta Serisi'ne ve `movesSpent`'e sayılmaz.
+  - Denetimler durumun saf fonksiyonu olduğu için geri dönülen durum o eylemden önceki adım 12'de denetlenmiştir; adım 12
+    yeniden çalışmaz. Bölüm başı durumu `untileable` ve solver denetimlerinden geçmiştir.
+- **`movesSpent`** (başlık alanı, K-43 madde 2): iptal edilmeyen her sürükleme hamlesinde +1; Geri Al bir sürükleme
+  hamlesini geri alırsa −1; Söküm, güçlendirici ve Mala değiştirmez. Çıkış onayı ve `level_end.exitFree` buna bakar
+  (`m`'ye değil).
+- **Geri Al (K-39) Söküm'den sonra:** oturumdaki anlık görüntü eylem öncesine aittir; hamle ve Söküm birlikte geri
+  alınır, sayaç geri gelir, `movesSpent` 1 düşer (GDD K-30 "Geri Al ile" örneği: kalan 9, `movesSpent` 4). Ek kod
+  gerekmez.
+- **Maliyet ve performans kapısı (EN-2R-19):** çalışma anında arama yoktur; adım 12 = D1 + D2 + D3a + tablo bakışı.
+  - Bölüm 1–10'da D3a ≤ 9 blok, ≤ 200 açılım, ≤ 0,1 ms masaüstü, ≤ 0,4 ms 4× CPU.
+  - En kötü durum açılım sayısıyla sınırlıdır: süre ≈ 20 000 × (açılım başına maliyet). WP-D'de `vitest bench` açılım
+    başına maliyeti ölçer; hedef ≤ 0,4 µs masaüstü (sayısal not defteri, dizge yok) → 4× CPU'da 20 000 açılım ≤ 32 ms.
+    Bu bir karenin üstündedir, bu yüzden ikinci kapı solver'dadır: `levels:solve` tam keşifte doğru yerleşim ya da
+    teslimatla girilen her durumda D3a'yı çalıştırır ve bölüm başına en büyük açılım sayısını (`d3aMaxExpansions`)
+    LEVEL_REPORT'a yazar. Oyuncunun güçlendiricisiz ulaşabildiği her durum bu keşfin içindedir.
+  - `npm run perf` kapıları (4× CPU, Bölüm 1–10, seed'li rastgele 2 000 eylem): adım 12 **p99 ≤ 2 ms**, **en kötü ≤ 8
+    ms** (entrepreneur'ün EN-2R-19 sayısı). `d3aMaxExpansions × ölçülen açılım maliyeti > 8 ms` olan bölüm LEVEL_REPORT'ta
+    kırmızı listelenir. Faz 3 bölümlerinde bu olursa iki seçenek product-lead'e gider: bölüm sadeleşir ya da GDD'deki
+    20 000 sınırı ölçülen değere iner (sınır sayıdır, belirlenimcilik bozulmaz).
+  - "Teklif öncesi genişletilmiş arama" yoktur; sayaç 0'da aynı denetimler aynı maliyetle çalışır.
+- **Testler:** "K-30 D3a detects the GDD tiling dead end", "K-30 D3a respects batch availability", "K-30 D3a paint
+  joker", "K-30 D3a budget exhaustion is unknown not dead", "K-30 W6 level skips D2", "K-30 D1 not run at zero moves",
+  "K-29 after +5 only D1 runs once", "K-30 teardown restores the pre-action state except moves left and moves spent",
+  "K-30 teardown after a booster keeps the inventory spent", "K-30 table is ignored on levelHash mismatch", "K-30 step
+  12 runs at zero moves before the offer window", "E13 out-of-moves offer only after deadlock check" (E-58), "E-59
+  teardown restores the shutter phase", "E-60 crane target rejected by the D3a precheck", "E-37 undo after teardown
+  returns the move", "E-48 teardown undoes the segment shift and the delivery", "K-43 exit penalty uses movesSpent",
+  "K-47 boosters never create a D3a dead end", "K-30 levels 1–10 need no dead table".
+
+### 2R.5 Solver: `npm run levels:solve` (Faz 3'ten öne alındı)
+
+Modüller `tools/solver/` altındadır ve yalnız Node'da çalışır. Çekirdeği ithal ederler; çekirdek onları ithal etmez
+(§1.3 ESLint katman kuralı).
+
+| Dosya | Görev |
+| --- | --- |
+| `space.ts` | Durum deposu. 64 bit Zobrist açık adresli tablo (iki `Uint32Array` şerit) + sıkıştırılmış durum kaydı (parça başına `zone, x, y, flags, counter` baytları + karmaya giren başlık alanları, `Int32Array` arena). Tam tampon gerekince kayıttan yeniden kurulur (≈ 3 µs). |
+| `expand.ts` | Budamasız, kesin hamle üretimi (aşağıda). |
+| `explore.ts` | Tam keşif (BFS) + CSR kenar dizileri (`Int32Array` hedef, `Uint8Array` tür ve maliyet). |
+| `distance.ts` | Geri yönde mesafe (kova kuyruklu Dijkstra, maliyet 1–3) ve kaydırma mesafesi (0-1 BFS). |
+| `metrics.ts` | K-50 ölçütleri, K-51 ve K-52 denetimleri, `d3aMaxExpansions`. |
+| `tutorial.ts` | L-35 `tut_hand_invalid` (GDD §14 "`hand.path` anlamı", aşağıda). |
+| `astar.ts` | Büyük uzay yedeği (§9.4 A* + TT; sezgisel aşağıda). |
+| `variants.ts` | `no-gaps`, `hammer-start`. |
+| `report.ts` | `artifacts/solver/level_NNN.json`, LEVEL_REPORT bölümü, ölü tablo (kesme 1'e kadar kapalı), solver golden'ı. |
+| `tools/solve.ts` | CLI, `worker_threads` havuzu (`os.availableParallelism()`), önbellek. |
+
+**Hamle üretimi** (budamasız; K-50 tanımlarına birebir). Tutulabilen her parça için tek bir `beginDrag` BFS'i yapılır;
+uç konumlar şu sınıflara ayrılır:
+
+1. **Saha:** Bütün hücreleri `x ≤ wy − 1, y ≤ hy − 1` olan ve başlangıçtan farklı her erişilebilir FREE düğüm. Y6
+   kapalıyken havada asılı konumlar da dahildir (K-50 madde 9 ortak sayım kuralı). Y6 açıksa iniş sonrası durumlar
+   birleşir.
+2. **Şantiye, serbest:** Her şantiye sütun konumu için sonucu değiştiren bırakma sınıflarının en alçak temsilcisi
+   (§9.3 madde 1: rüzgârda `d = 0` / `d ≥ 1`, G-L `atRow`, cam eşiği).
+3. **Ray:** Tamamen şantiyede olan her RAIL düğümü.
+4. **Boya kapısı:** `(düğüm, via)` çiftleri.
+
+Yalnız durumu değiştiren hamleler üretilir: doğru yerleşimler ve saha hamleleri. Hatalı yerleşim yalnız zamanlı
+mekanikli bölümde, "bekle" temsilcisi olarak üretilir (§9.3). Aynı sonuç durumuna giden hamleler tek kenar sayılır
+(birim = farklı (durum, sonraki durum) Zobrist çifti, K-50 madde 9). Kenarın türü olarak sözlük sırasında en küçük olan
+tutulur: duvar üstü < ray < kaydırma, sonra hamle demeti.
+
+**Hızlı saha yolu.** Bölümde komşu etkisi (Y1–Y3), saha yerçekimi (Y6), saklı nesne, zamanlı mekanik ve balon yoksa
+saha hamlesi `applyMove` çağrılmadan uygulanır: parça kaydı + doluluk + artımlı Zobrist, `turn` ve `movesSpent` artar,
+ikisi de karmada değildir. Bölüm 1–10'un hepsi bu koşulu sağlar. Eşdeğerlik testi: rastgele 10 000 saha hamlesinde
+hızlı yolun tamponu `applyMove`'unkiyle bit bit aynı (`turn` hariç). Tahmini kazanç düğüm başına ≈ 150 µs → ≈ 40 µs;
+WP-E'de `vitest bench` ile ölçülür.
+
+**Tam keşif.** Başlangıçtan BFS yapılır, her durum bir kez açılır.
+- Sınırlar: `--max-states` (varsayılan 3 000 000) ve `--max-ms` (varsayılan 120 000). Süre sınırı yalnız güvenlik
+  içindir; sınıra takılan sonuç belirlenimci sayılmaz ve `incomplete` olarak işaretlenir.
+- Bellek: durum başına kayıt ≈ 48 B, karma ≈ 16 B, kenar ≈ 10 × 9 B, toplam ≈ 160 B. 3 milyon durumda üst sınır
+  ≈ 480 MB; Bölüm 10'da (446 138 durum) ≈ 70 MB.
+- Süre: Bölüm 10'da 446 138 × 40–80 µs ≈ 18–36 s, tek çekirdek.
+
+**Ölçütler** (K-50; tam keşif tamamlanınca kesindir):
+
+| Ölçüt | Hesap |
+| --- | --- |
+| Kazanma kümesi `W` | K-48'i sağlayan durumlar |
+| `dist(s)` | `W`'den geri yönde en kısa yol (K-07 maliyetiyle) |
+| `min` | `dist(start)`; ∞ ise `unsolvable` |
+| `minShifts` | geri yönde 0-1 BFS (kaydırma 1, yerleşim 0), başlangıç değeri; `min` ile farklı çözümlerden gelebilir, rapor ikisini de yazar (K-50 madde 3) |
+| Kanonik çözüm | En kısa yollar DAG'ı (`dist(s) = c(e) + dist(s')` olan kenarlar). Önce duvar üstü yerleşim sayısını en büyük yapan DP (K-46), sonra her adımda sözlük sırası: duvar üstü < ray < kaydırma; tür adı (alfabetik dizge), açı (sayısal), renk (W Y G R O C B P), başlangıç x, y, hedef x, y (K-50 madde 4) |
+| `shiftsBySegment` | kanonik çözümde dilim başına kaydırma sayısı |
+| F0, `cover`, `firstNeedCover` | başlangıç durumunda statik hesap (erişim yok sayılır) |
+| `firstNeedDepth` | başlangıçtan yalnız saha kenarlarıyla BFS; doğru yerleşim kenarı olan ilk durumun derinliği |
+| Çıkmaz | `dist = ∞` |
+| `K` kapsamı | başlangıçtan ileri yönde kaydırma sayısı (0-1 BFS) ≤ `minShifts + 1` olan durumlar |
+| `trapCount` | `K` içindeki canlı durumdan çıkmaza giden doğru yerleşim (ya da boya kapısı) kenarlarının sayısı |
+| `deadRate` | bu kenarlar / `K` içindeki bütün doğru yerleşim kenarları |
+| `choices@k`, `bestChoices@k` | Kanonik yolun k'inci durumunda (k = 0, 1, 2) farklı ardıllar; koşul `g + c + dist(ardıl) ≤ moves` (`moves` = JSON değeri; JSON yoksa `min + T`, yani `a = 0`). En iyiler: `dist(ardıl) = dist − c` |
+| YAO | kanonik çözüm üzerinden (K-46) |
+| `d3aMaxExpansions` | keşifte doğru yerleşim ya da teslimatla girilen durumlarda D3a açılım sayısının en büyüğü (§2R.4 perf kapısı) |
+| Ölü tablo | canlı → çıkmaz kenarlarının hedefleri (§2R.4; kesme 1'e kadar yalnız `deadRate` hesaplanır, dosya yazılmaz) |
+
+**Öğretici eldiven denetimi** (`tutorial.ts`, L-35, DL-2R-01, DL-2R-15 madde 6). Her `drag`/`hold` adımı için:
+(1) adımın başladığı durum kanonik çözüm oynatılarak bulunur (`startOn` yoksa önceki adımın bittiği durum, varsa
+`startOn` olayının ilk gerçekleştiği durum); (2) `path[0]` vurgulu bir `piece:` bloğunun hücresidir ve blok K-09'a göre
+tutulabilir; (3) ardışık noktalar aynı satır ya da sütundadır ve aradaki her tamsayı noktanın çapası `beginDrag`
+BFS'inin `R` kümesindedir; (4) son çapa K-07'de satır 2, 6 ya da 7'dir; (5) `drag`'in son çapası bir en kısa çözümün ilk
+hamlesidir: o bırakmanın sonuç durumu `s'` için `dist(s') = dist(s) − c`. Hata iletisi adımı, noktayı ve bozulan maddeyi
+yazar. Test "K-53 tutorial hand path reachable and not cancel" (GDD örneği: Bölüm 4 adım 2'nin eski yolu `[[1,1],[4,1]]`
+→ `tut_hand_invalid`, yeni yol `[[1,1],[5,1]]` geçer).
+
+**Büyük uzay yedeği (Faz 3).** Keşif sınırı aşılırsa `min` ve bir çözüm A* + TT (§9.4) ile bulunur. Sezgisel tam örtüye
+göre yeniden yazıldı: `h(s) = (yerleşmemiş malzeme bloğu sayısı) + [şu an doğru yerleşim yok ∧ blok kaldı]`. Her blok
+tam bir kez yerleştiği için bu sezgisel kabul edilebilir ve tutarlıdır. Sonuç `status: 'heuristic'` olur; K-50'nin tarama
+ölçütleri `incomplete` yazılır ve `trap_scan_incomplete` (warn) üretilir. Faz 3 taslakları için hedef: saha ≤ 30 hücre ve
+E ≤ 10 (LEVELS §3 madde 10, CL-2R-14).
+
+**Varyantlar.** `--variant no-gaps` bütün geçitleri siler; `--variant hammer-start` başlangıçta bütün cargo'yu siler.
+Sonuçlar LEVEL_REPORT'ta "geçitsiz min" ve "Çekiç'le min" sütunlarına yazılır; LEVELS §2 bantları: Bölüm 4 ve 9
+`geçitsiz min − min ≥ 1`, Bölüm 8 ve 10 `min − Çekiç'le min ≥ 2`. Bant tutmazsa LEVEL_REPORT satırı kırmızıdır (K-50
+ölçütü değil, yeni kod yok).
+
+**Çıktılar.**
+- `artifacts/solver/level_NNN.json`:
+  `{ levelHash, rulesVersion, solverVersion, status, metrics, canonical: SessionAction[], stats }`.
+- `docs/LEVEL_REPORT.md`, "Bulmaca ölçütleri" tablosu: LEVELS §2 özet tablosunun sütunları + hedef bant + varyantlar +
+  `d3aMaxExpansions` + durum.
+- `src/generated/deadlock/level_NNN.json` (`--emit-tables`; kesme 1 ile Faz 3).
+- `tests/golden/level_NNN.solver.json`: kanonik çözüm + `eventLogHash`; yalnız `--update-golden` ile yazılır.
+
+**CLI.** `npm run levels:solve [-- --level N[,M]] [--variant no-gaps|hammer-start] [--max-states N] [--no-cache]
+[--update-golden] [--emit-tables] [--json]`.
+- Bir `error` kodu varsa çıkış 1.
+- Önbellek anahtarı `levelHash + rulesVersion + solverVersion`.
+- `levels:check` = `levels:validate && levels:solve`. Tablo yayımı (Faz 3) ve bot (WP-N, Faz 3) gelince ona eklenir.
+
+**Belirlenimcilik.**
+- Keşif sırası sabittir (parça indeksi, düğüm kodu). Sonuçlar küme ve mesafe olduğu için sıradan bağımsızdır; kanonik
+  çözüm sözlük sırasıyla tekildir.
+- 64 bit Zobrist'te 3 milyon durumda çakışma olasılığı ≈ 2,4·10⁻⁷'dir.
+- Kanonik çözüm her zaman gerçek çekirdekte baştan oynatılarak doğrulanır; uyuşmazlık hata verir.
+
+**Testler.**
+- "K-50 metrics match brute force on micro levels": 3×4 saha, ≤ 4 blok; ayrı yazılmış ağaç aramalı kaba hesapla
+  karşılaştırılır.
+- "K-50 level 3 choices 6 9 10 best 3 1 1": JSON gelince LEVELS §2 değerleriyle. Fark çıkarsa product-lead'e raporlanır
+  (R2-01 çalışma sırası 3).
+- "K-51 puzzle_first_reachable …", "K-51 trap_in_easy …", "K-52 moves_budget …", "K-52 intro level uses the easier
+  row" (DL-2R-05).
+- "K-46 canonical solution has max YAO among min-move solutions".
+- "K-50 fast yard path equals applyMove".
+- "K-53 tutorial hand path reachable and not cancel".
+
+### 2R.6 Görsel boru hattı (R2-08 güncellemesi, ASSET §16)
+
+**Akış:** design-lead SVG'yi elle yazar → `public/art/<kategori>/<kimlik>.svg` (depoda) → `npm run assets`
+(`tools/assets.ts`, kurulu Chromium) → `public/assets/v2/*.webp` + `public/assets/v2/manifest.json` (depoda, ≤ 1 MB) →
+oyun. Raster çıktıları depoya girdiği için GitHub Pages derlemesi Chromium istemez. Canva, üretken yapay zekâ, arka plan
+kaldırma ve elle "intake" klasörü yoktur (EN-2R-21, CL-2R-24 konusuz kaldı: SVG'de zemin çizilmez, şeffaflık doğaldır,
+kenar halesi oluşmaz).
+
+**Neden derlemede raster?** Çalışma anında `load.svg` ile raster de ücretsizdir ve indirmesi daha küçüktür (SVG toplamı
+≈ 90 KB gzip), ama 1080×1920 viewBox'lı bir arka planın Canvas'a raster edilmesi ana iş parçacığında 4× CPU'da 20–60 ms
+sürer (tahmin; ana sayfa animasyonu sırasında 1–4 kare). Derlemede raster bu maliyeti sıfırlar ve kabul denetimlerini
+tek yerde toplar. İndirme bütçesi (≤ 900 KB) iki yolda da tutar.
+
+**`tools/assets.ts` adımları:**
+1. **SVG denetimi** (ASSET §16.2 ortak kabul ölçütü 1 ve 2; otomatik):
+   - yasak öğeler yok: `text`, `image`, `foreignObject`, `script`, `@import`, dış `href`, `filter`, `mask`
+     (Chromium `DOMParser` ile öğe ve öznitelik taraması);
+   - kök `viewBox` ASSET §16.3'tekiyle aynı, `width`/`height` = viewBox;
+   - dosya boyutu (gzip öncesi): arka plan ≤ 60 KB, yapı ≤ 40 KB, karakter ≤ 20 KB, logo ≤ 15 KB, ikon ≤ 6 KB;
+   - yol koordinatlarında en çok 1 ondalık;
+   - palet: `fill`, `stroke`, `stop-color` değerleri `tokens.json` renkleri ∪ ART §2.5 formülüyle türetilen tonlar
+     (renk·0,68 + beyaz·0,32; renk × 0,92; renk × 0,68), kanal başına ±2 yuvarlama payı. Karakter imza renkleri
+     `color.character.*` ile birebir.
+   Ölçüt 3–5 (kontur ve ışık yönü, siluet okuma testi, ART §11.8) elle, design-lead incelemesindedir.
+2. **Raster:** Chromium sayfasında `<img src="…svg">` → `decode()` → Canvas2D `drawImage` ile ASSET §16.3 "Raster"
+   boyutunda (arka planlar 0,5 ölçek, 540×960). Yapı (`town_ch1_treehouse`) için aynı sayfada ozalit hayalet dokusu ART
+   §7.2 formülüyle üretilir. Kodlama `canvas.toBlob('image/webp', 0.80)`.
+3. **İkon atlası:** 19 ikon (16 + `icon_piggy`, `icon_kettlebell`, `icon_nextfloor`) × 128 px, raf paketleyici →
+   `icons_v2.webp` (512×640, 20 yuva) + Phaser JSON Hash.
+4. **Manifest:** `{ version, assets: { [key]: { file, w, h, bytes, srcSha1, group: 'P1' | 'P2' | 'P3', status } } }`.
+   Bir SVG denetimden geçmezse girdisi `status: 'rejected'` olur, oyun prosedürel yedeği kullanır ve araç çıkış 1 verir.
+5. **Bayatlık kapısı** (`npm test`, Chromium'suz): `tests/assets/manifest.test.ts` her SVG'nin sha1'ini manifestteki
+   `srcSha1` ile karşılaştırır; uyuşmazlıkta "npm run assets çalıştır" iletisiyle kırmızıdır. Adım 1'in Chromium
+   gerektirmeyen kısımları (yasak öğe düzenli ifadesi, boyut, viewBox, palet) aynı testte de koşar.
+
+**Çalışma anı** (`src/services/assets.ts` + `src/scenes/AssetLoaderScene.ts`). Yükleme dört gruptadır:
+- **P0** (açılış; değişmez): font ve giriş panelleri. FTUE kritik yolu değişmez; SVG görselleri FTUE'ye girmez.
+- **P1** (Bölüm 1 etkileşime açıldıktan sonra, arka planda): `icons_v2`, `chr_dede_bust` (yüklenince Ø 128 portre bir
+  kez Canvas2D `arc` + `clip` ile pişirilir, CL-2R-26), `chr_tuna_bust`, `bg_level_site_edge`.
+- **P2** (P1 bitince): `bg_home_town`, `town_ch1_treehouse` (+ hayalet), `chr_kepce_bust`, `logo_emblem`.
+- **P3:** `bg_win_plaza`, `chr_tuna_cheer`, `chr_gribeton_bust`.
+
+Tüketici `assets.texture(key, fallback)` çağırır. Görsel yüklüyse SVG kaynaklı doku, değilse prosedürel yedek döner.
+Görsel sonradan gelirse 200 ms'lik çapraz solmayla değişir (UX §3 "Yükleniyor"). Sahne kapanınca kullanmadığı dokuları
+`textures.remove` ile bırakılır. Oyun ekranının zemini doku değildir: `scene_game_bg` çivit gradyanı `Graphics` ile
+çizilir (ART §7.1, R2-12).
+
+**Prosedürel yedekler:**
+- `theme/draw/scene.ts`: gök gradyanı + 3 tepe + siluetler (ART §7.4 `color.chapter`).
+- `theme/draw/characters.ts`: ART §11.7 yollarının Canvas2D karşılığı.
+- İkonlar: mevcut `ui/icons.ts`.
+
+**Bütçeler** (ölçüm kapısı, §2R.13):
+- v2 görsellerinin toplam indirmesi ≤ 900 KB; toplam doku belleği ≤ 64 MB (ASSET tahmini ≈ 15,2 MB, aynı anda ≈ 10 MB).
+- `tools/verify-dist.ts` iki denetim kazanır: `dist/assets/v2` toplamı ≤ 1 MB ve ilk yük (index JS gzip + font)
+  ≤ 620 KB. Bugün ilk yük 501 KB JS gzip + 38 KB font = 539 KB. Aşılırsa çıkış 1. `public/art/**` SVG kaynakları
+  `dist`'e kopyalanır ama oyun onları istemez; indirme bütçesine girmez.
+
+### 2R.7 Görsel v2 çizim ve performans
+
+- **Blok çizici** `theme/draw/blockV2.ts`:
+  - `offsetEdges(poly, top, right, bottom, left)` saf fonksiyondur. Birim testi L4 ve T4 köşe koordinatlarını denetler
+    (ART §3A.4).
+  - `drawBlockV2(ctx, spec, tokens, k)` ART §3A.4 sırasını izler; §3A.5 çıkıntı katmanı (R2-12): hücre başına tek büyük
+    çıkıntı, sembol çıkıntının tepesinde. `k` = §2R.1 hücre ölçeği.
+  - Tutulabilirlik (DL-2R-17): parlama yayı + noktası ayrı, renksiz `blk_gloss_<şekil>` dokusudur ve yalnız
+    `holdable` parçaların üstüne konur (§2R.15); tutulamaz parça `setTint` × 0,92 (`blockV2.notHoldableTint`).
+  - Mevcut bölüm pişirmesi (§10.2) aynı atlas sayfalarına yazar. `textures.ts` geçiş süresince `variant: 'v1' | 'v2'`
+    taşır; testler v2'ye geçince v1 çizici silinir.
+- **Saha zemini:** `yard_floor` v2 delikli pano (hücre merkezinde Ø 12·k delik), sahaya bırakma önizlemesi 4 px beyaz α
+  0,6 noktalı kontur (DL-2R-18).
+- **Işıltı halkası:** şekil başına bir genişletilmiş siluet karesi; renkten bağımsızdır, ışıltı tonu `tint` ile verilir.
+- **Doğru yerleşim parlaması** (#92): siluete beyaz ADD flaşı, maske ve süpürme bandı yok (design-lead seçimi,
+  CL-2R-25). "Bölüm N" düğmesindeki süpürme (#98) `ui_button_shine` bandının `setCrop`'udur.
+- **Kit** `theme/draw/kit.ts`: düğme (4 durum × 6 renk), panel, şerit (3 renk), kare rozet (R2-12), kapsül, ilerleme
+  çubuğu, çivit alt gezinme, balon. Sabit boyutlu öğeler açılışta `kit` atlas sayfasına (≤ 2048×1024) bir kez pişirilir.
+  Değişken genişlikli panel ve şerit Phaser `NineSlice` ile çizilir.
+- **Fx:** `fx_sparkle4`, `fx_star_small`, ışın (12 ışınlı tek doku, döndürülür).
+- **Yazı stilleri** (ART §8.1): `ui/text.ts` içinde
+  `textStyle('brightTitle' | 'counter' | 'panel' | 'secondary', size, variant)`. Phaser Text konturu ve gölgesi
+  (`shadowStroke`) kullanılır; maske yok.
+- **Tokens:** `TokensSchema`'ya `blockV2` (çıkıntı dahil), `kit` (`kit.nav`, `kit.badge`), `tutorial`, `layout.adaptive`
+  (`cellMaxPx` gelince), `layout.home/hud/win`, `color.scene`, `color.obstacle.cargo*`, yeni `duration.*`, `alpha.*` ve
+  `particles.*` anahtarları ve `check.v2` eklenir. Bugün zod bilinmeyen anahtarları sessizce atıyor; eklenince tip güvenli
+  okunurlar. Kaldırılacak v1 anahtarları design-lead notundadır. Kod WP-F ve WP-H bitince onları okumayı bırakır; silmek
+  design-lead'in işidir.
+- **Performans tahmini:**
+  - Bölüm başı pişirme, Bölüm 10 (c 120): 5 doku (şekil × renk) + 3 siluet + 3 parlama ≈ 11 × 1,5 ms ≈ 17 ms masaüstünde,
+    4× CPU'da ≈ 70 ms. Bölüm 6 gibi c = 132–144 bölümlerde × 1,44'e kadar: ≈ 100 ms. Geçiş animasyonunun (300 ms)
+    arkasında kalır; kapı ≤ 150 ms.
+  - Kit pişirme açılışta ≈ 30 doku × 1 ms; 4× CPU'da ≈ 120 ms. Giriş panellerinin arkasında yapılır (UX §2.1 adım 1).
+
+### 2R.8 HomeScene v2 ve Kazanma v2 (UX §3, §6.1, META §10)
+
+- **`HomeModel`** (`src/meta/home.ts`, saf): kayıt + `economy.json` →
+  `{ lives, coins, stars, nextLevel, progress: { value, max }, structureStage, chest: { value, max }, tabs: [{ id, locked }], difficultyTag, contentEnd, replayLoop }`.
+  Faz 2R kuralları (META §10):
+  - görev sistemi ve yıldız harcama yok; `progress` = ilk kez kazanılan bölüm / 10;
+  - `structureStage` = `layout.home.ch1CropStops`'tan, oran = kazanılan bölüm / 10 (7 kırpma durağı);
+  - sandık halkası n/10 her zaman görünür; diğer kenar ikonları gizli;
+  - Mağaza kilitli, altın "+" "Yakında"; altın yetmeyen yerde pasif `common.notEnoughCoins`;
+  - Bölüm 10'dan sonra 1–10 döngüsü: özgün bütçe, yıldız yok, altın yalnız kazanma tabanı, öğretici yok (K-53 madde 6).
+
+  Testler "UX 3 home model …", "META 10 replay loop gives base coins only".
+- **`HomeScene`** yeniden yazılır (bugün 245 satır, tahmini ≈ 500). İçerik:
+  - arka plan `assets.texture('bg_home_town')`, alan şeridi, ilerleme çubuğu;
+  - yapı iki katmandır: ozalit hayaleti + tam renk, `setCrop` ile açılır;
+  - karakter köşesi, "Bölüm N" kit düğmesi + parlama süpürmesi (#98);
+  - alt gezinme (Ana Sayfa dışındaki 4 sekme kilitli, dokununca "Yakında" balonu ve `nav_tap`), üst çubuk kapsülleri.
+
+  Geçişler JUICE #99–#102'dir (kesme 2 ile Faz 5; o zamana kadar 150 ms solma).
+- **`WinScreen` v2** (`ui/WinScreen.ts`): tam ekran katman (UX §6.1, #95), ışın, şerit, kart, Tuna, ödül kapsülleri,
+  Altın Mala satırı (n ≥ 1). JUICE #55'in zaman çizelgesi değişmez. "Bütün bloklar yerinde" anı (#94) kazanmadan önce
+  `LevelScene`'de oynar.
+- **Oyun HUD v2:** hamle plakası (kit panel), hedef çipleri (yapı + kalan blok `blocksLeft`, teslim edilmemiş parti
+  "+n", "sonraki kat" rozeti; en çok 4 çip), alt grup (Tuna köşesi + güçlendirici yuvaları K-54), ozalit kuyusunda
+  panorama, kamyon göstergesinde sıradaki kuyruk bloğunun 0,35 ölçekli önizlemesi (DL-2R-22).
+- **Güçlendirici akışları (UX §5.2 Faz 2R):** Çekiç (B8) ve Vinç (B10) bu dilimde açılır; Mala → saha bloğu → |P| = 1
+  ise kendiliğinden, ≥ 2 ise `ghost_<şekil>_valid` vurgusu; Fırça iki blok seçimi (Faz 3); hedefsiz yuvada #108 ve
+  `booster.*.noTarget`. Yeni doku yok.
+
+### 2R.9 Hafif öğretici denetleyicisi (K-53, UX §13.1)
+
+Öğretici üç parçaya ayrılır:
+
+1. **`TutorialController`** (mevcut, saf): adım yalnız `done` ve `startOn` olaylarıyla ilerler; süzgeçler `piece`, `at`
+   dahil (GDD §14.1/3), `boosterUsed` olayı güçlendirici mini hattından gelir. Zorunlu adım, spot ışığı ve kilit
+   güvencesi (`tutorial/guarantee.ts`, `spotPieces.ts`) silinir. `inLevel.tutorial` biçimi değişmez (K-53/5). Kayıtta
+   bölüm `won = true` ise adımlar hiç başlamaz (K-53/6).
+2. **`TutorialPresence`** (saf indirgeyici, yeni):
+   - durumlar `wait | shown | hidden | done`; adım `shown` ya da `hidden` iken **etkin**dir (K-53/3);
+   - girdiler `{ t, kind: 'tick' | 'touchDown' | 'touchUp' | 'correctAction' | 'stepDone' | 'windowOpen' | 'windowClose' }`;
+   - süreler `tokens.tutorial`'dan (600 / 220 / 4000 / 4000 / 200 ms);
+   - `shows` sayacı (ilk görünme dahil) ve ilk görünme zamanı; `reshowsWithBubble` 3'ten sonra balon çıkmaz, eldiven ve
+     vurgu sürer;
+   - gizlenme adımı bitirmez; adımı yalnız `stepDone` (`done` olayı) bitirir.
+3. **`TutorialView`** (Phaser): eldiven yolu (tween), noktalı iz, balon, vurgu nabzı. Eldiven yalnız şu koşulda oynar
+   (UX §13.1, DL-2R-20): `path[0]` hücresi vurgulu blokla dolu ∧ blok `holdable` (§2R.15) ∧ yol o anki `R`'de ve
+   iptalsiz (aynı BFS, yalnız adım etkinken ve blok değişince). Balonun üst ya da alt yuvası UX §13.1'deki kutu
+   kesişimine göre seçilir. Hiçbiri dokunuş almaz (`setInteractive` yok).
+
+Girdi hiçbir zaman engellenmez: `DragController` öğreticiye bakmaz. Zaman sahne saatinden (`scene.time.now`) gelir ve
+pencere açıkken durur; çekirdeğe girmez. Bağlamsal `tut.ctx.*` satırı adım etkinken kuyruğa girer ve adım bitince + 400
+ms gösterilir; Söküm satırı (`tut.ctx.teardown` ve nedene göre metinleri) kuyruğa girmez (K-53/4). Bir adım etkinken
+`neededNow` nabzı gösterilmez (K-34 kanca 5). `tutorial_step { shows, msToDone }` `TutorialPresence`'tan okunur
+(§2R.16).
+
+**Testler:** "K-53 tutorial never blocks input", "K-53 hidden tutorial step still completes on done event"
+(PL-2R-16), "K-53 presence hides after visibleMs and reshows after idleReshowMs" (sahte saat), "K-53 step done ignores
+other piece", "K-53 no tutorial on replay", "K-53 teardown line skips the queue", "K-53 at most two steps"
+(doğrulayıcı), "K-53 tutorial hand path reachable and not cancel" (§2R.5). Mevcut "GDD 14.1 …" olay sayım testleri
+kalır; yalnız `required` dalları silinir.
+
+### 2R.10 Kayıt, golden ve veri göçü
+
+- `RULES_VERSION = 2`. Yeni JSON'larla `levelHash` değişir; eski `inLevel` K-43/4 ile cezasız kapanır
+  (`level_resume_invalid`).
+- Kayıt şemasının `version` alanı 1 artar. `levels[id].won` ve `attempts` korunur (id'ler aynı, içerik yeni).
+  `seenContextTips` korunur. Kayda yeni alan yok: `movesSpent` `inLevel` hamle günlüğünün tekrarından türetilir. Göç
+  testi "K-43 save version bump keeps progress".
+- Golden: Eski kurallarla yazılmış `tests/golden/level_00{1..5}.hand.json` silinir. Yerine LEVELS §2 kanonik
+  çözümlerinden `level_001…010.hand.json` (biçim §9.5 + `geo`) ve solver'dan `level_NNN.solver.json` gelir. Test: solver
+  kanonik çözümü = el çözümü. Eşit değilse önce LEVELS'a bakılır.
+- Fikstür kurucusu (`tests/fixtures/builders.ts`) `yard: { cols, rows }` ve `site: { cols, rows }` alır.
+- **Geçiş dönemi testleri** (kapanış turu, 2026-10-07): belgeler Faz 2R'ye geçti, kod ve `levels/*.json` paketler
+  bitene kadar Faz 2'de. Paket gerektirmeyen eşitlemeler yapıldı: `blocks` vurgu kimliği, seri kademesi 3 = +2 hamle
+  (`flow.test`), davranıştan bağımsız 11 STORY metni, ANALYTICS v6 tip birliği (`level_end.teardowns` Faz 2 çekirdeğinde
+  gerçek değeriyle 0, `blocksLeft` = `remainingBlocks`, `tutorial_step.shows` = 1 ve `msToDone` öğretici saatinden),
+  K-54 kapsam satırı. Paket bitmeden yeşile dönemeyecek eşitlik testleri **sıkı test `it.fails` + bilinen farkı birebir
+  iddia eden geçen test** çiftine ayrıldı; paket bitince sıkı test kendiliğinden kırmızıya döner, işaret ve fark listesi
+  kaldırılır:
+  - imza tablosu ↔ `MECHANICS` (fark: W1 4, S2 yok, S9 12) → WP-B;
+  - STORY ↔ i18n (fark: `booster.hint.trowel`, `tut.ctx.goldtrowel`, `tut.ctx.truckhelp.material`; metin, Faz 2
+    çekirdeğindeki eski Mala ve kamyon yardımı davranışıyla birlikte değişir) → WP-C, WP-D, WP-L.
+
+  LEVELS §2 ↔ `levels/*.json` inceleme kümeleri (`tests/review/data.review.test.ts`, 5 küme) LEVELS Faz 2R
+  biçimindeyken kayıt edilmez ve yerine bir `it.todo` durur; WP-M yeni biçime göre yeniden yazar.
+
+### 2R.11 Ekran görüntüsü, performans ve kapsam araçları
+
+- **`tools/screens.ts`** yeni ekranlar:
+  - `home-v2-first`, `home-v2`, `home-v2-locked-tap`, `win-v2`;
+  - `level-01` … `level-10` başlangıç tahtaları;
+  - `tutorial-shown`, `tutorial-hidden`;
+  - `teardown` (çıkmaz fikstürü), `booster-no-target`.
+
+  Her biri `assets=art` ve `assets=fallback` olmak üzere iki kipte çekilir. Profiller 390×844, 360×800 ve kısa
+  profillerdir. Harness kancaları: `__harness.tutorialClock(ms)`, `__harness.assetMode(mode)`,
+  `__harness.loadAscii(text)` (değişken boyutlu Ek A). 360×800'de `level-01` bloğunun CSS genişliği ölçülür (§2R.1).
+- **`tools/perf.ts`** yeni kapılar (4× CPU):
+  - Bölüm 10 sürükleme, kazanma v2 katmanı ve ana sayfa ≥ 50 FPS;
+  - bölüm başı pişirme ≤ 150 ms, kit pişirme ≤ 200 ms;
+  - adım 12 p99 ≤ 2 ms, en kötü ≤ 8 ms (§2R.4);
+  - `unlockedNeeded` sorgusu ≤ 1 ms (§2R.15);
+  - doku belleği ≤ 64 MB (texture manager toplamı);
+  - FTUE ≤ 10 s (Fast 4G + 4×).
+- **`test:rules`:**
+  - §12.4 F sütununda "2R" değeri 2 ile 3 arasındaki fazdır. `--phase 2` kapısı 2R kurallarını istemez; `--phase 2R`
+    ister.
+  - GDD §13'te "(Faz 2R" geçen E satırı en az 2R fazındadır.
+  - `[kural] (Faz 2R)` etiketli N-notları da okunur.
+  - `package.json` WP-K'de `--phase 2R`'ye geçer.
+
+### 2R.12 İş paketleri (son hali; paralel yazılabilir)
+
+Süreler ajan iş günüdür (g; 5 g = 1 hafta), tampon hariç. Paketler ayrık dosya alanlarına bölündü; aynı dosyaya iki
+paket yazmaz. Paylaşılan arayüzler `BoardGeo` / `CompiledLevel.geo` (WP-A ilk gün yayımlar) ve `ActionResult` /
+`TurnSummary` tipleridir (WP-D ilk gün yayımlar).
+
+| Paket | Dosya alanı | İçerik | Testler | Süre | Bağımlılık |
+| --- | --- | --- | --- | --- | --- |
+| WP-A Geometri | `core/geometry.ts` (yeni), `coords`, `state`, `grid`, `movement`, `gravity`, `placement`, `delivery`, `hash`, `ascii`; `level/compile.ts` (yalnız `geo`) | §2R.1; Ağır Yük düğüm kuralı ve `blockedCargo` sinyali | "K-49 …", E-56, E-57, "K-44 cargo …", "K-44 blockedCargo once per hold", 8 geometride değişmezler, ESLint yasak ithal | 3,25 g | — (1. gün `BoardGeo`) |
+| WP-B Şema + doğrulayıcı | `level/schema.ts`, `level/logic.ts`, `level/mechanics.ts`, `tools/validate-levels.ts`, `tools/levels-allow.json`, `tests/level/**` | §2R.2 şema (`piece`, `boosterUsed`, `segmentDone`, `blocks`), §2R.3 validate kodları, imza tablosu (CL-2R-12) | her yeni kod için geçersiz fikstür; `it.fails` işareti kalkar | 2,25 g | WP-A tipi |
+| WP-C Kurallar | `core/moves.ts` (kazanma), `boosters.ts`, `combo.ts`, `goals.ts`, `obstacles/*` | tam örtü, cargo, moloz, Y3, Çekiç/Mala/Fırça/Vinç/Geri Al, ön denetim, K-54 hedef yüklemleri | "K-47 conservation", "K-48 …", "K-33/36/37/38/39 …", "K-54 …", E-49…E-53, E-60, E-61 | 3 g | WP-A |
+| WP-D Kilitlenme | `core/deadlock.ts` (yeni), `moves.ts` adım 12 (yalnız kanca bağlama), `session.ts` (`preAction`, `movesSpent`, `ActionResult` paketi) | §2R.4 | "K-30 …", "K-29 …", "K-43 exit …", E-26, E-37, E-48, E-58, E-59; D3a `vitest bench` | 1,75 g | WP-A, WP-C |
+| WP-E Solver | `tools/solver/*`, `tools/solve.ts` | §2R.5 (L-35 dahil; tablo yayımı hariç) | "K-50 …", "K-51 …", "K-52 …", "K-46 canonical …", "K-53 tutorial hand path …", mikro bölüm kaba hesap | 4 g | WP-A, WP-C (WP-D'nin D3a'sını kullanır) |
+| WP-P Sunum kancaları | `core/summary.ts` (yeni) | §2R.15 | "K-09 holdable …", "K-34 hook 5 …", "K-26 queue entries …", "K-54 slot state order …" | 1 g | WP-C, WP-D |
+| WP-F Görsel çizim | `theme/draw/blockV2.ts`, `kit.ts`, `fx.ts`, `scene.ts`, `characters.ts`, `theme/textures.ts`, `theme/tokens.ts` | §2R.7 (çıkıntı, parlama dokusu, delikli zemin) | `offsetEdges` köşeleri, tokens şeması, `check.v2` kontrastı | 2,25 g | — |
+| WP-G Oyun sahnesi | `theme/layout.ts`, `scenes/level/BoardView.ts`, `hitTest.ts`, `DragController.ts`, `ui/GoalsPanel.ts`, `ui/Panorama.ts`, `ui/remaining.ts`, `ui/boosterSlots.ts`, `scenes/level/LevelScene.ts`, `main.ts` (geri koruması) | değişken boyut + uyarlanır hücre, hava bölgeleri, HUD v2, güçlendirici akışları (Çekiç, Vinç, Mala), #94, #107, #108, takılma nabzı, web geri koruması | UX §5.8 tablo değerleri, hitTest gidiş-dönüş, "UX 5.8 popstate …" | 3,25 g | WP-A tipi, WP-F, WP-P tipi |
+| WP-H Öğretici | `scenes/level/tutorial/*`, `TutorialOverlay.ts` → `TutorialView.ts` | §2R.9 | "K-53 …", "GDD 14.1 …" | 1,75 g | WP-B (şema), WP-F (balon) |
+| WP-I Ana sayfa + kazanma | `scenes/HomeScene.ts`, `ui/kit/*`, `ui/WinScreen.ts`, `meta/home.ts` | §2R.8 (kesme 2 ve 3 sonrası) | "UX 3 home model …", "UX 6.1 …", "META 10 …" | 1,75 g | WP-F |
+| WP-J Görsel boru hattı | `tools/assets.ts`, `services/assets.ts`, `scenes/AssetLoaderScene.ts`, `public/assets/v2/`, `tools/verify-dist.ts`, `tests/assets/*` | §2R.6 | SVG denetimi (yasak öğe, boyut, palet), bayatlık kapısı, bütçe kapısı | 1,5 g | — |
+| WP-K Göç + araçlar + analytics | `services/save/*`, `services/analytics.ts`, `scenes/flow/attempt.ts`, `tests/golden/*`, `tools/screens.ts`, `tools/perf.ts`, `tools/rule-coverage.ts` | §2R.10, §2R.11, §2R.16 (ANALYTICS v6, EN-2R-18) | göç, golden, `test:rules --phase 2R`, ANALYTICS §2 iki yönlü eşitlik | 1,75 g | WP-B, WP-C, WP-D, WP-E, WP-G, WP-H, WP-I |
+| WP-L i18n | `src/i18n/tr.json`, `en.json` | STORY §6A, §7 anahtarları (`tut.m.*`, `tut.ctx.teardown`, `booster.*.noTarget`, `nav.*`, `win.clear`, `lose.blocksLeft`, geri bildirim) | "D-017 every text is verbatim from STORY …" | 0,5 g | design-lead STORY |
+| WP-M Bölüm 1–10 entegrasyonu | (JSON'lar product-lead'in) `levels:solve` döngüsü, LEVEL_REPORT, `tests/review/data.review.test.ts` LEVELS kümeleri | ölçüt farklarını product-lead'e raporlamak, golden üretmek, LEVELS ↔ JSON incelemesini Faz 2R biçimine yazmak | `levels:check` yeşil | 1 g (+ product-lead yinelemesi) | WP-B, WP-E |
+| WP-O Geri bildirim dışa aktarımı | `services/feedback.ts`, Ayarlar düğmesi | §2R.16 (EN-2R-20) | "ANALYTICS feedback export has no personal data and fits 20 000 chars" | 0,5 g | WP-K, WP-L |
+| WP-N Bot (temel plan dışı) | `tools/playtest-bot.ts` | "orta" profil × 500 → K-52 `a` | belirlenimcilik | 1,5 g | WP-E; Faz 3 |
+
+**Toplam (kesme 1–3 uygulanmış; WP-N hariç):** **29,5 g net → 35,4 g tamponlu (%20)**. Kesmesiz 31,5 g net. İnceleme
+taslağının paket toplamı 27 g'dir (taslak metninde "26,5 g" yazılmıştı; toplama hatası). Kapanışta eklenenler: WP-A Ağır
+Yük düğüm kuralı + `blockedCargo` +0,25; WP-B şema ekleri +0,25; WP-C K-54 yüklemleri + ön denetim kapsamı +0,5; WP-D
+politika sabitleri −0,25, güçlendirici/Mala Söküm'ü + D3a bench +0,25; WP-E L-35 +0,25; WP-F çıkıntı, parlama dokusu,
+delikli zemin +0,25; WP-G uyarlanır hücre +0,25, güçlendirici akışları +0,5, takılma nabzı ve #94/#107/#108 +0,15, web
+geri koruması +0,1; WP-H öğretici ekleri +0,25; WP-K analytics gönderim noktaları +0,25; yeni WP-O +0,5, yeni WP-P +1
+(toplam +4,5 → 31,5). Kesmeler −2 (WP-D −0,25, WP-E −0,25, WP-G −0,25, WP-I −1,25).
+
+**Kesme sırası** (EN-2R-17 ve BUSINESS §12.4 ile aynı; korunan çekirdek kesilmez). Tetik tuttu: Faz 2R tamponlu süresi
+4 haftayı aşıyor (§14.0). Sıra 1–3 proje sahibine sorulmadan uygulanabilir ve yukarıdaki toplama uygulanmıştır:
+
+| Sıra | Ertelenen | Gittiği yer | Kazanç | Oyuncu farkı |
+| --- | --- | --- | --- | --- |
+| 1 | D3b tablo yayımı, yükleyici ve bakış (WP-D 0,25 + WP-E 0,25) | Faz 3 | 0,5 g | yok: 1–10'da `deadRate = 0`, kapı §2R.4 |
+| 2 | JUICE §8'den #94, #95, #91, #92, #97, #103, #104, #107, #108 dışındakiler: #93, #96, #98–#102, #105, #106 (WP-G 0,25, WP-I 0,75) | Faz 5 | 1 g | yalnız cila; yerlerine 150 ms solma |
+| 3 | Ana sayfa bulut paralaksı ve sandık önizleme penceresi (n/10 halkası statik kalır) | Faz 4 | 0,5 g | yalnız cila |
+| 4 | (BUSINESS sıra 4: "AI görsellerinin 2. ay partisi" — R2-08 güncellemesiyle konusuz) | — | 0 | — |
+| 5 | Kazanma v2'nin tam ekran ışın + karakter katmanı → yalnız şerit + kart (proje sahibinin onayıyla) | Faz 4 | 0,75 g | uygulanmadı |
+| — | WP-N bot | Faz 3 (temel plan dışı) | — | `a = 0` |
+
+**Paralel şeritler ve takvim:**
+1. Çekirdek + araç şeridi: WP-A (3,25) → WP-C (3) → WP-D (1,75) → WP-P (1) → WP-E (4) → WP-M (1) → WP-K (1,75) =
+   15,75 g net.
+2. Görünüm + meta şeridi: WP-B (2,25; WP-A tipiyle 1. günden), WP-F (2,25), WP-J (1,5), WP-L (0,5), WP-G (3,25), WP-H
+   (1,75), WP-I (1,75), WP-O (0,5) = 13,75 g net.
+
+Tek şeritte takvim = toplam = 35,4 g tamponlu ≈ 7,1 hf. İki şeritte takvim = uzun şerit = 15,75 g net → 18,9 g
+tamponlu ≈ 3,8 hf. **Kritik yol:** WP-A → WP-C → WP-E → WP-M → WP-K = 13 g net (WP-D ve WP-P, WP-E ile paralel
+kaydırılabilir: WP-E yalnız D3a'yı ister, o da WP-D'nin ilk günüdür).
+
+**Birleşme kuralı:** Her paket kendi testleri yeşil olarak birleşir ve `npm run check` her birleşmede yeşil kalır. Geçiş
+süresince Faz 2R kuralları `--phase 2` kapısının dışındadır; WP-K'de kapı `--phase 2R`'ye çıkar.
+
+### 2R.13 Riskler ve ölçüm kapıları
+
+| Risk | Olasılık / etki | Önlem |
+| --- | --- | --- |
+| Faz 3'ün büyük sahalarında solver durum uzayı patlar | orta / yüksek | A* yedeği, `trap_scan_incomplete` + product-lead kabul notu, saha ≤ 30 hücre ve E ≤ 10 hedefi (LEVELS §3 madde 10) |
+| Resmî ölçütler LEVELS taslağından farklı çıkar | orta / orta | WP-M döngüsü; ortak sayım birimi (K-50 madde 9); fark product-lead'e |
+| Geometri göçünde gizli sabit kalır (`10 − h`, `x ≤ 5` …) | orta / yüksek | ESLint yasak ithal, sayı `grep` kapısı, 8 geometride parametreli değişmez testleri |
+| D3a en kötü durumda bir kareyi aşar (Faz 3 bölümleri) | düşük (1–10'da ≤ 200 açılım) / orta | sayısal not defteri, solver'da `d3aMaxExpansions`, perf kapısı en kötü ≤ 8 ms; aşan bölüm sadeleşir ya da sınır iner (§2R.4) |
+| `unlockedNeeded` BFS'leri düşük cihazda kare düşürür | düşük / düşük | yalnız Kolay/Normal, yalnız `neededNow` blokları, bir sonraki karede (§2R.15); kapı ≤ 1 ms |
+| SVG'ler zamanında gelmez ya da denetimden geçmez | orta / düşük | her varlıkta prosedürel yedek, iki kipte ekran görüntüsü, `status: 'rejected'` |
+| iOS'ta GPU belleği yetmez | düşük / yüksek | 0,5 ölçekli arka plan, sahne çıkışında `textures.remove`, ≤ 64 MB kapısı (ASSET tahmini ≈ 15,2 MB) |
+| v2 pişirme düşük cihazda yavaş kalır | düşük / orta | pişirme geçişin arkasında; ≤ 150 ms kapısı; aşılırsa renk başına tembel pişirme |
+| Öğretici zamanlaması testte kararsız çıkar | düşük / düşük | saf `TutorialPresence` + sahte saat |
+| Android'de kenar hareketi sürüklemeyi keser ya da sayfadan çıkarır | orta / orta | web: geri koruması + `pointercancel` iptali (§2R.1); Capacitor: hareket dışlama dikdörtgeni (§13, Faz 5) |
+| Faz 2R takvimi 4 haftalık tamponu aşar | yüksek / orta | kesme 1–3 uygulandı; iki paralel kod şeridi (§2R.12, §14.0) |
+
+| Kapı | Ölçüt | Araç | Eşik | Paket |
+| --- | --- | --- | --- | --- |
+| Birim ve derleme | `npm test`, `npm run build` | vitest, tsc, vite | yeşil | her birleşme |
+| Kural kapsamı | `test:rules --phase 2R` | rule-coverage | 0 eksik kimlik | WP-K |
+| Bölümler | `levels:check` (Bölüm 1–10) | validate + solve | error yok; her warn LEVEL_REPORT'ta açıklamalı; tablosuz bölümde `deadRate = 0` | WP-M |
+| Solver süresi | Bölüm 1–10 toplam, önbelleksiz | `levels:solve --no-cache` | ≤ 5 dk (8 işçi) | WP-E |
+| FPS | Bölüm 10 sürükleme, kazanma v2, ana sayfa | `perf`, 4× CPU | ≥ 50 FPS | WP-K |
+| Tek kare | dokunuş → blok hareketi | `perf` | ≤ 1 kare | WP-K |
+| Adım 12 | D1 + D2 + D3a + tablo bakışı | `perf`, 4× CPU | p99 ≤ 2 ms, en kötü ≤ 8 ms | WP-D |
+| Sunum kancaları | `unlockedNeeded` | `perf`, 4× CPU | ≤ 1 ms | WP-P |
+| Pişirme | bölüm başı / kit | `perf`, 4× CPU | ≤ 150 ms / ≤ 200 ms | WP-F |
+| Bellek | doku toplamı | harness | ≤ 64 MB | WP-J |
+| İndirme | ilk yük gzip / v2 görselleri | `verify-dist` | ≤ 620 KB / ≤ 1 MB | WP-J |
+| Hücre | 360×800'de B1 bloğu | `screens` | ≥ 48 CSS px (`cellMaxPx` 144 iken) | WP-G |
+| FTUE | Bölüm 1'in etkileşime açılması | `perf`, Fast 4G + 4× | ≤ 10 s, ≤ 3 dokunuş | WP-K |
+| Belirlenimcilik | `replay` = canlı oturum, `eventLogHash`, D3 sonucu 1× ve 6× CPU'da aynı | vitest + `perf` | bit bit eşit | WP-D, WP-K |
+
+### 2R.14 Açık sorular ve öneriler (DECISIONS için; dönüş değerinde de var)
+
+- **P-2R-1 (kapandı):** Söküm tek adım, `movesSpent`, D3b = solver tablosu. product-lead GDD K-30'a yazdı.
+- **P-2R-2:** Azami çerçeve kodlaması ve `BoardGeo` (§2R.0 madde 2, §2R.1). Karar code-lead'in; bilgi için.
+- **P-2R-3:** Yeni bağımlılık ve ücretli servis yok; SVG denetimi, raster ve atlas kurulu Chromium'da (§2R.6). R2-08
+  güncellemesiyle uyumlu.
+- **P-2R-4 (kapandı):** Bölüm JSON'unda isteğe bağlı `targets` alanı; LEVELS §0'da kabul.
+- **P-2R-5:** `test:rules` için "2R" fazı (§2R.11).
+- **P-2R-6 (orkestratöre, DL-2R-14):** R2-02'deki "hücre 120 px korunur" ifadesi "hücre en az 120 px; bölüm tahtası
+  izin verirse 144'e kadar büyür" olarak okunsun. Kod hazır (§2R.1); token design-lead'in.
+- **P-2R-7 (orkestratöre):** Faz 2R iki paralel code-lead oturumuyla yürütülsün (çekirdek + araç / görünüm + meta).
+  Tek şeritte ≈ 7,1 hf, iki şeritte ≈ 3,8 hf; ek ücret yok, paketler ayrık dosya alanlarındadır (§2R.12, §14.0).
+
+### 2R.15 Sunum kancaları (DL-2R-15; K-09, K-26, K-34 kanca 5, K-44, K-54)
+
+Çekirdek her eylemi tek pakette döndürür ve hamle sonu durumu için saf sorgular sunar. Sorgular durumu değiştirmez,
+olay günlüğüne ve `replay`'e girmez.
+
+```ts
+// src/core/session.ts (WP-D) — bir eylem = sürükleme hamlesi, güçlendirici, Altın Mala ya da +5 kabulü
+export interface ActionResult {
+  readonly events: readonly GameEvent[];      // adım sırasıyla; Söküm varsa son olay `teardown`
+  readonly teardown: TeardownEvent | null;    // kısa yol: paketin sonunda Söküm var mı (JUICE §0 kural 14)
+  readonly summary: TurnSummary;              // eylem (ve varsa Söküm) sonrası durum
+}
+// src/core/summary.ts (WP-P, yeni, saf)
+export interface QueueEntry { readonly pieceId: PieceId; readonly shape: ShapeId; readonly color: ColorCode }
+export interface TurnSummary {
+  readonly holdable: readonly PieceId[];      // K-09 (a)–(e) tutulabilir parçalar (UX §5.3, ART §3A.2)
+  readonly queue: readonly QueueEntry[];      // kamyon kuyruğu, FIFO sırası (K-26; DL-2R-22 önizleme)
+  readonly pendingBatches: number;            // teslim edilmemiş parti sayısı (UX §5.9 "+n" rozeti)
+  readonly blocksLeft: number;                // N − doğru yerleşmiş malzeme (K-48, §2R.2)
+  readonly neededNow: readonly PieceId[];     // K-34 kanca 5 (erişim, duvar, geçit yok sayılır)
+  readonly boosterTargets: Readonly<Record<'hammer' | 'crane' | 'undo' | 'paintBrush' | 'trowel', boolean>>; // K-54 madde 2
+}
+export function unlockedNeeded(prev: TurnSummary, s: GameState, ctx: ReachCache): readonly PieceId[]; // K-34 kanca 5
+```
+
+1. **`holdable`** (DL-2R-15/1): her eylemin sonunda ve teslimattan sonra (paketin son durumu teslimatı içerir). Parça
+   başına K-09 denetimi, ≤ 20 parça × 4 öteleme, µs. Sahne parlama dokusunu ve `notHoldableTint`'i buna göre koyar;
+   öğretici eldiveni de buna bakar (§2R.9).
+2. **`neededNow` ve `unlockedNeeded`** (DL-2R-15/2, GDD K-34 kanca 5):
+   - `neededNow` = aktif dilimde K-16'ya (K-34 dahil) göre en az bir doğru konumu olan, sahadaki, kilitsiz malzeme
+     blokları; D3a'nın sütun profili ve şekil uyumuyla, erişimsiz hesaplanır (µs). Kuyruktaki bloklar girmez.
+   - `unlockedNeeded` = `neededNow` içinde olup bu eylemden **sonra** `R`'sinde (K-08 BFS) doğru yerleşim veren bir
+     bırakma konumu bulunan, eylemden **önce** bulunmayan bloklar. "Önce" bilgisi bir önceki paketin `ReachCache`'inden
+     okunur; BFS yalnız `neededNow` blokları için ve yalnız Kolay/Normal'de (GDD zorluk kapısı) çalışır. Sahne sorguyu
+     paketi oynatmaya başladıktan sonraki karede çağırır; ışıltı en çok 1 kare (16,7 ms) gecikir. Bütçe 4× CPU'da ≤ 1 ms
+     (Bölüm 1–10'da ≤ 4 blok × BFS).
+   - Takılma nabzı (Kolay 6000 ms, Normal 12000 ms, 2 kez) sahnededir; çekirdek süre bilmez. Öğretici adımı etkinken
+     nabız yoktur. Bot bu sorguları çağırmaz.
+3. **Tek paket** (DL-2R-15/3): `GameSession.apply(action) → ActionResult`. Söküm olursa `teardown` paketin son olayıdır;
+   sahne paketi oynatmadan önce `teardown !== null`'a bakar ve doğru yerleşim ödüllerini (#7/#12 sesi, haptik, #15, #16,
+   #92) atlar (JUICE §0 kural 14, DL-2R-24).
+4. **Kuyruk içeriği** (DL-2R-15/4): `queue` FIFO sırasıyla şekil ve rengi taşır; kamyon göstergesi ilk girdinin 0,35
+   ölçekli önizlemesini çizer.
+5. **`blockedCargo { pieceId }`** (DL-2R-15/5, K-44): çekirdek sürükleme oturumunun (`core/movement.ts`,
+   `DragSession.update`) sinyalidir, hamle değildir: parmak hedefi `p` tutuş boyunca ilk kez saha dışına (`x ≥ wy` ya da
+   `y ≥ hy`) çıkınca bir kez döner. Olay günlüğüne, `replay`'e ve öğretici `done` sözlüğüne girmez.
+6. **Eldiven yolu doğrulaması** (DL-2R-15/6): L-35 `tut_hand_invalid`, solver aşamasında (§2R.3, §2R.5).
+7. **Güçlendirici yuvası durumu** (K-54, EN-2R-04): sahne `locked` (meta açılış) > `noTarget`
+   (`boosterTargets[b] = false`) > `empty` (envanter 0) > `ready` sırasıyla ilk tutanı seçer; her eylemden sonra ve bölüm
+   başında yeniden hesaplanır. Hedef yüklemleri: Çekiç K-36 kümesi boş değil; Fırça sahada eşit hücreli, farklı renkli,
+   K-38'e göre seçilebilir iki malzeme bloğu; Vinç K-37'ye göre seçilebilir ve (a) ya da (b) hedefi olan blok; Geri Al
+   son eylem K-39'a göre geri alınabilir sürükleme hamlesi; Mala (şerit metni için) `P`'si boş olmayan saha bloğu. Ön
+   denetim (D3a) yüklemlere girmez. `noTarget` yuvada "+" yok, satın alma penceresi ve `offer_shown` yok (BUSINESS E12).
+
+**Testler:** "K-09 holdable list after every action and delivery", "K-34 hook 5 unlockedNeeded after dig" (GDD Bölüm 3
+örneği), "K-34 hook 5 neededNow ignores access", "K-26 queue entries in FIFO order", "K-44 blockedCargo once per hold",
+"K-30 teardown is the last event of the package", "K-54 slot state order locked noTarget empty ready", "K-54 no
+purchase offer for booster without target", "E-61 hammer slot without target in level 9".
+
+### 2R.16 Analytics v6 ve geri bildirim dışa aktarımı (EN-2R-18, EN-2R-20)
+
+**Tip birliği** (`services/analytics.ts`, §11.4'ün farkı; tablo ANALYTICS §2 v6; kapanış turunda yazıldı, iki yönlü
+test yeşil; `deadlock_teardown`, `nav_tap` ve `booster_used.target`'ın gönderim noktaları WP-D, WP-I ve WP-C ile gelir): `+deadlock_teardown { level, cause,
+movesLeft, piecesReturned }`, `+nav_tap { tab, locked }`, `level_end` += `teardowns`, `blocksLeft`, `booster_used` +=
+`target`, `tutorial_step` += `shows`, `msToDone`. Tablo 30 satırdır: 28 MVP + 2 mağaza sürümü olayı. "Her olay kodda
+var" testi tabloyu iki yönlü karşılaştırır (§11.4).
+
+**Gönderim noktaları:**
+
+| Olay / parametre | Nerede | Değer |
+| --- | --- | --- |
+| `deadlock_teardown` | `scenes/flow/attempt.ts`, `ActionResult.teardown !== null` | `cause` = `ANALYTICS_CAUSE[teardown.cause]`; `movesLeft` Söküm sonrası sayaç; `piecesReturned` = `teardown.pieces.length`. Geri Al bu Söküm'ü geri alırsa yeni olay yok |
+| `level_end.teardowns` | aynı | denemedeki Söküm sayısı − Geri Al ile geri alınanlar |
+| `level_end.truckHelps` | aynı | D1 yeniden dizme + Söküm sayısı − geri alınanlar (`teardowns ≤ truckHelps`) |
+| `level_end.blocksLeft` | aynı | bitiş durumunda `summary.blocksLeft`; kazanmada 0 |
+| `level_end.exitFree` | aynı | `result = quit` ∧ `movesSpent = 0` (K-43 Faz 2R) |
+| `booster_used.target` | güçlendirici mini hattı sonrası | Çekiç: K-36 hedef türü (`cargo`, `crate`, `cementBag`, `chain`, `siteDebris`, `stuckMortar`); Vinç, Fırça: `block`; Geri Al ve oyun öncesi: `null` |
+| `tutorial_step.shows`, `msToDone` | `TutorialPresence` (§2R.9) | ilk görünme dahil görünme sayısı; ilk görünmeden `done`'a kadar sahne saati (pencere açıkken durur). Adım `done` olmadan bölüm biterse olay yok |
+| `nav_tap` | `HomeScene` alt gezinme | her dokunuş; `locked = true` "Yakında" balonu, `store_open` yok |
+
+`deadlock_teardown.cause` tablosundaki `unknown_before_offer` değerinin gönderim noktası yoktur: GDD K-30'da "bilinmiyor
+→ dön" dalı kalktı. Tip tabloyu izler; değer tablodan çıkarılana kadar birlikte durur ve hiç gönderilmez (test "ANALYTICS
+deadlock_teardown never sends unknown_before_offer").
+
+**Geri bildirim dışa aktarımı** (EN-2R-20; WP-O, 0,5 g; sunucu ve SDK yok):
+- Ayarlar'da "Geri bildirim" düğmesi (yer ve metin design-lead'in: UX Ayarlar ekranı ve STORY anahtarları
+  `settings.feedback`, `settings.feedbackCopied`, `settings.feedbackManual`).
+- Halka tampon yerel kalıcıdır: `localStorage` `minikusta.analytics`, son 500 olay (≈ 100 KB üst sınır), yalnız
+  cihazda. Bugünkü tampon yalnız bellekte; Kapı 0 için oturumlar arası birikim gerekir.
+- Dışa aktarılan JSON: `{ v: 1, app, rules, platform, lang, events: [[tMs, name, …değerler tablo sırasıyla]] }`.
+  Olay süzgeci: `app_open`, `level_start`, `level_end`, `tutorial_step`, `deadlock_teardown`, `offer_shown`,
+  `offer_result`, `nav_tap`, `session_end`. Ortak parametreler (`sessionId`, `coins`, `lives` …) gönderilmez; `tMs` ilk
+  olaya göre göreli süredir (duvar saati yok). Kişisel veri yok; içerik yalnız ANALYTICS §2 tablosundaki tiplerdir.
+  Boyut ≤ 20 000 karakter; aşarsa en eski olaylar düşer.
+- Kopyalama: `navigator.clipboard.writeText` (HTTPS ve kullanıcı dokunuşu gerekir; GitHub Pages HTTPS'tir). Yazma
+  reddedilirse salt okunur, seçili bir metin kutusu açılır ve oyuncu elle kopyalar (`settings.feedbackManual`).
+- Testler: "ANALYTICS feedback export has no personal data and fits 20 000 chars", "ANALYTICS ring buffer survives a
+  reload".
 
 ---
 
@@ -2612,6 +3472,10 @@ type LeagueSeed = { weekId: number; groupId: number };  // META §7.1/§7.3: gro
 
 ### 11.4 Analytics — tipli olay birliği
 
+**Faz 2R:** tablo v6'ya geçti (+`deadlock_teardown`, +`nav_tap`, `level_end` +`teardowns` +`blocksLeft`,
+`booster_used` +`target`, `tutorial_step` +`shows` +`msToDone`; 28 MVP olayı). Birliğin farkı, gönderim noktaları ve
+geri bildirim dışa aktarımı §2R.16'dadır; aşağıdaki kod bloğu v5 hâlidir ve WP-K'de v6'ya yeniden yazılır.
+
 Olay adları, parametreleri, tipleri ve enum değerleri için **tek kaynak `docs/ANALYTICS.md` §2 tablosudur (v5,
 2026-10-06, son tutarlılık turu 3: `store_open.source` += `coin_plus`, `piggy`, `bridge_loss`; v4: `mode` += `replay`;
 v3: günlük reklam yerleşimi `daily_double`, `offer` + `daily_double`, +`level_load_failed`, +`cutscene_missing`,
@@ -2867,7 +3731,7 @@ bağımlılık yok: `node tools/solve.ts`. Koşulları:
 | `screens` | `vite build --mode harness && node tools/screens.ts [--profile 390x844\|360x800\|390x763\|360x740] [--only <ad>,…] [--cvd protanopia,deuteranopia,tritanopia\|all]` → `artifacts/screens/<profil>[-<cvd>]/<ad>.png`. CVD: harness `&cvd=` → `#game` üstünde SVG `feColorMatrix` (Machado 2009, şiddet 1,0, doğrusal RGB). Faz 2 çekimleri 01a–01c giriş panelleri (harness `introPanel(n)`), 02–18, 19-palette (8 renk blok + plan + cephe + `.` + `?`, harness fikstür sahnesi), 20-home-l2, 21-home-more-soon, 22-pause, 23-cancel-preview, 24-bounce-support (JUICE #84'ün içinde: harness `waitCue(84)` + 100 ms oyun zamanı, Faz 2 tur 2 #6), 25-trowel-pick. Kısa görünümler 390×763 (TECH §10.1, Safari çubukları) ve 360×740 yalnız `start1`…`start5` senaryoları (her biri boş bağlamda; harness kayıtlı denemenin üstüne başka bölüm yüklemez, K-43): Bölüm 1–5 başlangıçları 02–06 (öğretici balonu, Faz 2 tur 2 #15) |
 | `perf` | `vite build --mode harness && node tools/perf.ts` (§10.7) |
 | `build:verify` | `vite build` sonrası `tools/verify-dist.ts`: `dist/` içinde `src/debug`/`src/harness` parçası, `__debug`/`__harness` dizgesi ya da `?debug` işleyicisi **yok** (R-20); `npm run build`'in parçası |
-| `test:rules` | `vitest list --json` çıktısını `tools/rule-coverage.ts` okur; GDD.md'deki **her K-01…K-46 ve E-01…E-47**, OBSTACLES.md'deki her engel kimliği (W1…W8, Y1…Y8, S1…S8, G-H, G-L) ve `[kural]` etiketli her N-notu en az bir test adında geçmiyorsa çıkış 1. Kimlik listesi belgelerden okunur (kod içinde liste yok). Faz 2–3'te `package.json` betiği `--phase N` verir (Faz 2: `--phase 2`, Faz 3: `--phase 3`, Faz 4'ten itibaren bayraksız = tam): K-xx yalnız §12.4 tablosunun F sütunundaki ilk faz ≤ N ise; engel kimlikleri Faz 2'de OBSTACLES "İlk bölüm" ≤ 5 olanlar (W1, S1, S2), Faz 3'te hepsi; **N-notları fazını OBSTACLES etkileşim matrisinden alır** (metindeki kimliklerden değil: N7, N24 gibi notların metninde engel kimliği geçmez): notun geçtiği her hücrenin fazı = iki engelin fazının büyüğü, notun fazı = bu hücre fazlarının en küçüğü (andığı K-xx'lerin F'sinden küçük olamaz) — Faz 2 engellerinin hücreleri W1×S1 `·`, W1×S2 N10 `[not]`, S1×S2 `·` olduğundan bütün `[kural]` notları en erken Faz 3'tedir (§14.2 "N-notu testleri"); **E-xx** andığı her K-xx ve engel kimliği (GDD §13 "Kurallar" sütunu + satır metni) bu kümelerdeyse, **ama** satırı Sallanan Köprü ya da Usta Ligi'ni anıyorsa (metin) ya da "Kurallar"ı `META` içeriyorsa Faz 4'te (Köprü/Lig §14.3 Faz 4). Ör. E-47 ("G-L: …") Faz 3'te, E-22 ("Sallanan Köprü'de …", K-29, META) ve E-45 (Köprü tur harcaması) Faz 4'te zorunlu olur. Betikle sayıldı (2026-10-06): `--phase 2` zorunlu E kümesi = E-01, E-03, E-06, E-21, E-27, E-28, E-30, E-34, E-38; Faz 4: E-22, E-45; kalan 36 E Faz 3; 38 `[kural]` notunun 38'i Faz 3 (eski "andığı kimlik" kuralı 31'ini — N1, N3, N5–N8, N11, N13, N14, N16–N20, N23–N35, N38, N40, N41, N43 — Faz 2'ye düşürüyordu). Test: "test:rules phase 2 requires no N-note and no bridge E row" (`tools/rule-coverage.ts`, gerçek belgelerle). Uygulandı (Faz 2 tur 1 #20/#22): eşleşme `(^|[^\w-])ID(?!\d)` (K-1 ≠ K-10, S1 ≠ S10); eksik kimlik çıkış 1, belge/argüman hatası çıkış 2; `--list <dosya>` kayıtlı `vitest list --json` okur, `--print` kimlikleri yazar; K-xx kümesi GDD başlıklarından (tablo satırı olmayan K-xx hata) |
+| `test:rules` | `vitest list --json` çıktısını `tools/rule-coverage.ts` okur; GDD.md'deki **her K-01…K-54 ve E-01…E-61**, OBSTACLES.md'deki her engel kimliği (W1…W8, Y1…Y8, S1, S3…S9, G-H, G-L; "İlk bölüm" sütunu sayı olan satırlar; S2 Faz 2R'de tablo dışı) ve `[kural]` etiketli her N-notu en az bir test adında geçmiyorsa çıkış 1. Kimlik listesi belgelerden okunur (kod içinde liste yok). Faz 2–3'te `package.json` betiği `--phase N` verir (Faz 2: `--phase 2`, Faz 3: `--phase 3`, Faz 4'ten itibaren bayraksız = tam): K-xx yalnız §12.4 tablosunun F sütunundaki ilk faz ≤ N ise; engel kimlikleri Faz 2'de OBSTACLES "İlk bölüm" ≤ 5 olanlar (Faz 2R tablosuyla W1, S1), Faz 2R'de 6–10 olanlar da (W2, W3, Y5), Faz 3'te hepsi; **N-notları fazını OBSTACLES etkileşim matrisinden alır** (metindeki kimliklerden değil: N7, N24 gibi notların metninde engel kimliği geçmez): notun geçtiği her hücrenin fazı = iki engelin fazının büyüğü, notun fazı = bu hücre fazlarının en küçüğü (andığı K-xx'lerin F'sinden küçük olamaz) — Faz 2 engellerinin hücreleri W1×S1 `·`, W1×S2 N10 `[not]`, S1×S2 `·` olduğundan bütün `[kural]` notları en erken Faz 3'tedir (§14.2 "N-notu testleri"); **E-xx** andığı her K-xx ve engel kimliği (GDD §13 "Kurallar" sütunu + satır metni) bu kümelerdeyse, **ama** satırı Sallanan Köprü ya da Usta Ligi'ni anıyorsa (metin) ya da "Kurallar"ı `META` içeriyorsa Faz 4'te (Köprü/Lig §14.3 Faz 4). Ör. E-47 ("G-L: …") Faz 3'te, E-22 ("Sallanan Köprü'de …", K-29, META) ve E-45 (Köprü tur harcaması) Faz 4'te zorunlu olur. Betikle sayıldı (Faz 2R kapanışı, 2026-10-07; K-30, K-36, K-37 F sütununda 2R oldu): `--phase 2` zorunlu E kümesi = E-01, E-03, E-06, E-21, E-28, E-30, E-34, E-38; `--phase 2R` ek: K-30, K-36, K-37, K-47…K-54; E-23, E-26, E-27, E-37, E-42, E-48, E-49, E-50, E-51, E-54, E-55, E-56, E-57, E-58, E-60, E-61 (16; geçersiz satırlar E-23 ve E-55 için test geçersizliği iddia eder); W2, W3, Y5; N2, N3, N6; Faz 4: E-22, E-45; kalan 35 E ve 39 `[kural]` notu Faz 3. Önceki sayım (aynı gün, ilk 2R sürümü): `--phase 2R` ek yalnız E-49, E-50; 42 notun 42'si Faz 3. Önceki sayım (2026-10-06): Faz 2 kümesinde E-27 de vardı, 38 notun 38'i Faz 3 (eski "andığı kimlik" kuralı 31'ini — N1, N3, N5–N8, N11, N13, N14, N16–N20, N23–N35, N38, N40, N41, N43 — Faz 2'ye düşürüyordu). Test: "test:rules phase 2 requires no N-note and no bridge E row" (`tools/rule-coverage.ts`, gerçek belgelerle). Uygulandı (Faz 2 tur 1 #20/#22): eşleşme `(^|[^\w-])ID(?!\d)` (K-1 ≠ K-10, S1 ≠ S10); eksik kimlik çıkış 1, belge/argüman hatası çıkış 2; `--list <dosya>` kayıtlı `vitest list --json` okur, `--print` kimlikleri yazar; K-xx kümesi GDD başlıklarından (tablo satırı olmayan K-xx hata) |
 | `golden:update` | (Faz 3; Faz 2 `package.json`'ında yok, solver yok) `node tools/solve.ts --update-golden` — **yalnız** solver golden'larını (`tests/golden/level_NNN.json`: çözüm + `eventLogHash` + YAO) yeniden yazar; diff incelenmeden işlenmez. **Kapsam dışı:** `tests/golden/level_NNN.hand.json` (LEVELS §2 el çözümleri, §9.5) elle yazılır; kural ya da olay değişikliğinde yalnız `eventLogHash` (gerekirse `finalAscii`) günlük incelendikten sonra elle güncellenir — test iletisi dosyayı adıyla söyler. Araç `*.hand.json`'a yazmaz (test: "golden:update never touches hand goldens", Faz 3) |
 | `typecheck` | `tsc --noEmit -p tsconfig.json && tsc -p tsconfig.core.json && tsc -p tsconfig.tools.json` |
 | `check` | `typecheck && lint && format:check && test && test:rules` |
@@ -2899,7 +3763,7 @@ mağaza/web üretim paketi olarak dağıtılmaz. DOM katmanıdır (Phaser değil
 
 ### 12.4 Test stratejisi
 
-- **Kural testleri:** GDD'deki **her K-01…K-46** en az bir test; test adı kimliği içerir:
+- **Kural testleri:** GDD'deki **her K-01…K-54** en az bir test; test adı kimliği içerir:
   `it('K-17 wrong placement bounces to start and burns a move', …)`. Kenar durumları (E-01…E-47) `'E-04 …'`, GDD §14.1 öğretici kuralları `'GDD 14.1 …'`, hat adımları
   `'K-35 step 9 …'`, engeller `'W4 shutter closes every period'`, `[kural]` N-notları `'N33 …'`, engel çiftleri
   `'W6+S3 …'`. `test:rules` kapsamayı zorlar (`npm run check`'in parçası). Kapsam tablosu aşağıda.
@@ -2925,7 +3789,7 @@ mağaza/web üretim paketi olarak dağıtılmaz. DOM katmanıdır (Phaser değil
 - **Performans:** §10.7 + `vitest bench`.
 - Ortam: Vitest `environment: 'node'` (mevcut); core testleri DOM'suz koşar (saflığın ek kanıtı).
 
-**K-xx test kapsamı (K-01…K-46; "F" = ilk yazıldığı faz):**
+**K-xx test kapsamı (K-01…K-54; "F" = ilk yazıldığı faz; "2R" = Faz 2R, 2 ile 3 arasında bir faz: `test:rules --phase 2` istemez, `--phase 2R` ister, §2R.11):**
 
 | Kural | Ana test(ler) | F | | Kural | Ana test(ler) | F |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -2935,14 +3799,14 @@ mağaza/web üretim paketi olarak dağıtılmaz. DOM katmanıdır (Phaser değil
 | K-04 | duvar sınırı kapalı/açık satırlar, L-09 | 2 | | K-27 | malzeme yeterliliği (L-10/L-11) | 2 |
 | K-05 | Vinç Alanı iptali, 8 yüksek duvar boy ≤ 2, `blockedByWallHeight` | 2 | | K-28 | son hamlede kazanma, Bonus İnşaat sayısı | 2 |
 | K-06 | panorama durumu oyun durumunu değiştirmez | 2 | | K-29 | +5 teklif, 3 teklif sınırı (reklam dahil), reklam yalnız 1. teklifte ve ömür ilk teklifinde yok, ömürde ilk teklif bedava, Köprü tavanı 4.050, kabulden sonra adım 12 (E-42) | 2, 4 (Köprü tavanı, E-22) |
-| K-07 | iptal tablosu 7 satır (satır 5 kapalı şantiye), toplanan maliyetler (yapışmış harçlı cam 3), eşik tokens'tan | 2 | | K-30 | D1/D2/D3 tespiti (D2 arzında yapışmış harç var, moloz yok, E-44) ve üç yardım, D2 `B1`'leri adım 12'de `x = 5` (E-23), ≤ 2 hamle güvencesi (belirlenimci açılım bütçesi, bütçe biterse `reshape`); solver/tarama adım 12 kapalı (`noTruckHelp`, §9.1); ✓-tuzağı taraması L-27 (§9.8) | 3 |
+| K-07 | iptal tablosu 7 satır (satır 5 kapalı şantiye), toplanan maliyetler (yapışmış harçlı cam 3), eşik tokens'tan | 2 | | K-30 | Faz 2R (§2R.4): D1 (sayaç > 0 ve +5 sonrası), D2 (W6'da kapalı), D3a (parti uygunluğu, W6 jokeri, 20 000 açılım → bilinmiyor), Söküm tek adım (`m` geri gelir, `movesSpent` ve sayaç gelmez), sayaç 0'da adım 12 pencereden önce (E-58), güçlendirici ön denetimi; D3b solver tablosu ve zamanlayıcılı Söküm (E-59) Faz 3 | 2R, 3 (D3b tablosu, E-59) |
 | K-08 | BFS yolu, yapışkan takip eşitlik bozucuları | 2 | | K-31 | renk sayısı/açılmış renk (L-06/L-07; boya kapısı rengi dahil) | 2 |
 | K-09 | tutulabilirlik (a)–(e) | 2 | | K-32 | `repeat`/`mirrorOf` çözümü, açılma | 3 |
 | K-10 | saha yeniden konumlandırma | 2 | | K-33 | seri, Altın Mala, K-34'lü mala hedefi, cam kırılması seriyi sıfırlar | 2 |
 | K-11 | duvar üstü, açık gökyüzü, iniş formülü | 2 | | K-34 | alttan üste: ray/düşüş/balon/Vinç/Mala; `.` yalnız boşken dolu (E-43); `reasons` sırası, `missingSupport`, `buildFront` | 2 |
 | K-12 | ray hizalama, düşmez, tam sığma | 2 | | K-35 | adım sırası, mini hat, (y, x) tarama, komşuluk duvarı aşmaz (E-46), adım 10 zamanlayıcı sırası (`STEP10_TIMERS`) | 2 |
-| K-13 | çıkıntı altına yandan giriş yok | 2 | | K-36 | Çekiç hedefleri, zincir önce | 3 |
-| K-14 | kilit, Geri Al istisnası | 2 | | K-37 | Vinç ön koşulları, harcanmama | 3 |
+| K-13 | çıkıntı altına yandan giriş yok | 2 | | K-36 | Çekiç hedefleri (Faz 2R: malzeme kırılmaz; Ağır Yük hedefi Bölüm 8), zincir önce; kasa, torba, moloz, harç hedefleri engelleriyle | 2R, 3 (engel hedefleri) |
+| K-14 | kilit, Geri Al istisnası | 2 | | K-37 | Vinç ön koşulları, harcanmama, saha hedefinde döndürme yok, D3a ön denetimi (E-60; Bölüm 10) | 2R |
 | K-15 | plan, `.`, dilim tamamlanması | 2 | | K-38 | Boya Fırçası paleti, harç kilitlenmesi | 3 |
 | K-16 | doğru yerleşim 3 koşul | 2 | | K-39 | Geri Al derinlik 1, tam geri dönüş | 2 |
 | K-17 | geri sekme sırası, kuyruk sonu | 2 | | K-40 | Termos, Mala Başlangıcı, Açık Kepenk, seri bonusu | 3 |
@@ -2952,6 +3816,10 @@ mağaza/web üretim paketi olarak dağıtılmaz. DOM katmanıdır (Phaser değil
 | K-21 | bayrak birleşimleri (L-21) | 3 | | K-44 | şekil tablosu, kanonik, `shape_locked` (tür hikaye bölümüne, ağır şekil `id ≥ 8`'e göre) | 2 |
 | K-22 | dilim kayması + teslimat | 2 | | K-45 | her `code` için geçersiz fikstür; `seed` varsayılanı; imza tablosu ↔ OBSTACLES (L-16, L-22); solver aşaması L-19 | 2 (madde 1–7, 9), 3 (8) |
 | K-23 | döner platform sayacı, atlama, tamamlanma hamlesinde `t` artmaz | 3 | | K-46 | YAO sayımı (balon, G-L duvar üstü; ray geçit); solver eşit hamlede en yüksek YAO | 2, 3 |
+| K-47 | tam örtü: renk başına arz = talep (`cover_mismatch`), birikimli koşul (`cover_prefix_short`), korunum (20 bölüm × 500 rastgele eylem) | 2R | | K-48 | kazanma: dilimler + ek hedefler + sahada/kuyrukta/partide malzeme yok; cargo, kasa, torba kalabilir (E-49) | 2R |
+| K-49 | 8 geometride değişmezler, sınır `boundaryX` ile `siteX` arasında, saha/şantiye üstü hava, düşüş satırı `rows − boy`, `size_out_of_range`, `board_too_wide` | 2R | | K-50 | solver ölçütleri: mikro bölümlerde kaba hesapla eşitlik; Bölüm 1–10 değerleri; hızlı saha yolu = `applyMove` | 2R |
+| K-51 | `puzzle_first_reachable`, `puzzle_no_shift`, `trap_in_easy`, `trap_warn`, `trap_scan_incomplete`, `metric_out_of_band` | 2R | | K-52 | `moves_budget` aralığı ve zorluk tabanları | 2R |
+| K-53 | öğretici ≤ 2 adım, yalnız `soft`, girdi hiç kilitlenmez, gizli adım `done` ile biter, tekrar oynanışta yok, `TutorialPresence` durum makinesi (sahte saat), eldiven yolu L-35 | 2R | | K-54 | güçlendirici yuvası durum sırası kilitli > hedefsiz > adet 0 > hazır, hedefsiz yuvada satış yok (E-61; §2R.15) | 2R |
 
 ---
 
@@ -2972,6 +3840,7 @@ Doğrulanmış sürümler (2026-10-04): `@capacitor/core`, `@capacitor/cli`, `@c
 | Paket kimliği ve ad | iOS bundle ID ve Android `applicationId` yayından sonra **değiştirilemez** (D-067 KABUL): **isim kararından (D-068) sonra, ilk mağaza yüklemesinden (Faz 5 `npx cap init`) önce** kesinleşir; biçim `com.<şirket>.<ad>` (NAMING §6.1 tablosu, ör. `com.<şirket>.liftland`; `<şirket>` = tüzel kişilik adı, proje sahibinden), yalnızca `[a-z0-9.]`, "kids/little/minik" içermez. Görünen ad da NAMING kararından sonra girilir; her dil için ≤ 12 karakter kısa ad (ana ekran, PWA `short_name`); "&" Android `strings.xml`'de `&amp;`. Kod içi kimlikler (kayıt anahtarı `minikusta.save`, klasör adları) kod adı olarak kalır → isim değişikliği kayıt göçü gerektirmez; oyun adı metinleri yalnızca i18n (`app.title`, `{company}`) |
 | iOS derleme ortamı | Xcode ≥ 26 macOS ister: fiziksel Mac ya da bulut macOS CI (tercih Faz 5 başında; aylık maliyet o gün sağlayıcıdan doğrulanır ve entrepreneur BUSINESS §10'a yansıtır). Android derlemesi Linux CI'da |
 | Satın alma, reklam, onay | §11.8 arayüzleri (`IapService`, `AdsService`, `ConsentService`); MVP'de sahte uygulamalar, Faz 5'te gerçek eklentiler aynı arayüze (eklenti seçimi o gün `npm view` ile, ayrı D-xxx). Sağlayıcılar onaydan önce dinamik import edilmez |
+| Android hareketle gezinme (DL-2R-16, Faz 5) | 8 sütunlu tahtada (B8, B10, varsayılan 6×8 \| 2×8) saha sütun 0'ın sol kenarı ekran kenarından 10 CSS px, hücre merkezi 30 CSS px uzaktadır; sağa sürükleme sistemin "geri" hareketine düşebilir. Çözüm: Android 10+ (API 29) `View.setSystemGestureExclusionRects` ile tahta dikdörtgeninin sol ve sağ kenar şeritleri dışlanır. Sistem kenar başına dışlamayı en çok 200 dp dikey yükseklikle sınırlar; tahta 360 dp genişlikte 7 satırda ≈ 308 dp olduğundan saha satırlarının alttan 200 dp'si dışlanır (bloklar alttan dolduğu için en sık tutulan bölge). Uygulama: bağımlılıksız, depoda yerel küçük Capacitor eklentisi (Kotlin ≈ 40 satır; tahta dikdörtgeni her bölüm başında ve yerleşim değişince `boardLayout`'tan gönderilir). Sınır ve davranış Faz 5'te API belgesinden ve referans Android cihazda doğrulanır. iOS'ta uygulama içi kenar hareketi yoktur (WKWebView geri/ileri hareketi kapalı). Web karşılığı §2R.1 "Web geri hareketi". Tahmin 0,5 g |
 | Performans | WKWebView/Android WebView'de aynı `perf` harness'ı uzaktan hata ayıklamayla; referans düşük seviye + orta seviye Android + 1 eski iPhone (§10.7) |
 | Mağaza varlıkları | ikon/splash design-lead'den; `@capacitor/assets` vb. araçlar o gün doğrulanır |
 
@@ -2980,6 +3849,57 @@ Doğrulanmış sürümler (2026-10-04): `@capacitor/core`, `@capacitor/cli`, `@c
 ## 14. Uygulama planı ve efor (Faz 2 ayrıntılı, Faz 3–5 kaba)
 
 Süreler ajan iş günü (g); 5 g = 1 hafta. Tahminlere **%20 tampon** eklenir (entrepreneur isteği).
+
+### 14.0 Faz 2R — dikey dilimin yeniden yapımı (Bölüm 1–10; EN-2R-17, 2026-10-07)
+
+Paket ayrıntısı, bağımlılıklar ve kesme sırası §2R.12'dedir. Satırlar BUSINESS §10 "Faz 2R etkisi" kalemleriyle aynı
+sıradadır. Kesme 1–3 uygulanmıştır (tetik tuttu: Faz 2R tamponlu süresi 4 haftayı aşıyor); WP-N bot temel plan dışıdır
+(Faz 3).
+
+| Kalem | Paket | g net |
+| --- | --- | --- |
+| Değişken tahta: geometri, şema + doğrulayıcı, yerleşim + uyarlanır hücre | WP-A, WP-B, WP-G'nin yerleşim kısmı | 3,25 + 2,25 + 0,75 = 6,25 |
+| Tam örtü kuralları, cargo, güçlendiriciler ve ön denetim, K-54 yüklemleri | WP-C | 3 |
+| Solver + K-50/K-51/K-52 ölçütleri + L-35 (Faz 3'ten öne alındı) | WP-E | 4 |
+| D1/D2/D3a + Söküm + `movesSpent` (D3b tablo yayımı kesme 1 ile Faz 3'te) | WP-D | 1,75 |
+| Sunum kancaları (DL-2R-15) | WP-P | 1 |
+| Blok v2 çizici + UI kiti | WP-F | 2,25 |
+| Oyun sahnesi: HUD v2, güçlendirici akışları, #94, #107, #108, web geri koruması | WP-G kalanı | 2,5 |
+| Hafif öğretici durum makinesi | WP-H | 1,75 |
+| Ana sayfa v2 + kazanma v2 (kesme 2 ve 3 sonrası) | WP-I | 1,75 |
+| SVG görsel boru hattı (R2-08 güncellemesi) | WP-J | 1,5 |
+| Göç, golden, araçlar, analytics v6 | WP-K | 1,75 |
+| i18n | WP-L | 0,5 |
+| Bölüm 1–10 entegrasyonu (product-lead yinelemesi hariç) | WP-M | 1 |
+| Geri bildirim dışa aktarımı (EN-2R-20) | WP-O | 0,5 |
+| **Toplam** | | **29,5 g net → 35,4 g tamponlu** |
+
+**Diğer fazlardan düşen ve kesmelerle eklenen** (Faz 2R'de yapılan iş o fazdan düşer; toplam efor değişmez, yalnız
+yeri değişir):
+
+| Faz | Kalem | Önce | Sonra | Fark |
+| --- | --- | --- | --- | --- |
+| 3 | Solver | 5,5 | 2 (kalan: `via`, G-L ve zamanlı mekanik dallanması, hedef engelleyicisi `h` terimleri, beam yedeği) | −3,5 |
+| 3 | ✓-tuzağı taraması | 1 | 0,25 (tarama K-50 `trapCount` oldu; kalan: büyük uzayda eksik tarama raporu) | −0,75 |
+| 3 | K-30 tespit + yardım | 2 | 1 (zamanlayıcılı Söküm E-59, W6 jokeri 0,5 + kesme 1 tablo yayımı 0,5) | −1 |
+| 3 | Güçlendiriciler K-36…K-40 | 3 | 1,5 (Fırça akışı, K-40 oyun öncesi, Termos, Açık Kepenk) | −1,5 |
+| 3 | Doğrulayıcı kalanları | 1 | 0,5 (L-20, `levels:preview --png`) | −0,5 |
+| 3 | 23 engel eklentisi | 13,5 | 12,75 (W2, W3, Y5 Faz 2R dilimine girdi) | −0,75 |
+| **3** | **Faz 3 toplamı** | **32,5** | **24,5 net → 29,4 tamponlu** | **−8** |
+| 4 | Ana ekran, kasaba + 35 görev | 4 | 3 (ana sayfa iskeleti Faz 2R'de −1,5; kesme 3 +0,5) | −1 |
+| **4** | **Faz 4 toplamı** | **19,75** | **18,75 net → 22,5 tamponlu** | **−1** |
+| 5 | JUICE tamamlama | 4 | 5 (kesme 2: JUICE §8'in 9 olayı) | +1 |
+| 5 | Capacitor: Android hareket dışlama (DL-2R-16, §13) | 3 | 3,5 | +0,5 |
+| **5** | **Faz 5 toplamı** | **15** | **16,5 net → 19,8 tamponlu** | **+1,5** |
+
+**Takvim etkisi:**
+- Faz 2R tek kod şeridinde 35,4 g tamponlu ≈ **7,1 hf**; iki paralel şeritte uzun şerit 15,75 g net → 18,9 g tamponlu
+  ≈ **3,8 hf** (§2R.12; kritik yol 13 g net).
+- Faz 3–5 7,5 g net (9 g tamponlu ≈ 1,8 hf) kısalır.
+- Plan toplamına net etki: 29,5 − 8 − 1 + 1,5 = **+22 g net → +26,4 g tamponlu**. Tek şeritte takvim ≈ +5,3 hf;
+  BUSINESS §10'daki 4 haftalık genel tampon ≈ 1,3 hf aşılır ve Aşama 0 bu kadar kayar. İki şeritte takvim etkisi
+  3,8 − 1,8 ≈ **+2,0 hf**; tampon içinde kalır. Ek ücret yoktur (ajan oturumu); öneri P-2R-7 (§2R.14).
+- Kalan plan (Faz 2R–5): 29,5 + 24,5 + 18,75 + 16,5 = 89,25 g net → 107,1 g tamponlu ≈ 21,4 hf (tek şerit).
 
 ### 14.1 Faz 2 — dikey dilim (Bölüm 1–5)
 
@@ -3062,6 +3982,7 @@ görüntüleri design-lead incelemesinde.
 | 45 bölüm JSON'u için araç desteği, düzeltmeler, perf tekrarı | 2 g |
 | Öğretici 11–38 (§8.2): 7 yeni hamle sonu olayının sayımı + süzgeçler, `startOn`, `pre:` pencere kapanışı, simülasyonlu kilit güvencesi (GDD §14.1/4b) + testler; el çözümü golden'ları 6–10 "Solver … golden'lar" kalemindedir (§9.5) | 0,5 g |
 | **Toplam** | **32,5 g net → 39 g tamponlu (≈ 7,8 hf)** |
+| **Faz 2R sonrası (§14.0)** | **24,5 g net → 29,4 g tamponlu (≈ 5,9 hf)**: solver, tarama, K-30, güçlendirici çekirdeği, L-19, W2/W3/Y5 Faz 2R'de; D3b tablo yayımı kesme 1 ile buraya |
 
 **Engel başına gün (B planı için, entrepreneur isteği):**
 
@@ -3089,6 +4010,7 @@ B planı kesimi S5 + S6 ≈ 2,5 g kazandırır (solver faz karmaşıklığı dah
 | 4 | Analytics tamamlama + ANALYTICS.md eşleme testi, save migration'ları | 1,5 g |
 | 4 | Ekran görüntüleri ve design-lead inceleme düzeltmeleri | 2 g |
 | | **Faz 4 toplam** | **19,75 g net → 23,5 g (≈ 4,7 hf; tampon 4 → 3,75 g)** |
+| | **Faz 4, Faz 2R sonrası (§14.0)** | **18,75 g net → 22,5 g (≈ 4,5 hf)**: ana sayfa iskeleti Faz 2R'de; kesme 3 (paralaks, sandık önizleme) buraya |
 | 5 | JUICE tamamlama (92 olay; Faz 2 P0'daki 36 olay dışında kalan 56 olay — engel olayları JUICE §0 kural 12 gereği engelleriyle Faz 3'te bağlanır, cilası burada — + azaltılmış varyantlar) | 4 g |
 | 5 | Ses: ~76 efekt tembel çizim, müzik | 1,5 g |
 | 5 | Capacitor iOS/Android, platform adaptörleri, yaşam döngüsü, Preferences, Haptics | 3 g |
@@ -3096,6 +4018,7 @@ B planı kesimi S5 + S6 ≈ 2,5 g kazandırır (solver faz karmaşıklığı dah
 | 5 | Derleme hattı (macOS CI), ikon/splash, paket kimliği, mağaza görüntüleri | 1,5 g |
 | 5 | i18n tamamlama, erişilebilirlik ayarları, son hata ayıklama | 2 g |
 | | **Faz 5 toplam** | **15 g net → 18 g (≈ 3,6 hf)** |
+| | **Faz 5, Faz 2R sonrası (§14.0)** | **16,5 g net → 19,8 g (≈ 4,0 hf)**: kesme 2 (JUICE §8'in 9 olayı) +1 g, Android hareket dışlama +0,5 g |
 
 **Toplam Faz 2–5:** 93,75 g net (26,5 + 32,5 + 19,75 + 15; son tutarlılık turu 2: Faz 2 +0,25, Faz 3 +0,5, Faz 4 +0,25;
 turu 3: Faz 2 +0,5, JUICE P0; Faz 2A boşluk kapanışı: Faz 2 +0,25, asgari ana ekran)
@@ -3103,6 +4026,10 @@ turu 3: Faz 2 +0,5, JUICE P0; Faz 2A boşluk kapanışı: Faz 2 +0,25, asgari an
 sığar ama pay kalmadı; dağılım değişir: Faz 2 ≈ 6 hf (+2), Faz 3 ≈ 7,8 hf (son tutarlılık turu: hedef engelleyicileri +0,5 g,
 ✓-tuzağı taraması +1 g; tur 2: öğretici 11–38 +0,5 g), Faz 4 ≈ 4,7 hf (23,5 g), Faz 5 ≈ 3,6 hf (18 g). Gerçek reklam/IAP SDK'ları,
 yaş ekranı ve mağaza sürümü işleri Aşama 1–2 kapsamındadır, burada sayılmadı.
+
+**Faz 2R sonrası toplam (2026-10-07, §14.0):** Faz 2 (tamamlandı) 26,5 + Faz 2R 29,5 + Faz 3 24,5 + Faz 4 18,75 +
+Faz 5 16,5 = 115,75 g net (önceki 93,75 g'ye göre +22 g). Kalan Faz 2R–5: 89,25 g net → 107,1 g tamponlu ≈ 21,4 hf tek
+şeritte; Faz 2R iki şeritte yürütülürse ≈ 18,1 hf.
 
 ---
 
@@ -3119,7 +4046,7 @@ yaş ekranı ve mağaza sürümü işleri Aşama 1–2 kapsamındadır, burada s
 | R-7 | Playtest botu 75 000 oyun | Tek çekirdekte ~25 dk | `worker_threads` (8 işçi ≈ 3–5 dk), `--games 100` hızlı mod, solver önbelleği |
 | R-8 | Phaser 4 olgunluğu | 4.x yeni ana sürüm; topluluk örnekleri çoğunlukla v3 | Yalnızca temel API (Image, Text, Tween, CanvasTexture, particles); v3 bilgisine güvenmeden `node_modules/phaser/types` ve paketteki `skills/` belgeleriyle doğrulama; Filter kullanmama |
 | R-9 | FIT ölçekleme | 19,5:9 telefonlarda ekranın %9–20'si boş | FIT ve EXPAND ikisi de desteklenir (R-06; çapa sözleşmesi §10.1); öneri EXPAND (P-7), karar proje sahibinin |
-| R-10 | Küçük hücre | 360 px genişlikte 8 sütun + 0,5 hücre duvar: `cellPx` 120 / 1080 → **40 CSS px** (≈ 6,3 mm) | Parmak ofseti + yapışkan takip + çok hücreli bloklar; dokunma payı `touch.hitSlopPx` (30 px önerisi), çakışmada en yakın hücre merkezi |
+| R-10 | Küçük hücre | 360 px genişlikte 8 sütun + 0,5 hücre duvar: `cellPx` 120 / 1080 → **40 CSS px** (≈ 6,3 mm) | Parmak ofseti + yapışkan takip + çok hücreli bloklar; dokunma payı `touch.hitSlopPx` (30 px önerisi), çakışmada en yakın hücre merkezi. Faz 2R: tahta 8 sütundan darsa hücre büyür (§2R.1 uyarlanır hücre; `cellMaxPx` 144 ile Bölüm 1–10'un 7'sinde 48 CSS px) |
 | R-11 | iOS web haptik | Safari Vibration API'yi desteklemiyor (doğrulandı) | Web'de no-op; Capacitor Haptics (Faz 5) |
 | R-12 | ZzFX | Import anında `AudioContext`, `Math.random` | Yalnızca `buildSamples` alınır (P-9) |
 | R-13 | Playwright/Chromium sürüm farkı | 1.63 rev 1243 bekliyor, kurulu rev 1194 | `executablePath` (P-10); API farkı çıkarsa Playwright sürümü değil bizim çağrılarımız uyarlanır |

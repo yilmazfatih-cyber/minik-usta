@@ -27,6 +27,7 @@ import { addBoosters } from '../../services/save.ts';
 import type { DeepReadonly, InLevel, SaveService } from '../../services/save.ts';
 import { offerPrice } from '../../ui/offer.ts';
 import type { OfferModel } from '../../ui/offer.ts';
+import { remainingBlocks } from '../../ui/remaining.ts';
 import type { WinRewards } from '../../ui/rewards.ts';
 
 export interface AttemptDeps {
@@ -325,9 +326,13 @@ export class LevelAttempt {
     this.#levelEnd(session, 'quit', true);
   }
 
-  /** ANALYTICS `tutorial_step` (completed or skipped by the lock guarantee: the same record, TECH §8.2). */
-  tutorialStep(step: number): void {
-    this.#deps.track({ name: 'tutorial_step', level: this.levelId, step });
+  /**
+   * ANALYTICS `tutorial_step` v6 (completed or skipped by the lock guarantee: the same record, TECH §8.2). `msToDone` =
+   * animation time from the step's first show to its end. `shows` = 1: the Faz 2 overlay stays on screen until the step
+   * ends; the Faz 2R `TutorialPresence` (TECH §2R.9, WP-H) counts the re-shows.
+   */
+  tutorialStep(step: number, msToDone: number): void {
+    this.#deps.track({ name: 'tutorial_step', level: this.levelId, step, shows: 1, msToDone });
   }
 
   #levelEnd(session: GameSession, result: 'win' | 'lose' | 'quit', exitFree: boolean): void {
@@ -344,6 +349,9 @@ export class LevelAttempt {
       extensions: Math.min(3, session.offersUsed),
       exitFree,
       truckHelps: this.#truckHelps,
+      // ANALYTICS v6: the Faz 2 core has no Söküm (K-30 teardown arrives with WP-D), so the true count is 0.
+      teardowns: 0,
+      blocksLeft: remainingBlocks(session.state),
     });
   }
 }

@@ -9,8 +9,8 @@
   },
   "booster": {
     "hint": {
-      "brush": "Tap the block you want to paint.",
-      "crane": "Tap the block you want to move.",
+      "brush": "Tap two blocks to swap.",
+      "crane": "Tap a block to move.",
       "hammer": "Tap what you want to smash.",
       "trowel": "Tap a glowing cell."
     },
@@ -130,7 +130,7 @@
       "desc": "Keep hatched cells empty. Fill above them via a gap or bridge."
     },
     "w1": {
-      "desc": "Blocks sent through a gap don't fall; they stay put."
+      "desc": "Gaps are a shortcut for bottom blocks."
     }
   },
   "pause": {
@@ -181,22 +181,22 @@
   },
   "tut": {
     "ctx": {
-      "blocked": "That one can't move yet. Look around it.",
+      "blocked": "It can't move yet. Look around.",
       "bounce": {
         "color": "Wrong color, so it bounced back.",
         "offplan": "Nothing gets built outside the plan.",
         "window": "That's a window. It stays empty."
       },
       "goldtrowel": "Tap a glowing cell with the Golden Trowel.",
-      "lastmoves": "Five moves left! Think, don't rush.",
-      "queue": "Make room so the truck can unload.",
-      "reshuffle": "We're stuck! The truck is rearranging the yard.",
-      "resume": "The board is just as you left it, kiddo.",
-      "streak": "Get {n} right in a row for a Golden Trowel!",
+      "lastmoves": "Few moves left. Think it through.",
+      "queue": "Make room for the truck.",
+      "reshuffle": "Stuck! The truck reshuffles the yard.",
+      "resume": "Just as you left it, kiddo.",
+      "streak": "{n} right placements: Golden Trowel!",
       "support": "Fill the gap below first, kiddo.",
-      "tootall": "Too tall to pass over the top.",
+      "tootall": "Too tall to pass over.",
       "truckhelp": {
-        "free": "The truck helped, the blocks are free. Carry on!",
+        "free": "Truck helped. Blocks are free!",
         "material": "We were short on material. The truck brought more!"
       }
     },

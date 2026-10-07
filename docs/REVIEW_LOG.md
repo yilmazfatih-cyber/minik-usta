@@ -1175,3 +1175,13 @@ Proje sahibine sorular:
 - D-061 metni güncel rakamlara çekildi: Faz 2 26,25 g net / 29,5 g tamponlu; Faz 2–5 93,5 g net / 110 g ≈ 22,0 hf; kesme seçeneği 28,5 g.
 - Bu noktada açık yorum ya da yönlendirilmiş iş kalmadı. Açık olanlar yalnız proje sahibi kararlarıdır (Faz 1 onay paketi).
 
+## Faz 2R tasarım turu (2026-10-07)
+
+- Proje sahibi geri bildirimi ve orkestratör kararları: `review_inbox/_orchestrator_rulings_2R.md` (R2-01…R2-12).
+- Çapraz inceleme 96 yorum: product-lead'e 43, design-lead'e 39, code-lead'e 9, entrepreneur'e 5 (Engel 6).
+  Dosyalar: `review_inbox/{code-lead,entrepreneur,product-lead,design-lead}-2R-review.md`.
+- Kapanış: product-lead 42 KAPANDI / 1 RET (DL-2R-13 → D-089); design-lead 39 KAPANDI; code-lead 9 KAPANDI.
+  Dosyalar: `review_inbox/*-2R-closure.md`. Açık Engel yok.
+- Kararlar D-073…D-089. Proje sahibine bilgi: Söküm (D-075), Tuna görsel yaşı (D-087); mağaza öncesi insan sanatçı kararı Faz 5'e kadar açık (D-084).
+- Entrepreneur'de bekleyen 4 ANALYTICS düzeltmesi (code-lead kapanışı) uygulama turunda kapanır.
+
