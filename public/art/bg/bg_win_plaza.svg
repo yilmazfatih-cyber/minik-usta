@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <defs>
+    <radialGradient id="glow" cx="540" cy="760" r="1000" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFF3C4"/><stop offset=".35" stop-color="#FFE7A3"/><stop offset="1" stop-color="#FF9E55"/></radialGradient>
+    <linearGradient id="pz" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F0DAB4"/><stop offset="1" stop-color="#E2BD80"/></linearGradient>
+    <linearGradient id="fa" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE0A5"/><stop offset="1" stop-color="#EBC170"/></linearGradient>
+    <linearGradient id="fb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6CC9B"/><stop offset="1" stop-color="#E29946"/></linearGradient>
+    <linearGradient id="fc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF8E3"/><stop offset="1" stop-color="#EBE0C5"/></linearGradient>
+    <linearGradient id="rf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F59E6E"/><stop offset="1" stop-color="#DD6727"/></linearGradient>
+    <linearGradient id="rg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A8EAD7"/><stop offset="1" stop-color="#75CEB4"/></linearGradient>
+    <linearGradient id="rv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B6A6DB"/><stop offset="1" stop-color="#9179C8"/></linearGradient>
+    <g id="win"><rect x="-22" y="-30" width="44" height="60" rx="20" fill="#FFE7A3"/><path d="M-22 0H22M0-30V30" stroke-width="5"/></g>
+    <path id="pen" d="M-34 2H34L0 62Z"/>
+    <path id="pg" d="M-24 9H8L-14 26Z"/>
+    <g id="lamp"><path d="M-6 0H6V240H-6Z" fill="#3F454D"/><path d="M-22 240H22V256H-22Z" fill="#3F454D"/><path d="M-26-8H26L18-50H-18Z" fill="#FFE7A3"/><path d="M-30-50H30L0-72Z" fill="#3F454D"/></g>
+  </defs>
+  <rect width="1080" height="1920" fill="url(#glow)"/>
+  <g fill="#FFFFFF" fill-opacity=".22">
+    <circle cx="160" cy="640" r="34"/><circle cx="930" cy="700" r="26"/><circle cx="260" cy="1080" r="22"/><circle cx="860" cy="1120" r="38"/>
+    <circle cx="120" cy="880" r="18"/><circle cx="980" cy="920" r="20"/><circle cx="720" cy="380" r="24"/><circle cx="330" cy="420" r="28"/>
+  </g>
+  <g fill="#FFE680" fill-opacity=".35"><circle cx="210" cy="760" r="14"/><circle cx="880" cy="560" r="16"/><circle cx="820" cy="980" r="12"/><circle cx="190" cy="1180" r="16"/></g>
+  <g stroke="#3B2A1A" stroke-width="8" stroke-opacity=".3" stroke-linejoin="round">
+    <path d="M440 1300H640L620 1260H460Z" fill="#E6E9EE"/>
+    <path d="M500 1260V1190H580V1260Z" fill="#E6E9EE"/>
+    <path d="M470 1196Q540 1170 610 1196L600 1178Q540 1160 480 1178Z" fill="#DADEE6"/>
+    <path d="M540 1180V1120" fill="none" stroke-width="12"/>
+    <path d="M540 1124Q510 1100 492 1150M540 1124Q570 1100 588 1150" fill="none" stroke="#9FC8F0" stroke-opacity=".9" stroke-width="10" stroke-linecap="round"/>
+  </g>
+  <g stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round">
+    <path d="M-10 1340V820L120 760L250 820V1340Z" fill="url(#fa)"/>
+    <path d="M-30 830L120 720L270 830Q274 846 256 846H-16Q-34 846-30 830Z" fill="url(#rf)"/>
+    <use href="#win" transform="translate(60 930)"/><use href="#win" transform="translate(180 930)"/><use href="#win" transform="translate(60 1060)"/><use href="#win" transform="translate(180 1060)"/>
+    <path d="M90 1340V1210Q90 1170 130 1170Q170 1170 170 1210V1340Z" fill="#A8743A"/>
+    <path d="M-10 1340V1000H40V1340Z" fill="url(#fc)"/>
+    <path d="M1090 1340V860L960 800L830 860V1340Z" fill="url(#fb)"/>
+    <path d="M1110 870L960 760L810 870Q806 886 824 886H1096Q1114 886 1110 870Z" fill="url(#rg)"/>
+    <use href="#win" transform="translate(900 970)"/><use href="#win" transform="translate(1020 970)"/><use href="#win" transform="translate(900 1100)"/><use href="#win" transform="translate(1020 1100)"/>
+    <path d="M850 1020H880V1060H850Z" fill="#CF404E"/>
+    <path d="M820 1180H1000L986 1214H834Z" fill="#CF404E"/>
+    <path d="M840 1182V1212M876 1182V1212M912 1182V1212M948 1182V1212M984 1182V1212" stroke="#FFFFFF" stroke-width="8" stroke-opacity=".8"/>
+    <path d="M300 1340V1060L380 1010L460 1060V1340Z" fill="url(#fc)" stroke-opacity=".45"/>
+    <path d="M286 1068L380 996L474 1068Z" fill="url(#rv)" stroke-opacity=".45"/>
+    <path d="M620 1340V1080L700 1030L780 1080V1340Z" fill="url(#fa)" stroke-opacity=".45"/>
+    <path d="M606 1088L700 1016L794 1088Z" fill="url(#rf)" stroke-opacity=".45"/>
+    <g stroke-opacity=".45"><use href="#win" transform="translate(380 1150) scale(.8)"/><use href="#win" transform="translate(700 1170) scale(.8)"/></g>
+    <path d="M-10 1330Q540 1290 1090 1330V1930H-10Z" fill="url(#pz)"/>
+  </g>
+  <g stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round">
+    <use href="#lamp" transform="translate(286 1200)"/><use href="#lamp" transform="translate(794 1200)"/>
+  </g>
+  <g fill="#FFFFFF" fill-opacity=".5"><ellipse cx="276" cy="1172" rx="5" ry="12"/><ellipse cx="784" cy="1172" rx="5" ry="12"/></g>
+  <g fill="none" stroke="#D4AE6E" stroke-width="6" stroke-linecap="round">
+    <path d="M60 1420Q540 1380 1020 1420M0 1530Q540 1480 1080 1530M0 1660Q540 1600 1080 1660M0 1810Q540 1740 1080 1810"/>
+    <path d="M200 1400L170 1500M420 1390L410 1490M660 1390L670 1490M880 1402L910 1500M120 1520L80 1640M380 1500L360 1620M700 1500L720 1620M960 1520L1000 1640"/>
+  </g>
+  <g stroke="#3B2A1A" stroke-width="6" stroke-linejoin="round">
+    <path d="M-10 150Q540 420 1090 70M-10 50Q540 330 1090 210" fill="none" stroke-width="8"/>
+    <use href="#pen" transform="translate(82 190.8) rotate(22)" fill="#CF404E"/>
+    <use href="#pen" transform="translate(178 224.2) rotate(17)" fill="#FFE23E"/>
+    <use href="#pen" transform="translate(274 248.1) rotate(11)" fill="#44D088"/>
+    <use href="#pen" transform="translate(370 262.6) rotate(6)" fill="#2984DE"/>
+    <use href="#pen" transform="translate(466 267.6) rotate(0)" fill="#EC8D20"/>
+    <use href="#pen" transform="translate(562 263.2) rotate(-5)" fill="#5D3AAE"/>
+    <use href="#pen" transform="translate(658 249.3) rotate(-11)" fill="#CF404E"/>
+    <use href="#pen" transform="translate(754 226) rotate(-16)" fill="#FFE23E"/>
+    <use href="#pen" transform="translate(850 193.2) rotate(-21)" fill="#44D088"/>
+    <use href="#pen" transform="translate(946 151) rotate(-26)" fill="#2984DE"/>
+    <use href="#pen" transform="translate(1042 99.4) rotate(-30)" fill="#EC8D20"/>
+    <use href="#pen" transform="translate(40 74.6) rotate(25)" fill="#5D3AAE"/>
+    <use href="#pen" transform="translate(140 118.9) rotate(22)" fill="#CF404E"/>
+    <use href="#pen" transform="translate(240 156.6) rotate(19)" fill="#FFE23E"/>
+    <use href="#pen" transform="translate(340 187.7) rotate(16)" fill="#44D088"/>
+    <use href="#pen" transform="translate(440 212.1) rotate(12)" fill="#2984DE"/>
+    <use href="#pen" transform="translate(540 230) rotate(8)" fill="#EC8D20"/>
+    <use href="#pen" transform="translate(640 241.2) rotate(5)" fill="#5D3AAE"/>
+    <use href="#pen" transform="translate(740 245.9) rotate(1)" fill="#CF404E"/>
+    <use href="#pen" transform="translate(840 243.9) rotate(-3)" fill="#FFE23E"/>
+    <use href="#pen" transform="translate(940 235.3) rotate(-7)" fill="#44D088"/>
+    <use href="#pen" transform="translate(1040 220.1) rotate(-10)" fill="#2984DE"/>
+  </g>
+  <g fill="#FFFFFF" fill-opacity=".45">
+    <use href="#pg" transform="translate(82 190.8) rotate(22)"/>
+    <use href="#pg" transform="translate(274 248.1) rotate(11)"/>
+    <use href="#pg" transform="translate(466 267.6) rotate(0)"/>
+    <use href="#pg" transform="translate(658 249.3) rotate(-11)"/>
+    <use href="#pg" transform="translate(850 193.2) rotate(-21)"/>
+    <use href="#pg" transform="translate(1042 99.4) rotate(-30)"/>
+    <use href="#pg" transform="translate(40 74.6) rotate(25)"/>
+    <use href="#pg" transform="translate(240 156.6) rotate(19)"/>
+    <use href="#pg" transform="translate(440 212.1) rotate(12)"/>
+    <use href="#pg" transform="translate(640 241.2) rotate(5)"/>
+    <use href="#pg" transform="translate(840 243.9) rotate(-3)"/>
+    <use href="#pg" transform="translate(1040 220.1) rotate(-10)"/>
+
+  </g>
+</svg>

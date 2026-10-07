@@ -54,7 +54,7 @@ describe('compile (TECH §2.3)', () => {
     expect(s1?.hiddenMask).toBe(0b1100);
   });
 
-  it('K-25 piece ids: batch 0, then truck batches, then debris, then D2 help slots', () => {
+  it('K-25 piece ids: batch 0, then truck batches, then debris (Faz 2R: no D2 help slots, TECH §2R.1)', () => {
     const lvl = compiledLevel({
       id: 17,
       plan: [['WW'], ['YY']],
@@ -65,28 +65,10 @@ describe('compile (TECH §2.3)', () => {
       batches: [{ forSegment: 1, pieces: [['D2_90', 'Y', 2, 8]] }],
       debris: [['B1_0', 'W', 7, 0, 1]],
     });
-    expect(lvl.pieces.map((p) => p.origin)).toEqual([
-      'yard',
-      'yard',
-      'truck',
-      'debris',
-      'help',
-      'help',
-      'help',
-      'help',
-    ]);
-    expect(lvl.pieces.map((p) => p.startZone)).toEqual([
-      Zone.yard,
-      Zone.yard,
-      Zone.pending,
-      Zone.site,
-      Zone.gone,
-      Zone.gone,
-      Zone.gone,
-      Zone.gone,
-    ]);
+    expect(lvl.pieces.map((p) => p.origin)).toEqual(['yard', 'yard', 'truck', 'debris']);
+    expect(lvl.pieces.map((p) => p.startZone)).toEqual([Zone.yard, Zone.yard, Zone.pending, Zone.site]);
     expect(lvl.staticPieceCount).toBe(4);
-    expect(lvl.helpPieceCount).toBe(4); // one B1 per plan cell (K-30 D2)
+    expect(lvl.helpPieceCount).toBe(0);
     expect(lvl.batches.map((b) => b.pieceIds)).toEqual([[0, 1], [2]]);
     expect(lvl.pieces[3]?.segment).toBe(1);
   });

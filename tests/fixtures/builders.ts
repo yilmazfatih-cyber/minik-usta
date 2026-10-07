@@ -3,6 +3,11 @@
  * `compiledLevel` / `initialState` go one step further; `expectAscii` compares a state with Appendix A text.
  * Builders only run the zod schema, not the logic checks, so small hand-made boards (e.g. a nearly empty yard)
  * are allowed for rule tests.
+ *
+ * Faz 2R sizes (K-49, TECH §2R.1): `yard: { cols, rows }` and `site: { cols, rows }` are optional; without them the
+ * level is the default 6×8 | 2×8 board and every pre-2R fixture builds unchanged. While the schema does not carry the
+ * size fields yet (WP-B), a sized spec is parsed through a 2-wide stand-in (rows and debris columns the old schema
+ * accepts) and the sizes, the real plan rows and debris columns are attached to the parsed data afterwards.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -21,11 +26,21 @@ import type { ColorCode, DataPieceFlag, ShapeId } from '../../src/core/types.ts'
 
 /** `[shape, colour, x, y, flags?, wetMoves?]` — anchor = bottom-left of the bounding box. */
 export type PieceSpec = readonly [ShapeId, ColorCode, number, number, (readonly DataPieceFlag[])?, number?];
-/** `[shape, colour, x (6–7), plan row, segment?]`. */
+/** `[shape, colour, x (global site column, default 6–7), plan row, segment?]`. */
 export type DebrisSpec = readonly [ShapeId, ColorCode, number, number, number?];
+
+/** K-49 size fields of `yard` / `site`. */
+export interface SizeSpec {
+  readonly cols?: number;
+  readonly rows?: number;
+}
 
 export interface LevelSpec {
   readonly id?: number;
+  /** K-49 yard size Wy × Hy (default 6 × 8). */
+  readonly yard?: SizeSpec;
+  /** K-49 site size Ws × Hs (default 2 × 8). */
+  readonly site?: SizeSpec;
   readonly chapter?: number;
   readonly moves?: number;
   readonly difficulty?: LevelInput['difficulty'];
@@ -125,7 +140,7 @@ export function levelJson(spec: LevelSpec = {}): LevelInput {
         ...(spec.batches ?? []).map((b) => ({
           forSegment: b.forSegment,
           ...(b.dropColumns ? { dropColumns: [...b.dropColumns] } : {}),
-          pieces: b.pieces.map((p) => piece([p[0], p[1], p[2], 8, p[4], p[5]])),
+          pieces: b.pieces.map((p) => piece([p[0], p[1], p[2], spec.yard?.rows ?? 8, p[4], p[5]])),
         })),
       ],
     },
@@ -134,11 +149,60 @@ export function levelJson(spec: LevelSpec = {}): LevelInput {
   };
 }
 
+const hasSizes = (spec: LevelSpec): boolean => spec.yard !== undefined || spec.site !== undefined;
+
+/** The spec's level JSON with the K-49 size fields written in (`yard.cols/rows`, `site`). */
+function sizedJson(spec: LevelSpec): LevelInput {
+  const json = levelJson(spec);
+  if (!hasSizes(spec)) return json;
+  return {
+    ...json,
+    yard: { ...json.yard, ...(spec.yard ?? {}) },
+    ...(spec.site ? { site: { ...spec.site } } : {}),
+  } as LevelInput;
+}
+
+/**
+ * Pre-WP-B schema path: parses a 2-wide, size-free stand-in of the spec, then attaches the sizes, the real plan rows
+ * and the real debris columns to the parsed data. Returns null when even the stand-in breaks the schema.
+ */
+function standInLevel(spec: LevelSpec): LevelData | null {
+  const json = levelJson(spec);
+  const standIn: LevelInput = {
+    ...json,
+    build: {
+      ...json.build,
+      segments: json.build.segments.map((sg) => ({ ...sg, rows: sg.rows.map((r) => `${r}WW`.slice(0, 2)) })),
+      ...(json.build.debris ? { debris: json.build.debris.map((d) => ({ ...d, x: 6 })) } : {}),
+    },
+  };
+  const parsed = LevelSchema.safeParse(standIn);
+  if (!parsed.success) return null;
+  const data = parsed.data;
+  return {
+    ...data,
+    yard: { ...data.yard, ...(spec.yard ?? {}) },
+    ...(spec.site ? { site: { ...spec.site } } : {}),
+    build: {
+      ...data.build,
+      segments: data.build.segments.map((sg, i) => ({
+        ...sg,
+        rows: [...(json.build.segments[i]?.rows ?? [])],
+      })),
+      ...(data.build.debris
+        ? { debris: data.build.debris.map((d, i) => ({ ...d, x: json.build.debris?.[i]?.x ?? d.x })) }
+        : {}),
+    },
+  } as LevelData;
+}
+
 /** Schema-parsed LevelData; throws with a readable message when the spec breaks the schema. */
 export function level(spec: LevelSpec = {}): LevelData {
-  const parsed = LevelSchema.safeParse(levelJson(spec));
-  if (!parsed.success) throw new Error(`fixture breaks the level schema:\n${z.prettifyError(parsed.error)}`);
-  return parsed.data;
+  const parsed = LevelSchema.safeParse(sizedJson(spec));
+  if (parsed.success) return parsed.data;
+  const standIn = hasSizes(spec) ? standInLevel(spec) : null;
+  if (standIn) return standIn;
+  throw new Error(`fixture breaks the level schema:\n${z.prettifyError(parsed.error)}`);
 }
 
 export function compiledLevel(spec: LevelSpec = {}): CompiledLevel {
@@ -169,9 +233,10 @@ export function expectAscii(s: GameState, expected: string, opts: AsciiOptions =
   expect(norm(toAscii(s, opts))).toBe(norm(dedent(expected)));
 }
 
-const FIXTURE_DIR = join(dirname(fileURLToPath(import.meta.url)), 'levels');
+/** Level validator fixtures (Faz 2R, WP-B; TECH §2R.3): tests/level/fixtures. */
+const FIXTURE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'level', 'fixtures');
 
-/** Reads `tests/fixtures/levels/<group>/<name>.json`. */
+/** Reads `tests/level/fixtures/<group>/<name>.json`. */
 export function loadFixture(group: string, name: string): unknown {
   return JSON.parse(readFileSync(join(FIXTURE_DIR, group, `${name}.json`), 'utf8'));
 }

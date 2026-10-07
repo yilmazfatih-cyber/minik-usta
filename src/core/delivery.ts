@@ -9,19 +9,18 @@
  *   queued piece is tried once, oldest first; a piece that finds no room stays queued in its order and does not hold
  *   back the later ones (K-26).
  * - Columns of one piece (K-25): (1) its `x`; (2) its batch's `dropColumns` in list order (columns already tried are
- *   skipped); (3) every other valid anchor column `0 … 6 − w`, nearest to `x` first, ties to the larger x (nearer the
- *   wall). The last stage is never skipped (E-34). In each column the block drops from y = 10 − h onto its first
- *   support whatever the gravity settings; the first column where every landed cell has y ≤ 7 wins. The drop moves no
- *   other block and triggers no neighbour effect; balloons do not rise (E-36).
+ *   skipped); (3) every other valid anchor column `0 … wy − w`, nearest to `x` first, ties to the larger x (nearer the
+ *   wall). The last stage is never skipped (E-34). In each column the block drops from y = (H + 2) − h onto its first
+ *   support whatever the gravity settings; the first column where every landed cell has y ≤ Hy − 1 wins (yard air is
+ *   no landing, E-57). The drop moves no other block and triggers no neighbour effect; balloons do not rise (E-36).
  * - Bounced blocks queued by K-17 step 3 keep their (clamped) start column as `x` and join the same FIFO.
  */
 import type { Anchor, PieceId } from './types.ts';
-import { BOARD_ROWS, GRID_ROWS, YARD_COLS } from './coords.ts';
 import { shapeByIndex } from './shapes.ts';
 import { H, PF, hdr, pieceShape, pieceX, queueIds, setPieceField } from './state.ts';
 import type { GameState } from './state.ts';
 import type { CompiledBatch } from './level/compile.ts';
-import { dropIntoYard, movePiece, nearestColumnsFirst, yardPlace } from './placement.ts';
+import { dropIntoYard, movePiece, nearestColumnsFirst, yardDropRow, yardPlace } from './placement.ts';
 
 /** Truck batches (k ≥ 1) that come with segment `completed` (= number of completed segments, K-22, K-23, K-25). */
 export function batchesFor(s: GameState, completed: number): CompiledBatch[] {
@@ -36,7 +35,7 @@ export function enqueueBatchesFor(s: GameState, completed: number): PieceId[] {
   const out: PieceId[] = [];
   for (const batch of batchesFor(s, completed)) {
     for (const id of batch.pieceIds) {
-      movePiece(s, id, { zone: 'queue', x: pieceX(s, id), y: BOARD_ROWS, seg: -1 });
+      movePiece(s, id, { zone: 'queue', x: pieceX(s, id), y: s.lvl.geo.hy, seg: -1 });
       out.push(id);
     }
   }
@@ -56,15 +55,16 @@ export function deliveryColumns(s: GameState, id: PieceId): number[] {
   const x = pieceX(s, id);
   const out: number[] = [x];
   for (const c of batchDropColumns(s, id)) if (!out.includes(c)) out.push(c);
-  for (const c of nearestColumnsFirst(x, w)) if (!out.includes(c)) out.push(c);
+  for (const c of nearestColumnsFirst(s.lvl.geo, x, w)) if (!out.includes(c)) out.push(c);
   return out;
 }
 
 /** Where a queued piece would land now (K-25), or null when no column has room (it stays queued, K-26). */
 export function deliveryLanding(s: GameState, id: PieceId): Anchor | null {
   const shape = shapeByIndex(pieceShape(s, id));
+  const wy = s.lvl.geo.wy;
   for (const x of deliveryColumns(s, id)) {
-    if (x < 0 || x + shape.w > YARD_COLS) continue;
+    if (x < 0 || x + shape.w > wy) continue;
     const y = dropIntoYard(s, shape, x, id);
     if (y >= 0) return { ix: x, iy: y };
   }
@@ -74,7 +74,7 @@ export function deliveryLanding(s: GameState, id: PieceId): Anchor | null {
 /** One block the truck dropped (`pieceFell{cause: 'delivery'}`). */
 export interface Delivered {
   readonly pieceId: PieceId;
-  /** Drop start: (column, 10 − h). */
+  /** Drop start: (column, (H + 2) − h). */
   readonly from: Anchor;
   readonly to: Anchor;
   readonly rows: number;
@@ -97,10 +97,10 @@ export function deliverQueue(s: GameState): DeliveryResult {
   for (const id of queueIds(s)) {
     const to = deliveryLanding(s, id);
     if (!to) continue;
-    const h = shapeByIndex(pieceShape(s, id)).h;
+    const shape = shapeByIndex(pieceShape(s, id));
     movePiece(s, id, yardPlace(to));
     setPieceField(s, id, PF.arrivedTurn, turn);
-    const from = { ix: to.ix, iy: GRID_ROWS - h };
+    const from = { ix: to.ix, iy: yardDropRow(s.lvl.geo, shape) };
     delivered.push({ pieceId: id, from, to, rows: from.iy - to.iy });
   }
   return { delivered, queued: hdr(s, H.queueLen) };

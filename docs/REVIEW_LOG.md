@@ -1185,3 +1185,57 @@ Proje sahibine sorular:
 - Kararlar D-073…D-089. Proje sahibine bilgi: Söküm (D-075), Tuna görsel yaşı (D-087); mağaza öncesi insan sanatçı kararı Faz 5'e kadar açık (D-084).
 - Entrepreneur'de bekleyen 4 ANALYTICS düzeltmesi (code-lead kapanışı) uygulama turunda kapanır.
 
+
+## Faz 2R uygulama — WP-F görsel çizim + WP-J görsel boru hattı (code-lead, 2026-10-07)
+
+- [code-lead → design-lead] `public/art/town/town_ch1_tree.svg`: ASSET §16.3'te bu kimlik yok (`town_ch1_treehouse.svg`
+  ayrıca var). `npm run assets` dosyayı "unknown" sayar ve çıkış 1 verir. Dosya eskiyse silinmeli, yeni bir varlıksa
+  önce ASSET §16.3'e satır eklenmeli (katalog `src/services/assetCatalog.ts` o satırdan kurulur).
+- [code-lead → design-lead] Bayatlık kapısı (TECH §2R.6 adım 5): her SVG düzenlemesinden sonra `npm run assets`
+  çalıştırılmalı (kurulu Chromium, ≈ 1–2 s). Çalıştırılmazsa `npm test` (`tests/assets/manifest.test.ts`) ve
+  `npm run build` (`assets:check`) kırmızıdır. Raster çıktıları `public/assets/v2/` depoya girer; CI ve Pages Chromium
+  istemez.
+- [code-lead → design-lead] ASSET §16.3: UX §3 alt gezinmesi 5 ikon ister. `icon_nav_home` ve `icon_nav_album`
+  tabloda yok. Katalogda isteğe bağlı (`optional`) duruyorlar ve şimdilik prosedürel yedekle çiziliyorlar. Öneri: iki
+  satır eklensin (128 px, atlas 21 yuva → 512×768, bütçe değişmez).
+- [code-lead → design-lead] ASSET §13'te `sfx_teardown` satırı yok (JUICE #107). `tests/services/audio.test.ts` her
+  tipli sesin §13'te olmasını ister. Bu yüzden `tokens.ts` bu anahtarı satır gelene kadar tiplemiyor
+  (`PENDING_TOKEN_KEYS`). Satır eklenince anahtar şemaya girer.
+- [code-lead → design-lead] Token isteği: UX §5.8 saha çerçevesinin ahşap gradyanı #E2A653 → #B97A35 ve kontur #5A3A1E
+  token değil. Şimdilik `theme/draw/scene.ts` `YARD_FRAME` sabitinde duruyor. Öneri: `color.board.yardFrameTop`,
+  `yardFrameBottom` (kontur için `kit.panel.outline` aynı renk). `layout.adaptive.cellMaxPx` henüz yok: v2 pişirme k = 1
+  ile çalışıyor (TECH §2R.1; token gelince kod değişmez).
+- [code-lead → design-lead] v1 anahtarlarını silerken: v2 çizici sembol mürekkebi kuralı için hâlâ
+  `block.symbolDarkFactor` ve `block.symbolLightThresholdLstar` anahtarlarını okuyor (ART §2.5 "mürekkep kuralı §2.2 ile
+  aynı"). Bu iki anahtar ya kalmalı ya da `blockV2` altına taşınmalı.
+- [code-lead → design-lead] Bilgi, eylem gerekmez: ART §2.5 "sembol üst kenarı" sütunu sembol kutusunun tam tepesinde
+  (1×1 yastığın 0,22h'si, çıkıntısız tarif) ölçülünce B 3,13 · R 3,74 · W 6,0 · P 5,7 çıkıyor (tablo 3,2 / 3,9 / 6,4 / 6,0).
+  Hepsi ≥ 3:1. Varsayılan çıkıntılı tarifte sembol düz taban rengindedir; "taban" sütunu ±0,06 ile doğrulandı
+  (`tests/theme/blockV2.test.ts`).
+- [code-lead → design-lead] Görsel inceleme önerisi: çıkıntı parlama noktası (225°, 0,30d) W'nin damar çizgisine
+  değiyor, Y'nin üç noktasının yanında da 4. nokta gibi okunabilir. ART §12 kabul testi (b) sembol ayırt etmede buna
+  bakılmalı. Örnek: `artifacts/screens/2r/blocks-v2-a.png`, `board-v2.png`.
+
+## Faz 2R SVG çizimleri (design-lead, 2026-10-07)
+
+33 SVG `public/art/**` altında (ASSET §15 kayıt, §16.6 teslim durumu). Kontak sayfaları (git dışı):
+`artifacts/screens/art-review/contact_icons.png`, `contact_characters.png`, `contact_scenes.png`.
+
+- [design-lead → code-lead] assetCatalog: `public/art/town/town_ch1_tree.svg` katalogda yok → ekle: `town`, viewBox ve
+  raster 760×820, grup P2, **hayalet yok**. HomeScene'de `town_ch1_treehouse`'un **altında, aynı kutuda** (merkez x 540,
+  taban y 1180) her zaman tam renk çizilir; `setCrop` ve ozalit hayaleti yalnız `town_ch1_treehouse`'a. Ağaç olmadan
+  basamaklar havada kalır. Katalog dışı olduğu için `npm run assets` şu an çıkış 1 veriyor (ASSET §16.3 #4b, ART §7.2).
+- [design-lead → code-lead] ana sayfa yapısı: ağaç ev gruplarının (`t1`…`t7`) gerçek y aralıkları ve kırpma bantlarına
+  taşmaları ASSET §16.6 tablosunda; Faz 2R'de tek `setCrop` yeterli, Faz 4 görev açılışında grup id'leri hazır.
+- [design-lead → code-lead] `bg_level_site_edge`: grup `opacity=".06"` dosyanın içinde → doku α 1 ile çizilmeli
+  (`alpha.sceneSilhouette` ikinci kez uygulanırsa görünmez olur). 8 sütunluk tahtada (x 10–1070) kenar şeridi (x < 120)
+  tahtanın arkasına düşer; "tahtayla kesişmez" kuralı için doku tahta grubunun alt kenarının altından başlatılsın ya da
+  `setCrop` ile tahta dikdörtgeninin dışına kırpılsın.
+- [design-lead → code-lead] `chr_dede_bust` portre kırpımı (CL-2R-26): viewBox merkezi (126, 142), r 84 → Ø 128.
+- [design-lead → code-lead] `chr_kepce_bust` kendi zemin gölgesini taşır (α 0,18 elips, y ≈ 208): ana sayfada ve oyun
+  köşesinde ek gölge çizme. `chr_tuna_cheer`'da da gölge SVG içinde; zıplama tween'inde gölge yerinde kalsın istenirse
+  söyleyin, gölgesiz varyant ayrılır.
+- [design-lead → code-lead] atlas 21 ikona çıktı (`icon_nav_home`, `icon_nav_album` çizildi; katalogdaki isteğe bağlı
+  girdiler) → 512×768; `ui_tutorial_glove` atlas dışı tek doku (katalogda var).
+- [design-lead → orkestratör] ölçüt düzeltmesi bilgi: arka plan doygunluk kabulü HSL'den CIE LCh kromaya çevrildi (ART §7,
+  ASSET §16.3 #1); HSL açık pastellerde %100 veriyor. Ölçüm %40 / %38 düşük, eşik %25.

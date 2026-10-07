@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E5C08F"/><stop offset="1" stop-color="#C89654"/></linearGradient>
+    <linearGradient id="m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E6E9EE"/><stop offset="1" stop-color="#B8BEC9"/></linearGradient>
+    <path id="br" d="M-19-24Q-22-48-14-62Q-6-72 0-74Q6-72 14-62Q22-48 19-24Z"/>
+    <path id="hd" d="M-11 0H11L8 46Q0 56-8 46Z"/>
+    <clipPath id="c"><use href="#br"/></clipPath>
+  </defs>
+  <g transform="translate(56 66) rotate(35)">
+    <g transform="rotate(-35) translate(0 5) rotate(35)" fill="#3B2A1A" stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round"><use href="#br"/><use href="#hd"/><rect x="-21" y="-26" width="42" height="28" rx="5"/></g>
+    <use href="#hd" fill="url(#w)" stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M-4 8V40" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="4" stroke-linecap="round"/>
+    <use href="#br" fill="#44D088"/>
+    <g clip-path="url(#c)">
+      <path d="M0-80H30V0H0Z" fill="#2984DE"/>
+      <path d="M-30-40H30V-20H-30Z" fill="#3B2A1A" fill-opacity=".2"/>
+      <path d="M-10-56Q-12-44-12-32" fill="none" stroke="#FFFFFF" stroke-opacity=".6" stroke-width="5" stroke-linecap="round"/>
+    </g>
+    <use href="#br" fill="none" stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round"/>
+    <rect x="-21" y="-26" width="42" height="28" rx="5" fill="url(#m)" stroke="#3B2A1A" stroke-width="7"/>
+    <path d="M-21-12H21" stroke="#94979C" stroke-width="4"/>
+  </g>
+  <g fill="none" stroke-linecap="round">
+    <path d="M86 92A18 18 0 0 1 118 98M114 116A18 18 0 0 1 84 112" stroke="#3B2A1A" stroke-width="14"/>
+    <path d="M86 92A18 18 0 0 1 118 98" stroke="#44D088" stroke-width="6"/>
+    <path d="M114 116A18 18 0 0 1 84 112" stroke="#2984DE" stroke-width="6"/>
+  </g>
+  <path d="M120 88L122 104L108 100Z" fill="#44D088" stroke="#3B2A1A" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M82 122L78 106L94 112Z" fill="#2984DE" stroke="#3B2A1A" stroke-width="4" stroke-linejoin="round"/>
+</svg>

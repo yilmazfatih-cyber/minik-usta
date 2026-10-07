@@ -108,20 +108,24 @@ describe('S1 Kayan Şantiye — sliding site (OBSTACLES S1, GDD K-22, K-25, K-26
     expect(queueIds(s)).toEqual([]);
   });
 
-  it('S1 K-22 after the last segment there is no shift: step 11 wins (level 5 hand solution, 5 moves left)', () => {
-    const session = GameSession.start(levelFile(5));
-    const moves = HAND[5];
-    for (const m of moves.slice(0, -1)) expect(session.commit(m).status).toBe('applied');
-    const sink = new ArraySink();
-    const last = session.commit(moves[moves.length - 1] ?? dragTo(14, 6, 8), sink);
-    expect(last.won).toBe(true);
-    expect(session.outcome).toBe('won');
-    expect(session.movesLeft).toBe(5);
-    expect(find(sink.events, 'segmentCompleted')).toMatchObject({ seg: 1, step: 8 });
-    expect(types(sink.events)).not.toContain('siteShifted');
-    expect(find(sink.events, 'levelWon')).toMatchObject({ step: 11, movesLeft: 5 });
-    expect(session.yao()).toEqual({ overWall: 6, rail: 0, yao: 1 });
-  });
+  // WP-M ile yeniden üretilecek: the old level 5 keeps decoys in the yard → K-48 (3) holds back the win.
+  it.fails(
+    'S1 K-22 after the last segment there is no shift: step 11 wins (level 5 hand solution, 5 moves left)',
+    () => {
+      const session = GameSession.start(levelFile(5));
+      const moves = HAND[5];
+      for (const m of moves.slice(0, -1)) expect(session.commit(m).status).toBe('applied');
+      const sink = new ArraySink();
+      const last = session.commit(moves[moves.length - 1] ?? dragTo(14, 6, 8), sink);
+      expect(last.won).toBe(true);
+      expect(session.outcome).toBe('won');
+      expect(session.movesLeft).toBe(5);
+      expect(find(sink.events, 'segmentCompleted')).toMatchObject({ seg: 1, step: 8 });
+      expect(types(sink.events)).not.toContain('siteShifted');
+      expect(find(sink.events, 'levelWon')).toMatchObject({ step: 11, movesLeft: 5 });
+      expect(session.yao()).toEqual({ overWall: 6, rail: 0, yao: 1 });
+    },
+  );
 
   it('S1 K-26 a truck block without room waits in the queue ("Kamyonda: 1") and comes in a later step 9', () => {
     const s = initialState(fullYard());
@@ -136,7 +140,8 @@ describe('S1 Kayan Şantiye — sliding site (OBSTACLES S1, GDD K-22, K-25, K-26
     expect(find(next.ev, 'deliveryArrived')).toMatchObject({ pieces: [25], step: 9 });
     expect(find(next.ev, 'deliveryQueued').queued).toBe(0);
     expect(pieceZone(s, 25)).toBe(Zone.yard);
-    expect(next.res.won).toBe(true);
+    expect(next.res.won).toBe(false); // K-48 (3): the fixture's filler blocks are still in the yard
+    expect(find(next.ev, 'segmentCompleted').seg).toBe(1);
     expectConsistent(s);
   });
 });

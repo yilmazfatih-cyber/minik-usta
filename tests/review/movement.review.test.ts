@@ -16,7 +16,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { FREE, railMode, tryBeginDrag } from '../../src/core/movement.ts';
+import { DEFAULT_GEO } from '../../src/core/geometry.ts';
+import { FREE, isCargoShape, railMode, tryBeginDrag } from '../../src/core/movement.ts';
 import type { DragRules, DragSession } from '../../src/core/movement.ts';
 import {
   closedBoundaryMask,
@@ -165,14 +166,14 @@ const CANONICAL = SHAPES.filter((sh) => sh.index === sh.canonicalIndex && !FORBI
 
 describe('R-03 K-04 zero-width wall boundary', () => {
   it('K-04 GDD example: height 6, gap y=2 size 2 → rows 0–1 closed, 2–3 gap (rail only), 4–5 closed, 6–9 open', () => {
-    const gapRows = openRailMask(2, 2, true);
+    const gapRows = openRailMask(DEFAULT_GEO, 2, 2, true);
     expect(gapRows).toBe(0b1100);
-    expect(closedBoundaryMask(6, gapRows)).toBe(0b110011);
-    expect(openFreeMask(6)).toBe(0b1111000000);
+    expect(closedBoundaryMask(DEFAULT_GEO, 6, gapRows)).toBe(0b110011);
+    expect(openFreeMask(DEFAULT_GEO, 6)).toBe(0b1111000000);
     // a closed gap opens nothing: all six wall rows are closed, rail mask empty
-    expect(openRailMask(2, 2, false)).toBe(0);
-    expect(closedBoundaryMask(6, 0)).toBe(0b111111);
-    expect(rowRangeMask(6, 4)).toBe(openFreeMask(6));
+    expect(openRailMask(DEFAULT_GEO, 2, 2, false)).toBe(0);
+    expect(closedBoundaryMask(DEFAULT_GEO, 6, 0)).toBe(0b111111);
+    expect(rowRangeMask(DEFAULT_GEO, 6, 4)).toBe(openFreeMask(DEFAULT_GEO, 6));
 
     // the same rows seen by a dragged B1: a FREE step across exactly at y ≥ 6, a RAIL step exactly at y 2–3
     const s = initialState({
@@ -190,7 +191,7 @@ describe('R-03 K-04 zero-width wall boundary', () => {
   });
 
   it('K-04 height 0: no boundary row is closed and a B1 at (5,0) steps straight onto the site', () => {
-    expect(closedBoundaryMask(0, 0)).toBe(0);
+    expect(closedBoundaryMask(DEFAULT_GEO, 0, 0)).toBe(0);
     const d = grab(initialState({ wall: { height: 0 }, pieces: [['B1_0', 'W', 5, 0]] }), 0);
     expect(names(d.neighbours(F(5, 0)))).toContain('F(6,0)');
     expect(d.distanceFromStart(F(6, 0))).toBe(1);
@@ -199,8 +200,8 @@ describe('R-03 K-04 zero-width wall boundary', () => {
 
   it('E-46 x = 5 and x = 6 are never 4-neighbours, in any row (§0: neighbourhood never crosses the boundary)', () => {
     for (let y = 0; y <= 7; y++) {
-      const of5 = neighbors4(5, y).map((a) => `${a.ix},${a.iy}`);
-      const of6 = neighbors4(6, y).map((a) => `${a.ix},${a.iy}`);
+      const of5 = neighbors4(DEFAULT_GEO, 5, y).map((a) => `${a.ix},${a.iy}`);
+      const of6 = neighbors4(DEFAULT_GEO, 6, y).map((a) => `${a.ix},${a.iy}`);
       expect(of5, `(5,${y})`).not.toContain(`6,${y}`);
       expect(of5, `(5,${y})`).toContain(`4,${y}`);
       expect(of6, `(6,${y})`).not.toContain(`5,${y}`);
@@ -255,13 +256,14 @@ describe('K-05 crane area', () => {
     expect(d2.isReachable(F(3, 9))).toBe(false);
   });
 
-  it('K-05 Y5 example: heavy I5_0 at (0,7) lifted to (1,8) cancels; slid to (1,7) with (5,7) empty is a yard move; it never reaches x = 6', () => {
+  it('K-05 K-08 K-44 Y5 example (Faz 2R): Ağır Yük I5_0 at (0,7) cannot be lifted to (1,8) (not in R); slid to (1,7) with (5,7) empty is a yard move; it never reaches x = 6', () => {
     const s = initialState({ id: 8, pieces: fullYard([['I5_0', 'W', 0, 7]], [[5, 7]]) });
     const d = grab(s, 0);
-    expect(d.classify(F(1, 8))).toMatchObject({ kind: 'cancel', reason: 'craneOverYard', row: 3 });
+    expect(d.isReachable(F(1, 8))).toBe(false); // pre-2R: reachable and cancelled (row 3); K-08 Faz 2R: no crane area
+    expect(d.classify(F(1, 8))).toMatchObject({ kind: 'cancel', reason: 'invalid', row: 0 });
     expect(d.classify(F(1, 7))).toMatchObject({ kind: 'yard', row: 2 });
     expect(d.isReachable(F(2, 7))).toBe(false);
-    expect(d.reachableNodes().every((n) => n.mode === FREE && n.ix + 5 <= 6)).toBe(true);
+    expect(d.reachableNodes().every((n) => n.mode === FREE && n.ix + 5 <= 6 && n.iy <= 7)).toBe(true);
   });
 });
 
@@ -740,7 +742,7 @@ describe('K-11 entry over the wall (open sky)', () => {
 // --- K-12 gaps and rails -------------------------------------------------------------------------------------------
 
 describe('K-12 entry through a gap (rail)', () => {
-  it('K-12 alignment: a block enters a gap of size n iff its height h ≤ n (W3: only 1-row blocks pass a 1-row gap; N6 heavy never)', () => {
+  it('K-12 alignment: a block enters a gap of size n iff its height h ≤ n (W3: only 1-row blocks pass a 1-row gap; K-44 Ağır Yük never; a block wider than the site never reaches it)', () => {
     for (let size = 1; size <= 3; size++) {
       for (const shape of CANONICAL) {
         const d = grab(
@@ -750,12 +752,12 @@ describe('K-12 entry through a gap (rail)', () => {
           }),
           0,
         );
-        const fits = !shape.heavy && shape.h <= size;
+        const fits = !isCargoShape(shape) && shape.h <= size;
         expect(d.canEnterRail, `${shape.id} gap size ${size}`).toBe(fits);
         expect(
           d.reachableNodes().some((n) => n.mode !== FREE && n.ix >= 6),
           `${shape.id} on the site rail, gap size ${size}`,
-        ).toBe(fits);
+        ).toBe(fits && shape.w <= 2);
       }
     }
   });
@@ -1011,39 +1013,47 @@ describe('round 2 — K-08 tie-breaks across modes and gaps', () => {
 
 describe('round 2 — K-04 K-12 gap rows, gap hooks and two gaps', () => {
   it('K-01 K-05 R-03 geometry: crane rows 8–9 are neither yard nor site, x 5 | 6 is the boundary, only a box over both 5 and 6 straddles', () => {
-    expect([sideOf(5), sideOf(6)]).toEqual(['yard', 'site']);
-    expect([isYardCell(5, 7), isYardCell(5, 8), isYardCell(6, 0)]).toEqual([true, false, false]);
-    expect([isSiteCell(6, 0), isSiteCell(7, 7), isSiteCell(6, 8), isSiteCell(5, 0)]).toEqual([
-      true,
-      true,
-      false,
-      false,
-    ]);
-    expect([isCraneCell(0, 8), isCraneCell(7, 9), isCraneCell(7, 7)]).toEqual([true, true, false]);
+    expect([sideOf(DEFAULT_GEO, 5), sideOf(DEFAULT_GEO, 6)]).toEqual(['yard', 'site']);
+    expect([
+      isYardCell(DEFAULT_GEO, 5, 7),
+      isYardCell(DEFAULT_GEO, 5, 8),
+      isYardCell(DEFAULT_GEO, 6, 0),
+    ]).toEqual([true, false, false]);
+    expect([
+      isSiteCell(DEFAULT_GEO, 6, 0),
+      isSiteCell(DEFAULT_GEO, 7, 7),
+      isSiteCell(DEFAULT_GEO, 6, 8),
+      isSiteCell(DEFAULT_GEO, 5, 0),
+    ]).toEqual([true, true, false, false]);
+    expect([
+      isCraneCell(DEFAULT_GEO, 0, 8),
+      isCraneCell(DEFAULT_GEO, 7, 9),
+      isCraneCell(DEFAULT_GEO, 7, 7),
+    ]).toEqual([true, true, false]);
     // K-01: "Hiçbir bloğun hücresi y > 9, x < 0 ya da x > 7 olamaz"
-    expect([inGrid(7, 9), inGrid(7, 10), inGrid(8, 0), inGrid(-1, 0), inGrid(0, -1)]).toEqual([
-      true,
-      false,
-      false,
-      false,
-      false,
-    ]);
+    expect([
+      inGrid(DEFAULT_GEO, 7, 9),
+      inGrid(DEFAULT_GEO, 7, 10),
+      inGrid(DEFAULT_GEO, 8, 0),
+      inGrid(DEFAULT_GEO, -1, 0),
+      inGrid(DEFAULT_GEO, 0, -1),
+    ]).toEqual([true, false, false, false, false]);
     // K-07 row 4: cells on both sides of the boundary
-    expect([straddlesBoundary(5, 2), straddlesBoundary(4, 2), straddlesBoundary(6, 2)]).toEqual([
-      true,
-      false,
-      false,
-    ]);
-    expect([straddlesBoundary(5, 1), straddlesBoundary(4, 3), straddlesBoundary(3, 3)]).toEqual([
-      false,
-      true,
-      false,
-    ]);
-    expect(neighbors4(3, 8)).toEqual([]); // §0 neighbourhood is between board cells
+    expect([
+      straddlesBoundary(DEFAULT_GEO, 5, 2),
+      straddlesBoundary(DEFAULT_GEO, 4, 2),
+      straddlesBoundary(DEFAULT_GEO, 6, 2),
+    ]).toEqual([true, false, false]);
+    expect([
+      straddlesBoundary(DEFAULT_GEO, 5, 1),
+      straddlesBoundary(DEFAULT_GEO, 4, 3),
+      straddlesBoundary(DEFAULT_GEO, 3, 3),
+    ]).toEqual([false, true, false]);
+    expect(neighbors4(DEFAULT_GEO, 3, 8)).toEqual([]); // §0 neighbourhood is between board cells
   });
 
   it('K-04 K-12 a gap in the bottom row (y = 0, wall 2): B1 at (5,0) enters the rail in 1 step; FREE it needs 5 (up to row 2, over, down)', () => {
-    expect(closedBoundaryMask(2, openRailMask(0, 1, true))).toBe(0b10);
+    expect(closedBoundaryMask(DEFAULT_GEO, 2, openRailMask(DEFAULT_GEO, 0, 1, true))).toBe(0b10);
     const s = initialState({
       wall: { height: 2, gaps: [STATIC(0)] },
       pieces: [['B1_0', 'W', 5, 0]],
@@ -1059,7 +1069,13 @@ describe('round 2 — K-04 K-12 gap rows, gap hooks and two gaps', () => {
 
   it('K-04 K-12 a gap closed by its rule (canPassGap false) is a closed boundary row for both modes; the other gap stays open', () => {
     const wall = { height: 6, gaps: [STATIC(1), STATIC(4)] };
-    expect(closedBoundaryMask(6, openRailMask(1, 1, true) | openRailMask(4, 1, false))).toBe(0b111101);
+    expect(
+      closedBoundaryMask(
+        DEFAULT_GEO,
+        6,
+        openRailMask(DEFAULT_GEO, 1, 1, true) | openRailMask(DEFAULT_GEO, 4, 1, false),
+      ),
+    ).toBe(0b111101);
     const onlyFirst: DragRules = { canPassGap: (_s, gap) => gap === 0 };
     const s = initialState({ wall, pieces: [['B1_0', 'W', 5, 4]] });
     const attempt = tryBeginDrag(s, 0, onlyFirst);
@@ -1601,7 +1617,13 @@ describe('round 3 — K-12 three gaps', () => {
   it('K-12 K-04 three gaps on an 8-high wall: each rail is entered only in its own rows, the rails are joined only through the yard, and each release reports its own gap', () => {
     const wall = { height: 8, gaps: [STATIC(0), STATIC(2), STATIC(4, 2)] };
     expect(
-      closedBoundaryMask(8, openRailMask(0, 1, true) | openRailMask(2, 1, true) | openRailMask(4, 2, true)),
+      closedBoundaryMask(
+        DEFAULT_GEO,
+        8,
+        openRailMask(DEFAULT_GEO, 0, 1, true) |
+          openRailMask(DEFAULT_GEO, 2, 1, true) |
+          openRailMask(DEFAULT_GEO, 4, 2, true),
+      ),
     ).toBe(0b11001010);
     const d = grab(initialState({ wall, pieces: [['B1_0', 'W', 0, 0]] }), 0);
     const rails = d.reachableNodes().filter((n) => n.mode !== FREE);
@@ -1652,7 +1674,7 @@ describe('round 3 — K-08 tie-break 4, off-grid targets, interleaved sessions',
       expect(r.node, `p = (${px}, ${py})`).toEqual(want);
       visited.push(...r.path);
     }
-    expect(visited.every((n) => inGrid(n.ix, n.iy))).toBe(true);
+    expect(visited.every((n) => inGrid(DEFAULT_GEO, n.ix, n.iy))).toBe(true);
     expect(visited.length).toBeGreaterThan(20);
   });
 

@@ -5,7 +5,8 @@
  *
  * - class(p) = (canonical shape, colour, flags, counter) — NOT the piece id, so swapping two identical blocks gives
  *   the same hash (the solver never opens a symmetric state twice).
- * - position = yard anchor (y·8 + x), site (80 + seg·16 + sy·2 + sx) or queue slot (160 + index, FIFO order).
+ * - position in the 8 × 10 maximum frame for every geometry (TECH §2R.1): yard anchor (y·8 + x, 0…79), site
+ *   (80 + seg·32 + sy·4 + sx, 80…239; sx = x − wy) or queue slot (240 + index, FIFO order).
  * - K and F mix a fixed random table entry (splitmix32, constant seed → deterministic for golden tests) with the
  *   value through the bijective `fmix32`, so distinct values on one position never cancel. The class space
  *   (52 × 8 × 2⁸ × counter) is too large to tabulate, hence the mixing instead of a pure lookup.
@@ -16,16 +17,17 @@
  */
 import { fmix32, splitmix32 } from './rng.ts';
 import { Zone } from './types.ts';
-import { SEGMENT_CELLS, SITE_COLS, SITE_X } from './coords.ts';
+import { DEFAULT_GEO, MAX_COLS, MAX_ROWS, MAX_SEGMENTS, MAX_SITE_COLS, SEGMENT_SLOTS } from './geometry.ts';
+import type { BoardGeo } from './geometry.ts';
 import { GAP_STRIDE, H, OBSTACLE_STRIDE, PF, PIECE_STRIDE } from './state.ts';
 import type { GameState, StateLayout } from './state.ts';
 
 /** Fixed seed of the table generator (changing it changes every golden hash). */
 export const ZOBRIST_SEED = 0x5eed2b1d;
 
-/** Yard positions occupy 0..79, site 80..159, queue from 160. */
-export const POS_SITE = 80;
-export const POS_QUEUE = 160;
+/** Frame positions (§2R.1): yard 0..79 (`y·8 + x`), site 80..239 (`80 + seg·32 + sy·4 + sx`), queue from 240. */
+export const POS_SITE = MAX_COLS * MAX_ROWS;
+export const POS_QUEUE = POS_SITE + MAX_SEGMENTS * SEGMENT_SLOTS;
 
 export interface ZobristTables {
   /** Lane 0 / lane 1 position keys. */
@@ -38,25 +40,34 @@ export interface ZobristTables {
   readonly cycle: number;
 }
 
-/** Scalar buffer offsets that enter the hash (header fields are handled separately). */
-export function hashedFieldOffsets(layout: StateLayout): number[] {
+/**
+ * Zobrist position of a piece record (§2R.1): yard anchor `y·8 + x`, site `80 + seg·32 + sy·4 + (x − siteX)`; the
+ * queue slot `240 + i` is added by `hashState`. The same frame for every geometry (`siteX` = `geo.siteX`).
+ */
+export function piecePosition(siteX: number, zone: number, x: number, y: number, seg: number): number {
+  if (zone === Zone.yard) return y * MAX_COLS + x;
+  return POS_SITE + seg * SEGMENT_SLOTS + y * MAX_SITE_COLS + (x - siteX);
+}
+
+/** Scalar buffer offsets that enter the hash (header fields are handled separately); `filled` has S × ws masks. */
+export function hashedFieldOffsets(layout: StateLayout, geo: BoardGeo = DEFAULT_GEO): number[] {
   const c = layout.counts;
   const out: number[] = [];
   for (let i = 0; i < c.gaps * GAP_STRIDE; i++) out.push(layout.gaps + i);
   for (let i = 0; i < c.obstacles * OBSTACLE_STRIDE; i++) out.push(layout.obstacles + i);
   for (let i = 0; i < c.hidden; i++) out.push(layout.hidden + i);
   for (let i = 0; i < 3; i++) out.push(layout.goals + i);
-  for (let i = 0; i < c.segments * SITE_COLS; i++) out.push(layout.filled + i);
+  for (let i = 0; i < c.segments * geo.ws; i++) out.push(layout.filled + i);
   return out;
 }
 
 /** Header terms: turn mod L, activeSeg, frontSeg, carouselT, elev, elevDir, deliveryCursor, shutterActive. */
 const HEADER_TERMS = 8;
 
-export function buildZobrist(layout: StateLayout, cycle: number): ZobristTables {
+export function buildZobrist(layout: StateLayout, cycle: number, geo: BoardGeo = DEFAULT_GEO): ZobristTables {
   const next = splitmix32(ZOBRIST_SEED);
   const positions = POS_QUEUE + layout.counts.pieces;
-  const fields = HEADER_TERMS + hashedFieldOffsets(layout).length;
+  const fields = HEADER_TERMS + hashedFieldOffsets(layout, geo).length;
   const fill = (n: number): Uint32Array => {
     const a = new Uint32Array(n);
     for (let i = 0; i < n; i++) a[i] = next();
@@ -115,18 +126,19 @@ export function hashState(s: GameState, out: Uint32Array = new Uint32Array(2)): 
     h1 ^= fmix32(Math.imul(cls, MUL1) ^ (z.pos1[POS_QUEUE + q] ?? 0));
   }
   const P = layout.counts.pieces;
+  const siteX = lvl.geo.siteX;
   for (let id = 0; id < P; id++) {
     const base = layout.pieces + id * PIECE_STRIDE;
     const zone = buf[base + PF.zone] ?? 0;
-    let pos: number;
-    if (zone === Zone.yard) pos = (buf[base + PF.y] ?? 0) * 8 + (buf[base + PF.x] ?? 0);
-    else if (zone === Zone.site)
-      pos =
-        POS_SITE +
-        (buf[base + PF.seg] ?? 0) * SEGMENT_CELLS +
-        (buf[base + PF.y] ?? 0) * SITE_COLS +
-        ((buf[base + PF.x] ?? 0) - SITE_X);
-    else continue; // queue handled above (order matters); pending and gone pieces are not hashed
+    // queue handled above (order matters); pending and gone pieces are not hashed
+    if (zone !== Zone.yard && zone !== Zone.site) continue;
+    const pos = piecePosition(
+      siteX,
+      zone,
+      buf[base + PF.x] ?? 0,
+      buf[base + PF.y] ?? 0,
+      buf[base + PF.seg] ?? 0,
+    );
     const cls = pieceClass(buf, base);
     h0 ^= fmix32(Math.imul(cls, MUL0) ^ (z.pos0[pos] ?? 0));
     h1 ^= fmix32(Math.imul(cls, MUL1) ^ (z.pos1[pos] ?? 0));

@@ -61,7 +61,7 @@ describe('K-22 segments (S1)', () => {
     expect(types(placed.ev)).not.toContain('segmentCompleted');
     const cleared = run(s, dragTo(1, 5, 2)); // the debris leaves the site → complete in the same move's step 8
     expect(types(cleared.ev)).toContain('segmentCompleted');
-    expect(cleared.res.won).toBe(true);
+    expect(cleared.res.won).toBe(false); // K-48 (3): the debris is a material block, now in the yard
   });
 });
 

@@ -1,9 +1,11 @@
 /**
- * `npm run levels:validate` — zod schema + logic checks L-01…L-18, L-21…L-26 on levels/level_NNN.json
- * (TECH_DESIGN §8.3, §12.2; codes = GDD K-45). Prints a `code` + `rule` table; exit 1 when any error is found.
+ * `npm run levels:validate` — zod schema + the validate-stage logic checks on levels/level_NNN.json (TECH_DESIGN §8.3,
+ * §2R.3, §12.2; codes = GDD K-45 items 1–8 and 10, Faz 2R). Prints a `code` + `rule` table; exit 1 when any error is
+ * found. Warnings listed for the level in `tools/levels-allow.json` are shown as allowed and not counted.
  *
  * Options: `--dir <path>` (default levels/), `--level <N>` (report one level; earlier levels still feed the
- * mechanic history of L-16/L-22).
+ * mechanic history of L-16/L-22), `--allow <file>` (default tools/levels-allow.json), `--no-i18n` (skip the
+ * `tut_key_missing` key lookup, e.g. while the i18n keys of a new level are still being written).
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -14,6 +16,8 @@ import type { Issue } from '../src/core/level/logic.ts';
 import { deriveMechanics } from '../src/core/level/mechanics.ts';
 import type { MechanicId } from '../src/core/level/schema.ts';
 import { ROOT, formatIssue, listLevelFiles, loadBoosterUnlock, loadI18nKeys } from './lib/levels.ts';
+import { isAllowed, loadAllowList } from './lib/levelsAllow.ts';
+import type { AllowList } from './lib/levelsAllow.ts';
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -31,10 +35,19 @@ function main(): number {
     );
     return 0;
   }
-  const i18nKeys = loadI18nKeys();
+  let allow: AllowList;
+  try {
+    allow = arg('--allow') !== undefined ? loadAllowList(arg('--allow')) : loadAllowList();
+  } catch (e) {
+    process.stdout.write(`levels:validate: ${e instanceof Error ? e.message : String(e)}\n`);
+    return 1;
+  }
+  const skipI18n = process.argv.includes('--no-i18n');
+  const i18nKeys = skipI18n ? null : loadI18nKeys();
   const boosterUnlock = loadBoosterUnlock();
   const notes: string[] = [];
-  if (!i18nKeys) notes.push('src/i18n/tr.json or en.json not found: tut_key_missing (L-17) skipped');
+  if (skipI18n) notes.push('--no-i18n: tut_key_missing (L-17) key lookup skipped');
+  else if (!i18nKeys) notes.push('src/i18n/tr.json or en.json not found: tut_key_missing (L-17) skipped');
   if (!boosterUnlock) notes.push('config/economy.json not found: booster:/pre: unlock check (L-17) skipped');
   const ids = files.map((f) => f.fileId);
   const gaps = ids.filter((id, i) => i > 0 && id !== (ids[i - 1] ?? 0) + 1);
@@ -46,6 +59,7 @@ function main(): number {
   const previous = new Set<MechanicId>();
   let errors = 0;
   let warnings = 0;
+  let allowed = 0;
   let reported = 0;
   for (const file of files) {
     let issues: Issue[];
@@ -75,17 +89,25 @@ function main(): number {
     for (const m of mechanics) previous.add(m);
     if (only !== undefined && file.fileId !== only) continue;
     reported++;
-    const e = issues.filter((i) => i.severity === 'error').length;
-    const w = issues.length - e;
+    const silenced = issues.filter((i) => isAllowed(allow, file.fileId, i));
+    const shown = issues.filter((i) => !isAllowed(allow, file.fileId, i));
+    const e = shown.filter((i) => i.severity === 'error').length;
+    const w = shown.length - e;
     errors += e;
     warnings += w;
+    allowed += silenced.length;
     const status = e > 0 ? 'FAIL' : w > 0 ? 'WARN' : 'OK';
     const mech = mechanics.length > 0 ? `  mechanics: ${mechanics.join(' ')}` : '';
     process.stdout.write(`${file.name}  ${status}${mech}\n`);
-    for (const issue of issues) process.stdout.write(`${formatIssue(issue)}\n`);
+    for (const issue of shown) process.stdout.write(`${formatIssue(issue)}\n`);
+    for (const issue of silenced)
+      process.stdout.write(`${formatIssue({ ...issue, message: `(allowed) ${issue.message}` })}\n`);
   }
   for (const n of notes) process.stdout.write(`note: ${n}\n`);
-  process.stdout.write(`levels:validate: ${reported} file(s), ${errors} error(s), ${warnings} warning(s)\n`);
+  const allowedText = allowed > 0 ? `, ${allowed} allowed warning(s)` : '';
+  process.stdout.write(
+    `levels:validate: ${reported} file(s), ${errors} error(s), ${warnings} warning(s)${allowedText}\n`,
+  );
   return errors > 0 ? 1 : 0;
 }
 

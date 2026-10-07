@@ -6,7 +6,8 @@
  */
 import { COLOR_CODES, Zone } from '../types.ts';
 import type { ColorCode, PieceId, ShapeId } from '../types.ts';
-import { SEGMENT_CELLS } from '../coords.ts';
+import { geoFromLevel } from '../geometry.ts';
+import type { BoardGeo } from '../geometry.ts';
 import { shapeById } from '../shapes.ts';
 import { computeLayout } from '../state.ts';
 import type { StateLayout } from '../state.ts';
@@ -58,40 +59,50 @@ export interface CompiledSegment {
   readonly index: number;
   readonly name: { readonly tr: string; readonly en: string };
   readonly height: number;
-  /** Local index `sy * 2 + sx`: colour index 0–7, −1 `.`, −2 outside the plan (`?` already resolved). */
+  /** Local index `sy * ws + sx` (K-49): colour index 0–7, −1 `.`, −2 outside the plan (`?` already resolved). */
   readonly planColors: Int8Array;
-  /** Bits of `?` cells (local index). */
+  /** Bits of `?` cells (local index; ws · hs ≤ 32 bits, read bit 31 with `>>> 0` or `>>`, never as a sign). */
   readonly hiddenMask: number;
-  /** Per column: non-`.` plan rows / `.` rows. */
-  readonly planMask: readonly [number, number];
-  readonly dotMask: readonly [number, number];
+  /** Per site column (length ws): non-`.` plan rows / `.` rows. */
+  readonly planMask: readonly number[];
+  readonly dotMask: readonly number[];
   /** Bits (local index) of every cell that must be filled. */
   readonly targetMask: number;
 }
 export const PLAN_DOT = -1;
 export const PLAN_OUTSIDE = -2;
 
+/** `help` (Faz 2 K-30 D2 bricks) is no longer produced since Faz 2R (§2R.1: `counts.pieces` = static pieces only). */
 export type PieceOrigin = 'yard' | 'truck' | 'debris' | 'help';
+
+/**
+ * Piece class (GDD K-44, K-47, TECH §2R.2): `cargo` = Ağır Yük (Y5: I5, Q9 in every orientation; colourless, never
+ * supply or demand, may stay in the yard at the win), `material` = every other block, debris included.
+ */
+export type PieceClass = 'material' | 'cargo';
 
 export interface CompiledPiece {
   readonly id: PieceId;
   readonly origin: PieceOrigin;
   /** Batch index (yard 0, truck k ≥ 1), −1 for debris and help slots. */
   readonly batch: number;
-  /** Index inside its batch / `build.debris[]` / help slots. */
+  /** Index inside its batch / `build.debris[]`. */
   readonly index: number;
+  /** K-44 / K-47 class: cargo (I5, Q9) or material. */
+  readonly cls: PieceClass;
   /** Shape id as written in the data. */
   readonly dataShape: ShapeId;
   /** Canonical shape index (K-44: symmetric aliases reduced). */
   readonly shapeIndex: number;
+  /** Colour index 0–7; −1 for cargo (Ağır Yük is colourless, K-44: the data colour is ignored). */
   readonly colorIndex: number;
   /** Start flag bits (state FLAG_BIT; debris gets `debris`). */
   readonly flags: number;
   readonly wetMoves: number;
   readonly startZone: Zone;
-  /** Yard / truck drop column: global anchor x; debris: global column 6–7. */
+  /** Yard / truck drop column: global anchor x; debris: global site column (`geo.siteX` …). */
   readonly x: number;
-  /** Yard: global anchor y; truck: 8 (ignored, K-25); debris: plan row. */
+  /** Yard: global anchor y; truck: `geo.hy` (ignored, K-25); debris: plan row. */
   readonly y: number;
   /** Debris segment; −1 otherwise. */
   readonly segment: number;
@@ -138,6 +149,8 @@ export type CompiledObstacle =
 
 export interface CompiledLevel {
   readonly data: LevelData;
+  /** Board geometry (K-49, TECH §2R.1); every core region test reads it as `s.lvl.geo`. */
+  readonly geo: BoardGeo;
   readonly id: number;
   readonly chapter: number;
   readonly difficulty: LevelData['difficulty'];
@@ -158,10 +171,22 @@ export interface CompiledLevel {
   } | null;
   readonly segments: readonly CompiledSegment[];
   readonly pieces: readonly CompiledPiece[];
-  /** Pieces from data (batches + debris); help slots follow. */
+  /** Pieces from data (batches + debris) = `pieces.length` since Faz 2R. */
   readonly staticPieceCount: number;
+  /** @deprecated Faz 2 D2 help slots are gone (TECH §2R.1): always `pieces.length`. */
   readonly helpPieceBase: number;
+  /** @deprecated always 0 since Faz 2R. */
   readonly helpPieceCount: number;
+  /** K-47: material cells per colour index (every batch and the debris), length 8. */
+  readonly supply: readonly number[];
+  /** K-47: plan cells per colour index over every segment (`?` resolved), length 8. */
+  readonly demand: readonly number[];
+  /** K-47 item 2: plan cells per segment and colour index. */
+  readonly demandBySegment: readonly (readonly number[])[];
+  /** K-47 item 2: material cells per batch and colour index; debris joins the batch index of its segment. */
+  readonly supplyByBatch: readonly (readonly number[])[];
+  /** K-47 / K-48 `N`: material blocks of the level (cargo excluded). */
+  readonly materialCount: number;
   readonly batches: readonly CompiledBatch[];
   readonly obstacles: readonly CompiledObstacle[];
   /** Obstacle indices of screws and keys, in hidden-section order. */
@@ -212,9 +237,10 @@ export function step10Timers(level: LevelData): Step10Timer[] {
 
 /** Compiles schema-valid level data. Throws on structurally impossible data (run the validator first). */
 export function compile(level: LevelData): CompiledLevel {
-  const { plans } = buildPlans(level);
+  const geo = geoFromLevel(level);
+  const { plans } = buildPlans(level, geo);
   const segments: CompiledSegment[] = plans.map((p, index) => {
-    const planColors = new Int8Array(SEGMENT_CELLS).fill(PLAN_OUTSIDE);
+    const planColors = new Int8Array(geo.segCells).fill(PLAN_OUTSIDE);
     p.cells.forEach((c, i) => {
       if (c === '.') planColors[i] = PLAN_DOT;
       else if (c !== null) planColors[i] = colorIndex(c);
@@ -226,8 +252,8 @@ export function compile(level: LevelData): CompiledLevel {
       height: p.height,
       planColors,
       hiddenMask: p.hiddenMask,
-      planMask: [p.planMask[0] ?? 0, p.planMask[1] ?? 0] as const,
-      dotMask: [p.dotMask[0] ?? 0, p.dotMask[1] ?? 0] as const,
+      planMask: Object.freeze(Array.from({ length: geo.ws }, (_, sx) => p.planMask[sx] ?? 0)),
+      dotMask: Object.freeze(Array.from({ length: geo.ws }, (_, sx) => p.dotMask[sx] ?? 0)),
       targetMask: p.targetMask,
     });
   });
@@ -239,19 +265,21 @@ export function compile(level: LevelData): CompiledLevel {
       const id = pieces.length;
       const shape = shapeById(p.shape);
       const flags = (p.flags ?? []).reduce((m, f) => m | FLAG_BIT[f], 0);
+      const cls = pieceClassOf(p.shape);
       pieces.push({
         id,
         origin: k === 0 ? 'yard' : 'truck',
         batch: k,
         index: i,
+        cls,
         dataShape: p.shape,
         shapeIndex: shape.canonicalIndex,
-        colorIndex: colorIndex(p.color),
+        colorIndex: cls === 'cargo' ? -1 : colorIndex(p.color),
         flags,
         wetMoves: p.wetMoves ?? 0,
         startZone: k === 0 ? Zone.yard : Zone.pending,
         x: p.x,
-        y: k === 0 ? p.y : 8,
+        y: k === 0 ? p.y : geo.hy,
         segment: -1,
       });
       tutorialPieceIds.set(k === 0 ? `piece:${i}` : `piece:k${k}_${i}`, id);
@@ -271,6 +299,7 @@ export function compile(level: LevelData): CompiledLevel {
       origin: 'debris',
       batch: -1,
       index: i,
+      cls: 'material',
       dataShape: d.shape,
       shapeIndex: shapeById(d.shape).canonicalIndex,
       colorIndex: colorIndex(d.color),
@@ -284,26 +313,7 @@ export function compile(level: LevelData): CompiledLevel {
     tutorialPieceIds.set(`debris:${i}`, id);
   });
   const staticPieceCount = pieces.length;
-  // D2 help bricks (K-30, Phase 3): at most one B1 per plan cell.
-  const helpPieceCount = segments.reduce((n, s) => n + popcount(s.targetMask), 0);
-  const b1 = shapeById('B1_0').canonicalIndex;
-  for (let i = 0; i < helpPieceCount; i++) {
-    pieces.push({
-      id: pieces.length,
-      origin: 'help',
-      batch: -1,
-      index: i,
-      dataShape: 'B1_0',
-      shapeIndex: b1,
-      colorIndex: 0,
-      flags: 0,
-      wetMoves: 0,
-      startZone: Zone.gone,
-      x: 5,
-      y: 8,
-      segment: -1,
-    });
-  }
+  const cover = coverTotals(level, segments, pieces);
 
   let hiddenCount = 0;
   const hiddenItems: number[] = [];
@@ -329,18 +339,22 @@ export function compile(level: LevelData): CompiledLevel {
     }),
   );
 
-  const layout = computeLayout({
-    segments: segments.length,
-    pieces: pieces.length,
-    gaps: gaps.length,
-    obstacles: obstacles.length,
-    hidden: hiddenCount,
-    goals: level.goals.length,
-  });
+  const layout = computeLayout(
+    {
+      segments: segments.length,
+      pieces: pieces.length,
+      gaps: gaps.length,
+      obstacles: obstacles.length,
+      hidden: hiddenCount,
+      goals: level.goals.length,
+    },
+    geo,
+  );
   const cycle = cycleLength(level);
   const el = level.build.elevator;
   return Object.freeze({
     data: level,
+    geo,
     id: level.id,
     chapter: level.chapter,
     difficulty: level.difficulty,
@@ -360,7 +374,12 @@ export function compile(level: LevelData): CompiledLevel {
     pieces: Object.freeze(pieces.map((p) => Object.freeze(p))),
     staticPieceCount,
     helpPieceBase: staticPieceCount,
-    helpPieceCount,
+    helpPieceCount: 0,
+    supply: cover.supply,
+    demand: cover.demand,
+    demandBySegment: cover.demandBySegment,
+    supplyByBatch: cover.supplyByBatch,
+    materialCount: cover.materialCount,
     batches: Object.freeze(batches),
     obstacles: Object.freeze(obstacles.map((o) => Object.freeze(o))),
     hiddenItems: Object.freeze(hiddenItems),
@@ -369,15 +388,60 @@ export function compile(level: LevelData): CompiledLevel {
     cycle,
     tutorialPieceIds,
     layout,
-    zobrist: buildZobrist(layout, cycle),
-    hashFields: Object.freeze(hashedFieldOffsets(layout)),
+    zobrist: buildZobrist(layout, cycle, geo),
+    hashFields: Object.freeze(hashedFieldOffsets(layout, geo)),
   });
 }
 
-function popcount(n: number): number {
-  let c = 0;
-  for (let v = n; v !== 0; v &= v - 1) c++;
-  return c;
+/** K-44: I5 and Q9 (every orientation) are Ağır Yük; every other shape is a material block. */
+export function pieceClassOf(shape: ShapeId): PieceClass {
+  const kind = shapeById(shape).kind;
+  return kind === 'I5' || kind === 'Q9' ? 'cargo' : 'material';
+}
+
+interface CoverTotals {
+  readonly supply: readonly number[];
+  readonly demand: readonly number[];
+  readonly demandBySegment: readonly (readonly number[])[];
+  readonly supplyByBatch: readonly (readonly number[])[];
+  readonly materialCount: number;
+}
+
+/** K-47 totals: plan cells and material cells per colour (`?` resolved, cargo excluded, debris in its segment's batch). */
+function coverTotals(
+  level: LevelData,
+  segments: readonly CompiledSegment[],
+  pieces: readonly CompiledPiece[],
+): CoverTotals {
+  const colors = COLOR_CODES.length;
+  const zero = (): number[] => Array.from({ length: colors }, () => 0);
+  const demandBySegment = segments.map((sg) => {
+    const out = zero();
+    for (const c of sg.planColors) if (c >= 0) out[c] = (out[c] ?? 0) + 1;
+    return Object.freeze(out);
+  });
+  const demand = zero();
+  for (const row of demandBySegment) row.forEach((n, c) => (demand[c] = (demand[c] ?? 0) + n));
+  const batchCount = Math.max(level.yard.batches.length, segments.length);
+  const supplyByBatch = Array.from({ length: batchCount }, zero);
+  const supply = zero();
+  let materialCount = 0;
+  for (const p of pieces) {
+    if (p.cls !== 'material' || p.colorIndex < 0) continue;
+    const cells = shapeById(p.dataShape).cellCount;
+    const k = p.origin === 'debris' ? p.segment : p.batch;
+    const row = supplyByBatch[k];
+    if (row) row[p.colorIndex] = (row[p.colorIndex] ?? 0) + cells;
+    supply[p.colorIndex] = (supply[p.colorIndex] ?? 0) + cells;
+    materialCount += 1;
+  }
+  return Object.freeze({
+    supply: Object.freeze(supply),
+    demand: Object.freeze(demand),
+    demandBySegment: Object.freeze(demandBySegment),
+    supplyByBatch: Object.freeze(supplyByBatch.map((r) => Object.freeze(r))),
+    materialCount,
+  });
 }
 
 /**

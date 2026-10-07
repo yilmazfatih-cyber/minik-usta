@@ -3,12 +3,15 @@
  * Copying a state is `buf.slice()` (≈ 2–4 KB); the RNG state lives in the buffer, so a snapshot replays the same
  * future. Hot code uses the small accessors below; UI/debug code uses `readPiece`.
  *
- * Coordinates: yard pieces store the GLOBAL anchor (x 0–5, y 0–7). Site pieces store x as the global column (6–7) and
- * y as the segment-local plan row `sy` (board row = sy + elev, K-24), so they move with the elevator frame.
+ * Coordinates: yard pieces store the GLOBAL anchor (x 0 … wy−1, y 0 … hy−1). Site pieces store x as the global column
+ * (wy … wy+ws−1) and y as the segment-local plan row `sy` (board row = sy + elev, K-24), so they move with the elevator
+ * frame. Array sizes follow the level geometry (`lvl.geo`, K-49, TECH §2R.1): yardOcc `wy × rows`, siteOcc
+ * `S × ws × hs`, filled / wrongOcc `S × ws` row masks, revealed `S` (ws · hs ≤ 32 bits).
  */
 import { COLOR_CODES, PIECE_FLAGS, Zone } from './types.ts';
 import type { ColorCode, PieceFlag, PieceId, ShapeId, ZoneName } from './types.ts';
-import { GRID_ROWS, SEGMENT_CELLS, SITE_COLS, SITE_X, YARD_COLS } from './coords.ts';
+import { DEFAULT_GEO, MAX_ROWS } from './geometry.ts';
+import type { BoardGeo } from './geometry.ts';
 import { shapeByIndex } from './shapes.ts';
 import type { CompiledLevel } from './level/compile.ts';
 
@@ -43,7 +46,8 @@ export const H = {
   railCount: 15,
   /** STATE_FLAG bits. */
   flags: 16,
-  reserved: 17,
+  /** K-43 `movesSpent` (Faz 2R, §2R.4): non-cancelled drag moves of this attempt; Undo −1, Söküm keeps it. Not hashed. */
+  movesSpent: 17,
 } as const;
 export const HEADER_SIZE = 18;
 
@@ -95,13 +99,13 @@ export interface StateCounts {
 export interface StateLayout {
   readonly size: number;
   readonly counts: StateCounts;
-  /** 6 × 10: 0 empty · pieceId + 1 · −(obstacleIndex + 1) (crate, bag). Index `y * 6 + x`. */
+  /** wy × rows: 0 empty · pieceId + 1 · −(obstacleIndex + 1) (crate, bag). Index `y * wy + x`. */
   readonly yardOcc: number;
-  /** S × 16 local 2 × 8: 0 · pieceId + 1 (debris included) · −1 trowel cell. Index `seg * 16 + sy * 2 + sx`. */
+  /** S × ws × hs: 0 · pieceId + 1 (debris included) · −1 trowel cell. Index `seg * ws·hs + sy * ws + sx`. */
   readonly siteOcc: number;
-  /** S × 2: per segment and column, bit mask of correctly filled plan rows (K-34). */
+  /** S × ws: per segment and column, bit mask of correctly filled plan rows (K-34). */
   readonly filled: number;
-  /** S × 2: per segment and column, plan rows holding debris or a stuck mortar block (K-34 `dotFree`, E-43). */
+  /** S × ws: per segment and column, plan rows holding debris or a stuck mortar block (K-34 `dotFree`, E-43). */
   readonly wrongOcc: number;
   readonly pieces: number;
   readonly gaps: number;
@@ -110,23 +114,25 @@ export interface StateLayout {
   readonly goals: number;
   /** Q = P slots: queued piece ids in FIFO order (K-26). */
   readonly queue: number;
-  /** S: revealed `?` cells, 16-bit local mask per segment (K-32). */
+  /** S: revealed `?` cells, ws·hs-bit local mask per segment (K-32; up to 32 bits). */
   readonly revealed: number;
 }
 
-export const YARD_OCC_ROWS = GRID_ROWS;
+/** @deprecated frame rows; yardOcc has `geo.rows` rows (TECH §2R.1). */
+export const YARD_OCC_ROWS = MAX_ROWS;
 
-export function computeLayout(counts: StateCounts): StateLayout {
+/** Buffer layout for the level's counts and geometry (default geometry: the pre-2R layout, word for word). */
+export function computeLayout(counts: StateCounts, geo: BoardGeo = DEFAULT_GEO): StateLayout {
   let at = HEADER_SIZE;
   const take = (n: number): number => {
     const start = at;
     at += n;
     return start;
   };
-  const yardOcc = take(YARD_COLS * YARD_OCC_ROWS);
-  const siteOcc = take(counts.segments * SEGMENT_CELLS);
-  const filled = take(counts.segments * SITE_COLS);
-  const wrongOcc = take(counts.segments * SITE_COLS);
+  const yardOcc = take(geo.wy * geo.rows);
+  const siteOcc = take(counts.segments * geo.segCells);
+  const filled = take(counts.segments * geo.ws);
+  const wrongOcc = take(counts.segments * geo.ws);
   const pieces = take(counts.pieces * PIECE_STRIDE);
   const gaps = take(counts.gaps * GAP_STRIDE);
   const obstacles = take(counts.obstacles * OBSTACLE_STRIDE);
@@ -209,7 +215,7 @@ export interface PieceView {
   readonly shape: ShapeId;
   readonly color: ColorCode;
   readonly zone: ZoneName;
-  /** Yard: global anchor. Site: global column (6–7) and segment-local plan row. */
+  /** Yard: global anchor. Site: global column (wy …) and segment-local plan row. */
   readonly x: number;
   readonly y: number;
   readonly seg: number;
@@ -244,31 +250,33 @@ export function readPiece(s: GameState, id: PieceId): PieceView {
 
 // --- occupancy ---------------------------------------------------------------------------------------------------
 
-/** Yard cell (x 0–5, y 0–9): 0 empty · pieceId + 1 · −(obstacleIndex + 1). */
+/** Yard cell (x 0 … wy−1, y 0 … rows−1): 0 empty · pieceId + 1 · −(obstacleIndex + 1). */
 export function yardOcc(s: GameState, x: number, y: number): number {
-  return s.buf[s.lvl.layout.yardOcc + y * YARD_COLS + x] ?? 0;
+  return s.buf[s.lvl.layout.yardOcc + y * s.lvl.geo.wy + x] ?? 0;
 }
 export function setYardOcc(s: GameState, x: number, y: number, v: number): void {
-  s.buf[s.lvl.layout.yardOcc + y * YARD_COLS + x] = v;
+  s.buf[s.lvl.layout.yardOcc + y * s.lvl.geo.wy + x] = v;
 }
-/** Site cell of a segment (local sx 0–1, sy 0–7): 0 · pieceId + 1 · SITE_TROWEL. */
+/** Site cell of a segment (local sx 0 … ws−1, sy 0 … hs−1): 0 · pieceId + 1 · SITE_TROWEL. */
 export function siteOcc(s: GameState, seg: number, sx: number, sy: number): number {
-  return s.buf[s.lvl.layout.siteOcc + seg * SEGMENT_CELLS + sy * SITE_COLS + sx] ?? 0;
+  const geo = s.lvl.geo;
+  return s.buf[s.lvl.layout.siteOcc + seg * geo.segCells + sy * geo.ws + sx] ?? 0;
 }
 export function setSiteOcc(s: GameState, seg: number, sx: number, sy: number, v: number): void {
-  s.buf[s.lvl.layout.siteOcc + seg * SEGMENT_CELLS + sy * SITE_COLS + sx] = v;
+  const geo = s.lvl.geo;
+  s.buf[s.lvl.layout.siteOcc + seg * geo.segCells + sy * geo.ws + sx] = v;
 }
 export function filledMask(s: GameState, seg: number, sx: number): number {
-  return s.buf[s.lvl.layout.filled + seg * SITE_COLS + sx] ?? 0;
+  return s.buf[s.lvl.layout.filled + seg * s.lvl.geo.ws + sx] ?? 0;
 }
 export function setFilledMask(s: GameState, seg: number, sx: number, v: number): void {
-  s.buf[s.lvl.layout.filled + seg * SITE_COLS + sx] = v;
+  s.buf[s.lvl.layout.filled + seg * s.lvl.geo.ws + sx] = v;
 }
 export function wrongOccMask(s: GameState, seg: number, sx: number): number {
-  return s.buf[s.lvl.layout.wrongOcc + seg * SITE_COLS + sx] ?? 0;
+  return s.buf[s.lvl.layout.wrongOcc + seg * s.lvl.geo.ws + sx] ?? 0;
 }
 export function setWrongOccMask(s: GameState, seg: number, sx: number, v: number): void {
-  s.buf[s.lvl.layout.wrongOcc + seg * SITE_COLS + sx] = v;
+  s.buf[s.lvl.layout.wrongOcc + seg * s.lvl.geo.ws + sx] = v;
 }
 
 // --- gaps, obstacles, hidden items, goals, queue -------------------------------------------------------------------
@@ -360,7 +368,7 @@ export function createInitialState(lvl: CompiledLevel): GameState {
       for (const c of shape.cells) setYardOcc(s, p.x + c.x, p.y + c.y, p.id + 1);
     } else if (p.startZone === Zone.site) {
       for (const c of shape.cells) {
-        const sx = p.x - SITE_X + c.x;
+        const sx = p.x - lvl.geo.siteX + c.x;
         const sy = p.y + c.y;
         setSiteOcc(s, p.segment, sx, sy, p.id + 1);
         if ((planAreaMask(lvl, p.segment, sx) >> sy) & 1)

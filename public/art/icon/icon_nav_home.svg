@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EBE0C5"/></linearGradient>
+    <linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F59E6E"/><stop offset=".5" stop-color="#F0702A"/><stop offset="1" stop-color="#DD6727"/></linearGradient>
+    <linearGradient id="d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6DABE9"/><stop offset="1" stop-color="#2679CC"/></linearGradient>
+    <rect id="b" x="26" y="56" width="76" height="58" rx="6"/>
+    <path id="rf" d="M10 60L64 16L118 60Q122 68 112 68H16Q6 68 10 60Z"/>
+    <clipPath id="cb"><use href="#b"/></clipPath>
+    <clipPath id="cr"><use href="#rf"/></clipPath>
+  </defs>
+  <path d="M84 40V18H98V48Z" fill="#CF404E" stroke="#3B2A1A" stroke-width="7" stroke-linejoin="round"/>
+  <use href="#b" transform="translate(0 5)" fill="#3B2A1A" stroke="#3B2A1A" stroke-width="8"/>
+  <use href="#b" fill="url(#w)"/>
+  <g clip-path="url(#cb)"><use href="#b" fill="#ADA692" fill-opacity=".35"/><use href="#b" y="-8" fill="url(#w)"/></g>
+  <use href="#b" fill="none" stroke="#3B2A1A" stroke-width="8"/>
+  <path d="M52 114V88Q52 78 64 78Q76 78 76 88V114Z" fill="url(#d)" stroke="#3B2A1A" stroke-width="6" stroke-linejoin="round"/>
+  <circle cx="70" cy="98" r="3" fill="#FFC21A"/>
+  <use href="#rf" transform="translate(0 5)" fill="#3B2A1A" stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round"/>
+  <use href="#rf" fill="url(#r)"/>
+  <g clip-path="url(#cr)">
+    <path d="M30 54Q38 60 46 54Q54 60 62 54Q70 60 78 54Q86 60 94 54Q102 60 110 54M46 40Q54 46 62 40Q70 46 78 40Q86 46 94 40" fill="none" stroke="#A34C1D" stroke-width="4"/>
+    <path d="M0 62H128V80H0Z" fill="#A34C1D" fill-opacity=".35"/>
+  </g>
+  <path d="M22 56L60 25" stroke="#FFFFFF" stroke-opacity=".6" stroke-width="5" stroke-linecap="round"/>
+  <use href="#rf" fill="none" stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round"/>
+</svg>

@@ -17,10 +17,15 @@
  * `:` air above the wall. Optional lines: `queue:` (FIFO ids). With `ids: true` the header ends in `ids`, cells show
  * piece ids (0–9, a–z, A–Z = 0…61), crates/bags move to an `obstacles:` line and `locked:` / `stuck:` list flags, so
  * `fromAscii` can rebuild the state.
+ *
+ * Geometry (K-49, TECH §2R.1): a board that differs from the default 6×8 | 2×8 (yard, site or H) gets a second header
+ * line `size 4x4|2x5 H5`; without it the default board is assumed, so pre-2R text reads unchanged. Rows run
+ * `rows − 1 … 0` (H + 1 … 0); yard air (x ≤ wy−1, hy ≤ y ≤ H−1) and site air (site columns, hs + e ≤ y ≤ H−1) print
+ * `·` (LEVELS §0); the crane area prints `.`.
  */
 import { COLOR_CODES, Zone } from './types.ts';
 import type { PieceId } from './types.ts';
-import { BOARD_ROWS, GRID_ROWS, SITE_COLS, SITE_X, YARD_COLS } from './coords.ts';
+import { DEFAULT_GEO, geoLabel, hasDefaultBoard } from './geometry.ts';
 import { shapeByIndex } from './shapes.ts';
 import {
   FLAG_BIT,
@@ -55,6 +60,8 @@ import { occupyPiece, refreshSiteMasks, visibleSegment } from './grid.ts';
 import type { CompiledLevel } from './level/compile.ts';
 
 const ID_CHARS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+/** Yard air and site air (LEVELS §0 notation). */
+export const AIR_CHAR = '·';
 
 export interface AsciiOptions {
   /** Print piece ids instead of colours (fixture mode). */
@@ -88,6 +95,8 @@ export function wallChar(s: GameState, y: number): string {
 }
 
 function yardChar(s: GameState, x: number, y: number, ids: boolean): string {
+  const { hy, h } = s.lvl.geo;
+  if (y >= hy && y < h) return AIR_CHAR;
   const v = yardOcc(s, x, y);
   if (v > 0) return ids ? idChar(v - 1) : colorChar(s, v - 1, false);
   if (v < 0 && !ids) {
@@ -99,10 +108,12 @@ function yardChar(s: GameState, x: number, y: number, ids: boolean): string {
 }
 
 function siteChar(s: GameState, sx: number, y: number, ids: boolean): string {
+  const { hs, h } = s.lvl.geo;
   const elev = hdr(s, H.elev);
   if (y < elev) return '_';
+  if (y >= h) return '.'; // crane area
   const sy = y - elev;
-  if (sy >= BOARD_ROWS || y >= BOARD_ROWS) return '.';
+  if (sy >= hs) return AIR_CHAR;
   const v = siteOcc(s, visibleSegment(s), sx, sy);
   if (v === SITE_TROWEL) return '*';
   if (v <= 0) return '.';
@@ -114,17 +125,21 @@ function siteChar(s: GameState, sx: number, y: number, ids: boolean): string {
 export function toAscii(s: GameState, opts: AsciiOptions = {}): string {
   const ids = opts.ids === true;
   const { lvl } = s;
+  const geo = lvl.geo;
   const seg = visibleSegment(s);
   const lines: string[] = [];
   lines.push(
     `L${lvl.id} turn ${hdr(s, H.turn)} moves ${hdr(s, H.movesLeft)} seg ${seg + 1}/${lvl.segments.length} elev ${hdr(s, H.elev)}${ids ? ' ids' : ''}`,
   );
-  lines.push(' y  0 1 2 3 4 5 | W | 6 7');
-  for (let y = GRID_ROWS - 1; y >= 0; y--) {
+  if (!hasDefaultBoard(geo)) lines.push(`size ${geoLabel(geo)}`);
+  const yardCols = Array.from({ length: geo.wy }, (_, x) => String(x));
+  const siteCols = Array.from({ length: geo.ws }, (_, sx) => String(geo.siteX + sx));
+  lines.push(` y  ${yardCols.join(' ')} | W | ${siteCols.join(' ')}`);
+  for (let y = geo.rows - 1; y >= 0; y--) {
     const yard: string[] = [];
-    for (let x = 0; x < YARD_COLS; x++) yard.push(yardChar(s, x, y, ids));
+    for (let x = 0; x < geo.wy; x++) yard.push(yardChar(s, x, y, ids));
     const site: string[] = [];
-    for (let sx = 0; sx < SITE_COLS; sx++) site.push(siteChar(s, sx, y, ids));
+    for (let sx = 0; sx < geo.ws; sx++) site.push(siteChar(s, sx, y, ids));
     lines.push(` ${y}  ${yard.join(' ')} | ${wallChar(s, y)} | ${site.join(' ')}`);
   }
   const rows = lvl.data.build.segments[seg]?.rows ?? [];
@@ -134,7 +149,7 @@ export function toAscii(s: GameState, opts: AsciiOptions = {}): string {
     [...row]
       .map((ch, sx) => {
         if (ch !== '?') return ch;
-        const local = (h - 1 - i) * SITE_COLS + sx;
+        const local = (h - 1 - i) * geo.ws + sx;
         const color = lvl.segments[seg]?.planColors[local] ?? -2;
         return (revealed >> local) & 1 && color >= 0 ? (COLOR_CODES[color] ?? '?') : '?';
       })
@@ -176,6 +191,23 @@ export function toAscii(s: GameState, opts: AsciiOptions = {}): string {
   return lines.join('\n');
 }
 
+/** Board size of a text (`size` line; default 6×8 | 2×8, H 8 when absent). */
+export interface AsciiSize {
+  readonly wy: number;
+  readonly hy: number;
+  readonly ws: number;
+  readonly hs: number;
+  readonly h: number;
+}
+
+const DEFAULT_ASCII_SIZE: AsciiSize = Object.freeze({
+  wy: DEFAULT_GEO.wy,
+  hy: DEFAULT_GEO.hy,
+  ws: DEFAULT_GEO.ws,
+  hs: DEFAULT_GEO.hs,
+  h: DEFAULT_GEO.h,
+});
+
 /** Structural parse of either mode. */
 export interface AsciiBoard {
   readonly levelId: number;
@@ -186,7 +218,9 @@ export interface AsciiBoard {
   readonly segCount: number;
   readonly elev: number;
   readonly ids: boolean;
-  /** `cells[y][x]` for x 0–7 (yard 0–5, site 6–7), y 0–9. */
+  /** Board size (K-49). */
+  readonly size: AsciiSize;
+  /** `cells[y][x]` for x 0 … wy+ws−1 (yard, then site), y 0 … h+1. */
   readonly cells: readonly (readonly string[])[];
   /** `wall[y]`. */
   readonly wall: readonly string[];
@@ -200,14 +234,28 @@ export interface AsciiBoard {
 }
 
 const HEADER_RE = /^L(\d+) turn (\d+) moves (\d+) seg (\d+)\/(\d+) elev (\d+)( ids)?$/;
-const ROW_RE = /^ (\d) {2}(\S(?: \S){5}) \| (\S) \| (\S) (\S)$/;
+const SIZE_RE = /^size (\d)x(\d)\|(\d)x(\d) H(\d)$/;
+const COLS_RE = /^ y {2}\S(?: \S)* \| W \| \S(?: \S)*$/;
+const ROW_RE = /^ (\d) {2}(\S(?: \S)*) \| (\S) \| (\S(?: \S)*)$/;
 
 export function parseAscii(text: string): AsciiBoard {
   const lines = text.split('\n').map((l) => l.replace(/\s+$/, ''));
   const head = HEADER_RE.exec(lines[0] ?? '');
   if (!head) throw new SyntaxError(`ascii: bad header "${lines[0] ?? ''}"`);
-  const cells: string[][] = Array.from({ length: GRID_ROWS }, () => Array.from({ length: 8 }, () => '.'));
-  const wall: string[] = Array.from({ length: GRID_ROWS }, () => '#');
+  const sized = SIZE_RE.exec(lines[1] ?? '');
+  const size: AsciiSize = sized
+    ? {
+        wy: Number(sized[1]),
+        hy: Number(sized[2]),
+        ws: Number(sized[3]),
+        hs: Number(sized[4]),
+        h: Number(sized[5]),
+      }
+    : DEFAULT_ASCII_SIZE;
+  const rows = size.h + 2;
+  const cols = size.wy + size.ws;
+  const cells: string[][] = Array.from({ length: rows }, () => Array.from({ length: cols }, () => '.'));
+  const wall: string[] = Array.from({ length: rows }, () => '#');
   const seen = new Set<number>();
   let plan: string[] = [];
   let hidden: string[] | null = null;
@@ -216,15 +264,18 @@ export function parseAscii(text: string): AsciiBoard {
   let locked: number[] = [];
   let stuck: number[] = [];
   const nums = (rest: string): number[] => rest.trim().split(/\s+/).filter(Boolean).map(Number);
-  for (const line of lines.slice(2)) {
+  for (const line of lines.slice(sized ? 2 : 1)) {
+    if (COLS_RE.test(line)) continue;
     const row = ROW_RE.exec(line);
     if (row) {
       const y = Number(row[1]);
       const yard = (row[2] ?? '').split(' ');
-      const target = cells[y] as string[];
+      const site = (row[4] ?? '').split(' ');
+      const target = cells[y];
+      if (!target || yard.length !== size.wy || site.length !== size.ws)
+        throw new SyntaxError(`ascii: row "${line}" does not fit the ${size.wy}|${size.ws} × ${rows} board`);
       yard.forEach((ch, x) => (target[x] = ch));
-      target[6] = row[4] ?? '.';
-      target[7] = row[5] ?? '.';
+      site.forEach((ch, sx) => (target[size.wy + sx] = ch));
       wall[y] = row[3] ?? '#';
       seen.add(y);
       continue;
@@ -244,7 +295,7 @@ export function parseAscii(text: string): AsciiBoard {
     else if (line.startsWith('stuck:')) stuck = nums(line.slice(6));
     else if (line.trim() !== '') throw new SyntaxError(`ascii: unexpected line "${line}"`);
   }
-  if (seen.size !== GRID_ROWS) throw new SyntaxError('ascii: the board needs rows 9 … 0');
+  if (seen.size !== rows) throw new SyntaxError(`ascii: the board needs rows ${rows - 1} … 0`);
   return {
     levelId: Number(head[1]),
     turn: Number(head[2]),
@@ -253,6 +304,7 @@ export function parseAscii(text: string): AsciiBoard {
     segCount: Number(head[5]),
     elev: Number(head[6]),
     ids: head[7] !== undefined,
+    size,
     cells,
     wall,
     plan,
@@ -275,6 +327,10 @@ export function fromAscii(lvl: CompiledLevel, text: string): GameState {
   if (!board.ids) throw new Error('fromAscii needs ids mode text (toAscii(state, { ids: true }))');
   if (board.levelId !== lvl.id)
     throw new Error(`fromAscii: text is level ${board.levelId}, compiled level is ${lvl.id}`);
+  const geo = lvl.geo;
+  const z = board.size;
+  if (z.wy !== geo.wy || z.hy !== geo.hy || z.ws !== geo.ws || z.hs !== geo.hs || z.h !== geo.h)
+    throw new Error(`fromAscii: text board ${z.wy}x${z.hy}|${z.ws}x${z.hs} H${z.h}, level ${geoLabel(geo)}`);
   const s = createInitialState(lvl);
   const P = lvl.layout.counts.pieces;
   // fresh occupancy grids (yardOcc, siteOcc, filled, wrongOcc precede the piece table in the layout)
@@ -288,13 +344,13 @@ export function fromAscii(lvl: CompiledLevel, text: string): GameState {
     setHdr(s, H.deliveryCursor, board.seg);
   }
   const cellsById = new Map<number, { x: number; y: number }[]>();
-  for (let y = 0; y < GRID_ROWS; y++) {
-    for (let x = 0; x < 8; x++) {
+  for (let y = 0; y < geo.rows; y++) {
+    for (let x = 0; x < geo.cols; x++) {
       const ch = board.cells[y]?.[x] ?? '.';
-      if (x >= SITE_X && ch === '*' && y >= board.elev)
-        setSiteOcc(s, board.seg, x - SITE_X, y - board.elev, SITE_TROWEL);
+      if (x >= geo.siteX && ch === '*' && y >= board.elev)
+        setSiteOcc(s, board.seg, x - geo.siteX, y - board.elev, SITE_TROWEL);
       const id = ID_CHARS.indexOf(ch);
-      if (ch === '.' || ch === '_' || ch === '*' || id < 0) continue;
+      if (ch === '.' || ch === '_' || ch === '*' || ch === AIR_CHAR || id < 0) continue;
       const list = cellsById.get(id) ?? [];
       list.push({ x, y });
       cellsById.set(id, list);
@@ -321,7 +377,7 @@ export function fromAscii(lvl: CompiledLevel, text: string): GameState {
       throw new Error(
         `fromAscii: piece ${id} cells ${got.join(' ')} do not match ${shape.id} at (${ax},${ay})`,
       );
-    const onSite = ax >= SITE_X;
+    const onSite = ax >= geo.siteX;
     setPieceField(s, id, PF.zone, onSite ? Zone.site : Zone.yard);
     setPieceField(s, id, PF.x, ax);
     setPieceField(s, id, PF.y, onSite ? ay - board.elev : ay);

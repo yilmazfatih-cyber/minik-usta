@@ -60,7 +60,7 @@ describe('debug event log (TECH 12.3)', () => {
     expect(describeAction({ kind: 'addMoves', amount: 5, source: 'offerCoins' })).toBe('+5 offerCoins');
     expect(describeAction({ kind: 'undo' })).toBe('undo');
     expect(describeAction({ kind: 'exit' })).toBe('exit');
-    expect(describeAction({ kind: 'paint', pieceId: 2, color: 'R' })).toBe('paint {pieceId:2,color:R}');
+    expect(describeAction({ kind: 'paint', a: 2, b: 5 })).toBe('paint {a:2,b:5}');
     const long = describeEvent({
       seq: 0,
       step: 9,

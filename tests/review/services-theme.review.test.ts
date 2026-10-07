@@ -358,7 +358,7 @@ describe('K-43 in-level record, resume and void (GDD K-43, TECH 11.1)', () => {
     s.recordAction({ kind: 'undo' }, { movesMade: 0 });
     s.recordAction({ kind: 'hammer', target: { pieceId: 7 } }, { movesMade: 0 });
     s.recordAction({ kind: 'trowel', seg: 0, x: 0, y: 1 }, { movesMade: 0 });
-    s.recordAction({ kind: 'paint', pieceId: 2, color: 'Y' }, { movesMade: 0 });
+    s.recordAction({ kind: 'paint', a: 2, b: 3 }, { movesMade: 0 });
     const decision = r.open().resumeOnLaunch(() => null);
     expect(decision).toMatchObject({ kind: 'void', cause: 'level_hash' });
     const want = { thermos: 1, trowelStart: 1, hammer: 2, undo: 1, paintBrush: 1 };
@@ -1474,7 +1474,7 @@ describe('round 2: K-43 / K-29 edges (GDD K-29, K-43; TECH 11.1)', () => {
       [{ kind: 'drag', pieceId: 2, to: { ix: 6.5, iy: 0, mode: 0 } }, { movesMade: 2 }],
       [drag(2, 6, 1), { movesMade: -1 }],
       [offer('offerCoins'), { movesMade: 11, offerCoins: -900 }],
-      [{ kind: 'paint', pieceId: 2, color: 'X' as ColorCode }, { movesMade: 1 }],
+      [{ kind: 'paint', a: 2, b: -1 }, { movesMade: 1 }],
     ];
     for (const [action, info] of bad) expect(() => s.recordAction(action, info)).toThrow();
     expect(r.store.get(SAVE_KEY)).toBe(before);

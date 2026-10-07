@@ -1,10 +1,12 @@
 /**
- * Segment plans (GDD K-15, K-32). `rows` are written top → bottom; plan row r (from the bottom) is
- * `rows[h − 1 − r]`. Local index of a plan cell = `sy * 2 + sx` (sx 0 = board x 6, sx 1 = board x 7).
+ * Segment plans (GDD K-15, K-32, K-49). `rows` are written top → bottom; plan row r (from the bottom) is
+ * `rows[h − 1 − r]`. Local index of a plan cell = `sy * ws + sx` (sx 0 = board x `wy`, the first site column; the
+ * default 2-wide site gives the pre-2R `sy * 2 + sx`). Sizes come from the level geometry (`geoFromLevel`, K-49).
  */
 import { COLOR_CODES } from '../types.ts';
 import type { ColorCode } from '../types.ts';
-import { SEGMENT_CELLS, SITE_COLS } from '../coords.ts';
+import { DEFAULT_GEO, geoFromLevel } from '../geometry.ts';
+import type { BoardGeo } from '../geometry.ts';
 import type { LevelData } from './schema.ts';
 
 export type PlanChar = ColorCode | '.' | '?';
@@ -19,10 +21,10 @@ export interface SegmentPlan {
   readonly cells: readonly PlanCell[];
   /** Bits (local index) of `?` cells. */
   readonly hiddenMask: number;
-  /** Per column: plan rows that are not `.` (bit = row). */
-  readonly planMask: readonly [number, number];
-  /** Per column: `.` rows. */
-  readonly dotMask: readonly [number, number];
+  /** Per site column (length ws): plan rows that are not `.` (bit = row). */
+  readonly planMask: readonly number[];
+  /** Per site column (length ws): `.` rows. */
+  readonly dotMask: readonly number[];
   /** Bits (local index) of every cell that must be filled (colour or `?`). */
   readonly targetMask: number;
 }
@@ -34,18 +36,24 @@ export interface HiddenProblem {
   readonly message: string;
 }
 
-export function localIndex(sx: number, sy: number): number {
-  return sy * SITE_COLS + sx;
+/**
+ * Local plan index `sy · ws + sx` (K-49). `ws` defaults to the default 2-wide site: a compatibility default for callers
+ * written before Faz 2R (pass `geo.ws`).
+ */
+export function localIndex(sx: number, sy: number, ws: number = DEFAULT_GEO.ws): number {
+  return sy * ws + sx;
 }
 
-function rawCells(rows: readonly string[]): (PlanChar | null)[] {
-  const out: (PlanChar | null)[] = Array.from({ length: SEGMENT_CELLS }, () => null);
+/** Raw characters by local index; rows above Hs (or longer than ws) are cut by the frame, missing cells stay null. */
+function rawCells(geo: BoardGeo, rows: readonly string[]): (PlanChar | null)[] {
+  const out: (PlanChar | null)[] = Array.from({ length: geo.segCells }, () => null);
   const h = rows.length;
   rows.forEach((row, i) => {
     const sy = h - 1 - i;
-    for (let sx = 0; sx < SITE_COLS; sx++) {
+    if (sy < 0 || sy >= geo.hs) return;
+    for (let sx = 0; sx < geo.ws; sx++) {
       const ch = row[sx];
-      if (ch !== undefined) out[localIndex(sx, sy)] = ch as PlanChar;
+      if (ch !== undefined) out[localIndex(sx, sy, geo.ws)] = ch as PlanChar;
     }
   });
   return out;
@@ -56,15 +64,20 @@ const isColor = (c: PlanChar | null): c is ColorCode =>
 
 /**
  * Builds every segment plan and resolves `?` cells (K-32): `repeat p` takes (c, r − p) of the same segment (chained),
- * `mirrorOf j` takes (1 − c, r) of segment j. Problems found on the way are L-08 `hidden_invalid` material.
+ * `mirrorOf j` takes (ws − 1 − c, r) of segment j (default site: (1 − c, r)). Problems found on the way are L-08
+ * `hidden_invalid` material. `geo` defaults to the level's own geometry (K-49).
  */
-export function buildPlans(level: LevelData): { plans: SegmentPlan[]; problems: HiddenProblem[] } {
+export function buildPlans(
+  level: LevelData,
+  geo: BoardGeo = geoFromLevel(level),
+): { plans: SegmentPlan[]; problems: HiddenProblem[] } {
   const segs = level.build.segments;
-  const raws = segs.map((s) => rawCells(s.rows));
+  const ws = geo.ws;
+  const raws = segs.map((s) => rawCells(geo, s.rows));
   const problems: HiddenProblem[] = [];
 
   const resolve = (seg: number, sx: number, sy: number, depth: number): ColorCode | null => {
-    const raw = raws[seg]?.[localIndex(sx, sy)] ?? null;
+    const raw = raws[seg]?.[localIndex(sx, sy, ws)] ?? null;
     if (raw === null || raw === '.') return null;
     if (isColor(raw)) return raw;
     // raw === '?'
@@ -75,22 +88,22 @@ export function buildPlans(level: LevelData): { plans: SegmentPlan[]; problems: 
       if (sy - rule.period < 0) return null;
       return resolve(seg, sx, sy - rule.period, depth + 1);
     }
-    const src = raws[rule.segment]?.[localIndex(1 - sx, sy)] ?? null;
+    const src = raws[rule.segment]?.[localIndex(ws - 1 - sx, sy, ws)] ?? null;
     return isColor(src) ? src : null;
   };
 
   const plans = segs.map((s, seg): SegmentPlan => {
     const raw = raws[seg] ?? [];
-    const h = s.rows.length;
+    const h = Math.min(s.rows.length, geo.hs);
     const cells: PlanCell[] = [];
     let hiddenMask = 0;
     let targetMask = 0;
-    const planMask: [number, number] = [0, 0];
-    const dotMask: [number, number] = [0, 0];
-    for (let i = 0; i < SEGMENT_CELLS; i++) {
+    const planMask: number[] = Array.from({ length: ws }, () => 0);
+    const dotMask: number[] = Array.from({ length: ws }, () => 0);
+    for (let i = 0; i < geo.segCells; i++) {
       const ch = raw[i] ?? null;
-      const sx = i % SITE_COLS;
-      const sy = Math.floor(i / SITE_COLS);
+      const sx = i % ws;
+      const sy = Math.floor(i / ws);
       if (ch === null) {
         cells.push(null);
         continue;

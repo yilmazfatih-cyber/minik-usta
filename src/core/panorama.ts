@@ -8,7 +8,6 @@
  */
 import { COLOR_CODES } from './types.ts';
 import type { ColorCode } from './types.ts';
-import { SITE_COLS } from './coords.ts';
 import { revealedMask } from './state.ts';
 import type { GameState } from './state.ts';
 import { PLAN_DOT, PLAN_OUTSIDE } from './level/compile.ts';
@@ -41,8 +40,8 @@ export function panoramaView(s: GameState): PanoramaSegment[] {
     const rows: PanoramaCell[][] = [];
     for (let sy = seg.height - 1; sy >= 0; sy--) {
       const row: PanoramaCell[] = [];
-      for (let sx = 0; sx < SITE_COLS; sx++) {
-        const local = sy * SITE_COLS + sx;
+      for (let sx = 0; sx < s.lvl.geo.ws; sx++) {
+        const local = sy * s.lvl.geo.ws + sx;
         const color = seg.planColors[local] ?? PLAN_OUTSIDE;
         if (color === PLAN_OUTSIDE) row.push(null);
         else if (color === PLAN_DOT) row.push('.');

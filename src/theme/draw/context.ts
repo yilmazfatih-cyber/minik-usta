@@ -3,7 +3,9 @@
  *
  * A real `CanvasRenderingContext2D` (Phaser `CanvasTexture.context`, or a Chromium canvas in tools/level-preview.ts)
  * satisfies this type; tests use a recording mock. Drawers never create DOM objects (no `Path2D`, no `document`):
- * SVG path data is parsed into plain commands (draw/path.ts), so the same code runs in Node.
+ * SVG path data is parsed into plain commands (draw/path.ts), so the same code runs in Node. Gradients (v2 candy look,
+ * ART §3A, §14) come from the context itself (`createLinearGradient` / `createRadialGradient`); the recorder returns a
+ * plain object that logs its colour stops.
  */
 export type DrawContext = Pick<
   CanvasRenderingContext2D,
@@ -43,6 +45,8 @@ export type DrawContext = Pick<
   | 'font'
   | 'textAlign'
   | 'textBaseline'
+  | 'createLinearGradient'
+  | 'createRadialGradient'
 >;
 
 /** Size of a drawn frame in design px. */

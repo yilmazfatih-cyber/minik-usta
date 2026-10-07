@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE680"/><stop offset="1" stop-color="#F0A800"/></linearGradient>
+    <linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A27D5E"/><stop offset="1" stop-color="#6D3B11"/></linearGradient>
+    <linearGradient id="m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#C9CED5"/></linearGradient>
+    <path id="b" d="M26 18H102V40C102 66 85 80 64 80C43 80 26 66 26 40Z"/>
+    <clipPath id="c"><use href="#b"/></clipPath>
+  </defs>
+  <g fill="none" stroke-linecap="round">
+    <path d="M30 30C10 30 10 62 38 62M98 30C118 30 118 62 90 62" stroke="#3B2A1A" stroke-width="20"/>
+    <path d="M30 30C10 30 10 62 38 62M98 30C118 30 118 62 90 62" stroke="#F0A800" stroke-width="8"/>
+  </g>
+  <rect x="34" y="92" width="60" height="24" rx="8" transform="translate(0 5)" fill="#3B2A1A" stroke="#3B2A1A" stroke-width="8"/>
+  <path d="M55 76H73L77 94H51Z" fill="url(#g)" stroke="#3B2A1A" stroke-width="7" stroke-linejoin="round"/>
+  <rect x="34" y="92" width="60" height="24" rx="8" fill="url(#w)" stroke="#3B2A1A" stroke-width="8"/>
+  <rect x="50" y="100" width="28" height="8" rx="3" fill="#FFC21A"/>
+  <use href="#b" transform="translate(0 5)" fill="#3B2A1A" stroke="#3B2A1A" stroke-width="8"/>
+  <use href="#b" fill="url(#g)"/>
+  <g clip-path="url(#c)">
+    <use href="#b" fill="#AD8412" fill-opacity=".35"/>
+    <use href="#b" y="-8" fill="url(#g)"/>
+    <ellipse cx="64" cy="18" rx="38" ry="8" fill="#C98A00"/>
+  </g>
+  <path d="M35 32Q34 52 44 64" fill="none" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="6" stroke-linecap="round"/>
+  <use href="#b" fill="none" stroke="#3B2A1A" stroke-width="8"/>
+  <g transform="translate(64 48) rotate(35)" stroke="#3B2A1A" stroke-width="4" stroke-linejoin="round">
+    <path d="M0-21C9-13 13-4 10 3Q0 8-10 3C-13-4-9-13 0-21Z" fill="url(#m)"/>
+    <rect x="-4.5" y="6" width="9" height="16" rx="4.5" fill="#A27D5E"/>
+  </g>
+</svg>

@@ -10,6 +10,7 @@ import {
   blockCells,
   canPickPiece,
   isCancelled,
+  isCargoShape,
   isSiteClosed,
   railMode,
   tryBeginDrag,
@@ -811,11 +812,20 @@ describe('K-12 entry through a gap (rail)', () => {
     expect(d.distanceFromStart(N(5, 3))).toBeGreaterThan(1);
   });
 
-  it('K-12 N6 heavy blocks never cross the boundary, not even through a fitting gap', () => {
-    const d = drag(initialState({ ...gap3, pieces: [['I3_90', 'W', 3, 3]] }), 0);
-    expect(d.shape.heavy).toBe(true);
-    expect(d.reachableNodes().filter((n) => n.ix + 3 > 6 || n.mode !== FREE)).toEqual([]);
-    expect(d.isReachable(N(3, 9))).toBe(true);
+  it('K-12 K-44 Ağır Yük (I5/Q9) never crosses the boundary, not even through a fitting gap; a 3-wide material block is no longer heavy (Faz 2R)', () => {
+    // GDD K-44 Faz 2R: only I5/Q9 are cargo; cargo stays in the yard (x ≤ 5, y ≤ 7: no crane area, no rail)
+    const cargo = drag(initialState({ id: 8, ...gap3, pieces: [['I5_0', 'W', 0, 3]] }), 0);
+    expect(cargo.cargo).toBe(true);
+    expect(cargo.reachableNodes().filter((n) => n.ix + 5 > 6 || n.iy > 7 || n.mode !== FREE)).toEqual([]);
+    expect(cargo.isReachable(N(1, 7))).toBe(true);
+    expect(cargo.isReachable(N(1, 8))).toBe(false);
+    // I3_90 is a material block now (the pre-2R "w ≥ 3 is heavy" branch is gone): it enters the 1-row gap, but a
+    // 3-wide block never fits the 2-wide site (`piece_too_wide` keeps it out of valid data)
+    const wide = drag(initialState({ ...gap3, pieces: [['I3_90', 'W', 3, 3]] }), 0);
+    expect(wide.cargo).toBe(false);
+    expect(wide.canEnterRail).toBe(true);
+    expect(wide.reachableNodes().filter((n) => n.ix >= 6)).toEqual([]);
+    expect(wide.isReachable(N(3, 9))).toBe(true);
   });
 });
 
@@ -967,7 +977,7 @@ function modelValid(m: Model, n: DragNode): boolean {
   const cells = modelCells(m, n);
   for (const [x, y] of cells) {
     if (x < 0 || x > 7 || y < 0 || y > 9) return false;
-    if (m.shape.heavy && x > 5) return false;
+    if (isCargoShape(m.shape) && (x > 5 || y > 7)) return false; // K-44 Faz 2R: cargo stays in the yard
     if (m.blocked(x, y)) return false;
   }
   const site = cells.filter(([x]) => x >= 6);

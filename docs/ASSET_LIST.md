@@ -1,6 +1,6 @@
 # Varlık listesi — Minik Usta
 
-Sahip: design-lead · Sürüm: **Faz 2R (2026-10-07)** — görsel listesi v2 §16: **elle yazılmış SVG** (R2-08 güncellemesi: Canva ve üretken yapay zekâ yok; 26 varlık, ücret 0), bellek ve indirme bütçesi (CL-2R-23), R2-12 studlu tuğla ve çivit sahne varlıkları, prosedürel v2 varlıkları §16.5; çapraz inceleme kapanışı aynı gün; önceki: Faz 1 revizyonu (2026-10-05; R-04, R-05, R-07, R-14, R-19, R-24), Faz 2 boşluğu 2 (2026-10-06) · Görsel
+Sahip: design-lead · Sürüm: **Faz 2R uygulama (2026-10-07)** — 33 SVG teslim edildi (§15 kayıt, §16.6 teslim durumu); **Faz 2R (2026-10-07)** — görsel listesi v2 §16: **elle yazılmış SVG** (R2-08 güncellemesi: Canva ve üretken yapay zekâ yok; 26 varlık, ücret 0), bellek ve indirme bütçesi (CL-2R-23), R2-12 studlu tuğla ve çivit sahne varlıkları, prosedürel v2 varlıkları §16.5; çapraz inceleme kapanışı aynı gün; önceki: Faz 1 revizyonu (2026-10-05; R-04, R-05, R-07, R-14, R-19, R-24), Faz 2 boşluğu 2 (2026-10-06) · Görsel
 tarifler: `docs/ART_DIRECTION.md` · Animasyon/ses: `docs/JUICE.md` · Sahneler: `docs/STORY.md`
 
 ---
@@ -371,7 +371,8 @@ sayıma girmez.
 ## 15. Üretim kaydı (provenance)
 
 Her **final** varlık için bir satır (entrepreneur, fikri mülkiyet). Kaynak dosya `art-source/` altında (depo dışı
-yedekli); bu tablo Faz 5'te `docs/ASSET_PROVENANCE.md` olarak ayrılabilir.
+yedekli); bu tablo Faz 5'te `docs/ASSET_PROVENANCE.md` olarak ayrılabilir. Faz 2R SVG'lerinde kaynak dosya SVG'nin
+kendisidir (katmanlar `<g id>` grupları); referans görsellerden (R2-12) iz sürme, kırpma ya da renk örnekleme yapılmadı.
 
 Sütunlar EN-2R-14 ile genişletildi: **araç + plan**, **tarih**, **insan rötuşu** (var/yok, kim), **ters görsel arama**
 sonucu (Google Lens ya da TinEye, ücretsiz; mağaza öncesi her final illüstrasyon için; benzer görsel bulunursa varlık
@@ -380,7 +381,39 @@ yeniden çizilir).
 | Varlık | Sürüm | Yazar (insan / design-lead ajanı) | Araç ve plan (ücret) | Rol (eskiz / web MVP final / mağaza final) | Tarih | İnsan rötuşu (var/yok, kim) | Ters görsel arama (araç, tarih, sonuç) | Kaynak dosya | Lisans / devir |
 | ------ | ----- | --------------------------------- | -------------------- | ------------------------------------------ | ----- | --------------------------- | -------------------------------------- | ------------ | -------------- |
 | `font_baloo2_latin_tr` | 1 | Ek Type (OFL 1.1) | pyftsubset (ücretsiz) | final (alt küme) | 2026-10-04 | yok | — (font) | `fonts/baloo2/` | OFL 1.1, Lisanslar sayfasında |
-| (örnek) `chr_tuna_bust` | 1 | design-lead ajanı | elle SVG, metin düzenleyici (ücret 0) | web MVP final | — | yok | mağaza öncesi | `public/art/chr/chr_tuna_bust.svg` | proje sahibine ait; P-15: mağaza öncesi insan sanatçı yeniden çizimi, iş sözleşmesiyle tam devir |
+| `bg_home_town` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/bg/bg_home_town.svg` | proje sahibine ait |
+| `bg_level_site_edge` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/bg/bg_level_site_edge.svg` | proje sahibine ait |
+| `bg_win_plaza` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/bg/bg_win_plaza.svg` | proje sahibine ait |
+| `town_ch1_tree` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/town/town_ch1_tree.svg` | proje sahibine ait |
+| `town_ch1_treehouse` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/town/town_ch1_treehouse.svg` | proje sahibine ait |
+| `chr_tuna_bust` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_tuna_bust.svg` | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 |
+| `chr_tuna_cheer` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_tuna_cheer.svg` | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 |
+| `chr_dede_bust` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_dede_bust.svg` | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 |
+| `chr_kepce_bust` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_kepce_bust.svg` | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 |
+| `chr_gribeton_bust` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_gribeton_bust.svg` | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 |
+| `logo_emblem` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/logo/logo_emblem.svg` | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 |
+| `icon_coin` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_coin.svg` | proje sahibine ait |
+| `icon_life` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_life.svg` | proje sahibine ait |
+| `icon_star` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_star.svg` | proje sahibine ait |
+| `icon_moves` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_moves.svg` | proje sahibine ait |
+| `icon_settings` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_settings.svg` | proje sahibine ait |
+| `icon_lock` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_lock.svg` | proje sahibine ait |
+| `icon_hammer` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_hammer.svg` | proje sahibine ait |
+| `icon_crane` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_crane.svg` | proje sahibine ait |
+| `icon_gold_trowel` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_gold_trowel.svg` | proje sahibine ait |
+| `icon_chest` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_chest.svg` | proje sahibine ait |
+| `icon_nav_shop` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_nav_shop.svg` | proje sahibine ait |
+| `icon_nav_league` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_nav_league.svg` | proje sahibine ait |
+| `icon_nav_team` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_nav_team.svg` | proje sahibine ait |
+| `icon_nav_home` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_nav_home.svg` | proje sahibine ait |
+| `icon_nav_album` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_nav_album.svg` | proje sahibine ait |
+| `icon_kettlebell` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_kettlebell.svg` | proje sahibine ait |
+| `icon_nextfloor` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_nextfloor.svg` | proje sahibine ait |
+| `icon_brush` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_brush.svg` | proje sahibine ait |
+| `icon_undo` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_undo.svg` | proje sahibine ait |
+| `icon_thermos` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_thermos.svg` | proje sahibine ait |
+| `icon_piggy` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_piggy.svg` | proje sahibine ait |
+| `ui_tutorial_glove` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/ui_tutorial_glove.svg` | proje sahibine ait |
 
 ---
 
@@ -433,6 +466,20 @@ genel brifinin ve §6–§11'deki tek tek brif cümlelerinin **yerine geçer** (
 - **Özgünlük (ART §11.8):** sarı çocuk kaskı, tulum, buldok, taç/pelerin, konuşan makine, üst üste küp yığını, neon
   ışıma yok; R2-12 referansından ve rakiplerden iz sürme, kırpma, birebir düzen yok.
 
+- **Uygulama netleştirmeleri (Faz 2R uygulama, 2026-10-07; 33 SVG bu kurallarla yazıldı):**
+  - Karakter yüzeyleri **3 duraklıdır**: açık (0) → **imza rengi** (0,5) → alt (1). Böylece imza hex'i dosyada birebir
+    bulunur (§16.3 kabul, code-lead `checkSvg` imza denetimi). Diğer varlıklarda 2 durak.
+  - İç gölge şeridi filtre/maske olmadan: şekil kendi `clipPath`'iyle kırpılır; içine önce koyu ton (× 0,68) α 0,35,
+    üstüne aynı şekil 5–10 px yukarı kaydırılmış gradyanla çizilir; altta koyu şerit kalır.
+  - **Alt kalınlık ("dudak"):** ikon, yapı ve logo ana şekillerinin `#3B2A1A` kopyası 4–6 px aşağıda, konturla aynı
+    kalınlıkta (UI kiti düğmeleriyle aynı hacim dili, ART §14.1).
+  - Ölçekli gruplarda (`scale(.7)` vb.) `stroke-width` ölçeğe bölünür; ekranda kontur 6 / 8 px kalır.
+  - Silindirik uzun parçalarda (sap, gövde) dikey gradyan korunur; sol kenarda beyaz α 0,3–0,5 parlama şeridi ışığı
+    sol üstten verir.
+  - `bg_level_site_edge`: yalnız #FFFFFF; **grup `opacity=".06"` dosyanın içindedir** — oyun dokuyu α 1 ile çizer,
+    `alpha.sceneSilhouette` ikinci kez uygulanmaz. Siluetlerde kontur yoktur.
+  - `transform` değerleri de en çok 1 ondalık (`scale(.8)`, `scale(.75)` değil).
+
 **Ortak kabul ölçütleri (her SVG):** (1) yasak öğe yok ve boyut sınırı içinde (`npm run assets` denetler, code-lead);
 (2) renkler palet içinde, imza renkleri birebir; (3) kontur ve ışık yönü kurallara uygun, aynı ailedeki görseller yan
 yana tek oyundan görünür; (4) kullanım boyutunda (ikonda 64 px) siluet tanınır — 3 kişiden 3'ü ikonun adını söyler;
@@ -444,13 +491,14 @@ Raster = oyunun yüklediği doku boyutu; GPU = RGBA bellek. "Faz" sütunu: **2R*
 
 | # | Kimlik (`public/art/…`) | viewBox | Raster / GPU | Kullanım yeri | Kabul ölçütü (ortak ölçütlere ek) | Prosedürel yedek | Faz |
 | - | ----------------------- | ------- | ------------ | ------------- | --------------------------------- | ---------------- | --- |
-| 1 | `bg/bg_home_town` | 0 0 1080 1920 | 540×960, 0,5 ölçek, ×2 çizilir / 2,1 MB; üstte ≤ 480 px prosedürel gök | Ana sayfa (UX §3, ART §7.2) | Orta arsa (x 160–920, y 360–1240) yalnız çimen + çınar; üst 300 ve alt 420 px düşük ayrıntı; 6–12 bina; ortalama HSL doygunluğu blok tabanlarından ≥ %25 düşük | ART §7.4 ch1: gök gradyanı + 3 tepe + 4–6 ev silueti | 2R |
+| 1 | `bg/bg_home_town` | 0 0 1080 1920 | 540×960, 0,5 ölçek, ×2 çizilir / 2,1 MB; üstte ≤ 480 px prosedürel gök | Ana sayfa (UX §3, ART §7.2) | Orta arsa (x 160–920, y 360–1240) yalnız çimen (çınar `town_ch1_tree`'dedir, yapıyla aynı kutuda: EXPAND'de arka plan ile yapı ayrı kaydığı için hizayı yalnız aynı kutu korur); üst 300 ve alt 420 px düşük ayrıntı; 6–12 bina; ortalama **CIE LCh kroma C\*** blok tabanlarının ortalamasından ≥ %25 düşük (HSL doygunluğu açık pastellerde %100 çıktığı için ölçüt kromaya çevrildi, 2026-10-07; ölçüm §16.6) | ART §7.4 ch1: gök gradyanı + 3 tepe + 4–6 ev silueti | 2R |
 | 2 | `bg/bg_level_site_edge` | 0 0 120 1920 | 60×960 / 0,23 MB; sağ kenarda yatay aynalanır | Oyun ekranı kenar siluetleri (ART §7.1, R2-12); zemin prosedürel çivit | Yalnız beyaz α 0,06 dolgu (tek renk), alt %40'ta iskele + kule vinç silueti; tahta dikdörtgeniyle kesişmez | yok (zemin yalnız gradyan) | 2R |
 | 3 | `bg/bg_win_plaza` | 0 0 1080 1920 | 540×960 / 2,1 MB | Kazanma katmanı (UX §6.1, ART §7.3) | Merkez (x 240–840, y 440–1040) açık ve sade; bayraklar üst %30'da | `kit.sunburst` ışın + bayrak üçgenleri | 2R |
-| 4 | `town/town_ch1_treehouse` | 0 0 760 820 | 760×820 / 2,5 MB + hayalet dokusu 2,5 MB | Ana sayfa yapısı (UX §3, ART §7.2) | Görev sırası alttan üste (ART §7.2: basamak → platform → duvar → pencere → çatı → ip merdiven + makara yukarıda → bayrak); her görev parçası kendi `<g id="t1">`…`<g id="t7">` grubunda; kırpma durakları `layout.home.ch1CropStops` ile örtüşür | gövde + 3 yaprak dairesi + platform + ozalit hayaleti | 2R |
+| 4 | `town/town_ch1_treehouse` | 0 0 760 820 | 760×820 / 2,5 MB + hayalet dokusu 2,5 MB | Ana sayfa yapısı (UX §3, ART §7.2) | Görev sırası alttan üste (ART §7.2: basamak → platform → duvar → pencere → çatı → ip merdiven + makara yukarıda → bayrak); her görev parçası kendi `<g id="t1">`…`<g id="t7">` grubunda; kırpma durakları `layout.home.ch1CropStops` ile örtüşür; **ağaç bu dosyada yoktur** (4b); grup sınırları ve bant taşmaları §16.6 | gövde + 3 yaprak dairesi + platform + ozalit hayaleti | 2R |
+| 4b | `town/town_ch1_tree` (2026-10-07 eklendi) | 0 0 760 820 | 760×820 / 2,5 MB | Ana sayfa: yapının **altında**, aynı kutuda (merkez x 540, taban y 1180), her zaman tam renk | Ozalit hayaleti ve `setCrop` **uygulanmaz** (ağaç inşa edilmez, yalnız yapı); gövde x 340–436 basamakların arkasında, gözcü dalı y 80–200 makara ve bayrak direğini taşır; taç yapının arkasında | gövde + 3 yaprak dairesi (#4 yedeğinin ağaç kısmı) | 2R |
 | 5 | `chr/chr_tuna_bust` | 0 0 256 320 | 300×375 / 0,45 MB | Oyun köşesi, ana sayfa, ara sahne | `color.character.tuna` birebir; sarı kask ve tulum yok; görünür yaş 10–12 (açık soru ART §11.1); 6 ifade `face` grubu | ART §11.7 Tuna | 2R |
 | 6 | `chr/chr_tuna_cheer` | 0 0 300 400 | 300×400 / 0,48 MB | Kazanma (UX §6.1) | #5 ile aynı karakter (yan yana 2 kişiden 2'si aynı der) | Tuna SVG + eldivenler yukarıda | 2R |
-| 7 | `chr/chr_dede_bust` | 0 0 256 320 | 256×320 / 0,33 MB + portre 128×128 (Canvas2D daire kırpımı, bir kez; ART §14.8) | Öğretici balonu, ara sahne | Kasket #C65A3A, ceket #7A8B4A birebir; katlanır metre görünür; Ø 128 dairede yüz + kasket sığar | ART §11.7 Usta Dede | 2R |
+| 7 | `chr/chr_dede_bust` | 0 0 256 320 | 256×320 / 0,33 MB + portre 128×128 (Canvas2D daire kırpımı, bir kez; ART §14.8) | Öğretici balonu, ara sahne | Kasket #C65A3A, ceket #7A8B4A birebir; katlanır metre görünür; Ø 128 dairede yüz + kasket sığar **Portre kırpım dairesi: viewBox merkezi (126, 142), r 84** → 128 px (yüz, kasket, bıyık ve metrenin ucu içeride; 72 px'te de okunur, `contact_characters.png`) | ART §11.7 Usta Dede | 2R |
 | 8 | `chr/chr_kepce_bust` | 0 0 320 220 | 300×206 / 0,25 MB | Oyun köşesi, ana sayfa | Kask #FF9A1F, tasma #7FE0C4; sosis köpek oranı (gövde ≥ 2,5 × omuz yüksekliği) | ART §11.7 Kepçe | 2R |
 | 9 | `chr/chr_gribeton_bust` | 0 0 256 320 | 256×320 / 0,33 MB | Ara sahne, rakip satırları | Dikdörtgen siluet, beton blok saç; takım #8C939C; kötü adam ifadesi yok | ART §11.7 Gribeton | 2R |
 | 10 | `logo/logo_emblem` | 0 0 360 360 | 360×360 / 0,52 MB | Açılış logosu (UX §1) | Harf yok (yazı `app.title` kodla, Baloo 2); 48 px'te siluet okunur; küp yığını yok; studlu tek tuğla + vinç kancası + duvar başlığı motifi | `logo_wordmark` yer tutucusu | 2R |
@@ -458,7 +506,10 @@ Raster = oyunun yüklediği doku boyutu; GPU = RGBA bellek. "Faz" sütunu: **2R*
 
 **Yeni küçük SVG'ler (R2-12 ve kapanış):** `icon/icon_piggy` (kumbara, kenar ikonu; Faz 4), `icon/icon_kettlebell`
 (Ağır Yük rozeti, 40 px; ART §6), `icon/icon_nextfloor` (32 px "sonraki kat" rozeti; UX §5.9) — atlasın boş yuvalarına
-(16 + 3 = 19 > 16: atlas 512×640, 20 yuva, 1,3 MB).
+(16 + 3 = 19 > 16: atlas 512×640, 20 yuva, 1,3 MB). **Ek (2026-10-07):** `icon/icon_nav_home` (kiremit çatılı ev, seçili sekmede
+mavi karo üstünde) ve `icon/icon_nav_album` (spiralli albüm, MVP'de yalnız kilitli) — code-lead kataloğunda isteğe bağlı
+iki gezinme ikonu (UX §3, ART §9); atlas 21 ikonla 512×768 (24 yuva, 1,5 MB). `icon/ui_tutorial_glove` (0 0 140 160;
+§16.5) atlasa girmez, tek doku 140×160 (0,09 MB).
 
 ### 16.4 Üretim sırası (Faz 2R görsel uygulaması)
 
@@ -499,3 +550,48 @@ incelemesi ve REVIEW_LOG kaydı.
 | `site_scaffold` v2 | boru 16 × ((Hs + e)·120 + 40; şantiye üstü hava varsa H·120 + 40), kelepçe 24×20 | ART §4 Faz 2R notu, UX §5.8 | Faz 2R |
 
 **Kaldırılan:** `ui_spotlight` (§10) — Faz 2R'de karartma ve delik yok (UX §13.1, R2-10).
+
+### 16.6 Teslim durumu (Faz 2R uygulama, 2026-10-07)
+
+**Teslim:** 33 SVG, toplam 113 KB (gzip -9 ≈ 19,7 KB): `bg/` 3, `town/` 2, `chr/` 5, `logo/` 1, `icon/` 22 (§16.3'ün 19
+ikonu + `icon_nav_home`, `icon_nav_album`, `ui_tutorial_glove`). Hepsi §15'te kayıtlı (web MVP final, insan rötuşu yok).
+Sıra §16.4'e uygun: ikonlar → Tuna/Dede/Kepçe → ağaç ev + ana sayfa → kenar, kazanma, Tuna sevinç, logo → Gribeton →
+Faz 3 ikonları.
+
+**Denetimler:** (1) code-lead `checkSvg` (`src/services/assetCatalog.ts`, salt okunur çağrı): katalogdaki 32 SVG'nin
+32'si geçer, ret 0; yalnız `town_ch1_tree` katalog dışı (code-lead'e katalog isteği REVIEW_LOG'da). (2) `npm run
+assets` (son SVG'lerle yeniden üretildi): 33 SVG → 33 ok + 1 sorun (katalog dışı ağaç; araç bu yüzden çıkış 1 verir),
+indirme 229,0 / 900 KB, doku 12,8 / 64 MB; ardından `npm run assets:check` çıkış 0 (bayat çıktı yok, 1 uyarı). (3)
+design-lead betiği (yasak öğe, kök viewBox, boyut, geometri öznitelikleri ve `transform` dahil en çok 1 ondalık, palet
+± 2, kontur rengi): 33 / 33 geçer. (4) Görsel inceleme Chromium'da kullanım boyutunda (ikon 128 / 64 / 40 / 32 px,
+karakter ≈ 300 px, arka plan 540×960) çivit #2B2560 ve krem zeminde; kontak sayfaları `artifacts/screens/art-review/`
+(`contact_icons.png`, `contact_characters.png`, `contact_scenes.png`; git dışı).
+
+**Arka plan kroması (CIE LCh C\*, 540×960 raster ortalaması; blok tabanları ortalaması 55,6):** `bg_home_town` 33,4
+(%40 düşük), `bg_win_plaza` 34,4 (%38 düşük) → eşik (%25) tutar. HSV doygunluğuyla %43 / %41 düşük; HSL ile %12 / −%21
+(pastel gök ve ışık renklerinde HSL S = %100; ölçüt bu yüzden C\*'a çevrildi, ART §7).
+
+**Ağaç ev katmanları (code-lead için):** `town_ch1_tree` (taban, her zaman tam renk) + `town_ch1_treehouse` (görev
+parçaları; renkli doku `setCrop`, hayalet bu dosyanın siluetinden) aynı 760×820 kutuda üst üste çizilir. Tek başına
+yapı dokusunda basamaklar havada kalır; taban katmanı zorunludur. Kırpma tek y çizgisi olduğu için grupların bir kısmı
+komşu banda taşar (ölçüm: Chromium `getBBox`, viewBox y; bant = `ch1CropStops`'tan):
+
+| Grup | Görev | Grup y | Bant y | Taşma (hangi aşamada erken/geç görünür) |
+| ---- | ----- | ------ | ------ | --------------------------------------- |
+| `t1` | basamaklar | 600–796 | 672–820 | üst 2 basamak (600–672) 2. aşamada platformla açılır |
+| `t2` | platform | 500–680 | 525–672 | korkuluk üstü (500–525) 3. aşamada; payanda ucu 8 px 1. aşamada |
+| `t3` | duvarlar + kapı | 316–560 | 394–525 | duvar tabanı 2. aşamada (döşeme gibi okunur); üst duvar 4. aşamada pencereyle |
+| `t4` | pencere + perde | 322–392 | 312–394 | yok |
+| `t5` | çatı | 176–342 | 197–312 | saçak uçları 4. aşamada; mahya başlığı 6. aşamada |
+| `t6` | ip merdiven + makara | 112–250 | 98–197 | merdiven alt ucu (197–250) 5. aşamada çatıyla |
+| `t7` | bayrak + tabela | 9–106 | 0–98 | direk dibi 8 px 6. aşamada |
+
+Faz 4'te görev sistemi gelince grup bazlı açılış (her `<g id="tk">` ayrı) bu taşmaları sıfırlar; Faz 2R'de taşmalar
+"yapım sürüyor" görünümü verir ve hayalet örtüsüyle kabul edilir.
+
+**Usta Dede portre kırpımı:** viewBox merkezi (126, 142), r 84 → Ø 128 (CL-2R-26 Canvas2D `arc` + `clip`).
+
+**Kalite açısından zayıf kalanlar (sonraki tur):** `bg_win_plaza` ve `bg_home_town` alt üçte birinde geniş düz alan
+(UI örtüyor, ama tek başına sade); `chr_gribeton_bust` eli ve klasörü basit; Tuna'nın oranları (büyük kafa, iri göz)
+D-087'nin 10–12 yaş görünümünden genç okunabilir — 5 kişilik yaş tahmini testi ART §12'deki yan yana testle birlikte
+yapılır; `icon_moves` duvarı 128 px'te küçük bir sıraya benzer (64 px'te sorun yok).

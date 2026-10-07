@@ -19,7 +19,8 @@
  * Y6 yard gravity, S1 segments, S2 `.` validation) carry no hook: the plugin only declares `appliesTo`, its rank and
  * its info card (the "öğretici bayrağı" of TECH §7.2).
  */
-import type { PieceFlag } from '../types.ts';
+import type { HammerTargetKind, PieceFlag } from '../types.ts';
+import type { GameState } from '../state.ts';
 import type { CompiledGap, CompiledLevel, CompiledObstacle } from '../level/compile.ts';
 import type { MechanicId } from '../level/schema.ts';
 import type { DragRules } from '../movement.ts';
@@ -148,6 +149,14 @@ export interface ObstacleRule {
   readonly onMoveEnd?: TimerHook;
   /** GDD K-35 step 10 position of `onMoveEnd` (= `STEP10_TIMERS` order of the id), independent of `order`. */
   readonly moveEndOrder?: number;
+  /** End of K-35 step 5, after the neighbour effects (Y3: release a chain with no neighbour left, E-53). */
+  readonly afterNeighbors?: Hook<MoveHooks['afterNeighbors']>;
+  /** K-36: the hammer may hit this owned entity now (crate, bag, chained block). Needs `onHammer`. */
+  readonly canHammer?: (s: GameState, entity: EntityRef) => boolean;
+  /** K-36: the hammer hit on an owned entity (step 1 of the mini pipeline). Returns the analytics target kind. */
+  readonly onHammer?: (ctx: RuleContext, entity: EntityRef) => HammerTargetKind;
+  /** K-30 D1 help, first stage: lift the rule's blockers (Y3 chains, Y4 wetness). True when something changed. */
+  readonly onTruckHelp?: Hook<MoveHooks['onTruckHelp']>;
 }
 
 /** Freezes a rule (and its `infoKeys` / `owns`); plugin files declare their rule with it. */

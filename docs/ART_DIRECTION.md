@@ -609,8 +609,10 @@ design-lead'in elle yazdığı **SVG** dosyalarıdır (`public/art/bg/*.svg`, AS
   ölçüm kapısı; ayrıntılı tablo ASSET §16.1).
 - **Sakin orta:** oyun ekranında tahta grubunun dikdörtgeni (8 sütunluk tahtada x 10–1070, y = vinç alanı tepesi –
   durum şeridi altı) ve ana sayfada "Bölüm N" düğmesinin arkası belirgin nesne içermez; ayrıntı kenarlarda.
-- **Doygunluk:** arka planın ortalama HSL doygunluğu blok tabanlarının ortalamasından en az **%25 düşük**; en doygun
-  renkler yalnız bloklarda ve birincil düğmede. Kabul ölçütü ASSET §16.
+- **Doygunluk:** arka planın ortalama **CIE LCh kroması (C\*)** blok tabanlarının ortalamasından (55,6) en az **%25
+  düşük**; en doygun renkler yalnız bloklarda ve birincil düğmede. (2026-10-07: ölçüt HSL doygunluğundan kromaya
+  çevrildi; HSL açık pastel gök ve ışık tonlarında %100 verip görsel doygunluğu yansıtmıyor. Ölçüm: `bg_home_town` %40,
+  `bg_win_plaza` %38 düşük; ASSET §16.6.)
 - **Paralaks:** yalnız ana sayfada, kasaba görseli tek katman + bulut katmanı (prosedürel, 0,2 hızla sürüklenir: 12
   px/s). Oyun ekranında arka plan sabittir (performans ve dikkat).
 
@@ -644,7 +646,10 @@ yapılmamış katmanlar **ozalit hayaleti** (yapı siluetinin `board.blueprint` 
 dilini oyun ekranındaki ozalitten alması bilinçlidir: "planı çiz, sonra inşa et".
 
 **SVG ve kırpma durakları (R2-08, PL-2R-15 c):** `bg_home_town` ve `town_ch1_treehouse` elle yazılmış SVG'dir (ASSET
-§16). Yapı, STORY §5 görev sırası **alttan üste** okunacak biçimde çizilir: basamaklar → platform → duvarlar → pencere
+§16). **Çınar ayrı taban katmanıdır** (`town_ch1_tree`, 2026-10-07): yapıyla aynı 760×820 kutuda, yapının altında, her
+zaman tam renk; hayalet ve kırpma yalnız `town_ch1_treehouse`'a uygulanır (ağaç inşa edilmez). Arka planın orta
+arsası bu yüzden yalnız çimendir; EXPAND'de arka plan ile yapı farklı kaydığından ağacın arka planda olması hizayı
+bozardı. Yapı, STORY §5 görev sırası **alttan üste** okunacak biçimde çizilir: basamaklar → platform → duvarlar → pencere
 ve perde → çatı → **ip merdiven ve makara** (çatının üstündeki gözcü dalına yukarı doğru uzanır, platformdan aşağı
 sarkmaz) → bayrak ve tabela (en tepe). Açılan yükseklik oranları (görselin altından, yüksekliğine göre)
 `layout.home.ch1CropStops` = [0,18 · 0,36 · 0,52 · 0,62 · 0,76 · 0,88 · 1,00]; Faz 4'te k. görev tamamlanınca oran
@@ -827,7 +832,10 @@ Blok ve plan dokuları modla birlikte yeniden pişirilir. Renk adı etiketi bu m
 > büst); yapay zekâ görsel üretimi yoktur. R2-12 ilkesiyle biçimler basit ve hacimlidir: kapsül/tuğla gövde, büyük
 > göz, her yüzeyde 2 durak gradyan + sol üst parlama + 6 px `#3B2A1A` kontur. Aşağıdaki tarifler (renk, imza siluet,
 > özgünlük listesi §11.8) SVG'nin içeriği ve kabul ölçütüdür: imza renkler `tokens.color.character.*` ile **birebir**
-> (aynı hex). §11.7 yer tutucuları final SVG'lerin iskeletidir. Mağaza sürümü öncesi logo, uygulama simgesi ve 4 ana
+> (aynı hex). §11.7 yer tutucuları final SVG'lerin iskeletidir. **Teslim (2026-10-07):** `chr_tuna_bust`,
+> `chr_tuna_cheer`, `chr_dede_bust`, `chr_kepce_bust`, `chr_gribeton_bust`; yüzeyler 3 duraklı gradyan (açık → imza
+> rengi → alt) ki imza hex'i birebir kalsın; gözler beyaz göz akı + iris + bebek + iki parlama (§11.6'daki düz
+> "fasulye göz" yer tutucu tarifidir); her dosyada tek `<g id="face">`. Mağaza sürümü öncesi logo, uygulama simgesi ve 4 ana
 > karakterin insan sanatçıyla yeniden çizimi entrepreneur kararı P-15'tir (proje sahibi onayına; ASSET §0, §16.1).
 
 

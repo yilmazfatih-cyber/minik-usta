@@ -10,6 +10,7 @@ import {
   goalTarget,
   goalViews,
   levelGoalsMet,
+  materialLeft,
   setBuildProgress,
 } from '../../src/core/goals.ts';
 import { movePiece } from '../../src/core/placement.ts';
@@ -71,7 +72,7 @@ describe('K-41 goals', () => {
     expect(countDebrisLeftSite(s, 0, Zone.site)).toBe(false); // not debris
   });
 
-  it('K-28 the level is won only with every segment complete and every extra goal met', () => {
+  it('K-28 K-48 the level is won only with every segment complete, every extra goal met and no material block left', () => {
     const s = initialState(GOALS);
     expect([allSegmentsComplete(s), extraGoalsMet(s), levelGoalsMet(s)]).toEqual([false, false, false]);
     setHdr(s, H.deliveryCursor, 2);
@@ -80,7 +81,11 @@ describe('K-41 goals', () => {
     expect(levelGoalsMet(s)).toBe(false);
     addGoalCount(s, 'crate', 2);
     addGoalCount(s, 'debris', 1);
-    expect([extraGoalsMet(s), levelGoalsMet(s)]).toEqual([true, true]);
+    expect(extraGoalsMet(s)).toBe(true);
+    // K-48 (3): the yard block (material) still holds back the win
+    expect([materialLeft(s), levelGoalsMet(s)]).toEqual([true, false]);
+    movePiece(s, 0, { zone: 'gone', x: 0, y: 0, seg: -1 });
+    expect([materialLeft(s), levelGoalsMet(s)]).toEqual([false, true]);
     expect(goalViews(s).every((g) => g.done)).toBe(true);
   });
 });

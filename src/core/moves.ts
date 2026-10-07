@@ -8,11 +8,14 @@
  *   step 3 · 3 site: `isCorrectPlacement` (K-16 + K-34) → lock / Y8 stick / K-17 bounce, streak · 4 cost (base + glass,
  *   counter ≥ 0), `m += 1` · 5 neighbour effects of the start cells (once per entity, (y, x) order, never across the
  *   wall boundary) + hidden item check #1 · 6 yard gravity (`settleYard`) + check #2 · 7 goal counters · 8 segment
- *   completion (site strategy) + next batch queued · 9 FIFO delivery · 10 timers (`lvl.step10` order) · 11 win, else
- *   out of moves · 12 deadlock check / truck help (K-30 hook, Phase 3; skipped by `noTruckHelp`).
+ *   completion (site strategy) + next batch queued · 9 FIFO delivery · 10 timers (`lvl.step10` order) · 11 win (K-48),
+ *   else out of moves · 12 deadlock check and truck help (core/deadlock.ts `runStep12`; Faz 2R: also at 0 moves, before
+ *   the out-of-moves window; skipped by `noTruckHelp`). A Söküm (K-30) restores the action's start buffer
+ *   (`ApplyOptions.preAction`) except the counter and `movesSpent`; its `teardown` event is the action's last event.
  * Boosters run the mini pipeline (GDD §10): the direct effect as step 1, then steps 5 (hidden items only), 6, 7, 8, 9,
- * 11, 12. Phase 2 implements the Golden Trowel (K-33); hammer, crane and paint brush (K-36…K-38) are Phase 3.
- * `addMoves` from an accepted +5 offer sets no timer and no streak and runs step 12 once (K-29, E-42).
+ * 11, 12: hammer (K-36), crane (K-37), paint brush (K-38) and the Golden Trowel (K-33, `goldTrowel`); preconditions,
+ * effects and the D3a pre-check live in core/boosters.ts. The Faz 2 cell trowel (`trowel`) is rejected.
+ * `addMoves` from an accepted +5 offer sets no timer and no streak and runs step 12 once: D1 only (K-29, E-42).
  *
  * Obstacles: core has no obstacle-specific `if`. Every rule effect comes through `MoveHooks`; by default the level's
  * hooks from the obstacle registry (core/obstacles/registry.ts `levelHooks`, TECH §7). Phase 2 has W1 (core rail
@@ -24,8 +27,20 @@
  * `eventLogHash` (FNV-1a 64 over canonical JSON) pins it in golden tests (TECH §6.3, §9.5).
  */
 import { Zone } from './types.ts';
-import type { Anchor, At, DragNode, GameEvent, GameEventBody, Move, PieceId, Steer } from './types.ts';
-import { BOARD_ROWS, YARD_COLS, neighbors4 } from './coords.ts';
+import type {
+  Anchor,
+  At,
+  DragNode,
+  GameEvent,
+  GameEventBody,
+  HammerTargetKind,
+  Move,
+  PieceId,
+  ShapeId,
+  Steer,
+  TeardownCause,
+} from './types.ts';
+import { neighbors4 } from './coords.ts';
 import {
   FLAG_BIT,
   H,
@@ -33,11 +48,14 @@ import {
   goalValue,
   hdr,
   hiddenCollected,
+  pieceColor,
   pieceFlags,
+  pieceShape,
   pieceZone,
   setHdr,
   yardOcc,
 } from './state.ts';
+import { shapeByIndex } from './shapes.ts';
 import type { GameState } from './state.ts';
 import type { CompiledLevel, GravityProfile, TimerId } from './level/compile.ts';
 import { bufferRng } from './rng.ts';
@@ -57,7 +75,20 @@ import {
   yardPlace,
 } from './placement.ts';
 import type { PiecePlace, PlacementRules, ReturnTarget } from './placement.ts';
-import { applyTrowel, comboOnCorrect, comboReset, trowelRejection } from './combo.ts';
+import { comboOnCorrect, comboReset } from './combo.ts';
+import {
+  applyCraneEffect,
+  applyHammer,
+  applyTrowelEffect,
+  colorCodeOf,
+  craneRejection,
+  goldTrowelRejection,
+  hammerTargetKind,
+  paintRejection,
+  swapColors,
+} from './boosters.ts';
+import { runStep12 } from './deadlock.ts';
+import type { DeadTable } from './deadlock.ts';
 import {
   changedCountGoals,
   countDebrisLeftSite,
@@ -165,10 +196,24 @@ export interface MoveHooks {
   readonly onNeighborMoved?: (ctx: RuleContext, entity: EntityRef, movedPieceId: PieceId) => NeighborEffect;
   /** Steps 5–6: the cell of hidden item `obstacle` (screw Y7, key W7) is empty and not collected yet (K-42). */
   readonly onCellUncovered?: (ctx: RuleContext, obstacle: number) => void;
+  /** End of step 5, after the neighbour effects (Y3: a chain with no neighbour left is released, E-53). */
+  readonly afterNeighbors?: (ctx: RuleContext) => void;
+  /** K-36: hammer targets owned by obstacle rules (crate Y1, bag Y2, chain Y3). */
+  readonly hammer?: HammerRules;
+  /** K-30 D1 help, first stage: rules lift chains (Y3) and wetness (Y4). True when something changed. */
+  readonly onTruckHelp?: (ctx: RuleContext) => boolean;
   /** Step 10 timers (rule `onMoveEnd`, site S5 / S6 ticks), called in `lvl.step10` order (§7.3). */
   readonly timers?: Readonly<Partial<Record<TimerHookId, (ctx: RuleContext) => void>>>;
-  /** Step 12: K-30 deadlock check and truck help (core/deadlock.ts, Phase 3). */
+  /** Step 12 override (tests): replaces `runStep12` (core/deadlock.ts) when given. */
   readonly deadlock?: (ctx: RuleContext) => void;
+}
+
+/** Obstacle-rule hammer hooks (K-36), composed by the registry from the owners of the entity types. */
+export interface HammerRules {
+  /** The hammer may hit `entity` now (a crate / bag that still stands, a chained yard block). */
+  canHit(s: GameState, entity: EntityRef): boolean;
+  /** Step 1 of the mini pipeline: the hit (events, goal counts). Returns the analytics target kind. */
+  hit(ctx: RuleContext, entity: EntityRef): HammerTargetKind;
 }
 
 /** No rule at all (tests, tools that want the bare core). `applyMove` defaults to the level's registry hooks. */
@@ -185,8 +230,10 @@ export interface MoveResult {
   readonly reason: string | null;
   /** K-28: won in this move's step 11. */
   readonly won: boolean;
-  /** K-29: step 11 found the counter at 0 without a win ("Hamleler bitti!" window). */
+  /** K-29: step 11 found the counter at 0 without a win ("Hamleler bitti!" window, opened after step 12). */
   readonly outOfMoves: boolean;
+  /** K-30: step 12 ran a Söküm (the state is back at the action's start except the counter and `movesSpent`). */
+  readonly teardownCause?: TeardownCause;
 }
 
 export interface ApplyOptions {
@@ -196,6 +243,13 @@ export interface ApplyOptions {
   readonly noTruckHelp?: boolean;
   /** Throw on an invalid move record instead of emitting `moveCancelled{reason: 'invalid'}` (development, tests). */
   readonly strict?: boolean;
+  /**
+   * K-30 Söküm target: the buffer before this action. `GameSession` passes the copy it keeps for Undo; without it
+   * `applyMove` takes its own copy (≈ 1 µs) whenever step 12 may run.
+   */
+  readonly preAction?: Int32Array;
+  /** K-30 D3b dead-state table of the level; null / absent in Faz 2R (cut 1). */
+  readonly deadTable?: DeadTable | null;
 }
 
 const APPLIED: MoveResult = Object.freeze({ status: 'applied', reason: null, won: false, outOfMoves: false });
@@ -214,12 +268,13 @@ export function applyMove(
   switch (move.kind) {
     case 'drag':
       return dragMove(s, move, em, hooks, opts);
-    case 'trowel':
-      return trowelMove(s, move, em, hooks, opts);
     case 'addMoves':
       return addMovesMove(s, move, em, hooks, opts);
+    case 'trowel':
+      em.emit({ t: 'boosterRejected', booster: 'trowel', reason: 'legacyTrowel' });
+      return rejected('legacyTrowel');
     default:
-      throw new Error(`Phase 3: the ${move.kind} booster (GDD K-36…K-38) is not implemented yet`);
+      return boosterMove(s, move, em, hooks, opts);
   }
 }
 
@@ -256,6 +311,7 @@ function dragMove(
   if (move.steer !== undefined && !steerValid(s, drag, drop, move.steer))
     return invalid(em, id, opts, 'steer needs light gravity, a 1-wide block and a FREE site release');
 
+  const pre = preActionOf(s, opts);
   const start = piecePlace(s, id);
   const startZone = pieceZone(s, id);
   const startCells = pieceBoardCells(s, id);
@@ -321,7 +377,7 @@ function dragMove(
 
   // --- step 3: validation on the site (K-16, K-34), lock / stick / bounce (K-14, K-17, Y8), streak (K-33)
   em.step = 3;
-  if (landed) placementStep(s, em, hooks, id, landed, start, seg);
+  const placed = landed ? placementStep(s, em, hooks, id, landed, start, seg) : false;
 
   // --- step 4: cost (K-07: base + glass penalty, never below 0), m += 1
   em.step = 4;
@@ -331,6 +387,7 @@ function dragMove(
   const delta = -Math.min(left, base + glass);
   setHdr(s, H.movesLeft, left + delta);
   setHdr(s, H.turn, hdr(s, H.turn) + 1);
+  setHdr(s, H.movesSpent, hdr(s, H.movesSpent) + 1); // K-43 item 2: every non-cancelled drag move
   em.emit({
     t: 'movesChanged',
     movesLeft: left + delta,
@@ -342,6 +399,7 @@ function dragMove(
   // --- step 5: neighbour effects of the START cells + hidden item check #1 (K-42)
   em.step = 5;
   if (startZone === Zone.yard) neighbourEffects(ctx, hooks, startCells, id);
+  hooks.afterNeighbors?.(ctx);
   uncoverCheck(ctx, hooks);
 
   // --- steps 6–12
@@ -349,14 +407,14 @@ function dragMove(
   em.step = 7;
   countDebrisLeftSite(s, id, startZone);
   emitGoalChanges(s, em, goalsBefore);
-  segmentStep(s, em);
-  deliveryStep(s, em, queueBefore);
+  const shifted = segmentStep(s, em);
+  const delivered = deliveryStep(s, em, queueBefore);
   em.step = 10;
   runTimers(ctx, hooks);
-  return endOfMove(ctx, hooks, opts);
+  return endOfMove(ctx, hooks, opts, { pre, tiling: placed || shifted || delivered });
 }
 
-/** K-35 step 3 for a block that landed on the site (fall or rail). */
+/** K-35 step 3 for a block that landed on the site (fall or rail). Returns true for a correct placement. */
 function placementStep(
   s: GameState,
   em: Emitter,
@@ -365,7 +423,7 @@ function placementStep(
   landed: FallResult,
   start: PiecePlace,
   seg: number,
-): void {
+): boolean {
   const landingAt = siteAt(landed.landing, seg);
   const { verdict } = landed;
   const out = settlePlacement(s, id, landed.landing, verdict, { start, rules: hooks.placement });
@@ -382,7 +440,7 @@ function placementStep(
       em.emit({ t: 'trowelEarned', trowels: step.trowels });
       em.emit({ t: 'comboChanged', combo: step.combo });
     }
-    return;
+    return true;
   }
   setHdr(s, H.wrongCount, hdr(s, H.wrongCount) + 1);
   em.emit({
@@ -405,51 +463,144 @@ function placementStep(
     });
   }
   if (comboReset(s)) em.emit({ t: 'comboChanged', combo: 0 });
+  return false;
 }
 
 // --- Golden Trowel (K-33) and +moves ----------------------------------------------------------------------------------
 
-type TrowelMove = Extract<Move, { kind: 'trowel' }>;
+type BoosterMove = Extract<Move, { kind: 'hammer' | 'crane' | 'paint' | 'goldTrowel' }>;
 
-/** K-33 trowel use + mini pipeline (GDD §10: steps 5 (hidden items), 6, 7, 8, 9, 11, 12; no cost, no timers). */
-function trowelMove(
+const BOOSTER_OF = { hammer: 'hammer', crane: 'crane', paint: 'paint', goldTrowel: 'trowel' } as const;
+
+function rejected(reason: string): MoveResult {
+  return { status: 'rejected', reason, won: false, outOfMoves: false };
+}
+
+/**
+ * Booster mini pipeline (GDD §10; K-33, K-36…K-38): step 0 precondition + D3a pre-check (a refused target spends
+ * nothing), step 1 the direct effect, then 5 (hidden items), 6, 7, 8, 9, 11, 12. No cost, `m`, `movesSpent`, timers
+ * or streak change; YAO never counts.
+ */
+function boosterMove(
   s: GameState,
-  move: TrowelMove,
+  move: BoosterMove,
   em: Emitter,
   hooks: MoveHooks,
   opts: ApplyOptions,
 ): MoveResult {
   em.step = 0;
-  const target = { seg: move.seg, x: move.x, y: move.y };
-  const refused = trowelRejection(s, target);
+  const booster = BOOSTER_OF[move.kind];
+  const refused = boosterRejection(s, move, hooks);
   if (refused !== null) {
-    em.emit({ t: 'boosterRejected', booster: 'trowel', reason: refused });
-    return { status: 'rejected', reason: refused, won: false, outOfMoves: false };
+    em.emit({ t: 'boosterRejected', booster, reason: refused });
+    return rejected(refused);
   }
+  const pre = preActionOf(s, opts);
   const ctx = makeContext(s, em, { wasStuck: false, rotatedAtStep8: false, affected: new Set() });
   const goalsBefore = goalSnapshot(s);
   const queueBefore = hdr(s, H.queueLen);
   em.step = 1;
-  const fill = applyTrowel(s, target);
-  em.emit({
-    t: 'boosterApplied',
-    booster: 'trowel',
-    detail: { cell: fill.cell, color: fill.color, trowels: fill.trowels },
-  });
-  if (fill.revealed)
-    em.emit({
-      t: 'cellsRevealed',
-      seg: move.seg,
-      cells: [{ x: fill.cell.x, y: fill.cell.y, color: fill.color }],
-    });
+  const moved = boosterEffect(ctx, move, hooks);
   em.step = 5;
   uncoverCheck(ctx, hooks);
   yardGravityStep(ctx, hooks);
   em.step = 7;
+  if (moved) countDebrisLeftSite(s, moved.id, moved.startZone);
   emitGoalChanges(s, em, goalsBefore);
   segmentStep(s, em);
   deliveryStep(s, em, queueBefore);
-  return endOfMove(ctx, hooks, opts);
+  return endOfMove(ctx, hooks, opts, { pre, tiling: true });
+}
+
+function boosterRejection(s: GameState, move: BoosterMove, hooks: MoveHooks): string | null {
+  if (isLevelWon(s)) return 'levelOver';
+  switch (move.kind) {
+    case 'hammer':
+      return hammerTargetKind(s, move.target, hooks) === null ? 'noTarget' : null;
+    case 'crane':
+      return craneRejection(s, move, hooks);
+    case 'paint':
+      return paintRejection(s, move.a, move.b);
+    case 'goldTrowel':
+      return goldTrowelRejection(s, move, hooks);
+  }
+}
+
+/** Step 1 of a booster: the effect and its events. Returns the piece that moved (debris count, step 7). */
+function boosterEffect(
+  ctx: PipelineContext,
+  move: BoosterMove,
+  hooks: MoveHooks,
+): { readonly id: PieceId; readonly startZone: number } | null {
+  const { s, em } = ctx;
+  switch (move.kind) {
+    case 'hammer': {
+      const startZone = 'pieceId' in move.target ? pieceZone(s, move.target.pieceId) : Zone.yard;
+      // the rule's own events (chainReleased, crateBroken …) follow the booster event (K-36 direct hit, step 1)
+      em.emit({
+        t: 'boosterApplied',
+        booster: 'hammer',
+        detail: { target: hammerTargetKind(s, move.target, hooks), ...move.target },
+      });
+      const hit = applyHammer(ctx, move.target, hooks);
+      if (hit.kind === 'cargo') {
+        em.emit({ t: 'cargoSmashed', pieceId: hit.pieceId, at: hit.at });
+        return null;
+      }
+      if (hit.kind === 'siteDebris' || hit.kind === 'stuckMortar') {
+        em.emit({ t: 'pieceReturned', pieceId: hit.pieceId, from: hit.from, to: targetAt(s, hit.target) });
+        return { id: hit.pieceId, startZone };
+      }
+      return null;
+    }
+    case 'crane': {
+      const startZone = pieceZone(s, move.pieceId);
+      const fx = applyCraneEffect(s, move);
+      em.emit({
+        t: 'boosterApplied',
+        booster: 'crane',
+        detail: { pieceId: move.pieceId, to: fx.to, rotation: move.rotation },
+      });
+      em.emit({
+        t: 'pieceLifted',
+        pieceId: move.pieceId,
+        by: 'crane',
+        from: fx.from,
+        to: fx.to,
+        shape: fx.shape.id,
+      });
+      if (fx.revealed.length > 0 && fx.to.seg !== undefined)
+        em.emit({ t: 'cellsRevealed', seg: fx.to.seg, cells: fx.revealed });
+      return { id: move.pieceId, startZone };
+    }
+    case 'paint': {
+      swapColors(s, move.a, move.b);
+      const aColor = colorCodeOf(pieceColor(s, move.a));
+      const bColor = colorCodeOf(pieceColor(s, move.b));
+      em.emit({ t: 'boosterApplied', booster: 'paint', detail: { a: move.a, b: move.b } });
+      em.emit({ t: 'colorsSwapped', a: move.a, b: move.b, aColor, bColor });
+      return null;
+    }
+    case 'goldTrowel': {
+      const fx = applyTrowelEffect(s, move.pieceId, { ix: move.x, iy: move.y });
+      em.emit({
+        t: 'boosterApplied',
+        booster: 'trowel',
+        detail: { pieceId: move.pieceId, to: fx.to, trowels: fx.trowels },
+      });
+      em.emit({
+        t: 'pieceLifted',
+        pieceId: move.pieceId,
+        by: 'trowel',
+        from: fx.from,
+        to: fx.to,
+        shape: readShapeId(s, move.pieceId),
+      });
+      if (fx.revealed.length > 0 && fx.to.seg !== undefined)
+        em.emit({ t: 'cellsRevealed', seg: fx.to.seg, cells: fx.revealed });
+      return null;
+    }
+  }
 }
 
 type AddMovesMove = Extract<Move, { kind: 'addMoves' }>;
@@ -476,9 +627,18 @@ function addMovesMove(
   const movesLeft = hdr(s, H.movesLeft) + move.amount;
   setHdr(s, H.movesLeft, movesLeft);
   em.emit({ t: 'movesChanged', movesLeft, delta: move.amount, reason: offer ? 'offer' : 'booster' });
-  if (offer && !opts.noTruckHelp && hooks.deadlock) {
+  if (offer && !opts.noTruckHelp) {
     em.step = 12;
-    hooks.deadlock(makeContext(s, em, { wasStuck: false, rotatedAtStep8: false, affected: new Set() }));
+    const ctx = makeContext(s, em, { wasStuck: false, rotatedAtStep8: false, affected: new Set() });
+    if (hooks.deadlock) hooks.deadlock(ctx);
+    else
+      runStep12(ctx, hooks, {
+        preAction: null,
+        tiling: false,
+        counterZero: movesLeft <= 0,
+        table: opts.deadTable ?? null,
+        afterOffer: true,
+      });
   }
   return APPLIED;
 }
@@ -540,9 +700,10 @@ function neighbourEffects(
   const hook = hooks.onNeighborMoved;
   if (!hook) return false;
   const around: BoardCell[] = [];
+  const geo = ctx.s.lvl.geo;
   for (const c of cells) {
-    if (c.x >= YARD_COLS || c.y >= BOARD_ROWS) continue;
-    for (const n of neighbors4(c.x, c.y)) around.push({ x: n.ix, y: n.iy });
+    if (c.x >= geo.wy || c.y >= geo.hy) continue;
+    for (const n of neighbors4(geo, c.x, c.y)) around.push({ x: n.ix, y: n.iy });
   }
   around.sort((a, b) => a.y - b.y || a.x - b.x);
   let freed = false;
@@ -578,18 +739,19 @@ function emitGoalChanges(s: GameState, em: Emitter, before: readonly number[]): 
 }
 
 /** K-35 step 8 (K-22): segment completion through the site strategy; the next batch joins the queue (K-25). */
-function segmentStep(s: GameState, em: Emitter): void {
+function segmentStep(s: GameState, em: Emitter): boolean {
   em.step = 8;
   const done = siteStrategy(s.lvl).completeIfDone(s);
-  if (!done) return;
+  if (!done) return false;
   em.emit({ t: 'segmentCompleted', seg: done.seg });
   for (const i of setBuildProgress(s, done.completed))
     em.emit({ t: 'goalProgress', goal: i, value: goalValue(s, i), target: goalTarget(s.lvl, i) });
   if (done.shiftedTo !== null) em.emit({ t: 'siteShifted', toSeg: done.shiftedTo });
+  return true;
 }
 
 /** K-35 step 9 (K-25, K-26): the single delivery point; "Kamyonda: N" when N changed during the move. */
-function deliveryStep(s: GameState, em: Emitter, queueBefore: number): void {
+function deliveryStep(s: GameState, em: Emitter, queueBefore: number): boolean {
   em.step = 9;
   const res = deliverQueue(s);
   if (res.delivered.length > 0) {
@@ -605,6 +767,7 @@ function deliveryStep(s: GameState, em: Emitter, queueBefore: number): void {
       });
   }
   if (res.queued !== queueBefore) em.emit({ t: 'deliveryQueued', queued: res.queued });
+  return res.delivered.length > 0;
 }
 
 /**
@@ -619,8 +782,19 @@ function runTimers(ctx: RuleContext, hooks: MoveHooks): void {
   }
 }
 
-/** K-35 steps 11–12: win (K-28) before out of moves (K-29), then the deadlock hook while the level goes on. */
-function endOfMove(ctx: PipelineContext, hooks: MoveHooks, opts: ApplyOptions): MoveResult {
+/** What step 12 needs from the action (K-30). */
+interface EndOfAction {
+  /** Söküm target (null when step 12 is off). */
+  readonly pre: Int32Array | null;
+  /** The action placed correctly, shifted the site, delivered, or was a booster / trowel: D3a runs. */
+  readonly tiling: boolean;
+}
+
+/**
+ * K-35 steps 11–12: win (K-28, K-48) before out of moves (K-29); while the level is not won step 12 always runs (Faz
+ * 2R: at 0 moves too, before the out-of-moves window) — D1 / D2 / D3 and the Söküm of core/deadlock.ts.
+ */
+function endOfMove(ctx: PipelineContext, hooks: MoveHooks, opts: ApplyOptions, end: EndOfAction): MoveResult {
   const { s, em } = ctx;
   em.step = 11;
   const movesLeft = hdr(s, H.movesLeft);
@@ -629,13 +803,33 @@ function endOfMove(ctx: PipelineContext, hooks: MoveHooks, opts: ApplyOptions): 
     em.emit({ t: 'levelWon', movesLeft });
     return { status: 'applied', reason: null, won: true, outOfMoves: false };
   }
-  if (movesLeft <= 0) {
-    em.emit({ t: 'outOfMoves' });
-    return { status: 'applied', reason: null, won: false, outOfMoves: true };
-  }
+  const outOfMoves = movesLeft <= 0;
+  if (outOfMoves) em.emit({ t: 'outOfMoves' });
   em.step = 12;
-  if (!opts.noTruckHelp) hooks.deadlock?.(ctx);
-  return APPLIED;
+  let teardown: TeardownCause | null = null;
+  if (!opts.noTruckHelp) {
+    if (hooks.deadlock) hooks.deadlock(ctx);
+    else
+      teardown = runStep12(ctx, hooks, {
+        preAction: end.pre,
+        tiling: end.tiling,
+        counterZero: outOfMoves,
+        table: opts.deadTable ?? null,
+      });
+  }
+  if (teardown !== null)
+    return { status: 'applied', reason: null, won: false, outOfMoves, teardownCause: teardown };
+  return outOfMoves ? { status: 'applied', reason: null, won: false, outOfMoves: true } : APPLIED;
+}
+
+/** The action's start buffer for a Söküm: the caller's copy, else a fresh one; null when step 12 is off. */
+function preActionOf(s: GameState, opts: ApplyOptions): Int32Array | null {
+  if (opts.noTruckHelp) return null;
+  return opts.preAction ?? s.buf.slice();
+}
+
+function readShapeId(s: GameState, id: PieceId): ShapeId {
+  return shapeByIndex(pieceShape(s, id)).id;
 }
 
 function invalid(em: Emitter, pieceId: PieceId, opts: ApplyOptions, why: string): MoveResult {

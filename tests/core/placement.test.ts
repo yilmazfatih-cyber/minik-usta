@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_GEO } from '../../src/core/geometry.ts';
 import {
   allCellsInPlanArea,
   buildFront,
@@ -158,14 +159,27 @@ describe('K-16 correct placement', () => {
     expect(isCorrectPlacement(s, 1, cellsOf('B1_0', 7, 9)).reasons).toEqual(['outside']);
   });
 
-  it('K-16 condition 2: debris is never correct, even on its own colour (S-13)', () => {
+  it('K-34 hook 2 debris and window never produced: Faz 2R debris is a material block, correct on its own colour (S4, K-16 (2) removed)', () => {
     const s = initialState({ plan: ['WW'], pieces: [['B1_0', 'W', 0, 0]], debris: [['B1_0', 'W', 6, 0]] });
-    expect(isCorrectPlacement(s, 1, cellsOf('B1_0', 6, 0))).toEqual({
-      ok: false,
-      reasons: ['debris'],
+    expect(isCorrectPlacement(s, 1, cellsOf('B1_0', 7, 0))).toEqual({
+      ok: true,
+      reasons: [],
       missingSupport: [],
     });
-    expect(isCorrectPlacement(s, 1, cellsOf('B1_0', 7, 0)).reasons).toEqual(['debris']);
+    const r = initialState({ plan: ['WW'], pieces: [['B1_0', 'W', 0, 0]], debris: [['B1_0', 'R', 6, 0]] });
+    expect(isCorrectPlacement(r, 1, cellsOf('B1_0', 7, 0)).reasons).toEqual(['color']);
+    // a Faz 2R plan has no `.` (K-15): over every site cell, neither reason ever shows up
+    const full = initialState({
+      plan: ['WY', 'YW', 'WW'],
+      pieces: [['B1_0', 'W', 0, 0]],
+      debris: [['B1_0', 'R', 6, 2]],
+    });
+    for (const id of [0, 1])
+      for (let x = 6; x <= 7; x++)
+        for (let y = 0; y < 10; y++) {
+          const reasons = isCorrectPlacement(full, id, cellsOf('B1_0', x, y)).reasons;
+          expect(reasons.includes('debris') || reasons.includes('window'), `${id} (${x},${y})`).toBe(false);
+        }
   });
 
   it('K-16 a hidden `?` cell is checked against its resolved colour; the correct block opens it (K-32)', () => {
@@ -318,7 +332,7 @@ describe('K-34 bottom-up support', () => {
     expect(isCorrectPlacement(s, 2, cellsOf('B1_0', 7, 2)).missingSupport).toEqual([site(7, 1)]);
   });
 
-  it('K-34 verdict reasons keep fixed order: debris, outside, window, colour, support', () => {
+  it('K-34 verdict reasons keep fixed order: outside, window, colour, support (Faz 2R: debris never produced)', () => {
     const s = initialState({
       plan: ['R.', 'WW'],
       pieces: [['B1_0', 'W', 0, 0]],
@@ -326,7 +340,7 @@ describe('K-34 bottom-up support', () => {
     });
     expect(isCorrectPlacement(s, 1, cellsOf('O4_0', 6, 1))).toEqual({
       ok: false,
-      reasons: ['debris', 'outside', 'window', 'color', 'support'],
+      reasons: ['outside', 'window', 'color', 'support'],
       missingSupport: [site(6, 0), site(7, 0)],
     });
   });
@@ -505,7 +519,7 @@ describe('K-17 wrong placement and bounce-back', () => {
     expect(d.isReachable(N(6, 8))).toBe(true);
     const fall = computeFall(s, 1, N(6, 8));
     expect(fall.landing).toEqual({ ix: 6, iy: 0 });
-    expect(fall.verdict.reasons[0]).toBe('debris');
+    expect(fall.verdict.reasons[0]).toBe('color');
     const out = settlePlacement(s, 1, fall.landing, fall.verdict);
     expect(out.kind === 'bounced' && out.target.to).toEqual({ zone: 'site', x: 7, y: 0, seg: 0 });
     expect(wrongOccMask(s, 0, 1)).toBe(0b11);
@@ -513,11 +527,11 @@ describe('K-17 wrong placement and bounce-back', () => {
   });
 
   it('K-17 step 2 order: nearest column to the start x first, ties nearer the wall', () => {
-    expect(nearestColumnsFirst(2, 1)).toEqual([2, 3, 1, 4, 0, 5]);
-    expect(nearestColumnsFirst(6, 1)).toEqual([5, 4, 3, 2, 1, 0]);
-    expect(nearestColumnsFirst(7, 2)).toEqual([4, 3, 2, 1, 0]);
-    expect(nearestColumnsFirst(0, 2)).toEqual([0, 1, 2, 3, 4]);
-    expect(nearestColumnsFirst(3, 3)).toEqual([3, 2, 1, 0]);
+    expect(nearestColumnsFirst(DEFAULT_GEO, 2, 1)).toEqual([2, 3, 1, 4, 0, 5]);
+    expect(nearestColumnsFirst(DEFAULT_GEO, 6, 1)).toEqual([5, 4, 3, 2, 1, 0]);
+    expect(nearestColumnsFirst(DEFAULT_GEO, 7, 2)).toEqual([4, 3, 2, 1, 0]);
+    expect(nearestColumnsFirst(DEFAULT_GEO, 0, 2)).toEqual([0, 1, 2, 3, 4]);
+    expect(nearestColumnsFirst(DEFAULT_GEO, 3, 3)).toEqual([3, 2, 1, 0]);
   });
 
   it('K-17 step 2: blocked start cells → drop over the yard into the nearest column that fits', () => {
@@ -730,7 +744,9 @@ describe('K-17 stuck lifecycle and state upkeep', () => {
     });
     expect(dropIntoYard(s, shapeById('O4_0'), 4)).toBe(4);
     expect(dropIntoYard(s, shapeById('B1_0'), 0)).toBe(-1);
-    expect(nearestColumnsFirst(0, 1).find((x) => dropIntoYard(s, shapeById('B1_0'), x) >= 0)).toBe(1);
+    expect(
+      nearestColumnsFirst(DEFAULT_GEO, 0, 1).find((x) => dropIntoYard(s, shapeById('B1_0'), x) >= 0),
+    ).toBe(1);
     expect(dropIntoYard(s, shapeById('B1_0'), 1)).toBe(6);
     // the moving piece itself is ignored; invalid columns give −1
     expect(dropIntoYard(s, shapeById('O4_0'), 2)).toBe(2);

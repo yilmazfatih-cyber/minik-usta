@@ -15,10 +15,10 @@
  *   · `onCellUncovered`: the owner of the hidden item's type.
  * - `timers`: `onMoveEnd` by rule id plus the site strategy's S5 / S6 ticks; the pipeline calls them in `lvl.step10`
  *   order (GDD K-35 step 10), never in `order`. The K-40 Open Shutter expiry joins in Phase 3.
- * A hook that no active rule provides stays undefined: a Phase 2 level (W1, S1, S2 are core models) gets empty hooks.
+ * A hook that no active rule provides stays undefined: a level with only W1 and S1 (core models) gets empty hooks.
  * `validateRules` rejects a malformed table when this module loads (e.g. `onMoveEnd` without `moveEndOrder`, §7.3).
  */
-import type { PieceFlag, PieceId, Verdict } from '../types.ts';
+import type { HammerTargetKind, PieceFlag, PieceId, Verdict } from '../types.ts';
 import { FLAG_BIT, GF, gapField, pieceFlags } from '../state.ts';
 import type { GameState } from '../state.ts';
 import { STEP10_TIMERS } from '../level/compile.ts';
@@ -30,7 +30,7 @@ import type { PlacementOverride, PlacementRules } from '../placement.ts';
 import type { BoardCell } from '../grid.ts';
 import { siteStrategy } from '../site.ts';
 import type { SiteStrategy } from '../site.ts';
-import type { MoveHooks } from '../moves.ts';
+import type { HammerRules, MoveHooks } from '../moves.ts';
 import { RULE_IDS, RULE_ORDER_BASE, obstacleInfoKey, ruleZone } from './types.ts';
 import type {
   EntityRef,
@@ -45,10 +45,13 @@ import type {
 } from './types.ts';
 import { W1_staticGap } from './W1_staticGap.ts';
 import { S1_slidingSite } from './S1_slidingSite.ts';
-import { S2_planVoid } from './S2_planVoid.ts';
+import { Y3_chain } from './Y3_chain.ts';
 
-/** Every rule plugin (TECH §7.1). Phase 2: W1, S1, S2; a new obstacle adds one line here. */
-export const ALL_RULES: readonly ObstacleRule[] = Object.freeze([W1_staticGap, S1_slidingSite, S2_planVoid]);
+/**
+ * Every rule plugin (TECH §7.1). Faz 2R: W1, Y3, S1 (S2 Plan Boşluğu left the MVP, R2-01: its plugin is gone, the `.`
+ * cell rules stay in the core for a later return); a new obstacle adds one line here.
+ */
+export const ALL_RULES: readonly ObstacleRule[] = Object.freeze([W1_staticGap, Y3_chain, S1_slidingSite]);
 
 // --- validation --------------------------------------------------------------------------------------------------------
 
@@ -136,6 +139,10 @@ export function validateRules(rules: readonly ObstacleRule[]): string[] {
       errors.push(`${where}: onNeighborMoved needs owns.obstacle or owns.pieceFlag`);
     if (r.onCellUncovered && own.obstacle === undefined)
       errors.push(`${where}: onCellUncovered needs owns.obstacle`);
+    if ((r.canHammer !== undefined) !== (r.onHammer !== undefined))
+      errors.push(`${where}: canHammer and onHammer come together (K-36)`);
+    if (r.canHammer && own.obstacle === undefined && own.pieceFlag === undefined)
+      errors.push(`${where}: canHammer / onHammer need owns.obstacle or owns.pieceFlag`);
   }
   return errors;
 }
@@ -242,6 +249,9 @@ export function composeHooks(lvl: CompiledLevel, set: RuleSet): MoveHooks {
   const moveCost = composeMoveCost(set.rules);
   const onNeighborMoved = composeNeighborMoved(set);
   const onCellUncovered = composeCellUncovered(set);
+  const afterNeighbors = composeAfterNeighbors(set.rules);
+  const hammer = composeHammer(set);
+  const onTruckHelp = composeTruckHelp(set.rules);
   const timers = composeTimers(lvl, set.rules);
   return Object.freeze({
     ...(drag ? { drag } : {}),
@@ -252,6 +262,9 @@ export function composeHooks(lvl: CompiledLevel, set: RuleSet): MoveHooks {
     ...(moveCost ? { moveCost } : {}),
     ...(onNeighborMoved ? { onNeighborMoved } : {}),
     ...(onCellUncovered ? { onCellUncovered } : {}),
+    ...(afterNeighbors ? { afterNeighbors } : {}),
+    ...(hammer ? { hammer } : {}),
+    ...(onTruckHelp ? { onTruckHelp } : {}),
     ...(timers ? { timers } : {}),
   });
 }
@@ -374,6 +387,50 @@ function composeCellUncovered(set: RuleSet): MoveHooks['onCellUncovered'] {
     const o = ctx.lvl.obstacles[obstacle];
     if (o) set.ruleByObstacleType.get(o.type)?.onCellUncovered?.(ctx, obstacle);
   };
+}
+
+function composeAfterNeighbors(rules: readonly ObstacleRule[]): MoveHooks['afterNeighbors'] {
+  const fns = hooksOf(rules, 'afterNeighbors');
+  if (fns.length === 0) return undefined;
+  return (ctx: RuleContext): void => {
+    for (const f of fns) f(ctx);
+  };
+}
+
+function composeTruckHelp(rules: readonly ObstacleRule[]): MoveHooks['onTruckHelp'] {
+  const fns = hooksOf(rules, 'onTruckHelp');
+  if (fns.length === 0) return undefined;
+  return (ctx: RuleContext): boolean => {
+    let changed = false;
+    for (const f of fns) if (f(ctx)) changed = true;
+    return changed;
+  };
+}
+
+/** K-36: an obstacle goes to the owner of its type, a block to the first owner of its flags that accepts it. */
+function composeHammer(set: RuleSet): HammerRules | undefined {
+  if (!set.rules.some((r) => r.canHammer !== undefined)) return undefined;
+  const owner = (s: GameState, entity: EntityRef): ObstacleRule | undefined => {
+    if (entity.kind === 'obstacle') {
+      const o = s.lvl.obstacles[entity.index];
+      const r = o ? set.ruleByObstacleType.get(o.type) : undefined;
+      return r?.canHammer?.(s, entity) ? r : undefined;
+    }
+    const flags = pieceFlags(s, entity.id);
+    for (const r of set.rules) {
+      const flag = r.owns?.pieceFlag;
+      if (flag !== undefined && (flags & FLAG_BIT[flag]) !== 0 && r.canHammer?.(s, entity)) return r;
+    }
+    return undefined;
+  };
+  return Object.freeze({
+    canHit: (s: GameState, entity: EntityRef): boolean => owner(s, entity) !== undefined,
+    hit: (ctx: RuleContext, entity: EntityRef): HammerTargetKind => {
+      const r = owner(ctx.s, entity);
+      if (!r?.onHammer) throw new RangeError('hammer: no rule accepts this target');
+      return r.onHammer(ctx, entity);
+    },
+  });
 }
 
 function composeTimers(lvl: CompiledLevel, rules: readonly ObstacleRule[]): MoveHooks['timers'] {

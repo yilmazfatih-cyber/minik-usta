@@ -86,7 +86,8 @@ describe('state buffer (TECH §2.4, D-052)', () => {
     });
     expect(siteOcc(s, 0, 1, 1)).toBe(4);
     expect(wrongOccMask(s, 0, 1)).toBe(0b10);
-    expect(readPiece(s, s.lvl.helpPieceBase).zone).toBe('gone');
+    // Faz 2R (TECH §2R.1): no D2 help slots; the piece table holds the static pieces only
+    expect([s.lvl.helpPieceCount, s.lvl.helpPieceBase, s.lvl.layout.counts.pieces]).toEqual([0, 4, 4]);
     expect(pieceField(s, 0, PF.arrivedTurn)).toBe(-1);
     expect(stateInvariantErrors(s)).toEqual([]);
   });

@@ -1,0 +1,4 @@
+{
+  "_doc": "Deliberate level warnings, silenced level by level (GDD K-45/9, TECH §2R.3 L-34; the reason is written in the level's LEVELS.md record). Keys are level numbers, values warning codes. Errors can never be silenced. Owner: code-lead.",
+  "10": ["batch_queued"]
+}

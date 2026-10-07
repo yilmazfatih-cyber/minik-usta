@@ -138,6 +138,26 @@ const DURATION_KEYS = [
   'chestItemStagger',
   'dailyClaim',
   'ceilingSettle',
+  // Faz 2R (JUICE §8, UX §3, §6.1, §13.1)
+  'homeEnter',
+  'homeToLevel',
+  'progressFill',
+  'structureReveal',
+  'yardClear',
+  'starBurst',
+  'shineSweep',
+  'shineEvery',
+  'ribbonDrop',
+  'rewardCount',
+  'sparkle',
+  'placeSheen',
+  'liftGlow',
+  'navLockedHint',
+  'teardown',
+  'teardownStagger',
+  'teardownSettle',
+  'holdableFade',
+  'truckPreviewSlide',
 ] as const;
 
 /** ZzFX 1.4.0 `buildSamples` parameter list (≤ 21 values, tokens `audio._doc`). */
@@ -166,7 +186,12 @@ const SFX_KEYS = [
   'sfx_streak_pip',
   'sfx_trowel',
   'sfx_clamp',
+  // `sfx_teardown` (JUICE #107) is in tokens.json but not yet in ASSET_LIST §13, which tests/services/audio.test.ts
+  // requires for every typed sound: it joins this list with the ASSET row (REVIEW_LOG code-lead → design-lead, 2R).
 ] as const;
+
+/** tokens.json keys deliberately not typed yet (see the comment above); tests/theme/tokens.test.ts skips them. */
+export const PENDING_TOKEN_KEYS: readonly string[] = ['audio.sfx.sfx_teardown'];
 const SEQ_KEYS = [
   'sfx_segment',
   'sfx_combo',
@@ -182,6 +207,337 @@ const SEQ_KEYS = [
 /** `[startMs, params]` steps mixed into one buffer (TECH §11.6). */
 const SeqSteps = z.array(z.tuple([num, ZzfxParams]));
 
+// ---------------------------------------------------------------------------------------------------------------
+// Faz 2R visual language v2 (ART §3A, §7.1, §14, §15; UX §3, §5.8, §5.9, §6.1, §13.1; TECH §2R.7)
+
+/** ART §3A / §3A.5 candy block v2 (`blockV2.*`). */
+const BlockV2 = z.object({
+  ...shapeOf(
+    [
+      'insetPx',
+      'cornerRadiusRatio',
+      'innerCornerRadiusRatio',
+      'outlinePx',
+      'lipPx',
+      'pillowInsetRatio',
+      'pillowOpenInsetRatio',
+      'pillowRadiusRatio',
+      'lightMix',
+      'gradientStop',
+      'bottomFactor',
+      'darkFactor',
+      'outlineFactor',
+      'grooveFactor',
+      'glowMix',
+      'innerShadeRatio',
+      'innerShadeAlpha',
+      'glossRotDeg',
+      'glossAlpha',
+      'glossDotAlpha',
+      'symbolSizeRatio',
+      'symbolCenterYRatio',
+      'symbolWhiteAlpha',
+      'embossDarkOffsetPx',
+      'embossDarkAlpha',
+      'embossLightOffsetPx',
+      'embossLightAlpha',
+      'placedSheenAlpha',
+      'liftGlowPx',
+      'liftGlowAlpha',
+      'studDiameterRatio',
+      'studMarginPx',
+      'studSidePx',
+      'studRimPx',
+      'studRimAlpha',
+      'studGlossWidthPx',
+      'studGlossAlpha',
+      'studDotAlpha',
+      'studSymbolMaxRatio',
+    ] as const,
+    num,
+  ),
+  /** `[cx, cy, rx, ry]` as ratios of the pillow w / h. */
+  glossEllipse: z.tuple([num, num, num, num]),
+  /** `[cx, cy, r]`: centre as pillow ratios, r as a ratio of the cell. */
+  glossDot: z.tuple([num, num, num]),
+  studEnabled: z.boolean(),
+  /** `[radius ratio of d, start°, end°]`. */
+  studGlossArc: z.tuple([num, num, num]),
+  /** `[radius ratio of d, angle°, r px]`. */
+  studDot: z.tuple([num, num, num]),
+  notHoldableTint: hex,
+});
+
+/** Colour quadruple of a kit button (ART §2.6). */
+const ButtonQuad = hexes(['top', 'base', 'lip', 'stroke']);
+/** Colour quadruple of a ribbon (ART §14.3). */
+const RibbonQuad = hexes(['top', 'base', 'dark', 'stroke']);
+export const KIT_BUTTON_COLORS = ['green', 'orange', 'blue', 'cream', 'red', 'grey'] as const;
+export const KIT_RIBBON_COLORS = ['orange', 'gold', 'blue'] as const;
+
+const Kit = z.object({
+  button: nums([
+    'strokePx',
+    'lipPx',
+    'pressedLipPx',
+    'radiusMaxPx',
+    'radiusHeightRatio',
+    'faceGradientStop',
+    'glossInsetXPx',
+    'glossInsetYPx',
+    'glossHeightRatio',
+    'glossAlphaTop',
+    'glossAlphaBottom',
+    'dropShadowYPx',
+    'dropShadowAlpha',
+    'pressedScale',
+    'textStrokeEm',
+    'textShadowEm',
+    'disabledGlossAlpha',
+    'shineWidthRatio',
+    'shineAlpha',
+    'shineAngleDeg',
+  ]),
+  buttonColor: z.object(shapeOf(KIT_BUTTON_COLORS, ButtonQuad)),
+  panel: z.object({
+    ...shapeOf(
+      ['outline', 'frameTop', 'frameBottom', 'frameInner', 'body', 'inset', 'innerShadow'] as const,
+      hex,
+    ),
+    ...shapeOf(
+      [
+        'outlinePx',
+        'framePx',
+        'innerLinePx',
+        'radiusPx',
+        'shadowYPx',
+        'shadowAlpha',
+        'innerShadowPx',
+        'innerShadowAlpha',
+        'padPx',
+      ] as const,
+      num,
+    ),
+  }),
+  ribbon: z.object({
+    ...shapeOf(
+      [
+        'heightPx',
+        'tailPx',
+        'notchPx',
+        'tailDropPx',
+        'radiusPx',
+        'strokePx',
+        'glossAlpha',
+        'textRatio',
+      ] as const,
+      num,
+    ),
+    ...shapeOf(KIT_RIBBON_COLORS, RibbonQuad),
+  }),
+  badge: z.object({
+    ...shapeOf(['diameterPx', 'ringPx', 'fontPx', 'cornerPx'] as const, num),
+    ...shapeOf(['ring', 'top', 'bottom', 'stroke'] as const, hex),
+    shape: z.enum(['roundedSquare', 'circle']),
+  }),
+  capsule: z.object({
+    ...shapeOf(
+      [
+        'heightPx',
+        'fillAlpha',
+        'innerStrokeAlpha',
+        'innerStrokePx',
+        'iconPx',
+        'iconOverhangPx',
+        'plusPx',
+        'fontPx',
+        'gapPx',
+      ] as const,
+      num,
+    ),
+    ...shapeOf(['fill', 'innerStroke', 'textStroke'] as const, hex),
+  }),
+  progress: z.object({
+    ...shapeOf(['heightPx', 'trackInnerAlpha', 'tickAlpha', 'endIconPx'] as const, num),
+    ...shapeOf(['track', 'fillTop', 'fillBottom'] as const, hex),
+  }),
+  nav: z.object({
+    ...shapeOf(
+      [
+        'barTop',
+        'barBottom',
+        'edge',
+        'selectedTop',
+        'selectedBottom',
+        'selectedStroke',
+        'label',
+        'labelLocked',
+      ] as const,
+      hex,
+    ),
+    ...shapeOf(
+      ['edgePx', 'raisePx', 'lockedAlpha', 'labelPx', 'iconPx', 'iconSelectedPx', 'lockPx'] as const,
+      num,
+    ),
+  }),
+  bubble: z.object({
+    ...shapeOf(['fill', 'stroke'] as const, hex),
+    ...shapeOf(
+      ['strokePx', 'radiusPx', 'shadowYPx', 'shadowAlpha', 'padXPx', 'padYPx', 'tailPx'] as const,
+      num,
+    ),
+  }),
+  sunburst: z.object({
+    ...shapeOf(['rayColor', 'innerColor', 'outerColor'] as const, hex),
+    ...shapeOf(['rays', 'rayAlpha', 'turnsPerSecond'] as const, num),
+  }),
+});
+
+/** UX §13.1 light tutorial (`tutorial.*`, R2-10, K-53). */
+const Tutorial = nums([
+  'startDelayMs',
+  'appearMs',
+  'hideMs',
+  'visibleMs',
+  'idleReshowMs',
+  'nextStepDelayMs',
+  'maxStepsPerLevel',
+  'maxWordsPerBubble',
+  'reshowsWithBubble',
+  'dragFadeAlpha',
+  'handLoopMs',
+  'handPauseMs',
+  'gloveW',
+  'gloveH',
+  'glovePressScale',
+  'trailDotPx',
+  'trailGapPx',
+  'trailAlpha',
+  'highlightStrokePx',
+  'highlightGlowPx',
+  'highlightPadPx',
+  'highlightPulseScale',
+  'highlightPulseMs',
+  'bubbleMaxW',
+  'bubbleMinH',
+  'portraitPx',
+  'portraitGapPx',
+  'dockGapPx',
+]);
+
+/** UX §5.8 variable board (`layout.adaptive.*`, K-49). `cellMaxPx` is optional: 120 when absent (TECH §2R.1). */
+const LayoutAdaptive = z.object({
+  ...shapeOf(
+    [
+      'maxTotalCols',
+      'minRows',
+      'maxRows',
+      'minSiteCols',
+      'maxSiteCols',
+      'yardFramePx',
+      'yardFrameRadiusPx',
+      'siteScaffoldPx',
+      'craneRows',
+      'minSideMarginPx',
+      'yardHolePx',
+    ] as const,
+    num,
+  ),
+  cellMaxPx: z.optional(num),
+});
+
+/** UX §3 home v2 (`layout.home.*`). */
+const LayoutHome = z.object({
+  ...shapeOf(
+    [
+      'livesX',
+      'livesW',
+      'coinsX',
+      'coinsW',
+      'starsX',
+      'starsW',
+      'topBarY',
+      'topBarH',
+      'settingsX',
+      'settingsY',
+      'settingsSize',
+      'areaRibbonY',
+      'areaRibbonW',
+      'progressX',
+      'progressY',
+      'progressW',
+      'sideLeftX',
+      'sideRightX',
+      'sideFirstY',
+      'sideStepY',
+      'sideSize',
+      'structureCenterX',
+      'structureBaseY',
+      'structureMaxW',
+      'structureMaxH',
+      'taskBubbleSize',
+      'characterX',
+      'characterBaseY',
+      'characterW',
+      'characterH',
+      'playButtonW',
+      'playButtonH',
+      'playButtonBottomPx',
+      'levelTagW',
+      'levelTagH',
+      'navBottomPx',
+      'navH',
+      'navTabW',
+      'expandShare',
+      'chestRingPx',
+    ] as const,
+    num,
+  ),
+  /** ART §7.2 structure crop stops (fraction of the structure height revealed from the bottom). */
+  ch1CropStops: numList,
+});
+
+/** UX §5.9 game HUD v2 (`layout.hud.*`). */
+const LayoutHud = nums([
+  'goalChipIconPx',
+  'goalChipGapPx',
+  'blocksLeftFontPx',
+  'blocksLeftLabelPx',
+  'bottomBandAlpha',
+  'goalChipMax',
+  'goalChipIconCompactPx',
+  'goalChipGapCompactPx',
+  'goalSecondRowH',
+  'truckSubBadgePx',
+  'nextFloorBadgePx',
+  'truckPreviewScale',
+]);
+
+/** UX §6.1 win v2 (`layout.win.*`). */
+const LayoutWin = nums([
+  'ribbonY',
+  'ribbonW',
+  'cardY',
+  'cardSize',
+  'characterX',
+  'characterY',
+  'characterW',
+  'characterH',
+  'bonusY',
+  'bonusW',
+  'bonusH',
+  'trowelRowY',
+  'trowelRowH',
+  'rewardsShiftPx',
+  'rewardsY',
+  'rewardCapsuleW',
+  'rewardGapPx',
+  'buttonW',
+  'buttonH',
+  'buttonBottomPx',
+  'expandShare',
+]);
+
 export const TokensSchema = z.object({
   meta: z.object({
     version: num,
@@ -191,6 +547,7 @@ export const TokensSchema = z.object({
     designHeight: num,
     designHeightMax: num,
     scale: nums(['fitHeight', 'expandMinHeight', 'expandMaxHeight']),
+    visualLanguage: str,
   }),
   color: z.object({
     block: colorRecord,
@@ -282,7 +639,12 @@ export const TokensSchema = z.object({
       'screwSlot',
       'key',
       'balloon',
+      'cargoSteel',
+      'cargoDark',
+      'cargoBuckle',
     ]),
+    /** ART §7.1 indigo game scene (R2-12). */
+    scene: hexes(['gameTop', 'gameBottom', 'gameLine', 'gameSilhouette']),
     chapter: z.object(shapeOf(CHAPTERS, hexes(CHAPTER_COLORS))),
     character: z.object({
       outline: hex,
@@ -320,6 +682,11 @@ export const TokensSchema = z.object({
     'panoramaFuture',
     'buildFrontGlow',
     'supportHatch',
+    'debrisLayer',
+    'yardPreview',
+    'sceneGridMinor',
+    'sceneGridMajor',
+    'sceneSilhouette',
   ]),
   block: z.object({
     ...shapeOf(
@@ -348,6 +715,7 @@ export const TokensSchema = z.object({
     /** `[x, y, w, h]` as cell ratios (ART §3 layer 4). */
     glossRect: z.tuple([num, num, num, num]),
   }),
+  blockV2: BlockV2,
   plan: z.object({
     ...shapeOf(
       [
@@ -425,6 +793,10 @@ export const TokensSchema = z.object({
       'groupTopFromBottomPx',
     ]),
     popup: nums(['optionW', 'optionH', 'optionGap', 'optionsBottomInsetPx', 'panelBottomPx']),
+    adaptive: LayoutAdaptive,
+    home: LayoutHome,
+    hud: LayoutHud,
+    win: LayoutWin,
   }),
   touch: nums(['minTargetPx', 'hitSlopPx']),
   drag: nums([
@@ -441,6 +813,7 @@ export const TokensSchema = z.object({
     'steerSwipeMinPx',
   ]),
   radius: nums(['button', 'panel', 'chip', 'badge', 'toggle', 'panelArt']),
+  kit: Kit,
   shadow: z.object({
     buttonLipPx: num,
     buttonPressedLipPx: num,
@@ -459,6 +832,7 @@ export const TokensSchema = z.object({
     'ghostNeutralPx',
     'ghostGlowPx',
     'textEm',
+    'yardPreviewPx',
   ]),
   font: z.object({
     family: str,
@@ -469,6 +843,7 @@ export const TokensSchema = z.object({
   }),
   duration: nums(DURATION_KEYS),
   text: nums(['typewriterCps']),
+  tutorial: Tutorial,
   hud: nums(['heavyRingWarnAt', 'heavyRingHapticBeforeEndMs', 'steerChipPx']),
   easing: z.object(
     shapeOf(
@@ -503,6 +878,11 @@ export const TokensSchema = z.object({
     'bagTear',
     'screw',
     'key',
+    'sparkle',
+    'starBurst',
+    'yardClear',
+    'progressFill',
+    'structureReveal',
   ]),
   haptic: z.object({
     light: num,

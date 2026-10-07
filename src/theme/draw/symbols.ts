@@ -115,7 +115,8 @@ function trace(ctx: DrawContext, g: Geometry): void {
 
 /**
  * Draws the symbol of `color` centred at (cx, cy) in a `sizePx` box. `ink` paints the glyph; `carve` is the base
- * colour under the glyph (block base or plan composite).
+ * colour under the glyph (block base or plan composite). `carve = null` skips the carved lines: the glyph's plain
+ * silhouette, used for the v2 emboss copy under the symbol (ART §3A.2 layer 7).
  */
 export function drawSymbol(
   ctx: DrawContext,
@@ -124,7 +125,7 @@ export function drawSymbol(
   cy: number,
   sizePx: number,
   ink: Ink,
-  carve: Rgb,
+  carve: Rgb | null,
 ): void {
   const k = sizePx / SYMBOL_UNITS;
   ctx.save();
@@ -133,7 +134,8 @@ export function drawSymbol(
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   for (const part of SYMBOLS[color]) {
-    const style = part.color === 'ink' ? css(ink.rgb, ink.alpha) : css(carve);
+    if (part.color === 'carve' && carve === null) continue;
+    const style = part.color === 'ink' || carve === null ? css(ink.rgb, ink.alpha) : css(carve);
     trace(ctx, part.geometry);
     if (part.paint === 'fill') {
       ctx.fillStyle = style;

@@ -23,6 +23,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_GEO } from '../../src/core/geometry.ts';
 import { inGrid, isCraneCell, isSiteCell, isYardCell, onBoard } from '../../src/core/coords.ts';
 import { SHAPES, shapeById } from '../../src/core/shapes.ts';
 import {
@@ -234,10 +235,10 @@ describe('review K-01 board and K-44 shapes', () => {
   it('K-01 GDD example: D2_0 anchored at (3,8) is (3,8),(3,9); anchored at (3,9) it reaches (3,10), which does not exist', () => {
     expect(cellsOf('D2_0', 3, 8)).toEqual(['3,8', '3,9']);
     const ok = shapeById('D2_0').cells.map((c) => [3 + c.x, 8 + c.y] as const);
-    expect(ok.every(([x, y]) => inGrid(x, y))).toBe(true);
+    expect(ok.every(([x, y]) => inGrid(DEFAULT_GEO, x, y))).toBe(true);
     const bad = shapeById('D2_0').cells.map((c) => [3 + c.x, 9 + c.y] as const);
     expect(bad).toContainEqual([3, 10]);
-    expect(bad.every(([x, y]) => inGrid(x, y))).toBe(false);
+    expect(bad.every(([x, y]) => inGrid(DEFAULT_GEO, x, y))).toBe(false);
   });
 
   it('K-01 the 8 × 8 board plus crane rows y 8–9; nothing at x < 0, x > 7 or y > 9', () => {
@@ -251,16 +252,23 @@ describe('review K-01 board and K-44 shapes', () => {
       [8, 0, false, false, false],
       [0, -1, false, false, false],
     ] as const) {
-      expect([inGrid(x, y), onBoard(x, y), isCraneCell(x, y)], `(${x},${y})`).toEqual([grid, board, crane]);
+      expect(
+        [inGrid(DEFAULT_GEO, x, y), onBoard(DEFAULT_GEO, x, y), isCraneCell(DEFAULT_GEO, x, y)],
+        `(${x},${y})`,
+      ).toEqual([grid, board, crane]);
     }
     // yard x 0–5 (K-02), site x 6–7 (K-03), both only on board rows
-    expect([isYardCell(5, 7), isYardCell(6, 0), isYardCell(5, 8)]).toEqual([true, false, false]);
-    expect([isSiteCell(6, 0), isSiteCell(7, 7), isSiteCell(5, 0), isSiteCell(6, 8)]).toEqual([
-      true,
-      true,
-      false,
-      false,
-    ]);
+    expect([
+      isYardCell(DEFAULT_GEO, 5, 7),
+      isYardCell(DEFAULT_GEO, 6, 0),
+      isYardCell(DEFAULT_GEO, 5, 8),
+    ]).toEqual([true, false, false]);
+    expect([
+      isSiteCell(DEFAULT_GEO, 6, 0),
+      isSiteCell(DEFAULT_GEO, 7, 7),
+      isSiteCell(DEFAULT_GEO, 5, 0),
+      isSiteCell(DEFAULT_GEO, 6, 8),
+    ]).toEqual([true, true, false, false]);
   });
 
   it('K-44 GDD example: C3_90 cells (0,0)(0,1)(1,1), view "XX / X." (top row full, bottom row left only)', () => {
@@ -369,32 +377,36 @@ describe('review K-01 board and K-44 shapes', () => {
     expect(SHAPES.length).toBe(52);
   });
 
-  it('K-44 symmetric aliases are accepted in level data and compile to the canonical shape (O4_90, D2_180, D2_270, I3_270, Q9_270)', () => {
-    const spec: LevelSpec = {
-      id: 11,
-      plan: ['WW'],
-      pieces: [
-        ['O4_90', 'W', 0, 0],
-        ['D2_180', 'W', 2, 0],
-        ['D2_270', 'W', 3, 0],
-        ['I3_270', 'W', 0, 2],
-        ['Q9_270', 'W', 3, 1],
-      ],
-    };
-    expect(run(spec, ['L-02', 'L-04', 'L-21'])).toEqual([]);
-    const lvl = compile(level(spec));
-    const expected: [ShapeId, ShapeId][] = [
-      ['O4_90', 'O4_0'],
-      ['D2_180', 'D2_0'],
-      ['D2_270', 'D2_90'],
-      ['I3_270', 'I3_90'],
-      ['Q9_270', 'Q9_0'],
-    ];
-    expected.forEach(([data, canon], i) => {
-      const p = lvl.pieces[i];
-      expect([p?.dataShape, p?.shapeIndex], data).toEqual([data, shapeById(canon).index]);
-    });
-  });
+  // Faz 2R (WP-B, TECH §2R.3): w ≥ 3 "heavy" rule → piece_too_wide; Y5 = I5/Q9 (K-44 Faz 2R). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-44 symmetric aliases are accepted in level data and compile to the canonical shape (O4_90, D2_180, D2_270, I3_270, Q9_270)',
+    () => {
+      const spec: LevelSpec = {
+        id: 11,
+        plan: ['WW'],
+        pieces: [
+          ['O4_90', 'W', 0, 0],
+          ['D2_180', 'W', 2, 0],
+          ['D2_270', 'W', 3, 0],
+          ['I3_270', 'W', 0, 2],
+          ['Q9_270', 'W', 3, 1],
+        ],
+      };
+      expect(run(spec, ['L-02', 'L-04', 'L-21'])).toEqual([]);
+      const lvl = compile(level(spec));
+      const expected: [ShapeId, ShapeId][] = [
+        ['O4_90', 'O4_0'],
+        ['D2_180', 'D2_0'],
+        ['D2_270', 'D2_90'],
+        ['I3_270', 'I3_90'],
+        ['Q9_270', 'Q9_0'],
+      ];
+      expected.forEach(([data, canon], i) => {
+        const p = lvl.pieces[i];
+        expect([p?.dataShape, p?.shapeIndex], data).toEqual([data, shapeById(canon).index]);
+      });
+    },
+  );
 });
 
 // =====================================================================================================================
@@ -426,22 +438,26 @@ describe('review K-44 K-45/5 shapes and flags in level data', () => {
     }
   });
 
-  it('K-44 heavy shapes only from level 8: I5_0/Q9_0 locked at 7, valid at 8 and 41; L4_90 usable once L4 is unlocked (11); I3_90 at 9 still locked (kind)', () => {
-    const heavy: PieceSpec[] = [
-      ['I5_0', 'W', 0, 0],
-      ['Q9_0', 'W', 0, 1],
-    ];
-    expect(run({ id: 7, plan: ['WW'], pieces: heavy }, ['L-04']).map((i) => i.code)).toEqual([
-      'shape_locked',
-      'shape_locked',
-    ]);
-    expect(run({ id: 8, plan: ['WW'], pieces: heavy }, ['L-04'])).toEqual([]);
-    expect(run({ id: 41, plan: ['WW'], pieces: heavy }, ['L-04'])).toEqual([]);
-    expect(run({ id: 11, plan: ['WW'], pieces: [['L4_90', 'W', 0, 0]] }, ['L-04'])).toEqual([]);
-    expect(codes(run({ id: 9, plan: ['WW'], pieces: [['I3_90', 'W', 0, 0]] }, ['L-04']))).toEqual([
-      'shape_locked',
-    ]);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): w ≥ 3 "heavy" rule → piece_too_wide; Y5 = I5/Q9 (K-44 Faz 2R). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-44 heavy shapes only from level 8: I5_0/Q9_0 locked at 7, valid at 8 and 41; L4_90 usable once L4 is unlocked (11); I3_90 at 9 still locked (kind)',
+    () => {
+      const heavy: PieceSpec[] = [
+        ['I5_0', 'W', 0, 0],
+        ['Q9_0', 'W', 0, 1],
+      ];
+      expect(run({ id: 7, plan: ['WW'], pieces: heavy }, ['L-04']).map((i) => i.code)).toEqual([
+        'shape_locked',
+        'shape_locked',
+      ]);
+      expect(run({ id: 8, plan: ['WW'], pieces: heavy }, ['L-04'])).toEqual([]);
+      expect(run({ id: 41, plan: ['WW'], pieces: heavy }, ['L-04'])).toEqual([]);
+      expect(run({ id: 11, plan: ['WW'], pieces: [['L4_90', 'W', 0, 0]] }, ['L-04'])).toEqual([]);
+      expect(codes(run({ id: 9, plan: ['WW'], pieces: [['I3_90', 'W', 0, 0]] }, ['L-04']))).toEqual([
+        'shape_locked',
+      ]);
+    },
+  );
 
   it('K-44 I5_90 and I5_270 are forbidden in level data at every level; I5_0 and I5_180 are not', () => {
     for (const id of [8, 41]) {
@@ -494,40 +510,44 @@ describe('review K-44 K-45/5 shapes and flags in level data', () => {
     ]);
   });
 
-  it('K-45/5 flag combinations follow the OBSTACLES table (✓ chained/wet on heavy, glass+mortar …; ✗ glass+balloon, heavy glass/balloon/mortar)', () => {
-    const allowed: PieceSpec[] = [
-      ['D2_90', 'W', 0, 0, ['glass', 'mortar']],
-      ['D2_90', 'W', 2, 0, ['glass', 'chained']],
-      ['D2_90', 'W', 4, 0, ['glass', 'wet'], 2],
-      ['D2_90', 'W', 0, 1, ['balloon', 'mortar']],
-      ['D2_90', 'W', 2, 1, ['balloon', 'chained']],
-      ['D2_90', 'W', 4, 1, ['mortar', 'chained']],
-      ['D2_90', 'W', 0, 2, ['chained', 'wet'], 3],
-      ['I3_90', 'W', 0, 3, ['chained']],
-      ['I3_90', 'W', 3, 3, ['wet'], 1],
-    ];
-    expect(run({ id: 41, plan: ['WW'], pieces: allowed }, ['L-21', 'L-26'])).toEqual([]);
-    const forbidden: PieceSpec[] = [
-      ['D2_90', 'W', 0, 0, ['glass', 'balloon']],
-      ['I3_90', 'W', 0, 1, ['glass']],
-      ['I3_90', 'W', 0, 2, ['balloon']],
-      ['Q9_0', 'W', 0, 3, ['mortar']],
-    ];
-    // debris carries no flags at all (K-21 table: debris × every flag ✗) — the schema refuses the field
-    const debrisJson = levelJson({
-      id: 41,
-      plan: ['WW'],
-      pieces: [['B1_0', 'W', 0, 0]],
-      debris: [['B1_0', 'R', 6, 0]],
-    });
-    const d0 = debrisJson.build.debris?.[0];
-    if (d0) Object.assign(d0, { flags: ['glass'] });
-    expect(codes(runJson(debrisJson))).toEqual(['schema_invalid']);
-    const issues = run({ id: 41, plan: ['WW'], pieces: forbidden }, ['L-21']);
-    expect(issues.map((i) => [i.code, i.rule, i.path])).toEqual(
-      [0, 1, 2, 3].map((k) => ['flag_combo_forbidden', 'K-45/5', `yard.batches[0].pieces[${k}]`]),
-    );
-  });
+  // Faz 2R (WP-B, TECH §2R.3): w ≥ 3 "heavy" rule → piece_too_wide; Y5 = I5/Q9 (K-44 Faz 2R). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-45/5 flag combinations follow the OBSTACLES table (✓ chained/wet on heavy, glass+mortar …; ✗ glass+balloon, heavy glass/balloon/mortar)',
+    () => {
+      const allowed: PieceSpec[] = [
+        ['D2_90', 'W', 0, 0, ['glass', 'mortar']],
+        ['D2_90', 'W', 2, 0, ['glass', 'chained']],
+        ['D2_90', 'W', 4, 0, ['glass', 'wet'], 2],
+        ['D2_90', 'W', 0, 1, ['balloon', 'mortar']],
+        ['D2_90', 'W', 2, 1, ['balloon', 'chained']],
+        ['D2_90', 'W', 4, 1, ['mortar', 'chained']],
+        ['D2_90', 'W', 0, 2, ['chained', 'wet'], 3],
+        ['I3_90', 'W', 0, 3, ['chained']],
+        ['I3_90', 'W', 3, 3, ['wet'], 1],
+      ];
+      expect(run({ id: 41, plan: ['WW'], pieces: allowed }, ['L-21', 'L-26'])).toEqual([]);
+      const forbidden: PieceSpec[] = [
+        ['D2_90', 'W', 0, 0, ['glass', 'balloon']],
+        ['I3_90', 'W', 0, 1, ['glass']],
+        ['I3_90', 'W', 0, 2, ['balloon']],
+        ['Q9_0', 'W', 0, 3, ['mortar']],
+      ];
+      // debris carries no flags at all (K-21 table: debris × every flag ✗) — the schema refuses the field
+      const debrisJson = levelJson({
+        id: 41,
+        plan: ['WW'],
+        pieces: [['B1_0', 'W', 0, 0]],
+        debris: [['B1_0', 'R', 6, 0]],
+      });
+      const d0 = debrisJson.build.debris?.[0];
+      if (d0) Object.assign(d0, { flags: ['glass'] });
+      expect(codes(runJson(debrisJson))).toEqual(['schema_invalid']);
+      const issues = run({ id: 41, plan: ['WW'], pieces: forbidden }, ['L-21']);
+      expect(issues.map((i) => [i.code, i.rule, i.path])).toEqual(
+        [0, 1, 2, 3].map((k) => ['flag_combo_forbidden', 'K-45/5', `yard.batches[0].pieces[${k}]`]),
+      );
+    },
+  );
 });
 
 // =====================================================================================================================
@@ -543,13 +563,17 @@ describe('review K-31 colour set and unlocks', () => {
     expect(issues.map((i) => [i.code, i.rule, i.severity])).toEqual([['too_many_colors', 'K-45/4', 'error']]);
   });
 
-  it('K-31 GDD example on level_005.json: G/R/W is valid; one Y decoy in the yard makes 4 colours → too_many_colors although the plan keeps 3', () => {
-    const json = readLevelJson(5);
-    expect(runJson(json)).toEqual([]);
-    batchOf(json, 0).pieces.push({ shape: 'B1_0', color: 'Y', x: 2, y: 7 });
-    const issues = runJson(json);
-    expect(codes(issues)).toEqual(['too_many_colors']);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): Faz 2 levels/*.json do not meet the Faz 2R rules. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-31 GDD example on level_005.json: G/R/W is valid; one Y decoy in the yard makes 4 colours → too_many_colors although the plan keeps 3',
+    () => {
+      const json = readLevelJson(5);
+      expect(runJson(json)).toEqual([]);
+      batchOf(json, 0).pieces.push({ shape: 'B1_0', color: 'Y', x: 2, y: 7 });
+      const issues = runJson(json);
+      expect(codes(issues)).toEqual(['too_many_colors']);
+    },
+  );
 
   it('K-31 GDD example: in level 22 the paint gate colour P joins the set (B, P, Y, R → 4 ≤ 5, nothing locked)', () => {
     const spec: LevelSpec = {
@@ -673,7 +697,8 @@ describe('review K-45/1 identity, seed', () => {
 });
 
 describe('review K-45/2 yard fill and overlap', () => {
-  it('K-45/2 K-02 GDD example: 46/48 is valid, 38/48 is yard_fill_low', () => {
+  // Faz 2R (WP-B, TECH §2R.3): K-02 80 % band → Faz 2R 2 ≤ E ≤ ⌊0,4·C⌋. WP-M ile yeniden üretilecek.
+  it.fails('K-45/2 K-02 GDD example: 46/48 is valid, 38/48 is yard_fill_low', () => {
     const fill = (n: number): string[] =>
       run({ id: 1, plan: ['WW'], pieces: bricks(n) }, ['L-03']).map((i) => i.code);
     expect(fill(46)).toEqual([]);
@@ -681,7 +706,8 @@ describe('review K-45/2 yard fill and overlap', () => {
     expect(fill(38)).toEqual(['yard_fill_low']);
   });
 
-  it('K-45/2 crates and cement bags fill yard cells, screws and keys do not', () => {
+  // Faz 2R (WP-B, TECH §2R.3): K-02 80 % band → Faz 2R 2 ≤ E ≤ ⌊0,4·C⌋. WP-M ile yeniden üretilecek.
+  it.fails('K-45/2 crates and cement bags fill yard cells, screws and keys do not', () => {
     const obstacles: LevelInput['obstacles'] = [
       { type: 'crate', x: 1, y: 6, hp: 1 },
       { type: 'cement_bag', x: 2, y: 6 },
@@ -910,35 +936,43 @@ describe('review K-45/3 wall and gaps (L-09)', () => {
 });
 
 describe('review K-45/4 plan rows, elevator, hidden cells (L-05, L-08)', () => {
-  it('K-45/4 a plan row of 1 character is row_width (not schema_invalid); an unknown letter is schema_invalid', () => {
-    const json = levelJson({ id: 1, plan: ['WW'], pieces: [['B1_0', 'W', 0, 0]] });
-    const seg = json.build.segments[0];
-    if (!seg) throw new Error('no segment');
-    seg.rows = ['W', 'WW'];
-    expect(runJson(json).map((i) => [i.code, i.rule, i.path])).toEqual([
-      ['row_width', 'K-45/4', 'build.segments[0].rows[0]'],
-    ]);
-    seg.rows = ['WX'];
-    expect(codes(runJson(json))).toEqual(['schema_invalid']);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): row_width → plan_size (K-15 Faz 2R). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-45/4 a plan row of 1 character is row_width (not schema_invalid); an unknown letter is schema_invalid',
+    () => {
+      const json = levelJson({ id: 1, plan: ['WW'], pieces: [['B1_0', 'W', 0, 0]] });
+      const seg = json.build.segments[0];
+      if (!seg) throw new Error('no segment');
+      seg.rows = ['W', 'WW'];
+      expect(runJson(json).map((i) => [i.code, i.rule, i.path])).toEqual([
+        ['row_width', 'K-45/4', 'build.segments[0].rows[0]'],
+      ]);
+      seg.rows = ['WX'];
+      expect(codes(runJson(json))).toEqual(['schema_invalid']);
+    },
+  );
 
-  it('K-45/4 K-24 elevator: h + b ≤ 8 for every segment (6 + 2 valid, 6 + 3 overflow on that segment only)', () => {
-    const el = (b: number): Issue[] =>
-      run(
-        {
-          id: 37,
-          plan: [
-            ['WW', 'WW', 'WW', 'WW', 'WW', 'WW'],
-            ['WW', 'WW', 'WW', 'WW'],
-          ],
-          pieces: [['B1_0', 'W', 0, 0]],
-          elevator: { range: [0, b], start: 0, dir: 1 },
-        },
-        ['L-05'],
-      );
-    expect(el(2)).toEqual([]);
-    expect(el(3).map((i) => [i.code, i.path])).toEqual([['elevator_overflow', 'build.segments[0]']]);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): plans are exactly Hs × Ws (plan_size). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-45/4 K-24 elevator: h + b ≤ 8 for every segment (6 + 2 valid, 6 + 3 overflow on that segment only)',
+    () => {
+      const el = (b: number): Issue[] =>
+        run(
+          {
+            id: 37,
+            plan: [
+              ['WW', 'WW', 'WW', 'WW', 'WW', 'WW'],
+              ['WW', 'WW', 'WW', 'WW'],
+            ],
+            pieces: [['B1_0', 'W', 0, 0]],
+            elevator: { range: [0, b], start: 0, dir: 1 },
+          },
+          ['L-05'],
+        );
+      expect(el(2)).toEqual([]);
+      expect(el(3).map((i) => [i.code, i.path])).toEqual([['elevator_overflow', 'build.segments[0]']]);
+    },
+  );
 
   it('K-45/4 K-32 repeat: no `?` in the bottom p rows; a `?` that resolves to `.` is invalid ("`.` gizli olamaz"); chains resolve', () => {
     const hidden = (rows: string[], period: number): string[] =>
@@ -1115,14 +1149,18 @@ describe('review K-45/7 debris (L-13)', () => {
     expect(base([['D2_0', 'R', 7, 1]])).toEqual([]);
   });
 
-  it('K-45/7 debris stays inside its own segment plan height (segment default 0); support is not required', () => {
-    const plans = [['WW', 'WW', 'WW'], ['WW']];
-    expect(base([['B1_0', 'R', 6, 2]], plans)).toEqual([]); // floating at row 2 of segment 0 (OBSTACLES S4)
-    expect(base([['B1_0', 'R', 6, 2, 1]], plans)).toEqual(['debris_misplaced']); // segment 1 has 1 row
-    expect(base([['B1_0', 'R', 6, 0, 1]], plans)).toEqual([]);
-    expect(base([['D2_0', 'R', 6, 2]], plans)).toEqual(['debris_misplaced']); // rows 2–3, plan has 3 rows
-    expect(base([['B1_0', 'R', 6, 0, 2]], plans)).toEqual(['debris_misplaced']); // no segment 2
-  });
+  // Faz 2R (WP-B, TECH §2R.3): debris rules changed (S4 Faz 2R, plan_has_window). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-45/7 debris stays inside its own segment plan height (segment default 0); support is not required',
+    () => {
+      const plans = [['WW', 'WW', 'WW'], ['WW']];
+      expect(base([['B1_0', 'R', 6, 2]], plans)).toEqual([]); // floating at row 2 of segment 0 (OBSTACLES S4)
+      expect(base([['B1_0', 'R', 6, 2, 1]], plans)).toEqual(['debris_misplaced']); // segment 1 has 1 row
+      expect(base([['B1_0', 'R', 6, 0, 1]], plans)).toEqual([]);
+      expect(base([['D2_0', 'R', 6, 2]], plans)).toEqual(['debris_misplaced']); // rows 2–3, plan has 3 rows
+      expect(base([['B1_0', 'R', 6, 0, 2]], plans)).toEqual(['debris_misplaced']); // no segment 2
+    },
+  );
 
   it('K-45/7 debris pieces of one segment must not overlap; the same cell in two different segments is no overlap', () => {
     const plans = [['WW'], ['WW']];
@@ -1152,28 +1190,33 @@ describe('review K-45/7 debris (L-13)', () => {
 // =====================================================================================================================
 
 describe('review K-27 material and K-25 truck batches', () => {
-  it('K-27 GDD example: segment 2 has 6 W cells, batch 1 brings O4 + D2_0 W (6) and a decoy C3 W → enough; O4 alone is material_short', () => {
-    const spec = (truck: PieceSpec[]): LevelSpec => ({
-      id: 5,
-      plan: [['GG'], ['W.', 'WW', 'WW', 'W.']],
-      pieces: [['D2_90', 'G', 0, 0]],
-      batches: [{ forSegment: 1, pieces: truck }],
-    });
-    expect(
-      run(
-        spec([
-          ['O4_0', 'W', 0, 8],
-          ['D2_0', 'W', 2, 8],
-          ['C3_0', 'W', 3, 8],
-        ]),
-        ['L-10'],
-      ),
-    ).toEqual([]);
-    const short = run(spec([['O4_0', 'W', 0, 8]]), ['L-10']);
-    expect(short.map((i) => [i.code, i.rule])).toEqual([['material_short', 'K-27']]);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 GDD example: segment 2 has 6 W cells, batch 1 brings O4 + D2_0 W (6) and a decoy C3 W → enough; O4 alone is material_short',
+    () => {
+      const spec = (truck: PieceSpec[]): LevelSpec => ({
+        id: 5,
+        plan: [['GG'], ['W.', 'WW', 'WW', 'W.']],
+        pieces: [['D2_90', 'G', 0, 0]],
+        batches: [{ forSegment: 1, pieces: truck }],
+      });
+      expect(
+        run(
+          spec([
+            ['O4_0', 'W', 0, 8],
+            ['D2_0', 'W', 2, 8],
+            ['C3_0', 'W', 3, 8],
+          ]),
+          ['L-10'],
+        ),
+      ).toEqual([]);
+      const short = run(spec([['O4_0', 'W', 0, 8]]), ['L-10']);
+      expect(short.map((i) => [i.code, i.rule])).toEqual([['material_short', 'K-27']]);
+    },
+  );
 
-  it('K-27 heavy blocks are not supply ("ağır olmayan"): an I3_90 W cannot cover 2 W cells', () => {
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails('K-27 heavy blocks are not supply ("ağır olmayan"): an I3_90 W cannot cover 2 W cells', () => {
     const supply = (pieces: PieceSpec[]): string[] =>
       run({ id: 11, plan: ['WW'], pieces }, ['L-10']).map((i) => i.code);
     expect(supply([['I3_90', 'W', 0, 0]])).toEqual(['material_short']);
@@ -1185,34 +1228,44 @@ describe('review K-27 material and K-25 truck batches', () => {
     ).toEqual([]);
   });
 
-  it('K-27 only blocks that can reach the site are supply: I3_0 cannot cross a height-8 wall (K-05) unless a gap of size ≥ 3 exists', () => {
-    const pieces: PieceSpec[] = [
-      ['I3_0', 'W', 0, 0],
-      ['I3_0', 'W', 1, 0],
-    ];
-    const plan = ['WW', 'WW', 'WW'];
-    expect(run({ id: 11, wall: { height: 8 }, plan, pieces }, ['L-10']).map((i) => i.code)).toEqual([
-      'material_short',
-    ]);
-    expect(
-      run({ id: 11, wall: { height: 8, gaps: [{ type: 'static', y: 0, size: 3 }] }, plan, pieces }, ['L-10']),
-    ).toEqual([]);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 only blocks that can reach the site are supply: I3_0 cannot cross a height-8 wall (K-05) unless a gap of size ≥ 3 exists',
+    () => {
+      const pieces: PieceSpec[] = [
+        ['I3_0', 'W', 0, 0],
+        ['I3_0', 'W', 1, 0],
+      ];
+      const plan = ['WW', 'WW', 'WW'];
+      expect(run({ id: 11, wall: { height: 8 }, plan, pieces }, ['L-10']).map((i) => i.code)).toEqual([
+        'material_short',
+      ]);
+      expect(
+        run({ id: 11, wall: { height: 8, gaps: [{ type: 'static', y: 0, size: 3 }] }, plan, pieces }, [
+          'L-10',
+        ]),
+      ).toEqual([]);
+    },
+  );
 
-  it('K-27 TECH L-10 "her blok bir kez": one O4 that is either Y or P (paint gate) cannot supply 2 Y + 2 P cells → material_short', () => {
-    const spec: LevelSpec = {
-      id: 22,
-      wall: { height: 6, gaps: [{ type: 'paint', y: 1, size: 2, color: 'P' }] },
-      plan: ['PP', 'YY'],
-      pieces: [['O4_0', 'Y', 0, 0]],
-    };
-    // The level is refused anyway by the exact cover (L-11) …
-    expect(codes(run(spec, ['L-11']))).toEqual(['untileable']);
-    // … but the material condition counts every block once, for one colour: 4 cells as Y or as P, never 2 + 2.
-    expect(codes(run(spec, ['L-10']))).toEqual(['material_short']);
-    const block = { forSegment: 0, color: 'Y' as const, cells: 4, alts: ['P' as const] };
-    expect(materialShortfall({ Y: 2, P: 2 }, [block]).length).toBeGreaterThan(0);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 TECH L-10 "her blok bir kez": one O4 that is either Y or P (paint gate) cannot supply 2 Y + 2 P cells → material_short',
+    () => {
+      const spec: LevelSpec = {
+        id: 22,
+        wall: { height: 6, gaps: [{ type: 'paint', y: 1, size: 2, color: 'P' }] },
+        plan: ['PP', 'YY'],
+        pieces: [['O4_0', 'Y', 0, 0]],
+      };
+      // The level is refused anyway by the exact cover (L-11) …
+      expect(codes(run(spec, ['L-11']))).toEqual(['untileable']);
+      // … but the material condition counts every block once, for one colour: 4 cells as Y or as P, never 2 + 2.
+      expect(codes(run(spec, ['L-10']))).toEqual(['material_short']);
+      const block = { forSegment: 0, color: 'Y' as const, cells: 4, alts: ['P' as const] };
+      expect(materialShortfall({ Y: 2, P: 2 }, [block]).length).toBeGreaterThan(0);
+    },
+  );
 
   it('K-25 truck blocks: y written as 8, 0 ≤ x ≤ 6 − w, forSegment 1…S−1, dropColumns fit the block', () => {
     const truck = (
@@ -1261,31 +1314,35 @@ describe('review K-27 material and K-25 truck batches', () => {
 // =====================================================================================================================
 
 describe('review K-45/9 mechanics derived from data', () => {
-  it('K-45/9 levels 1–5 derive {}, {}, {W1}, {W1, S2}, {S1}; each new mechanic equals `teaches`, 1 and 2 have none', () => {
-    const previous = new Set<MechanicId>();
-    const expected: Record<number, [MechanicId[], MechanicId | undefined]> = {
-      1: [[], undefined],
-      2: [[], undefined],
-      3: [['W1'], 'W1'],
-      4: [['W1', 'S2'], 'S2'],
-      5: [['S1'], 'S1'],
-    };
-    for (const n of LEVEL_IDS) {
-      const res = validateLevelJson(readLevelJson(n), {
-        only: ['L-16', 'L-22'],
-        previousMechanics: new Set(previous),
-      });
-      expect(res.issues, `level ${n}`).toEqual([]);
-      const lvl = res.level;
-      if (!lvl) throw new Error(`level ${n} fails the schema`);
-      const [derived, teaches] = expected[n] ?? [[], undefined];
-      expect(deriveMechanics(lvl), `level ${n} derived set`).toEqual(derived);
-      expect(lvl.teaches, `level ${n} teaches`).toBe(teaches);
-      const fresh = derived.filter((m) => !previous.has(m));
-      expect(fresh, `level ${n} new mechanics`).toEqual(teaches ? [teaches] : []);
-      for (const m of derived) previous.add(m);
-    }
-  });
+  // Faz 2R (WP-B, TECH §2R.3): S2 left the signature table (CL-2R-12, plan_has_window). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-45/9 levels 1–5 derive {}, {}, {W1}, {W1, S2}, {S1}; each new mechanic equals `teaches`, 1 and 2 have none',
+    () => {
+      const previous = new Set<MechanicId>();
+      const expected: Record<number, [MechanicId[], MechanicId | undefined]> = {
+        1: [[], undefined],
+        2: [[], undefined],
+        3: [['W1'], 'W1'],
+        4: [['W1', 'S2'], 'S2'],
+        5: [['S1'], 'S1'],
+      };
+      for (const n of LEVEL_IDS) {
+        const res = validateLevelJson(readLevelJson(n), {
+          only: ['L-16', 'L-22'],
+          previousMechanics: new Set(previous),
+        });
+        expect(res.issues, `level ${n}`).toEqual([]);
+        const lvl = res.level;
+        if (!lvl) throw new Error(`level ${n} fails the schema`);
+        const [derived, teaches] = expected[n] ?? [[], undefined];
+        expect(deriveMechanics(lvl), `level ${n} derived set`).toEqual(derived);
+        expect(lvl.teaches, `level ${n} teaches`).toBe(teaches);
+        const fresh = derived.filter((m) => !previous.has(m));
+        expect(fresh, `level ${n} new mechanics`).toEqual(teaches ? [teaches] : []);
+        for (const m of derived) previous.add(m);
+      }
+    },
+  );
 
   it('K-45/9 teaches is only valid for the one new mechanic: an already seen mechanic, or a level without a new one, is teaches_mismatch', () => {
     const seen = new Set<MechanicId>(['W1', 'S2', 'S1']);
@@ -1335,7 +1392,8 @@ describe('review GDD 14.1 tutorial data (L-17)', () => {
     expect(one('piece:k1_0', 5)).toEqual(['tut_highlight_invalid']); // truck block needs startOn deliveryDone
   });
 
-  it('GDD 14.1 done and startOn events that can never happen in level 1 are tut_done_invalid', () => {
+  // Faz 2R (WP-B, TECH §2R.3): Faz 2 validator expectation. WP-M ile yeniden üretilecek.
+  it.fails('GDD 14.1 done and startOn events that can never happen in level 1 are tut_done_invalid', () => {
     const impossible: Step['done'][] = [
       { event: 'segmentDone' },
       { event: 'deliveryDone' },
@@ -1390,52 +1448,60 @@ describe('review GDD 14.1 tutorial data (L-17)', () => {
     expect(at('placementCorrect', 5, 0)).toEqual(['tut_done_invalid']);
   });
 
-  it('GDD 14.1/4a a required step highlights a piece: or debris:; without piece: its done cannot be placementCorrect', () => {
-    const req = (highlight: string[], done: Step['done'], n = 1): string[] =>
-      l17(withTutorial(n, [soft(highlight, done, { mode: 'required' })]));
-    expect(req(['piece:0'], { event: 'placementCorrect' })).toEqual([]);
-    expect(req(['cell:6,0', 'build'], { event: 'turnEnd' })).toEqual(['tut_highlight_invalid']);
-    const debrisLevel = (done: Step['done']): string[] =>
-      l17({
-        ...levelJson({
-          id: 17,
-          plan: ['WW', 'WW'],
-          pieces: [['O4_0', 'W', 0, 0]],
-          debris: [['B1_0', 'R', 6, 0]],
-        }),
-        tutorial: [soft(['debris:0'], done, { mode: 'required' })],
-      });
-    expect(debrisLevel({ event: 'yardMove' })).toEqual([]);
-    expect(debrisLevel({ event: 'placementCorrect' })).toEqual(['tut_done_invalid']);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): timeoutMs / required steps are invalid (K-53, CL-2R-10). WP-M ile yeniden üretilecek.
+  it.fails(
+    'GDD 14.1/4a a required step highlights a piece: or debris:; without piece: its done cannot be placementCorrect',
+    () => {
+      const req = (highlight: string[], done: Step['done'], n = 1): string[] =>
+        l17(withTutorial(n, [soft(highlight, done, { mode: 'required' })]));
+      expect(req(['piece:0'], { event: 'placementCorrect' })).toEqual([]);
+      expect(req(['cell:6,0', 'build'], { event: 'turnEnd' })).toEqual(['tut_highlight_invalid']);
+      const debrisLevel = (done: Step['done']): string[] =>
+        l17({
+          ...levelJson({
+            id: 17,
+            plan: ['WW', 'WW'],
+            pieces: [['O4_0', 'W', 0, 0]],
+            debris: [['B1_0', 'R', 6, 0]],
+          }),
+          tutorial: [soft(['debris:0'], done, { mode: 'required' })],
+        });
+      expect(debrisLevel({ event: 'yardMove' })).toEqual([]);
+      expect(debrisLevel({ event: 'placementCorrect' })).toEqual(['tut_done_invalid']);
+    },
+  );
 
-  it('GDD 14.1/5 piece:k<p>_<i> is the startOn delivery block: p follows the delivery order (forSegment ascending), not the array order; count picks the n-th', () => {
-    // batch 1 is delivered for segment 2, batch 2 for segment 1 → batch 2 arrives first.
-    const make = (highlight: string, count?: number): unknown => ({
-      ...levelJson({
-        id: 35,
-        plan: [['WW'], ['WW'], ['WW']],
-        pieces: [['D2_90', 'W', 0, 0]],
-        batches: [
-          { forSegment: 2, pieces: [['D2_90', 'W', 0, 8, ['mortar']]] },
-          { forSegment: 1, pieces: [['D2_90', 'W', 0, 8, ['mortar']]] },
+  // Faz 2R (WP-B, TECH §2R.3): Faz 2 validator expectation. WP-M ile yeniden üretilecek.
+  it.fails(
+    'GDD 14.1/5 piece:k<p>_<i> is the startOn delivery block: p follows the delivery order (forSegment ascending), not the array order; count picks the n-th',
+    () => {
+      // batch 1 is delivered for segment 2, batch 2 for segment 1 → batch 2 arrives first.
+      const make = (highlight: string, count?: number): unknown => ({
+        ...levelJson({
+          id: 35,
+          plan: [['WW'], ['WW'], ['WW']],
+          pieces: [['D2_90', 'W', 0, 0]],
+          batches: [
+            { forSegment: 2, pieces: [['D2_90', 'W', 0, 8, ['mortar']]] },
+            { forSegment: 1, pieces: [['D2_90', 'W', 0, 8, ['mortar']]] },
+          ],
+        }),
+        tutorial: [
+          soft(
+            [highlight],
+            { timeoutMs: 2500 },
+            {
+              startOn: { event: 'deliveryDone', flag: 'mortar', ...(count ? { count } : {}) },
+            },
+          ),
         ],
-      }),
-      tutorial: [
-        soft(
-          [highlight],
-          { timeoutMs: 2500 },
-          {
-            startOn: { event: 'deliveryDone', flag: 'mortar', ...(count ? { count } : {}) },
-          },
-        ),
-      ],
-    });
-    expect(l17(make('piece:k2_0'))).toEqual([]);
-    expect(l17(make('piece:k1_0'))).toEqual(['tut_highlight_invalid']);
-    expect(l17(make('piece:k1_0', 2))).toEqual([]);
-    expect(l17(make('piece:k2_0', 2))).toEqual(['tut_highlight_invalid']);
-  });
+      });
+      expect(l17(make('piece:k2_0'))).toEqual([]);
+      expect(l17(make('piece:k1_0'))).toEqual(['tut_highlight_invalid']);
+      expect(l17(make('piece:k1_0', 2))).toEqual([]);
+      expect(l17(make('piece:k2_0', 2))).toEqual(['tut_highlight_invalid']);
+    },
+  );
 
   it('GDD 14.1 booster:/pre: highlights need the item unlocked in this level (economy.json unlockLevel; brush → paintBrush, trowel → trowelStart, shutter → openShutter)', () => {
     const unlock = loadBoosterUnlock(ROOT);
@@ -1463,22 +1529,26 @@ describe('review GDD 14.1 tutorial data (L-17)', () => {
     }
   });
 
-  it('GDD 14.1 textKey must exist in both tr.json and en.json (tut_key_missing names the missing language)', () => {
-    const json = withTutorial(1, [soft(['build'], { event: 'turnEnd' }, { textKey: 'tut.l1.only_tr' })]);
-    const issues = runJson(json, ['L-17'], {
-      i18nKeys: { tr: new Set(['tut.l1.only_tr']), en: new Set<string>() },
-    });
-    expect(issues.map((i) => i.code)).toEqual(['tut_key_missing']);
-    expect(issues[0]?.message).toContain('en');
-    const real = loadI18nKeys(ROOT);
-    if (!real) throw new Error('i18n files missing');
-    for (const n of LEVEL_IDS)
-      for (const st of readLevelJson(n).tutorial ?? [])
-        expect([real.tr.has(st.textKey), real.en.has(st.textKey)], `level ${n} ${st.textKey}`).toEqual([
-          true,
-          true,
-        ]);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): textKey format is tut.l<n>|m|ctx.<topic> (GDD 14.1/1 Faz 2R). WP-M ile yeniden üretilecek.
+  it.fails(
+    'GDD 14.1 textKey must exist in both tr.json and en.json (tut_key_missing names the missing language)',
+    () => {
+      const json = withTutorial(1, [soft(['build'], { event: 'turnEnd' }, { textKey: 'tut.l1.only_tr' })]);
+      const issues = runJson(json, ['L-17'], {
+        i18nKeys: { tr: new Set(['tut.l1.only_tr']), en: new Set<string>() },
+      });
+      expect(issues.map((i) => i.code)).toEqual(['tut_key_missing']);
+      expect(issues[0]?.message).toContain('en');
+      const real = loadI18nKeys(ROOT);
+      if (!real) throw new Error('i18n files missing');
+      for (const n of LEVEL_IDS)
+        for (const st of readLevelJson(n).tutorial ?? [])
+          expect([real.tr.has(st.textKey), real.en.has(st.textKey)], `level ${n} ${st.textKey}`).toEqual([
+            true,
+            true,
+          ]);
+    },
+  );
 
   it('GDD 14.1 steps are numbered 1, 2, … in order', () => {
     const steps = [soft(['build'], { event: 'turnEnd' }), soft(['build'], { event: 'turnEnd' }, { step: 3 })];
@@ -1752,50 +1822,58 @@ if (!LEVELS_IS_FAZ_2R) {
 }
 
 describe('review K-45 levels 1–5 through the whole validator', () => {
-  it('K-45 levels 1–5 pass every check L-01…L-18, L-21…L-26 in sequence (mechanic history, real tr/en keys and economy unlocks): no error, no warning', () => {
-    const i18nKeys = loadI18nKeys(ROOT);
-    const boosterUnlock = loadBoosterUnlock(ROOT);
-    expect(i18nKeys).not.toBeNull();
-    expect(boosterUnlock).not.toBeNull();
-    const previous = new Set<MechanicId>();
-    for (const n of LEVEL_IDS) {
-      const res = validateLevelJson(readLevelJson(n), {
-        fileId: n,
-        previousMechanics: new Set(previous),
-        ...(i18nKeys ? { i18nKeys } : {}),
-        ...(boosterUnlock ? { boosterUnlock } : {}),
-      });
-      expect(res.issues, `level ${n}`).toEqual([]);
-      if (res.level) for (const m of deriveMechanics(res.level)) previous.add(m);
-      // the game load path accepts it too
-      expect(loadLevel(readLevelJson(n)).ok, `level ${n} loadLevel`).toBe(true);
-    }
-  });
+  // Faz 2R (WP-B, TECH §2R.3): Faz 2 levels/*.json do not meet the Faz 2R rules. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-45 levels 1–5 pass every check L-01…L-18, L-21…L-26 in sequence (mechanic history, real tr/en keys and economy unlocks): no error, no warning',
+    () => {
+      const i18nKeys = loadI18nKeys(ROOT);
+      const boosterUnlock = loadBoosterUnlock(ROOT);
+      expect(i18nKeys).not.toBeNull();
+      expect(boosterUnlock).not.toBeNull();
+      const previous = new Set<MechanicId>();
+      for (const n of LEVEL_IDS) {
+        const res = validateLevelJson(readLevelJson(n), {
+          fileId: n,
+          previousMechanics: new Set(previous),
+          ...(i18nKeys ? { i18nKeys } : {}),
+          ...(boosterUnlock ? { boosterUnlock } : {}),
+        });
+        expect(res.issues, `level ${n}`).toEqual([]);
+        if (res.level) for (const m of deriveMechanics(res.level)) previous.add(m);
+        // the game load path accepts it too
+        expect(loadLevel(readLevelJson(n)).ok, `level ${n} loadLevel`).toBe(true);
+      }
+    },
+  );
 
-  it('K-45/9 npm run levels:validate on levels/ exits 0; --level 4 still uses levels 1–3 as mechanic history (only S2 is new)', () => {
-    const cli = (...args: string[]): { code: number | null; out: string } => {
-      const r = spawnSync(process.execPath, [join(ROOT, 'tools', 'validate-levels.ts'), ...args], {
-        cwd: ROOT,
-        encoding: 'utf8',
-      });
-      return { code: r.status, out: `${r.stdout}${r.stderr}` };
-    };
-    const all = cli();
-    expect(all.code, all.out).toBe(0);
-    for (const line of [
-      'level_001.json  OK',
-      'level_002.json  OK',
-      'level_003.json  OK  mechanics: W1',
-      'level_004.json  OK  mechanics: W1 S2',
-      'level_005.json  OK  mechanics: S1',
-    ])
-      expect(all.out).toContain(line);
-    expect(all.out).toMatch(/0 error\(s\), 0 warning\(s\)/);
-    const four = cli('--level', '4');
-    expect(four.code, four.out).toBe(0);
-    expect(four.out).toContain('level_004.json  OK  mechanics: W1 S2');
-    expect(four.out).toContain('1 file(s), 0 error(s)');
-  });
+  // Faz 2R (WP-B, TECH §2R.3): K-02 80 % band → Faz 2R 2 ≤ E ≤ ⌊0,4·C⌋. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-45/9 npm run levels:validate on levels/ exits 0; --level 4 still uses levels 1–3 as mechanic history (only S2 is new)',
+    () => {
+      const cli = (...args: string[]): { code: number | null; out: string } => {
+        const r = spawnSync(process.execPath, [join(ROOT, 'tools', 'validate-levels.ts'), ...args], {
+          cwd: ROOT,
+          encoding: 'utf8',
+        });
+        return { code: r.status, out: `${r.stdout}${r.stderr}` };
+      };
+      const all = cli();
+      expect(all.code, all.out).toBe(0);
+      for (const line of [
+        'level_001.json  OK',
+        'level_002.json  OK',
+        'level_003.json  OK  mechanics: W1',
+        'level_004.json  OK  mechanics: W1 S2',
+        'level_005.json  OK  mechanics: S1',
+      ])
+        expect(all.out).toContain(line);
+      expect(all.out).toMatch(/0 error\(s\), 0 warning\(s\)/);
+      const four = cli('--level', '4');
+      expect(four.code, four.out).toBe(0);
+      expect(four.out).toContain('level_004.json  OK  mechanics: W1 S2');
+      expect(four.out).toContain('1 file(s), 0 error(s)');
+    },
+  );
 
   it('K-45/1 a level file name number must equal its id (L-01 id_mismatch otherwise)', () => {
     const json = readLevelJson(2);
@@ -2002,186 +2080,222 @@ function materialOracle(json: LevelInput): string[] {
     for (const b of json.yard.batches)
       if (b.forSegment <= k)
         for (const p of b.pieces)
-          if (reaches(p.shape)) have.set(p.color, (have.get(p.color) ?? 0) + shapeById(p.shape).cells.length);
+          if (p.color !== undefined && reaches(p.shape))
+            have.set(p.color, (have.get(p.color) ?? 0) + shapeById(p.shape).cells.length);
     if ([...need].some(([c, d]) => d > (have.get(c) ?? 0))) failing.push(`build.segments[${k}]`);
   });
   return failing;
 }
 
 describe('review round 2: K-27 material (TECH L-10) after the whole-block fix', () => {
-  it('K-27 TECH L-10 is cumulative per segment: a truck batch for segment 1 cannot pay for segment 0; carousel checks only the total', () => {
-    // segment 0 needs 4 W and batch 0 brings 2 W; batch 1 (segment 1) brings 4 W and the 2 Y of segment 1.
-    const spec = (mode: 'segments' | 'carousel'): LevelSpec => ({
-      id: mode === 'segments' ? 5 : 31,
-      mode,
-      ...(mode === 'carousel' ? { carouselEvery: 3 } : {}),
-      plan: [['WW', 'WW'], ['YY']],
-      pieces: [['D2_90', 'W', 0, 0]],
-      batches: [
-        {
-          forSegment: 1,
-          pieces: [
-            ['O4_0', 'W', 0, 8],
-            ['D2_90', 'Y', 2, 8],
-          ],
-        },
-      ],
-    });
-    expect(l10(spec('segments'))).toEqual([['material_short', 'build.segments[0]']]);
-    expect(l10(spec('carousel'))).toEqual([]);
-  });
-
-  it('K-27 TECH L-10 the shortage shows at the first segment whose cumulative demand exceeds the supply; a truck for that segment fixes it', () => {
-    // stage 0: 2 W ≤ 2; stage 1: 4 W > 2 (batch 1 brings only Y); stage 2: 6 W ≤ 2 + 4 (batch 2 brings an O4 W).
-    const spec = (oForSegment: 1 | 2): LevelSpec => ({
-      id: 5,
-      plan: [['WW'], ['WW'], ['WW']],
-      pieces: [['D2_90', 'W', 0, 0]],
-      batches:
-        oForSegment === 2
-          ? [
-              { forSegment: 1, pieces: [['D2_90', 'Y', 0, 8]] },
-              { forSegment: 2, pieces: [['O4_0', 'W', 0, 8]] },
-            ]
-          : [
-              {
-                forSegment: 1,
-                pieces: [
-                  ['D2_90', 'Y', 0, 8],
-                  ['O4_0', 'W', 2, 8],
-                ],
-              },
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 TECH L-10 is cumulative per segment: a truck batch for segment 1 cannot pay for segment 0; carousel checks only the total',
+    () => {
+      // segment 0 needs 4 W and batch 0 brings 2 W; batch 1 (segment 1) brings 4 W and the 2 Y of segment 1.
+      const spec = (mode: 'segments' | 'carousel'): LevelSpec => ({
+        id: mode === 'segments' ? 5 : 31,
+        mode,
+        ...(mode === 'carousel' ? { carouselEvery: 3 } : {}),
+        plan: [['WW', 'WW'], ['YY']],
+        pieces: [['D2_90', 'W', 0, 0]],
+        batches: [
+          {
+            forSegment: 1,
+            pieces: [
+              ['O4_0', 'W', 0, 8],
+              ['D2_90', 'Y', 2, 8],
             ],
-    });
-    expect(run(spec(2), ['L-10']).map((i) => [i.code, i.rule, i.severity, i.path])).toEqual([
-      ['material_short', 'K-27', 'error', 'build.segments[1]'],
-    ]);
-    expect(l10(spec(1))).toEqual([]);
-  });
-
-  it('K-27 TECH L-10 paint gate: only blocks that fit the gate rows count for its colour (D2_0 needs size ≥ 2, D2_90 fits size 1)', () => {
-    // plan P W / P W: 2 P cells (left column) and 2 W cells; the Y block can only become P at the gate.
-    const gate = (size: number, shape: ShapeId): [string, string][] =>
-      l10({
-        id: 22,
-        wall: { height: 6, gaps: [{ type: 'paint', y: 1, size, color: 'P' }] },
-        plan: ['PW', 'PW'],
-        pieces: [
-          [shape, 'Y', 0, 0],
-          ['D2_0', 'W', 3, 0],
+          },
         ],
       });
-    expect(gate(1, 'D2_0')).toEqual([['material_short', 'build.segments[0]']]);
-    expect(gate(2, 'D2_0')).toEqual([]);
-    expect(gate(1, 'D2_90')).toEqual([]);
-  });
+      expect(l10(spec('segments'))).toEqual([['material_short', 'build.segments[0]']]);
+      expect(l10(spec('carousel'))).toEqual([]);
+    },
+  );
 
-  it('K-27 TECH L-10 heavy blocks are never supply, not even for a paint gate they would fit by height (Y5 never crosses the boundary)', () => {
-    const one = (shape: ShapeId): [string, string][] =>
-      l10({
-        id: 22,
-        wall: { height: 6, gaps: [{ type: 'paint', y: 1, size: 2, color: 'P' }] },
-        plan: ['PP'],
-        pieces: [[shape, 'Y', 0, 0]],
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 TECH L-10 the shortage shows at the first segment whose cumulative demand exceeds the supply; a truck for that segment fixes it',
+    () => {
+      // stage 0: 2 W ≤ 2; stage 1: 4 W > 2 (batch 1 brings only Y); stage 2: 6 W ≤ 2 + 4 (batch 2 brings an O4 W).
+      const spec = (oForSegment: 1 | 2): LevelSpec => ({
+        id: 5,
+        plan: [['WW'], ['WW'], ['WW']],
+        pieces: [['D2_90', 'W', 0, 0]],
+        batches:
+          oForSegment === 2
+            ? [
+                { forSegment: 1, pieces: [['D2_90', 'Y', 0, 8]] },
+                { forSegment: 2, pieces: [['O4_0', 'W', 0, 8]] },
+              ]
+            : [
+                {
+                  forSegment: 1,
+                  pieces: [
+                    ['D2_90', 'Y', 0, 8],
+                    ['O4_0', 'W', 2, 8],
+                  ],
+                },
+              ],
       });
-    expect(one('I3_90')).toEqual([['material_short', 'build.segments[0]']]); // 3 wide → heavy (K-44)
-    expect(one('D2_90')).toEqual([]);
-    expect(one('O4_0')).toEqual([]);
-  });
+      expect(run(spec(2), ['L-10']).map((i) => [i.code, i.rule, i.severity, i.path])).toEqual([
+        ['material_short', 'K-27', 'error', 'build.segments[1]'],
+      ]);
+      expect(l10(spec(1))).toEqual([]);
+    },
+  );
 
-  it('K-27 TECH L-10 "her blok bir kez" with two paint gates (E-39: the last gate wins): one D2_90 is P or B as a whole, never P + B; L-11 agrees', () => {
-    const twoGates = (pieces: PieceSpec[]): string[] =>
-      codes(
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 TECH L-10 paint gate: only blocks that fit the gate rows count for its colour (D2_0 needs size ≥ 2, D2_90 fits size 1)',
+    () => {
+      // plan P W / P W: 2 P cells (left column) and 2 W cells; the Y block can only become P at the gate.
+      const gate = (size: number, shape: ShapeId): [string, string][] =>
+        l10({
+          id: 22,
+          wall: { height: 6, gaps: [{ type: 'paint', y: 1, size, color: 'P' }] },
+          plan: ['PW', 'PW'],
+          pieces: [
+            [shape, 'Y', 0, 0],
+            ['D2_0', 'W', 3, 0],
+          ],
+        });
+      expect(gate(1, 'D2_0')).toEqual([['material_short', 'build.segments[0]']]);
+      expect(gate(2, 'D2_0')).toEqual([]);
+      expect(gate(1, 'D2_90')).toEqual([]);
+    },
+  );
+
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 TECH L-10 heavy blocks are never supply, not even for a paint gate they would fit by height (Y5 never crosses the boundary)',
+    () => {
+      const one = (shape: ShapeId): [string, string][] =>
+        l10({
+          id: 22,
+          wall: { height: 6, gaps: [{ type: 'paint', y: 1, size: 2, color: 'P' }] },
+          plan: ['PP'],
+          pieces: [[shape, 'Y', 0, 0]],
+        });
+      expect(one('I3_90')).toEqual([['material_short', 'build.segments[0]']]); // 3 wide → heavy (K-44)
+      expect(one('D2_90')).toEqual([]);
+      expect(one('O4_0')).toEqual([]);
+    },
+  );
+
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 TECH L-10 "her blok bir kez" with two paint gates (E-39: the last gate wins): one D2_90 is P or B as a whole, never P + B; L-11 agrees',
+    () => {
+      const twoGates = (pieces: PieceSpec[]): string[] =>
+        codes(
+          run(
+            {
+              id: 22,
+              wall: {
+                height: 6,
+                gaps: [
+                  { type: 'paint', y: 1, size: 1, color: 'P' },
+                  { type: 'paint', y: 3, size: 1, color: 'B' },
+                ],
+              },
+              plan: ['PB'],
+              pieces,
+            },
+            ['L-10', 'L-11'],
+          ),
+        );
+      expect(twoGates([['D2_90', 'Y', 0, 0]])).toEqual(['material_short', 'untileable']);
+      expect(
+        twoGates([
+          ['B1_0', 'Y', 0, 0],
+          ['B1_0', 'Y', 1, 0],
+        ]),
+      ).toEqual([]);
+    },
+  );
+
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 K-32 resolved `?` cells are demand in their resolved colour: `??` over `YW` (repeat 1) needs 2 Y and 2 W',
+    () => {
+      const hidden = (pieces: PieceSpec[]): [string, string][] =>
+        l10({ id: 27, plan: ['??', 'YW'], hidden: [{ kind: 'repeat', period: 1 }], pieces });
+      const w2: PieceSpec[] = [
+        ['B1_0', 'W', 0, 0],
+        ['B1_0', 'W', 1, 0],
+      ];
+      expect(hidden([...w2, ['B1_0', 'Y', 2, 0]])).toEqual([['material_short', 'build.segments[0]']]);
+      expect(hidden([...w2, ['B1_0', 'Y', 2, 0], ['B1_0', 'Y', 3, 0]])).toEqual([]);
+    },
+  );
+
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 a block whose only way to the site is a paint gate arrives in the gate colour: the validator refuses a plan of its own colour (L-10 or L-11) and accepts the gate colour',
+    () => {
+      // height 8: I3_0 (3 tall) cannot go over the wall (K-05: 3 > 10 − 8); the only gap tall enough is the P gate.
+      const behindGate = (rows: string[]): Issue[] =>
         run(
           {
             id: 22,
-            wall: {
-              height: 6,
-              gaps: [
-                { type: 'paint', y: 1, size: 1, color: 'P' },
-                { type: 'paint', y: 3, size: 1, color: 'B' },
-              ],
-            },
-            plan: ['PB'],
-            pieces,
+            wall: { height: 8, gaps: [{ type: 'paint', y: 0, size: 3, color: 'P' }] },
+            plan: rows,
+            pieces: [
+              ['I3_0', 'W', 0, 0],
+              ['I3_0', 'W', 1, 0],
+            ],
           },
           ['L-10', 'L-11'],
-        ),
-      );
-    expect(twoGates([['D2_90', 'Y', 0, 0]])).toEqual(['material_short', 'untileable']);
-    expect(
-      twoGates([
-        ['B1_0', 'Y', 0, 0],
-        ['B1_0', 'Y', 1, 0],
-      ]),
-    ).toEqual([]);
-  });
+        );
+      expect(errorCodes(behindGate(['WW', 'WW', 'WW'])).length).toBeGreaterThan(0);
+      expect(behindGate(['PP', 'PP', 'PP'])).toEqual([]);
+    },
+  );
 
-  it('K-27 K-32 resolved `?` cells are demand in their resolved colour: `??` over `YW` (repeat 1) needs 2 Y and 2 W', () => {
-    const hidden = (pieces: PieceSpec[]): [string, string][] =>
-      l10({ id: 27, plan: ['??', 'YW'], hidden: [{ kind: 'repeat', period: 1 }], pieces });
-    const w2: PieceSpec[] = [
-      ['B1_0', 'W', 0, 0],
-      ['B1_0', 'W', 1, 0],
-    ];
-    expect(hidden([...w2, ['B1_0', 'Y', 2, 0]])).toEqual([['material_short', 'build.segments[0]']]);
-    expect(hidden([...w2, ['B1_0', 'Y', 2, 0], ['B1_0', 'Y', 3, 0]])).toEqual([]);
-  });
-
-  it('K-27 a block whose only way to the site is a paint gate arrives in the gate colour: the validator refuses a plan of its own colour (L-10 or L-11) and accepts the gate colour', () => {
-    // height 8: I3_0 (3 tall) cannot go over the wall (K-05: 3 > 10 − 8); the only gap tall enough is the P gate.
-    const behindGate = (rows: string[]): Issue[] =>
-      run(
-        {
-          id: 22,
-          wall: { height: 8, gaps: [{ type: 'paint', y: 0, size: 3, color: 'P' }] },
-          plan: rows,
+  // Faz 2R (WP-B, TECH §2R.3): L-11 untileable is D3a now (no access search, `.` rejected). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 K-34 TECH L-11 a cell above a window needs an aligned gap (K-24: plan row g.y − e), a 2-wide bridge or an arch shape: `WW` over `.W`',
+    () => {
+      // plan (bottom → top): r0 `.W`, r1 `WW`; (6,1) sits above the window (6,0).
+      const tile = (spec: Partial<LevelSpec>): string[] =>
+        codes(
+          run({ id: 37, wall: { height: 4 }, plan: ['WW', '.W'], pieces: bricks(3), ...spec }, [
+            'L-10',
+            'L-11',
+          ]),
+        );
+      // three bricks, no gap: a FREE drop in column 6 falls into the window → untileable
+      expect(tile({})).toEqual(['untileable']);
+      // a rail at board row 1 holds the brick above the window (K-12); a gap at row 2 is one row too high …
+      expect(tile({ wall: { height: 4, gaps: [{ type: 'static', y: 1, size: 1 }] } })).toEqual([]);
+      expect(tile({ wall: { height: 4, gaps: [{ type: 'static', y: 2, size: 1 }] } })).toEqual([
+        'untileable',
+      ]);
+      // … unless the scaffold stands one row higher: with e = 1 the gap opens onto plan row 2 − 1 = 1 (K-24)
+      expect(
+        tile({
+          wall: { height: 4, gaps: [{ type: 'static', y: 2, size: 1 }] },
+          elevator: { range: [0, 1], start: 0, dir: 1 },
+        }),
+      ).toEqual([]);
+      // a horizontal D2 bridges both columns (lands on top(7) = 1); C3_180 is the arch itself; C3_0 has no hole
+      expect(
+        tile({
           pieces: [
-            ['I3_0', 'W', 0, 0],
-            ['I3_0', 'W', 1, 0],
+            ['D2_90', 'W', 0, 0],
+            ['B1_0', 'W', 2, 0],
           ],
-        },
-        ['L-10', 'L-11'],
-      );
-    expect(errorCodes(behindGate(['WW', 'WW', 'WW'])).length).toBeGreaterThan(0);
-    expect(behindGate(['PP', 'PP', 'PP'])).toEqual([]);
-  });
+        }),
+      ).toEqual([]);
+      expect(tile({ pieces: [['C3_180', 'W', 0, 0]] })).toEqual([]);
+      expect(tile({ pieces: [['C3_0', 'W', 0, 0]] })).toEqual(['untileable']);
+    },
+  );
 
-  it('K-27 K-34 TECH L-11 a cell above a window needs an aligned gap (K-24: plan row g.y − e), a 2-wide bridge or an arch shape: `WW` over `.W`', () => {
-    // plan (bottom → top): r0 `.W`, r1 `WW`; (6,1) sits above the window (6,0).
-    const tile = (spec: Partial<LevelSpec>): string[] =>
-      codes(
-        run({ id: 37, wall: { height: 4 }, plan: ['WW', '.W'], pieces: bricks(3), ...spec }, [
-          'L-10',
-          'L-11',
-        ]),
-      );
-    // three bricks, no gap: a FREE drop in column 6 falls into the window → untileable
-    expect(tile({})).toEqual(['untileable']);
-    // a rail at board row 1 holds the brick above the window (K-12); a gap at row 2 is one row too high …
-    expect(tile({ wall: { height: 4, gaps: [{ type: 'static', y: 1, size: 1 }] } })).toEqual([]);
-    expect(tile({ wall: { height: 4, gaps: [{ type: 'static', y: 2, size: 1 }] } })).toEqual(['untileable']);
-    // … unless the scaffold stands one row higher: with e = 1 the gap opens onto plan row 2 − 1 = 1 (K-24)
-    expect(
-      tile({
-        wall: { height: 4, gaps: [{ type: 'static', y: 2, size: 1 }] },
-        elevator: { range: [0, 1], start: 0, dir: 1 },
-      }),
-    ).toEqual([]);
-    // a horizontal D2 bridges both columns (lands on top(7) = 1); C3_180 is the arch itself; C3_0 has no hole
-    expect(
-      tile({
-        pieces: [
-          ['D2_90', 'W', 0, 0],
-          ['B1_0', 'W', 2, 0],
-        ],
-      }),
-    ).toEqual([]);
-    expect(tile({ pieces: [['C3_180', 'W', 0, 0]] })).toEqual([]);
-    expect(tile({ pieces: [['C3_0', 'W', 0, 0]] })).toEqual(['untileable']);
-  });
-
-  it.each(LEVEL_IDS)(
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails.each(LEVEL_IDS)(
     'K-27 TECH L-10 level %i: the verdict equals an independent cumulative count for the level, every one-block removal and every plan-cell recolouring',
     (n) => {
       const base = readLevelJson(n);
@@ -2239,29 +2353,33 @@ describe('review round 2: K-27 material (TECH L-10) after the whole-block fix', 
 describe('review round 2: gaps of round 1 (K-45/9, K-32, K-25, GDD 14.1/5, K-45/5, schema limits)', () => {
   const l17 = (json: unknown): string[] => runJson(json, ['L-17']).map((i) => i.code);
 
-  it('K-45/9 GDD example: a size-1 gap in level 4 makes the derived new mechanics {S2, W3} → too_many_new_mechanics', () => {
-    const history = new Set<MechanicId>();
-    for (const n of [1, 2, 3]) {
-      const lvl = validateLevelJson(readLevelJson(n)).level;
-      if (!lvl) throw new Error(`level ${n} fails the schema`);
-      for (const m of deriveMechanics(lvl)) history.add(m);
-    }
-    expect([...history]).toEqual(['W1']);
-    const json = readLevelJson(4);
-    const gap = json.wall.gaps[0];
-    if (!gap) throw new Error('level 4 has no gap');
-    gap.size = 1;
-    const res = validateLevelJson(json, { only: ['L-22'], previousMechanics: history });
-    expect(res.issues.map((i) => [i.code, i.rule])).toEqual([['too_many_new_mechanics', 'K-45/9']]);
-    if (!res.level) throw new Error('schema');
-    expect(
-      deriveMechanics(res.level)
-        .filter((m) => !history.has(m))
-        .sort(),
-    ).toEqual(['S2', 'W3']);
-    // the moved gap itself is fine under K-04 (y 3 + size 1 ≤ height 6 − 1)
-    expect(runJson(json, ['L-09'])).toEqual([]);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): S2 left the signature table (CL-2R-12, plan_has_window). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-45/9 GDD example: a size-1 gap in level 4 makes the derived new mechanics {S2, W3} → too_many_new_mechanics',
+    () => {
+      const history = new Set<MechanicId>();
+      for (const n of [1, 2, 3]) {
+        const lvl = validateLevelJson(readLevelJson(n)).level;
+        if (!lvl) throw new Error(`level ${n} fails the schema`);
+        for (const m of deriveMechanics(lvl)) history.add(m);
+      }
+      expect([...history]).toEqual(['W1']);
+      const json = readLevelJson(4);
+      const gap = json.wall.gaps[0];
+      if (!gap) throw new Error('level 4 has no gap');
+      gap.size = 1;
+      const res = validateLevelJson(json, { only: ['L-22'], previousMechanics: history });
+      expect(res.issues.map((i) => [i.code, i.rule])).toEqual([['too_many_new_mechanics', 'K-45/9']]);
+      if (!res.level) throw new Error('schema');
+      expect(
+        deriveMechanics(res.level)
+          .filter((m) => !history.has(m))
+          .sort(),
+      ).toEqual(['S2', 'W3']);
+      // the moved gap itself is fine under K-04 (y 3 + size 1 ≤ height 6 − 1)
+      expect(runJson(json, ['L-09'])).toEqual([]);
+    },
+  );
 
   it('K-32 a `?` needs a hidden rule in its segment, and a mirrorOf `?` that lands on a `.` is invalid ("`.` hücresi hiçbir zaman gizli değildir")', () => {
     expect(codes(run({ id: 27, plan: ['?W', 'WW'], pieces: [['B1_0', 'W', 0, 0]] }, ['L-08']))).toEqual([
@@ -2298,80 +2416,96 @@ describe('review round 2: gaps of round 1 (K-45/9, K-32, K-25, GDD 14.1/5, K-45/
     ]);
   });
 
-  it('GDD 14.1/5 TECH L-17 carousel: for piece:k<p>_<i> only the startOn filter is checked (delivery order depends on the player); a block without the flag stays invalid', () => {
-    const make = (highlight: string, mode: 'segments' | 'carousel'): unknown => ({
-      ...levelJson({
-        id: 35,
-        mode,
-        ...(mode === 'carousel' ? { carouselEvery: 3 } : {}),
-        plan: [['WW'], ['WW'], ['WW']],
-        pieces: [['D2_90', 'W', 0, 0]],
-        batches: [
-          { forSegment: 1, pieces: [['D2_90', 'W', 0, 8, ['mortar']]] },
-          {
-            forSegment: 2,
-            pieces: [
-              ['D2_90', 'W', 0, 8, ['mortar']],
-              ['B1_0', 'W', 2, 8],
-            ],
-          },
+  // Faz 2R (WP-B, TECH §2R.3): flag table: heavy debris is shape_forbidden / piece_too_wide now. WP-M ile yeniden üretilecek.
+  it.fails(
+    'GDD 14.1/5 TECH L-17 carousel: for piece:k<p>_<i> only the startOn filter is checked (delivery order depends on the player); a block without the flag stays invalid',
+    () => {
+      const make = (highlight: string, mode: 'segments' | 'carousel'): unknown => ({
+        ...levelJson({
+          id: 35,
+          mode,
+          ...(mode === 'carousel' ? { carouselEvery: 3 } : {}),
+          plan: [['WW'], ['WW'], ['WW']],
+          pieces: [['D2_90', 'W', 0, 0]],
+          batches: [
+            { forSegment: 1, pieces: [['D2_90', 'W', 0, 8, ['mortar']]] },
+            {
+              forSegment: 2,
+              pieces: [
+                ['D2_90', 'W', 0, 8, ['mortar']],
+                ['B1_0', 'W', 2, 8],
+              ],
+            },
+          ],
+        }),
+        tutorial: [
+          soft([highlight], { timeoutMs: 2500 }, { startOn: { event: 'deliveryDone', flag: 'mortar' } }),
         ],
-      }),
-      tutorial: [
-        soft([highlight], { timeoutMs: 2500 }, { startOn: { event: 'deliveryDone', flag: 'mortar' } }),
-      ],
-    });
-    expect(l17(make('piece:k1_0', 'carousel'))).toEqual([]);
-    expect(l17(make('piece:k2_0', 'carousel'))).toEqual([]);
-    expect(l17(make('piece:k2_1', 'carousel'))).toEqual(['tut_highlight_invalid']);
-    // segments mode keeps the order rule: the first mortar delivery is batch 1
-    expect(l17(make('piece:k1_0', 'segments'))).toEqual([]);
-    expect(l17(make('piece:k2_0', 'segments'))).toEqual(['tut_highlight_invalid']);
-  });
+      });
+      expect(l17(make('piece:k1_0', 'carousel'))).toEqual([]);
+      expect(l17(make('piece:k2_0', 'carousel'))).toEqual([]);
+      expect(l17(make('piece:k2_1', 'carousel'))).toEqual(['tut_highlight_invalid']);
+      // segments mode keeps the order rule: the first mortar delivery is batch 1
+      expect(l17(make('piece:k1_0', 'segments'))).toEqual([]);
+      expect(l17(make('piece:k2_0', 'segments'))).toEqual(['tut_highlight_invalid']);
+    },
+  );
 
-  it('GDD 14.1 TECH L-17 deliveryDone.flag needs a truck (k ≥ 1) block with that flag: a flagged batch-0 block is not enough (done and startOn)', () => {
-    const make = (truckFlag: boolean, done: Step['done'], startOn?: Step['startOn']): unknown => ({
-      ...levelJson({
-        id: 35,
-        plan: [['WW'], ['WW']],
-        pieces: [['D2_90', 'W', 0, 0, truckFlag ? [] : ['mortar']]],
-        batches: [{ forSegment: 1, pieces: [['D2_90', 'W', 0, 8, truckFlag ? ['mortar'] : []]] }],
-      }),
-      tutorial: [soft(['truck'], done, startOn ? { startOn } : {})],
-    });
-    const flagged = { event: 'deliveryDone', flag: 'mortar' } as const;
-    expect(l17(make(false, flagged))).toEqual(['tut_done_invalid']);
-    expect(l17(make(false, { timeoutMs: 2000 }, flagged))).toEqual(['tut_done_invalid']);
-    expect(l17(make(false, { event: 'deliveryDone' }))).toEqual([]);
-    expect(l17(make(true, flagged))).toEqual([]);
-    expect(l17(make(true, { timeoutMs: 2000 }, flagged))).toEqual([]);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): flag table: heavy debris is shape_forbidden / piece_too_wide now. WP-M ile yeniden üretilecek.
+  it.fails(
+    'GDD 14.1 TECH L-17 deliveryDone.flag needs a truck (k ≥ 1) block with that flag: a flagged batch-0 block is not enough (done and startOn)',
+    () => {
+      const make = (truckFlag: boolean, done: Step['done'], startOn?: Step['startOn']): unknown => ({
+        ...levelJson({
+          id: 35,
+          plan: [['WW'], ['WW']],
+          pieces: [['D2_90', 'W', 0, 0, truckFlag ? [] : ['mortar']]],
+          batches: [{ forSegment: 1, pieces: [['D2_90', 'W', 0, 8, truckFlag ? ['mortar'] : []]] }],
+        }),
+        tutorial: [soft(['truck'], done, startOn ? { startOn } : {})],
+      });
+      const flagged = { event: 'deliveryDone', flag: 'mortar' } as const;
+      expect(l17(make(false, flagged))).toEqual(['tut_done_invalid']);
+      expect(l17(make(false, { timeoutMs: 2000 }, flagged))).toEqual(['tut_done_invalid']);
+      expect(l17(make(false, { event: 'deliveryDone' }))).toEqual([]);
+      expect(l17(make(true, flagged))).toEqual([]);
+      expect(l17(make(true, { timeoutMs: 2000 }, flagged))).toEqual([]);
+    },
+  );
 
-  it('GDD 14.1 TECH L-17 piece:k<p>_<i> needs 1 ≤ p < batch count and i < that batch size (level 5: k1_3 valid; k1_4 and k2_0 invalid)', () => {
-    const one = (h: string): string[] =>
-      l17(withTutorial(5, [soft([h], { timeoutMs: 2500 }, { startOn: { event: 'deliveryDone' } })]));
-    expect(batchOf(readLevelJson(5), 1).pieces.length).toBe(4);
-    expect(one('piece:k1_0')).toEqual([]);
-    expect(one('piece:k1_3')).toEqual([]);
-    expect(one('piece:k1_4')).toEqual(['tut_highlight_invalid']);
-    expect(one('piece:k2_0')).toEqual(['tut_highlight_invalid']);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): Faz 2 validator expectation. WP-M ile yeniden üretilecek.
+  it.fails(
+    'GDD 14.1 TECH L-17 piece:k<p>_<i> needs 1 ≤ p < batch count and i < that batch size (level 5: k1_3 valid; k1_4 and k2_0 invalid)',
+    () => {
+      const one = (h: string): string[] =>
+        l17(withTutorial(5, [soft([h], { timeoutMs: 2500 }, { startOn: { event: 'deliveryDone' } })]));
+      expect(batchOf(readLevelJson(5), 1).pieces.length).toBe(4);
+      expect(one('piece:k1_0')).toEqual([]);
+      expect(one('piece:k1_3')).toEqual([]);
+      expect(one('piece:k1_4')).toEqual(['tut_highlight_invalid']);
+      expect(one('piece:k2_0')).toEqual(['tut_highlight_invalid']);
+    },
+  );
 
-  it('K-45/5 OBSTACLES flag table "debris × ağır şekil ✗ (moloz ≤ 2 geniş)": heavy debris is flag_combo_forbidden, 2-wide debris is not', () => {
-    const debris = (shape: ShapeId, only: readonly CheckId[]): string[] =>
-      codes(
-        run(
-          { id: 41, plan: ['WW', 'WW', 'WW'], pieces: [['B1_0', 'W', 0, 0]], debris: [[shape, 'R', 6, 0]] },
-          only,
-        ),
-      );
-    expect(debris('I3_90', ['L-21'])).toEqual(['flag_combo_forbidden']);
-    expect(debris('L4_90', ['L-21'])).toEqual(['flag_combo_forbidden']);
-    expect(debris('D2_90', ['L-21'])).toEqual([]);
-    expect(debris('O4_0', ['L-21', 'L-13'])).toEqual([]);
-    // a 3-wide debris also leaves x 6–7 (K-45/7)
-    expect(debris('I3_90', ['L-13'])).toEqual(['debris_misplaced']);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): w ≥ 3 "heavy" rule → piece_too_wide; Y5 = I5/Q9 (K-44 Faz 2R). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-45/5 OBSTACLES flag table "debris × ağır şekil ✗ (moloz ≤ 2 geniş)": heavy debris is flag_combo_forbidden, 2-wide debris is not',
+    () => {
+      const debris = (shape: ShapeId, only: readonly CheckId[]): string[] =>
+        codes(
+          run(
+            { id: 41, plan: ['WW', 'WW', 'WW'], pieces: [['B1_0', 'W', 0, 0]], debris: [[shape, 'R', 6, 0]] },
+            only,
+          ),
+        );
+      expect(debris('I3_90', ['L-21'])).toEqual(['flag_combo_forbidden']);
+      expect(debris('L4_90', ['L-21'])).toEqual(['flag_combo_forbidden']);
+      expect(debris('D2_90', ['L-21'])).toEqual([]);
+      expect(debris('O4_0', ['L-21', 'L-13'])).toEqual([]);
+      // a 3-wide debris also leaves x 6–7 (K-45/7)
+      expect(debris('I3_90', ['L-13'])).toEqual(['debris_misplaced']);
+    },
+  );
 
   it('K-45/3 wall limits are schema errors: height 9, paint gate without colour, shutter period 0, slider range start −1, locked gate without keyId', () => {
     const base = (): LevelInput =>
@@ -2432,73 +2566,77 @@ describe('review round 2: gaps of round 1 (K-45/9, K-32, K-25, GDD 14.1/5, K-45/
       expect(withObstacle(bad), JSON.stringify(bad)).toEqual(['schema_invalid']);
   });
 
-  it('K-45/9 OBSTACLES "Veri imzası": every one of the 27 signatures derives exactly its mechanic from a minimal level (W3 always comes with its gap type)', () => {
-    const base: LevelSpec = { id: 41, wall: { height: 4 }, plan: ['WW'], pieces: [['B1_0', 'W', 0, 0]] };
-    const derive = (extra: Partial<LevelSpec>): string[] =>
-      deriveMechanics(level({ ...base, ...extra })).sort();
-    expect(derive({})).toEqual([]);
-    const gap = (g: LevelInput['wall']['gaps'][number]): Partial<LevelSpec> => ({
-      wall: { height: 4, gaps: [g] },
-    });
-    const two: Partial<LevelSpec> = { plan: [['WW'], ['WW']] };
-    const cases: [string, Partial<LevelSpec>, string[]][] = [
-      ['W1', gap({ type: 'static', y: 0, size: 2 }), ['W1']],
-      ['W2', { wall: { height: 8 } }, ['W2']],
-      ['W3 static', gap({ type: 'static', y: 0, size: 1 }), ['W1', 'W3']],
-      ['W3 shutter', gap({ type: 'shutter', y: 0, size: 1, period: 2 }), ['W3', 'W4']],
-      ['W4', gap({ type: 'shutter', y: 0, size: 2, period: 2 }), ['W4']],
-      ['W5', gap({ type: 'slider', y: 0, size: 1, range: [0, 1] }), ['W3', 'W5']],
-      [
-        'W5 size 2',
-        { wall: { height: 6, gaps: [{ type: 'slider', y: 0, size: 2, range: [0, 1] }] } },
-        ['W5'],
-      ],
-      ['W6', gap({ type: 'paint', y: 0, size: 2, color: 'W' }), ['W6']],
-      [
-        'W7',
-        {
-          ...gap({ type: 'locked', y: 0, size: 2, keyId: 'a' }),
-          obstacles: [{ type: 'key', x: 0, y: 0, id: 'a' }],
-        },
-        ['W7'],
-      ],
-      ['W8', { wall: { height: 4, fan: 'left' } }, ['W8']],
-      ['Y1', { obstacles: [{ type: 'crate', x: 3, y: 3, hp: 1 }] }, ['Y1']],
-      ['Y2', { obstacles: [{ type: 'cement_bag', x: 3, y: 3 }] }, ['Y2']],
-      ['Y3 batch 0', { pieces: [['B1_0', 'W', 0, 0, ['chained']]] }, ['Y3']],
-      [
-        'Y3 truck',
-        { ...two, batches: [{ forSegment: 1, pieces: [['B1_0', 'W', 0, 8, ['chained']]] }] },
-        ['S1', 'Y3'],
-      ],
-      ['Y4', { pieces: [['B1_0', 'W', 0, 0, ['wet'], 2]] }, ['Y4']],
-      ['Y5', { pieces: [['I3_90', 'W', 0, 0]] }, ['Y5']],
-      ['Y6', { gravity: { yard: true } }, ['Y6']],
-      ['Y7', { obstacles: [{ type: 'screw', x: 0, y: 0 }] }, ['Y7']],
-      ['Y8', { pieces: [['B1_0', 'W', 0, 0, ['mortar']]] }, ['Y8']],
-      ['S1', two, ['S1']],
-      ['S2', { plan: ['W.'] }, ['S2']],
-      ['S3', { pieces: [['B1_0', 'W', 0, 0, ['glass']]] }, ['S3']],
-      ['S4', { plan: ['WW', 'WW'], debris: [['B1_0', 'R', 6, 0]] }, ['S4']],
-      ['S5', { ...two, mode: 'carousel', carouselEvery: 3 }, ['S5']],
-      ['S6', { elevator: { range: [0, 1], start: 0, dir: 1 } }, ['S6']],
-      ['S7-R', { plan: ['??', 'WY'], hidden: [{ kind: 'repeat', period: 1 }] }, ['S7-R']],
-      [
-        'S7-M',
-        { plan: [['WY'], ['?R']], hidden: [undefined, { kind: 'mirrorOf', segment: 0 }] },
-        ['S1', 'S7-M'],
-      ],
-      ['S8', { pieces: [['B1_0', 'W', 0, 0, ['balloon']]] }, ['S8']],
-      ['G-H', { gravity: { build: 'high' } }, ['G-H']],
-      ['G-L', { gravity: { build: 'low' } }, ['G-L']],
-    ];
-    const covered = new Set<string>();
-    for (const [name, extra, want] of cases) {
-      expect(derive(extra), name).toEqual([...want].sort());
-      for (const m of want) covered.add(m);
-    }
-    expect(covered.size).toBe(27);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): w ≥ 3 "heavy" rule → piece_too_wide; Y5 = I5/Q9 (K-44 Faz 2R). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-45/9 OBSTACLES "Veri imzası": every one of the 27 signatures derives exactly its mechanic from a minimal level (W3 always comes with its gap type)',
+    () => {
+      const base: LevelSpec = { id: 41, wall: { height: 4 }, plan: ['WW'], pieces: [['B1_0', 'W', 0, 0]] };
+      const derive = (extra: Partial<LevelSpec>): string[] =>
+        deriveMechanics(level({ ...base, ...extra })).sort();
+      expect(derive({})).toEqual([]);
+      const gap = (g: LevelInput['wall']['gaps'][number]): Partial<LevelSpec> => ({
+        wall: { height: 4, gaps: [g] },
+      });
+      const two: Partial<LevelSpec> = { plan: [['WW'], ['WW']] };
+      const cases: [string, Partial<LevelSpec>, string[]][] = [
+        ['W1', gap({ type: 'static', y: 0, size: 2 }), ['W1']],
+        ['W2', { wall: { height: 8 } }, ['W2']],
+        ['W3 static', gap({ type: 'static', y: 0, size: 1 }), ['W1', 'W3']],
+        ['W3 shutter', gap({ type: 'shutter', y: 0, size: 1, period: 2 }), ['W3', 'W4']],
+        ['W4', gap({ type: 'shutter', y: 0, size: 2, period: 2 }), ['W4']],
+        ['W5', gap({ type: 'slider', y: 0, size: 1, range: [0, 1] }), ['W3', 'W5']],
+        [
+          'W5 size 2',
+          { wall: { height: 6, gaps: [{ type: 'slider', y: 0, size: 2, range: [0, 1] }] } },
+          ['W5'],
+        ],
+        ['W6', gap({ type: 'paint', y: 0, size: 2, color: 'W' }), ['W6']],
+        [
+          'W7',
+          {
+            ...gap({ type: 'locked', y: 0, size: 2, keyId: 'a' }),
+            obstacles: [{ type: 'key', x: 0, y: 0, id: 'a' }],
+          },
+          ['W7'],
+        ],
+        ['W8', { wall: { height: 4, fan: 'left' } }, ['W8']],
+        ['Y1', { obstacles: [{ type: 'crate', x: 3, y: 3, hp: 1 }] }, ['Y1']],
+        ['Y2', { obstacles: [{ type: 'cement_bag', x: 3, y: 3 }] }, ['Y2']],
+        ['Y3 batch 0', { pieces: [['B1_0', 'W', 0, 0, ['chained']]] }, ['Y3']],
+        [
+          'Y3 truck',
+          { ...two, batches: [{ forSegment: 1, pieces: [['B1_0', 'W', 0, 8, ['chained']]] }] },
+          ['S1', 'Y3'],
+        ],
+        ['Y4', { pieces: [['B1_0', 'W', 0, 0, ['wet'], 2]] }, ['Y4']],
+        ['Y5', { pieces: [['I3_90', 'W', 0, 0]] }, ['Y5']],
+        ['Y6', { gravity: { yard: true } }, ['Y6']],
+        ['Y7', { obstacles: [{ type: 'screw', x: 0, y: 0 }] }, ['Y7']],
+        ['Y8', { pieces: [['B1_0', 'W', 0, 0, ['mortar']]] }, ['Y8']],
+        ['S1', two, ['S1']],
+        ['S2', { plan: ['W.'] }, ['S2']],
+        ['S3', { pieces: [['B1_0', 'W', 0, 0, ['glass']]] }, ['S3']],
+        ['S4', { plan: ['WW', 'WW'], debris: [['B1_0', 'R', 6, 0]] }, ['S4']],
+        ['S5', { ...two, mode: 'carousel', carouselEvery: 3 }, ['S5']],
+        ['S6', { elevator: { range: [0, 1], start: 0, dir: 1 } }, ['S6']],
+        ['S7-R', { plan: ['??', 'WY'], hidden: [{ kind: 'repeat', period: 1 }] }, ['S7-R']],
+        [
+          'S7-M',
+          { plan: [['WY'], ['?R']], hidden: [undefined, { kind: 'mirrorOf', segment: 0 }] },
+          ['S1', 'S7-M'],
+        ],
+        ['S8', { pieces: [['B1_0', 'W', 0, 0, ['balloon']]] }, ['S8']],
+        ['G-H', { gravity: { build: 'high' } }, ['G-H']],
+        ['G-L', { gravity: { build: 'low' } }, ['G-L']],
+      ];
+      const covered = new Set<string>();
+      for (const [name, extra, want] of cases) {
+        expect(derive(extra), name).toEqual([...want].sort());
+        for (const m of want) covered.add(m);
+      }
+      expect(covered.size).toBe(27);
+    },
+  );
 });
 
 // =====================================================================================================================
@@ -2529,56 +2667,60 @@ function reachByText(
 }
 
 describe('review round 3: K-05 box-height rule (round-2 movement fix) seen from the validator', () => {
-  it('K-27 K-05 K-12 Y5 every shape × wall height 0–8 × gap size: L-10 supply, canReachSite and the drag engine (site nodes) agree with the K-05 / K-12 text', () => {
-    let free = 0;
-    let railOnly = 0;
-    let never = 0;
-    for (const s of SHAPES) {
-      if (s.id === 'I5_90' || s.id === 'I5_270') continue; // forbidden in level data (K-44)
-      for (let height = 0; height <= 8; height++) {
-        // one static gap at row 0 of every legal size (K-04: y + size ≤ height − 1), or none
-        const options: number[][] = [[]];
-        for (let size = 1; size <= height - 1; size++) options.push([size]);
-        for (const sizes of options) {
-          const lvl = level({
-            id: 41,
-            wall: { height, gaps: sizes.map((size) => ({ type: 'static' as const, y: 0, size })) },
-            plan: ['W.'],
-            pieces: [[s.id, 'W', 0, 0]],
-          });
-          const where = `${s.id} height ${height} gap ${sizes.join() || '—'}`;
-          const want = reachByText(s.id, height, sizes);
-          const compiled = compile(lvl);
-          const id = compiled.tutorialPieceIds.get('piece:0');
-          if (id === undefined) throw new Error('piece:0 missing');
-          const attempt = tryBeginDrag(createInitialState(compiled), id);
-          if (!attempt.ok)
-            throw new Error(`${where}: a lone block in an empty yard is not pickable (${attempt.reason})`);
-          const kinds = new Set(
-            attempt.session.reachableNodes().map((n) => attempt.session.classify(n).kind),
-          );
-          expect({ free: kinds.has('siteFree'), rail: kinds.has('siteRail') }, `${where}: engine`).toEqual(
-            want,
-          );
-          const reach = want.free || want.rail;
-          expect(canReachSite(s, lvl), `${where}: canReachSite`).toBe(reach);
-          // plan `W.` needs 1 W cell: the block is the only supply (TECH L-10 "şantiyeye geçebilen ağır olmayan")
-          expect(
-            checkLevel(lvl, { only: ['L-10'] }).map((i) => i.code),
-            `${where}: L-10`,
-          ).toEqual(reach ? [] : ['material_short']);
-          if (want.free) free++;
-          else if (want.rail) railOnly++;
-          else never++;
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 K-05 K-12 Y5 every shape × wall height 0–8 × gap size: L-10 supply, canReachSite and the drag engine (site nodes) agree with the K-05 / K-12 text',
+    () => {
+      let free = 0;
+      let railOnly = 0;
+      let never = 0;
+      for (const s of SHAPES) {
+        if (s.id === 'I5_90' || s.id === 'I5_270') continue; // forbidden in level data (K-44)
+        for (let height = 0; height <= 8; height++) {
+          // one static gap at row 0 of every legal size (K-04: y + size ≤ height − 1), or none
+          const options: number[][] = [[]];
+          for (let size = 1; size <= height - 1; size++) options.push([size]);
+          for (const sizes of options) {
+            const lvl = level({
+              id: 41,
+              wall: { height, gaps: sizes.map((size) => ({ type: 'static' as const, y: 0, size })) },
+              plan: ['W.'],
+              pieces: [[s.id, 'W', 0, 0]],
+            });
+            const where = `${s.id} height ${height} gap ${sizes.join() || '—'}`;
+            const want = reachByText(s.id, height, sizes);
+            const compiled = compile(lvl);
+            const id = compiled.tutorialPieceIds.get('piece:0');
+            if (id === undefined) throw new Error('piece:0 missing');
+            const attempt = tryBeginDrag(createInitialState(compiled), id);
+            if (!attempt.ok)
+              throw new Error(`${where}: a lone block in an empty yard is not pickable (${attempt.reason})`);
+            const kinds = new Set(
+              attempt.session.reachableNodes().map((n) => attempt.session.classify(n).kind),
+            );
+            expect({ free: kinds.has('siteFree'), rail: kinds.has('siteRail') }, `${where}: engine`).toEqual(
+              want,
+            );
+            const reach = want.free || want.rail;
+            expect(canReachSite(s, lvl), `${where}: canReachSite`).toBe(reach);
+            // plan `W.` needs 1 W cell: the block is the only supply (TECH L-10 "şantiyeye geçebilen ağır olmayan")
+            expect(
+              checkLevel(lvl, { only: ['L-10'] }).map((i) => i.code),
+              `${where}: L-10`,
+            ).toEqual(reach ? [] : ['material_short']);
+            if (want.free) free++;
+            else if (want.rail) railOnly++;
+            else never++;
+          }
         }
       }
-    }
-    // the sweep really exercises all three outcomes
-    expect(Math.min(free, railOnly, never)).toBeGreaterThan(50);
-    // GDD K-05 example: height 8 I3_0 never crosses; height 7 it does (cells 7, 8, 9 ≥ 7)
-    expect(reachByText('I3_0', 8, [])).toEqual({ free: false, rail: false });
-    expect(reachByText('I3_0', 7, [])).toEqual({ free: true, rail: false });
-  });
+      // the sweep really exercises all three outcomes
+      expect(Math.min(free, railOnly, never)).toBeGreaterThan(50);
+      // GDD K-05 example: height 8 I3_0 never crosses; height 7 it does (cells 7, 8, 9 ≥ 7)
+      expect(reachByText('I3_0', 8, [])).toEqual({ free: false, rail: false });
+      expect(reachByText('I3_0', 7, [])).toEqual({ free: true, rail: false });
+    },
+  );
 
   if (!LEVELS_IS_FAZ_2R) {
     it.each(LEVEL_IDS)(
@@ -2821,55 +2963,65 @@ function tileSpec(c: TileCase): LevelSpec {
 }
 
 describe('review round 3: K-27 / K-34 tiling (TECH L-11) against an independent oracle', () => {
-  it('K-27 K-34 TECH L-11 on 2 500 seeded random 1–2 segment levels (W1 gaps, wall 0–8, B1…I4): `untileable` exactly when the oracle finds no bottom-up build', () => {
-    const rnd = lcg(20261006);
-    let ok = 0;
-    let bad = 0;
-    const mismatches: string[] = [];
-    for (let n = 0; n < 2500; n++) {
-      const c = randomTileCase(rnd);
-      const want = tileOracle(c);
-      const got = run(tileSpec(c), ['L-11']);
-      if (want) ok++;
-      else bad++;
-      const gotOk = got.length === 0;
-      if (gotOk !== want || got.some((i) => i.code !== 'untileable' || i.severity !== 'error'))
-        mismatches.push(`${JSON.stringify(c)} oracle ${want} L-11 ${JSON.stringify(got.map((i) => i.path))}`);
-    }
-    expect(mismatches.slice(0, 5)).toEqual([]);
-    // both verdicts are well represented
-    expect(Math.min(ok, bad)).toBeGreaterThan(500);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): L-11 untileable is D3a now (no access search, `.` rejected). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 K-34 TECH L-11 on 2 500 seeded random 1–2 segment levels (W1 gaps, wall 0–8, B1…I4): `untileable` exactly when the oracle finds no bottom-up build',
+    () => {
+      const rnd = lcg(20261006);
+      let ok = 0;
+      let bad = 0;
+      const mismatches: string[] = [];
+      for (let n = 0; n < 2500; n++) {
+        const c = randomTileCase(rnd);
+        const want = tileOracle(c);
+        const got = run(tileSpec(c), ['L-11']);
+        if (want) ok++;
+        else bad++;
+        const gotOk = got.length === 0;
+        if (gotOk !== want || got.some((i) => i.code !== 'untileable' || i.severity !== 'error'))
+          mismatches.push(
+            `${JSON.stringify(c)} oracle ${want} L-11 ${JSON.stringify(got.map((i) => i.path))}`,
+          );
+      }
+      expect(mismatches.slice(0, 5)).toEqual([]);
+      // both verdicts are well represented
+      expect(Math.min(ok, bad)).toBeGreaterThan(500);
+    },
+  );
 
-  it('K-34 TECH L-11 order matters: plan y0 `YY`, y1 `Y.`, y2 `YW` with L4_0 Y + B1 W is untileable (the W brick reaches (7,2) only by rail before the L4 blocks (6,2), and then hangs over the empty (7,0)); D2_90 + D2_0 Y instead is fine', () => {
-    const wall = { height: 4, gaps: [{ type: 'static' as const, y: 0, size: 3 }] };
-    const plan = ['YW', 'Y.', 'YY'];
-    const l4: LevelSpec = {
-      id: 41,
-      wall,
-      plan,
-      pieces: [
-        ['L4_0', 'Y', 0, 0],
-        ['B1_0', 'W', 3, 0],
-      ],
-    };
-    // material is exact (4 Y + 1 W) and an exact cover exists (L4_0 at (6,0), B1 at (7,2)) …
-    expect(run(l4, ['L-10'])).toEqual([]);
-    // … but no bottom-up order: L4 first closes the rail path, B1 first breaks K-34 in column 7
-    expect(run(l4, ['L-11']).map((i) => [i.code, i.severity])).toEqual([['untileable', 'error']]);
-    const pair: LevelSpec = {
-      ...l4,
-      pieces: [
-        ['D2_90', 'Y', 0, 0],
-        ['D2_0', 'Y', 2, 0],
-        ['B1_0', 'W', 3, 0],
-      ],
-    };
-    // D2_90 at y0, B1 W by rail at (7,2) over the window, D2_0 dropped into column 6 (lands on top(6) = 1)
-    expect(run(pair, ['L-10', 'L-11'])).toEqual([]);
-    // without the gap the W brick falls into the window (7,1) → untileable
-    expect(codes(run({ ...pair, wall: { height: 4 } }, ['L-11']))).toEqual(['untileable']);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): L-11 untileable is D3a now (no access search, `.` rejected). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-34 TECH L-11 order matters: plan y0 `YY`, y1 `Y.`, y2 `YW` with L4_0 Y + B1 W is untileable (the W brick reaches (7,2) only by rail before the L4 blocks (6,2), and then hangs over the empty (7,0)); D2_90 + D2_0 Y instead is fine',
+    () => {
+      const wall = { height: 4, gaps: [{ type: 'static' as const, y: 0, size: 3 }] };
+      const plan = ['YW', 'Y.', 'YY'];
+      const l4: LevelSpec = {
+        id: 41,
+        wall,
+        plan,
+        pieces: [
+          ['L4_0', 'Y', 0, 0],
+          ['B1_0', 'W', 3, 0],
+        ],
+      };
+      // material is exact (4 Y + 1 W) and an exact cover exists (L4_0 at (6,0), B1 at (7,2)) …
+      expect(run(l4, ['L-10'])).toEqual([]);
+      // … but no bottom-up order: L4 first closes the rail path, B1 first breaks K-34 in column 7
+      expect(run(l4, ['L-11']).map((i) => [i.code, i.severity])).toEqual([['untileable', 'error']]);
+      const pair: LevelSpec = {
+        ...l4,
+        pieces: [
+          ['D2_90', 'Y', 0, 0],
+          ['D2_0', 'Y', 2, 0],
+          ['B1_0', 'W', 3, 0],
+        ],
+      };
+      // D2_90 at y0, B1 W by rail at (7,2) over the window, D2_0 dropped into column 6 (lands on top(6) = 1)
+      expect(run(pair, ['L-10', 'L-11'])).toEqual([]);
+      // without the gap the W brick falls into the window (7,1) → untileable
+      expect(codes(run({ ...pair, wall: { height: 4 } }, ['L-11']))).toEqual(['untileable']);
+    },
+  );
 
   it('K-27 OBSTACLES W6 TECH L-11 a block painted at the paint gate keeps its colour and may then enter through a plain gap ("sahaya geri çekilse de boya kalıcıdır"): the level is tileable', () => {
     // height 8: I3_0 (3 tall) never crosses over the wall (K-05). Gap 0 = P paint gate rows 0–2, gap 1 = static rows 4–6.
@@ -2904,21 +3056,25 @@ describe('review round 3: K-27 / K-34 tiling (TECH L-11) against an independent 
 // --- debris, K-32 examples, K-02 / K-44 boundaries -------------------------------------------------------------------
 
 describe('review round 3: debris, K-32 worked examples, boundaries', () => {
-  it('K-27 debris is never supply ("moloz olmayan … sahaya taşınmış moloz arz değildir"): an R plan row with only R debris is material_short and untileable; one R yard block fixes both', () => {
-    const base: LevelSpec = {
-      id: 17,
-      plan: ['RR', 'WW'],
-      pieces: [['D2_90', 'W', 0, 0]],
-      debris: [['D2_90', 'R', 6, 1]],
-    };
-    expect(run(base, ['L-10', 'L-11']).map((i) => [i.code, i.rule])).toEqual([
-      ['material_short', 'K-27'],
-      ['untileable', 'K-27'],
-    ]);
-    expect(
-      run({ ...base, pieces: [...(base.pieces ?? []), ['D2_90', 'R', 2, 0]] }, ['L-10', 'L-11']),
-    ).toEqual([]);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 debris is never supply ("moloz olmayan … sahaya taşınmış moloz arz değildir"): an R plan row with only R debris is material_short and untileable; one R yard block fixes both',
+    () => {
+      const base: LevelSpec = {
+        id: 17,
+        plan: ['RR', 'WW'],
+        pieces: [['D2_90', 'W', 0, 0]],
+        debris: [['D2_90', 'R', 6, 1]],
+      };
+      expect(run(base, ['L-10', 'L-11']).map((i) => [i.code, i.rule])).toEqual([
+        ['material_short', 'K-27'],
+        ['untileable', 'K-27'],
+      ]);
+      expect(
+        run({ ...base, pieces: [...(base.pieces ?? []), ['D2_90', 'R', 2, 0]] }, ['L-10', 'L-11']),
+      ).toEqual([]);
+    },
+  );
 
   it('K-31 debris colours join the colour set: level 5 (limit 3) with plan W/Y/G and one R debris has 4 colours → too_many_colors', () => {
     const spec = (debrisColor: ColorCode): LevelSpec => ({
@@ -2932,18 +3088,22 @@ describe('review round 3: debris, K-32 worked examples, boundaries', () => {
     expect(run(spec('G'), ['L-06'])).toEqual([]);
   });
 
-  it('K-45/7 OBSTACLES S4 debris may stand on a `.` plan cell ("Bir `.` hücresindeki moloz", GDD E-43): no debris_misplaced', () => {
-    const spec: LevelSpec = {
-      id: 17,
-      plan: ['WW', '.W'],
-      pieces: [['D2_90', 'W', 0, 0]],
-      debris: [['B1_0', 'R', 6, 0]],
-    };
-    expect(run(spec, ['L-13'])).toEqual([]);
-    // still inside x 6–7 and the plan rows: one row higher is the top W row (fine), two rows higher is outside
-    expect(run({ ...spec, debris: [['B1_0', 'R', 6, 1]] }, ['L-13'])).toEqual([]);
-    expect(codes(run({ ...spec, debris: [['B1_0', 'R', 6, 2]] }, ['L-13']))).toEqual(['debris_misplaced']);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): debris rules changed (S4 Faz 2R, plan_has_window). WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-45/7 OBSTACLES S4 debris may stand on a `.` plan cell ("Bir `.` hücresindeki moloz", GDD E-43): no debris_misplaced',
+    () => {
+      const spec: LevelSpec = {
+        id: 17,
+        plan: ['WW', '.W'],
+        pieces: [['D2_90', 'W', 0, 0]],
+        debris: [['B1_0', 'R', 6, 0]],
+      };
+      expect(run(spec, ['L-13'])).toEqual([]);
+      // still inside x 6–7 and the plan rows: one row higher is the top W row (fine), two rows higher is outside
+      expect(run({ ...spec, debris: [['B1_0', 'R', 6, 1]] }, ['L-13'])).toEqual([]);
+      expect(codes(run({ ...spec, debris: [['B1_0', 'R', 6, 2]] }, ['L-13']))).toEqual(['debris_misplaced']);
+    },
+  );
 
   it('K-32 GDD examples: repeat p=2 `["??","??","YW","WY"]` resolves y2 = y0 = `WY`, y3 = y1 = `YW`; mirrorOf 0 of y0 `RW` is `WR`', () => {
     const W = COLOR_CODES.indexOf('W');
@@ -3011,20 +3171,24 @@ describe('review round 3: debris, K-32 worked examples, boundaries', () => {
     ).toEqual([]);
   });
 
-  it('K-02 the lower bound is exactly 39/48 ("en az %80\'i (≥ 39/48)"): 39 bricks or 38 bricks + 1 crate are valid, 38 bricks + 1 screw are not', () => {
-    const fill = (spec: Partial<LevelSpec>): string[] =>
-      run({ id: 26, plan: ['WW'], pieces: bricks(39), ...spec }, ['L-03']).map((i) => i.code);
-    expect(fill({})).toEqual([]);
-    expect(fill({ pieces: bricks(38, ['5,7']), obstacles: [{ type: 'crate', x: 5, y: 7, hp: 1 }] })).toEqual(
-      [],
-    );
-    expect(fill({ pieces: bricks(38, ['5,7']), obstacles: [{ type: 'cement_bag', x: 5, y: 7 }] })).toEqual(
-      [],
-    );
-    expect(fill({ pieces: bricks(38), obstacles: [{ type: 'screw', x: 0, y: 0 }] })).toEqual([
-      'yard_fill_low',
-    ]);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): K-02 80 % band → Faz 2R 2 ≤ E ≤ ⌊0,4·C⌋. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-02 the lower bound is exactly 39/48 ("en az %80\'i (≥ 39/48)"): 39 bricks or 38 bricks + 1 crate are valid, 38 bricks + 1 screw are not',
+    () => {
+      const fill = (spec: Partial<LevelSpec>): string[] =>
+        run({ id: 26, plan: ['WW'], pieces: bricks(39), ...spec }, ['L-03']).map((i) => i.code);
+      expect(fill({})).toEqual([]);
+      expect(
+        fill({ pieces: bricks(38, ['5,7']), obstacles: [{ type: 'crate', x: 5, y: 7, hp: 1 }] }),
+      ).toEqual([]);
+      expect(fill({ pieces: bricks(38, ['5,7']), obstacles: [{ type: 'cement_bag', x: 5, y: 7 }] })).toEqual(
+        [],
+      );
+      expect(fill({ pieces: bricks(38), obstacles: [{ type: 'screw', x: 0, y: 0 }] })).toEqual([
+        'yard_fill_low',
+      ]);
+    },
+  );
 
   it('K-44 kinds per story chapter hold for debris too: I3_0 debris in level 10 is shape_locked (build.debris[0]), in level 11 valid', () => {
     const debris = (id: number): [string, string][] =>
@@ -3183,7 +3347,7 @@ if (!LEVELS_IS_FAZ_2R) {
             const moved = cells.map((c) => ({ x: p.x + c.x + dx, y: p.y + c.y + dy }));
             const empty = moved.every((c) => {
               const other = occupied.get(cellKey(c.x, c.y));
-              return inGrid(c.x, c.y) && (other === undefined || other === i);
+              return inGrid(DEFAULT_GEO, c.x, c.y) && (other === undefined || other === i);
             });
             const crossing = moved.filter((c) => c.x >= 6);
             const ys = moved.map((c) => c.y);

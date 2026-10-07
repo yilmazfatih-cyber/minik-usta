@@ -21,7 +21,7 @@
  */
 import { Zone } from './types.ts';
 import type { Anchor, At, DragNode, PieceId, Steer, Verdict, VerdictReason } from './types.ts';
-import { BOARD_ROWS, GRID_COLS, GRID_ROWS, SITE_COLS, SITE_X } from './coords.ts';
+import type { BoardGeo } from './geometry.ts';
 import { shapeByIndex } from './shapes.ts';
 import type { ShapeDef } from './shapes.ts';
 import type { CompiledLevel } from './level/compile.ts';
@@ -123,13 +123,14 @@ export function computeFall(
   opts: FallOptions = {},
 ): FallResult {
   const shape = shapeByIndex(pieceShape(s, pieceId));
+  const geo = s.lvl.geo;
   if (
     !Number.isInteger(node.ix) ||
     !Number.isInteger(node.iy) ||
-    node.ix < SITE_X ||
-    node.ix + shape.w > GRID_COLS ||
+    node.ix < geo.siteX ||
+    node.ix + shape.w > geo.cols ||
     node.iy < 0 ||
-    node.iy + shape.h > GRID_ROWS
+    node.iy + shape.h > geo.rows
   )
     throw new RangeError(`computeFall: ${shape.id} at (${node.ix},${node.iy}) is not fully on the site`);
 
@@ -166,8 +167,8 @@ export function computeFall(
   let drift: -1 | 0 | 1 = 0;
   if (
     plan.drift !== 0 &&
-    fitsOnSite(cols, shape, x + plan.drift, y0) &&
-    openSky(cols, shape, x + plan.drift, y0)
+    fitsOnSite(geo, cols, shape, x + plan.drift, y0) &&
+    openSky(geo, cols, shape, x + plan.drift, y0)
   ) {
     x += plan.drift;
     drift = plan.drift;
@@ -176,10 +177,10 @@ export function computeFall(
 
   const dir = plan.dir;
   const ceil = ceilingAnchor(s, shape);
-  let land = dir < 0 ? fallFrom(cols, shape, x, y0) : Math.max(ceil, fallFrom(cols, shape, x, y0));
+  let land = dir < 0 ? fallFrom(geo, cols, shape, x, y0) : Math.max(ceil, fallFrom(geo, cols, shape, x, y0));
 
   // G-L (K-19 rules 3–4): shift one column at `atRow`, between the release row and the unsteered landing row (both
-  // included), when every shifted cell is on x 6–7 and empty; then go on in the same direction in the new column
+  // included), when every shifted cell is on the site columns and empty; then go on in the same direction there
   let steered: Steer | null = null;
   const st = s.lvl.gravity.steerable ? plan.steer : undefined;
   if (st) {
@@ -190,18 +191,18 @@ export function computeFall(
       Number.isInteger(st.atRow) &&
       st.atRow >= lo &&
       st.atRow <= hi &&
-      fitsOnSite(cols, shape, nx, st.atRow)
+      fitsOnSite(geo, cols, shape, nx, st.atRow)
     ) {
       pushPoint(path, x, st.atRow);
       x = nx;
       pushPoint(path, x, st.atRow);
       steered = { dir: st.dir, atRow: st.atRow };
-      if (dir < 0) land = fallFrom(cols, shape, x, st.atRow);
+      if (dir < 0) land = fallFrom(geo, cols, shape, x, st.atRow);
       else
         land =
           st.atRow <= ceil
-            ? riseFrom(cols, shape, x, st.atRow, ceil)
-            : Math.max(ceil, fallFrom(cols, shape, x, st.atRow));
+            ? riseFrom(geo, cols, shape, x, st.atRow, ceil)
+            : Math.max(ceil, fallFrom(geo, cols, shape, x, st.atRow));
     }
   }
   pushPoint(path, x, land);
@@ -224,17 +225,19 @@ export function computeFall(
 }
 
 /**
- * Blocked board rows (bits 0–9) of site columns x 6 and x 7: platform rows below the elevator offset and the visible
- * segment's occupied cells (board rows < 8, as in the drag collision masks), the `exclude` piece left out.
+ * Blocked frame rows (bits 0 … rows − 1) of the site columns, `out[sx]` = column `geo.siteX + sx` (length ws; default
+ * board: x 6 and x 7): platform rows below the elevator offset and the visible segment's occupied cells (board rows
+ * < h, as in the drag collision masks), the `exclude` piece left out.
  */
-export function siteColumnMasks(s: GameState, exclude: PieceId = -1): [number, number] {
+export function siteColumnMasks(s: GameState, exclude: PieceId = -1): number[] {
+  const { ws, hs, h, rows } = s.lvl.geo;
   const seg = visibleSegment(s);
   const elev = hdr(s, H.elev);
   const skip = exclude + 1;
-  const out: [number, number] = [0, 0];
-  for (let sx = 0; sx < SITE_COLS; sx++) {
-    let m = elev > 0 ? (1 << Math.min(elev, GRID_ROWS)) - 1 : 0;
-    for (let sy = 0; sy < BOARD_ROWS && sy + elev < BOARD_ROWS; sy++) {
+  const out: number[] = [];
+  for (let sx = 0; sx < ws; sx++) {
+    let m = elev > 0 ? (1 << Math.min(elev, rows)) - 1 : 0;
+    for (let sy = 0; sy < hs && sy + elev < h; sy++) {
       const v = siteOcc(s, seg, sx, sy);
       if (v !== 0 && v !== skip) m |= 1 << (sy + elev);
     }
@@ -250,21 +253,23 @@ export function siteColumnMasks(s: GameState, exclude: PieceId = -1): [number, n
 export function siteLandingRow(s: GameState, pieceId: PieceId, ix: number, iy: number, dir: -1 | 1): number {
   const shape = shapeByIndex(pieceShape(s, pieceId));
   const cols = siteColumnMasks(s, pieceId);
-  const support = fallFrom(cols, shape, ix, iy);
+  const support = fallFrom(s.lvl.geo, cols, shape, ix, iy);
   return dir < 0 ? support : Math.max(ceilingAnchor(s, shape), support);
 }
 
 /**
  * S8 in the yard (K-10, E-14): a balloon released at yard anchor `(ix, iy)` rises until its top cell is under the first
- * occupied cell of its columns, or at y = 7. Returns the anchor row (the piece itself is ignored).
+ * occupied cell of its columns, or at the yard's top row y = hy − 1 (default 7). Returns the anchor row (the piece
+ * itself is ignored).
  */
 export function yardBalloonLanding(s: GameState, pieceId: PieceId, ix: number, iy: number): number {
   const shape = shapeByIndex(pieceShape(s, pieceId));
   const skip = pieceId + 1;
-  let land = BOARD_ROWS - shape.h;
+  const hy = s.lvl.geo.hy;
+  let land = hy - shape.h;
   for (let c = 0; c < shape.w; c++) {
     const top = shape.colTop[c] ?? 0;
-    for (let y = iy + top + 1; y < BOARD_ROWS; y++) {
+    for (let y = iy + top + 1; y < hy; y++) {
       const v = yardOcc(s, ix + c, y);
       if (v !== 0 && v !== skip) {
         land = Math.min(land, y - 1 - top);
@@ -366,7 +371,7 @@ export function settleYard(s: GameState, hooks: SettleHooks = {}): YardMotion[] 
     for (const e of ents) if (e.kind === 'piece' && e.falls) passStart.set(e, entCells(e));
     const startAnchor = new Map<Ent, Anchor>(ents.map((e) => [e, { ix: e.x, iy: e.y }]));
 
-    for (let guard = 0; guard < 4 * GRID_ROWS * (ents.length + 1); guard++) {
+    for (let guard = 0; guard < 4 * s.lvl.geo.rows * (ents.length + 1); guard++) {
       const fell = halfStep(s, ents, byValue, -1);
       const rose = halfStep(s, ents, byValue, 1);
       if (!fell && !rose) break;
@@ -427,7 +432,7 @@ function yardEntities(s: GameState): Ent[] {
   }
   for (const o of s.lvl.obstacles) {
     if (o.type !== 'cement_bag' || obstacleField(s, o.index, OF.hp) <= 0) continue;
-    for (let y = 0; y < BOARD_ROWS; y++) {
+    for (let y = 0; y < s.lvl.geo.hy; y++) {
       if (yardOcc(s, o.x, y) === -(o.index + 1)) {
         ents.push({
           kind: 'bag',
@@ -453,8 +458,8 @@ function entCells(e: Ent): BoardCell[] {
 /**
  * One half step. dir −1 (falling half): every unsupported faller moves down 1; support = the floor, a solid cell
  * (crate, a block that does not fall, a balloon) or a supported faller (fixed point). dir +1 (rising half): every
- * unblocked balloon moves up 1; blocked = the y = 7 ceiling, a solid cell or a blocked balloon. Returns whether
- * anything moved.
+ * unblocked balloon moves up 1; blocked = the yard ceiling (y = hy − 1, default 7), a solid cell or a blocked balloon.
+ * Returns whether anything moved.
  */
 function halfStep(
   s: GameState,
@@ -490,9 +495,10 @@ function halfStep(
 /** The entity cannot move in `dir` this half step (see `halfStep`). */
 function stopped(s: GameState, e: Ent, byValue: ReadonlyMap<number, Ent>, dir: -1 | 1): boolean {
   const self = e.kind === 'piece' ? e.id + 1 : -(e.id + 1);
+  const hy = s.lvl.geo.hy;
   for (const c of entCells(e)) {
     const ny = c.y + dir;
-    if (ny < 0 || ny >= BOARD_ROWS) return true;
+    if (ny < 0 || ny >= hy) return true;
     const v = yardOcc(s, c.x, ny);
     if (v === 0 || v === self) continue;
     const o = byValue.get(v);
@@ -526,29 +532,35 @@ function ceilingAnchor(s: GameState, shape: ShapeDef): number {
   return (plan?.height ?? 0) + hdr(s, H.elev) - shape.h;
 }
 
-/** Every cell on x 6–7 inside the grid and not blocked. */
-function fitsOnSite(cols: readonly [number, number], shape: ShapeDef, ix: number, iy: number): boolean {
-  if (ix < SITE_X || ix + shape.w > GRID_COLS || iy < 0 || iy + shape.h > GRID_ROWS) return false;
+/** Every cell on the site columns inside the frame rows and not blocked. */
+function fitsOnSite(
+  geo: BoardGeo,
+  cols: readonly number[],
+  shape: ShapeDef,
+  ix: number,
+  iy: number,
+): boolean {
+  if (ix < geo.siteX || ix + shape.w > geo.cols || iy < 0 || iy + shape.h > geo.rows) return false;
   for (let c = 0; c < shape.w; c++) {
-    if ((((shape.colRows[c] ?? 0) << iy) & (cols[ix + c - SITE_X] ?? 0)) !== 0) return false;
+    if ((((shape.colRows[c] ?? 0) << iy) & (cols[ix + c - geo.siteX] ?? 0)) !== 0) return false;
   }
   return true;
 }
 
 /** K-11 open sky: nothing blocked at or above the block's lowest cell in each covered column. */
-function openSky(cols: readonly [number, number], shape: ShapeDef, ix: number, iy: number): boolean {
+function openSky(geo: BoardGeo, cols: readonly number[], shape: ShapeDef, ix: number, iy: number): boolean {
   for (let c = 0; c < shape.w; c++) {
-    if ((cols[ix + c - SITE_X] ?? 0) >> (iy + (shape.colBottom[c] ?? 0)) !== 0) return false;
+    if ((cols[ix + c - geo.siteX] ?? 0) >> (iy + (shape.colBottom[c] ?? 0)) !== 0) return false;
   }
   return true;
 }
 
 /** Anchor row after falling from `(ix, iy)`: onto the highest blocked row below the block in each covered column. */
-function fallFrom(cols: readonly [number, number], shape: ShapeDef, ix: number, iy: number): number {
+function fallFrom(geo: BoardGeo, cols: readonly number[], shape: ShapeDef, ix: number, iy: number): number {
   let land = 0;
   for (let c = 0; c < shape.w; c++) {
     const bottom = shape.colBottom[c] ?? 0;
-    const below = (cols[ix + c - SITE_X] ?? 0) & ((1 << (iy + bottom)) - 1);
+    const below = (cols[ix + c - geo.siteX] ?? 0) & ((1 << (iy + bottom)) - 1);
     const support = below === 0 ? -1 : 31 - Math.clz32(below);
     land = Math.max(land, support + 1 - bottom);
   }
@@ -557,7 +569,8 @@ function fallFrom(cols: readonly [number, number], shape: ShapeDef, ix: number, 
 
 /** Anchor row after rising from `(ix, iy)` up to `cap`: under the lowest blocked row above the block. */
 function riseFrom(
-  cols: readonly [number, number],
+  geo: BoardGeo,
+  cols: readonly number[],
   shape: ShapeDef,
   ix: number,
   iy: number,
@@ -566,7 +579,7 @@ function riseFrom(
   let land = cap;
   for (let c = 0; c < shape.w; c++) {
     const top = shape.colTop[c] ?? 0;
-    const above = (cols[ix + c - SITE_X] ?? 0) >> (iy + top + 1);
+    const above = (cols[ix + c - geo.siteX] ?? 0) >> (iy + top + 1);
     if (above === 0) continue;
     const first = 31 - Math.clz32(above & -above) + iy + top + 1;
     land = Math.min(land, first - 1 - top);
@@ -580,12 +593,13 @@ function touchesHiddenCell(s: GameState, cells: readonly BoardCell[]): boolean {
   const plan = s.lvl.segments[seg];
   if (!plan || plan.hiddenMask === 0) return false;
   const hidden = plan.hiddenMask & ~revealedMask(s, seg);
+  const { siteX, ws, hs } = s.lvl.geo;
   const elev = hdr(s, H.elev);
   for (const c of cells) {
-    const sx = c.x - SITE_X;
+    const sx = c.x - siteX;
     const sy = c.y - elev;
-    if (sx < 0 || sx >= SITE_COLS || sy < 0 || sy >= BOARD_ROWS) continue;
-    if ((hidden >> (sy * SITE_COLS + sx)) & 1) return true;
+    if (sx < 0 || sx >= ws || sy < 0 || sy >= hs) continue;
+    if ((hidden >> (sy * ws + sx)) & 1) return true;
   }
   return false;
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { DEFAULT_GEO } from '../../src/core/geometry.ts';
 import {
   computeFall,
   settleYard,
@@ -715,7 +716,7 @@ describe('K-20 yard gravity (K-35 step 6)', () => {
       let changed = false;
       for (const f of fallen)
         for (const c of f.cells)
-          for (const n of neighbors4(c.x, c.y)) {
+          for (const n of neighbors4(DEFAULT_GEO, c.x, c.y)) {
             if (n.ix > 5 || yardOcc(st, n.ix, n.iy) !== -1) continue;
             setYardOcc(st, n.ix, n.iy, 0);
             setObstacleField(st, 0, OF.hp, 0);

@@ -6,15 +6,16 @@
  *   `c = 4` the player earns one Golden Trowel and `c = 0`. A wrong placement (bounce, mortar sticking) and a glass
  *   break set `c = 0`. Yard moves, boosters and trowel use leave `c` alone; Undo restores the pre-move value (the whole
  *   state snapshot, K-39).
- * - Trowel use: the player taps a cell of the visible segment's build front (`eligibleTrowelCells` = `buildFront`, so the
- *   K-34 support rule holds by construction). The cell is filled with its plan colour, counts as correctly filled
- *   (`filled`, K-14) and a hidden `?` cell opens (K-32). An invalid target is rejected and consumes nothing.
+ * - Trowel use (Faz 2R, full cover K-47): the trowel no longer fills a plan cell without a block. The player picks a
+ *   yard block and it flies to a spot of its `P` set (move `goldTrowel`; core/boosters.ts `trowelSpots`,
+ *   `goldTrowelRejection`, `applyTrowelEffect`). The Faz 2 cell trowel below (`trowelRejection`, `applyTrowel`, move
+ *   `trowel`) is **deprecated**: the pipeline rejects it (`legacyTrowel`); it stays only until the scene moves to the
+ *   block trowel (WP-G).
  *
  * Pure state helpers: events and the K-35 mini pipeline belong to core/moves.ts.
  */
 import { COLOR_CODES } from './types.ts';
 import type { At, ColorCode } from './types.ts';
-import { SITE_COLS, SITE_X } from './coords.ts';
 import {
   H,
   SITE_TROWEL,
@@ -83,7 +84,9 @@ export function grantTrowels(s: GameState, n: number): void {
 
 // --- Golden Trowel use ----------------------------------------------------------------------------------------------
 
-/** Move record target (TECH §6.1 `trowel`): segment, local column (0 = x 6, 1 = x 7) and plan row of that segment. */
+/**
+ * @deprecated Faz 2 cell trowel target (segment, local column 0 | 1, plan row); use the `goldTrowel` move (K-33 Faz 2R).
+ */
 export interface TrowelTarget {
   readonly seg: number;
   readonly x: 0 | 1;
@@ -94,6 +97,7 @@ export interface TrowelTarget {
 export type TrowelRejectReason = 'levelOver' | 'noTrowel' | 'notVisibleSegment' | 'notBuildFront';
 
 /**
+ * @deprecated Faz 2 cell trowel (see the module comment); the pipeline rejects the `trowel` move since Faz 2R.
  * Precondition of a trowel use (TECH §6.4 `canUse*`; the UI greys the slot with the same function): the level is not
  * won, the player holds a trowel, the target is on the visible segment and is one of its build front cells (K-34).
  * Returns null when the use is allowed.
@@ -102,7 +106,7 @@ export function trowelRejection(s: GameState, target: TrowelTarget): TrowelRejec
   if ((hdr(s, H.flags) & STATE_FLAG.won) !== 0) return 'levelOver';
   if (hdr(s, H.trowels) <= 0) return 'noTrowel';
   if (target.seg !== visibleSegment(s)) return 'notVisibleSegment';
-  const x = SITE_X + target.x;
+  const x = s.lvl.geo.siteX + target.x;
   const y = target.y + hdr(s, H.elev);
   if (!buildFront(s).some((c) => c.x === x && c.y === y)) return 'notBuildFront';
   return null;
@@ -120,6 +124,7 @@ export interface TrowelFill {
 }
 
 /**
+ * @deprecated Faz 2 cell trowel (breaks the full cover K-47; never called by the pipeline since Faz 2R).
  * K-33 trowel effect: the target cell is filled with its plan colour (`siteOcc` = SITE_TROWEL), joins `filled` and opens
  * when hidden; one trowel is spent. Throws when `trowelRejection` refuses the target (check it first).
  */
@@ -128,7 +133,7 @@ export function applyTrowel(s: GameState, target: TrowelTarget): TrowelFill {
   if (refused !== null) throw new RangeError(`applyTrowel: target refused (${refused})`);
   const { seg, x: sx, y: sy } = target;
   const plan = s.lvl.segments[seg];
-  const local = sy * SITE_COLS + sx;
+  const local = sy * s.lvl.geo.ws + sx;
   setSiteOcc(s, seg, sx, sy, SITE_TROWEL);
   setFilledMask(s, seg, sx, filledMask(s, seg, sx) | (1 << sy));
   const hidden = plan !== undefined && ((plan.hiddenMask >> local) & 1) === 1;
@@ -136,7 +141,7 @@ export function applyTrowel(s: GameState, target: TrowelTarget): TrowelFill {
   if (revealed) setRevealedMask(s, seg, revealedMask(s, seg) | (1 << local));
   setHdr(s, H.trowels, hdr(s, H.trowels) - 1);
   return {
-    cell: { zone: 'site', x: SITE_X + sx, y: sy + hdr(s, H.elev), seg },
+    cell: { zone: 'site', x: s.lvl.geo.siteX + sx, y: sy + hdr(s, H.elev), seg },
     color: COLOR_CODES[plan?.planColors[local] ?? 0] ?? 'W',
     revealed,
     trowels: hdr(s, H.trowels),

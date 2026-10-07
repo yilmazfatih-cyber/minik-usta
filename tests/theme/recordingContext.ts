@@ -33,6 +33,34 @@ const METHODS = new Set([
   'fillText',
 ]);
 
+/** Gradient factories: they return a recorded gradient whose `addColorStop` calls land in the op log. */
+const GRADIENTS = new Set(['createLinearGradient', 'createRadialGradient']);
+
+/** What a recorded gradient looks like when it is assigned to `fillStyle` / `strokeStyle`. */
+export interface RecordedGradient {
+  readonly kind: 'linear' | 'radial';
+  readonly args: readonly number[];
+  readonly stops: [number, string][];
+}
+
+export const isGradient = (v: unknown): v is RecordedGradient =>
+  typeof v === 'object' && v !== null && 'stops' in v && 'kind' in v;
+
+/** `addColorStop` lives on the prototype, so two recordings of the same drawer compare equal with `toEqual`. */
+class RecGradient implements RecordedGradient {
+  readonly stops: [number, string][] = [];
+  readonly kind: 'linear' | 'radial';
+  readonly args: readonly number[];
+  constructor(kind: 'linear' | 'radial', args: readonly number[]) {
+    this.kind = kind;
+    this.args = args;
+  }
+  addColorStop(o: number, c: string): void {
+    if (!(o >= 0 && o <= 1)) throw new Error(`recorder: colour stop ${o} outside 0..1`);
+    this.stops.push([o, c]);
+  }
+}
+
 interface State {
   fillStyle: unknown;
   strokeStyle: unknown;
@@ -105,6 +133,12 @@ export function createRecorder(): Recorder {
   const ctx = new Proxy(target, {
     get(_t, prop) {
       if (typeof prop !== 'string') throw new Error(`recorder: symbol access ${String(prop)}`);
+      if (GRADIENTS.has(prop)) {
+        return (...args: number[]) => {
+          ops.push([prop, ...args]);
+          return new RecGradient(prop === 'createLinearGradient' ? 'linear' : 'radial', [...args]);
+        };
+      }
       if (METHODS.has(prop)) {
         return (...args: unknown[]) => {
           ops.push([prop, ...args.map(copy)]);

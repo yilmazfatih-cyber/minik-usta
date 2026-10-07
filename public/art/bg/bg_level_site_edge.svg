@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 1920" width="120" height="1920">
+  <g opacity=".06" fill="#FFFFFF" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M31 1920V1236M57 1920V1236" fill="none" stroke-width="7"/>
+    <path d="M31 1250L57 1286L31 1322L57 1358L31 1394L57 1430L31 1466L57 1502L31 1538L57 1574L31 1610L57 1646L31 1682L57 1718L31 1754L57 1790L31 1826L57 1862L31 1898" fill="none" stroke-width="5"/>
+    <path d="M36 1236L44 1176L52 1236Z" stroke="none"/>
+    <path d="M0 1222H120V1240H0Z" stroke="none"/>
+    <path d="M44 1180L118 1224M44 1180L2 1224" fill="none" stroke-width="5"/>
+    <path d="M0 1240H26V1272H0Z" stroke="none"/>
+    <path d="M60 1240H84V1268H60Z" stroke="none"/>
+    <path d="M106 1240V1330" fill="none" stroke-width="4"/>
+    <path d="M98 1330H114L112 1346Q106 1360 98 1350" stroke="none"/>
+    <path d="M8 1560V1920M112 1560V1920" fill="none" stroke-width="12"/>
+    <path d="M0 1600H120M0 1720H120M0 1840H120" fill="none" stroke-width="10"/>
+    <path d="M8 1600L112 1720M112 1720L8 1840" fill="none" stroke-width="7"/>
+    <path d="M0 1590H120V1602H0ZM0 1710H120V1722H0ZM0 1830H120V1842H0Z" stroke="none"/>
+  </g>
+</svg>

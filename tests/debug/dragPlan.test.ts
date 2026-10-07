@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { tryBeginDrag } from '../../src/core/movement.ts';
 import { GameSession } from '../../src/core/session.ts';
+import { allSegmentsComplete } from '../../src/core/goals.ts';
 import type { DragNode } from '../../src/core/types.ts';
 import { fingerForNode, planDrag, toPage } from '../../src/debug/dragPlan.ts';
 import type { DragMove } from '../../src/debug/dragPlan.ts';
@@ -64,7 +65,8 @@ describe.each(PHONES)('debug golden replay finger path on $name (TECH 12.3)', (p
         expect(node(drag.current), `${where}: release node`).toBe(node(move.to));
         expect(session.commit(move).status, `${where}: commit`).toBe('applied');
       });
-      expect(session.outcome).toBe('won');
+      // every segment is built; the Faz 2 levels keep decoys, so K-48 holds back the win (WP-M ile yeniden üretilecek)
+      expect(allSegmentsComplete(session.state)).toBe(true);
     },
   );
 });

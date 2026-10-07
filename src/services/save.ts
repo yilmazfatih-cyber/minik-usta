@@ -22,7 +22,6 @@
  * `MIGRATIONS[old]` and a fixture test (old JSON → expected new JSON).
  */
 import * as z from 'zod/mini';
-import { COLOR_CODES } from '../core/types.ts';
 import type { PreBooster, SessionAction } from '../core/types.ts';
 import { BOOSTER_IDS, RingBuffer } from './analytics.ts';
 import type { BoosterId, Track } from './analytics.ts';
@@ -110,7 +109,8 @@ export const SessionActionSchema = z.discriminatedUnion('kind', [
     to: z.object({ zone: z.enum(['yard', 'site']), x: z.int(), y: z.int() }),
     rotation: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]),
   }),
-  z.object({ kind: z.literal('paint'), pieceId: nonNeg(), color: z.enum(COLOR_CODES) }),
+  z.object({ kind: z.literal('paint'), a: nonNeg(), b: nonNeg() }),
+  z.object({ kind: z.literal('goldTrowel'), pieceId: nonNeg(), x: z.int(), y: z.int() }),
   z.object({
     kind: z.literal('trowel'),
     seg: nonNeg(),

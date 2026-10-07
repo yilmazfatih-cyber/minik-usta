@@ -5,33 +5,43 @@
  * - State + move log: `log[0]` is the `start` action (pre-level boosters, streak tier); then every committed drag,
  *   trowel use, accepted +5 offer and undo, in order (TECH §11.1 `InLevel.actions`). Cancelled drags and rejected
  *   boosters change nothing and are not logged.
- * - K-39 Undo: before each drag the buffer is copied (≈ 2–4 KB); Undo restores that copy IN PLACE (the scene keeps
- *   its state reference), so counter, `m`, timers, streak, trowels, deliveries and queue, segment shift, goals — and a
- *   truck help of that move's step 12 (E-37) — all come back. Depth 1; not after a trowel / +5 offer; not while the
- *   out-of-moves window is open (core/boosters.ts `undoBlock`).
+ * - K-39 Undo: before each action the buffer is copied (≈ 0.7–4 KB); the copy is the K-30 Söküm target of that
+ *   action (`ApplyOptions.preAction`, no second copy) and, for a drag, the Undo snapshot. Undo restores it IN PLACE
+ *   (the scene keeps its state reference), so counter, `m`, `movesSpent` (−1), timers, streak, trowels, deliveries and
+ *   queue, segment shift, goals — and a truck help or Söküm of that move's step 12 (E-37) — all come back. Depth 1;
+ *   not after a booster / trowel / +5 offer; not while the out-of-moves window is open (core/boosters.ts `undoBlock`).
+ * - `apply(action)` (TECH §2R.15): one package per action — the events in step order (a Söküm's `teardown` last), the
+ *   `teardown` short cut and the `TurnSummary` of the state after it (core/summary.ts).
  * - K-43 resume: `GameSession.replay(level, log)` rebuilds the attempt deterministically, bit for bit (E-38), with the
  *   same undo snapshot, offer count and out-of-moves window (UX §1 (a)). A replay that does not apply throws
  *   `ReplayError` (the caller voids the attempt, like a level hash / rules version mismatch, K-43 item 4).
  * - K-29: when a move ends with 0 moves and no win, the window offers `n = offersUsed + 1` (n ≤ 3; the ad option only
  *   for n = 1). Accepting runs `addMoves` (+5, step 12 once); declining loses the level. With 3 offers used the level is
  *   lost at once (no window).
- * - K-43 exit: only with the player's confirmation; `m ≥ 1` is a loss, `m = 0` is free (life and pre-level boosters are
- *   refunded by meta, the streak bonus is not consumed, E-41).
+ * - K-43 exit: only with the player's confirmation; `movesSpent ≥ 1` is a loss, `movesSpent = 0` is free (life and
+ *   pre-level boosters are refunded by meta, the streak bonus is not consumed, E-41). Faz 2R: `movesSpent`, not `m`
+ *   (a Söküm gives `m` back but never `movesSpent`).
  * - Attempt counting (`levels[id].attempts`, K-43: a resume is the same attempt) lives in the save service;
  *   `resumed` tells the caller which case it is.
  */
-import type { Move, PreBooster, SessionAction } from './types.ts';
+import type { GameEvent, Move, PreBooster, SessionAction } from './types.ts';
 import { H, STATE_FLAG, createInitialState, hdr, setHdr } from './state.ts';
 import type { GameState } from './state.ts';
 import type { CompiledLevel } from './level/compile.ts';
-import { NULL_SINK, applyMove, canonicalJson, fnv1a64, measureYao } from './moves.ts';
+import { ArraySink, NULL_SINK, applyMove, canonicalJson, fnv1a64, measureYao } from './moves.ts';
 import type { EventSink, MoveHooks, MoveResult, YaoMeasure } from './moves.ts';
 import { grantTrowels } from './combo.ts';
 import { undoBlock } from './boosters.ts';
 import type { BoosterOutcome, UndoBlock } from './boosters.ts';
+import { levelHooks } from './obstacles/registry.ts';
+import { turnSummary } from './summary.ts';
+import type { TurnSummary } from './summary.ts';
 
-/** Core rules version (K-43 item 4): bump it whenever a rule change can change the replay of a saved log. */
-export const RULES_VERSION = 1;
+/**
+ * Core rules version (K-43 item 4): bump it whenever a rule change can change the replay of a saved log. 2 = Faz 2R
+ * (full cover K-47/K-48, sizes K-49, Söküm K-30, new boosters, Zobrist frame positions; TECH §2R.0 item 4).
+ */
+export const RULES_VERSION = 2;
 /** K-29: moves of an accepted offer. */
 export const OFFER_MOVES = 5;
 /** K-29: offers per attempt (ad or coins). */
@@ -79,9 +89,11 @@ export interface OfferInfo {
 }
 
 export interface ExitResult {
-  /** `free`: m = 0 (K-43 item 2, E-41); `loss`: m ≥ 1. */
+  /** `free`: `movesSpent` = 0 (K-43 item 2, E-41); `loss`: `movesSpent` ≥ 1. */
   readonly kind: 'free' | 'loss';
   readonly movesMade: number;
+  /** K-43 item 2 (Faz 2R): the counter the penalty reads. */
+  readonly movesSpent: number;
   /** Free exit: pre-level boosters to give back (the reserved life is meta's). Empty on a loss. */
   readonly refundPreBoosters: readonly PreBooster[];
   /** The win-streak bonus counts as used (false on a free exit: given again next time). */
@@ -96,6 +108,23 @@ export class ReplayError extends Error {
     this.name = 'ReplayError';
     this.index = index;
   }
+}
+
+/** The K-30 Söküm event of a package (TECH §2R.15). */
+export type TeardownEvent = Extract<GameEvent, { t: 'teardown' }>;
+
+/** What `GameSession.apply` takes: a move, Undo, or an accepted +5 offer (`addMoves` from `offerCoins` / `offerAd`). */
+export type SessionInput = Move | { readonly kind: 'undo' };
+
+/**
+ * One action package (TECH §2R.15 item 3, DL-2R-15/3): the result, the events in step order (a Söküm's `teardown` is
+ * the last one), the `teardown` short cut (the scene skips the correct-placement rewards when it is set, JUICE §0
+ * rule 14) and the summary of the state after the action.
+ */
+export interface ActionResult extends MoveResult {
+  readonly events: readonly GameEvent[];
+  readonly teardown: TeardownEvent | null;
+  readonly summary: TurnSummary;
 }
 
 const NOT_PLAYING: MoveResult = Object.freeze({
@@ -209,9 +238,58 @@ export class GameSession {
     return this.#log.map(copyAction);
   }
 
-  /** GDD `m`: completed moves (K-43 exit, `level_resume.movesMade`). */
+  /** GDD `m`: completed moves (`level_resume.movesMade`); a Söküm gives it back. */
   get movesMade(): number {
     return hdr(this.#state, H.turn);
+  }
+
+  /** GDD `movesSpent` (K-43 item 2): non-cancelled drag moves of this attempt; Undo −1, a Söküm keeps it. */
+  get movesSpent(): number {
+    return hdr(this.#state, H.movesSpent);
+  }
+
+  /** The level's rule hooks (registry, or the options' hooks). */
+  get hooks(): MoveHooks {
+    return this.#opts.hooks ?? levelHooks(this.lvl);
+  }
+
+  /** TECH §2R.15: the summary of the current state (bölüm başı and after every package). */
+  summary(): TurnSummary {
+    return turnSummary(this.#state, { hooks: this.hooks, undoable: this.canUndo() });
+  }
+
+  /**
+   * TECH §2R.15 `GameSession.apply(action) → ActionResult`: a drag, a booster, the Golden Trowel, Undo or an accepted +5
+   * offer, as one package. Events also go to `sink`. A refused / cancelled action changes nothing (`status`).
+   */
+  apply(action: SessionInput, sink: EventSink = NULL_SINK): ActionResult {
+    const own = new ArraySink();
+    const tee: EventSink =
+      sink.enabled === false
+        ? own
+        : {
+            push: (e: GameEvent): void => {
+              own.push(e);
+              sink.push(e);
+            },
+          };
+    let res: MoveResult;
+    if (action.kind === 'undo') {
+      const ok = this.undo();
+      res = ok
+        ? { status: 'applied', reason: null, won: false, outOfMoves: false }
+        : { ...NOT_PLAYING, reason: this.undoBlock() ?? 'noDragMove' };
+    } else if (action.kind === 'addMoves') {
+      if (action.source !== 'offerCoins' && action.source !== 'offerAd')
+        throw new Error('GameSession.apply: start bonuses belong to GameSession.start (K-40)');
+      res = this.acceptOffer(action.source, tee);
+    } else {
+      res = this.commit(action, tee);
+    }
+    const events = own.events;
+    const last = events[events.length - 1];
+    const teardown = last?.t === 'teardown' ? last : null;
+    return Object.freeze({ ...res, events: Object.freeze([...events]), teardown, summary: this.summary() });
   }
 
   get movesLeft(): number {
@@ -252,17 +330,18 @@ export class GameSession {
   }
 
   /**
-   * Commits a drag or a booster move (Phase 2: the Golden Trowel). Cancelled / rejected moves change nothing and are
-   * not logged; a won level or an open out-of-moves window rejects every move. +5 offers go through `acceptOffer`.
+   * Commits a drag, a booster (hammer, crane, paint brush) or the Golden Trowel. Cancelled / rejected moves change
+   * nothing and are not logged; a won level or an open out-of-moves window rejects every move. +5 offers go through
+   * `acceptOffer`.
    */
   commit(move: Move, sink: EventSink = NULL_SINK): MoveResult {
     if (move.kind === 'addMoves') throw new Error('GameSession.commit: use acceptOffer for +5 offers (K-29)');
     if (this.#outcome !== 'playing') return NOT_PLAYING;
-    const snapshot = move.kind === 'drag' ? this.#state.buf.slice() : null;
-    const res = applyMove(this.#state, move, sink, this.#applyOptions());
+    const snapshot = this.#state.buf.slice();
+    const res = applyMove(this.#state, move, sink, { ...this.#applyOptions(), preAction: snapshot });
     if (res.status !== 'applied') return res;
     this.#log.push(copyAction(move));
-    this.#undo = snapshot;
+    this.#undo = move.kind === 'drag' ? snapshot : null; // K-39: only a drag move is undone
     if (res.won) this.#outcome = 'won';
     else if (res.outOfMoves) this.#outcome = this.#offersUsed >= MAX_OFFERS ? 'lost' : 'outOfMoves';
     if (this.#outcome === 'lost') this.#markLost();
@@ -303,19 +382,21 @@ export class GameSession {
     this.#markLost();
   }
 
-  /** K-43 item 2: confirmed exit. `m ≥ 1` → loss; `m = 0` → free (refunds, streak bonus kept). */
+  /** K-43 item 2: confirmed exit. `movesSpent ≥ 1` → loss; `movesSpent = 0` → free (refunds, streak bonus kept). */
   exit(): ExitResult {
     if (this.#outcome !== 'playing') throw new Error(`exit: the attempt is not running (${this.#outcome})`);
     const movesMade = this.movesMade;
-    if (movesMade >= 1) {
+    const movesSpent = this.movesSpent;
+    if (movesSpent >= 1) {
       this.#outcome = 'lost';
       this.#markLost();
-      return { kind: 'loss', movesMade, refundPreBoosters: [], streakBonusConsumed: true };
+      return { kind: 'loss', movesMade, movesSpent, refundPreBoosters: [], streakBonusConsumed: true };
     }
     this.#outcome = 'exited';
     return {
       kind: 'free',
       movesMade,
+      movesSpent,
       refundPreBoosters: [...this.preBoosters],
       streakBonusConsumed: false,
     };

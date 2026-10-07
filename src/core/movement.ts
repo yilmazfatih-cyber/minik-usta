@@ -1,19 +1,22 @@
 /**
- * Drag movement (docs/GDD.md K-04, K-05, K-07…K-13; docs/TECH_DESIGN.md §4).
+ * Drag movement (docs/GDD.md K-04, K-05, K-07…K-13, K-44, K-49; docs/TECH_DESIGN.md §4, §2R.1).
  *
- * Edge model (R-03, D-010): the wall is the zero-width boundary between x = 5 and x = 6. A drag node is
- * `(ix, iy, mode)`, mode FREE (0) or RAIL(g) (1 + gap index); integer code `mode * 80 + iy * 8 + ix`
- * (= coords.dragNodeCode). `beginDrag` runs the K-09 pick gate and ONE BFS over the nodes (the board is frozen while
- * dragging, K-08, so the reachable set R never changes); the session then answers the scene's read-only queries:
- * reachability, the K-07 release class (cancel preview), K-08 sticky follow with its tie-break rules and hysteresis,
- * the BFS path the view follows, and the scene signals `blockedByWallHeight` (K-05), `dragCrossedWall` /
+ * Edge model (R-03, D-010): the wall is the zero-width boundary between x = wy−1 and x = wy (`geo.boundaryX |
+ * geo.siteX`; default board 5 | 6). A drag node is `(ix, iy, mode)`, mode FREE (0) or RAIL(g) (1 + gap index); integer
+ * code `mode * 80 + iy * 8 + ix` in the 8 × 10 maximum frame for every geometry (= coords.dragNodeCode, §2R.0 item 2).
+ * `beginDrag` runs the K-09 pick gate and ONE BFS over the nodes (the board is frozen while dragging, K-08, so the
+ * reachable set R never changes); the session then answers the scene's read-only queries: reachability, the K-07
+ * release class (cancel preview), K-08 sticky follow with its tie-break rules and hysteresis, the BFS path the view
+ * follows, and the scene signals `blockedByWallHeight` (K-05), `blockedCargo` (K-44), `dragCrossedWall` /
  * `dragEnteredRail` (tutorial `overWall` / `gapPass`, TECH §8.2). The session keeps no reference to the state.
  *
- * Nodes (TECH §4.2):
- * - FREE(ix, iy) valid ⇔ inside the 8 × 10 grid (heavy: `ix + w ≤ 6`, Y5/N6), no collision, every row that has block
- *   cells on BOTH sides of the boundary is open in FREE mode (`y ≥ wall.height`), and open sky (K-11, K-13): in every
- *   site column the block covers, its lowest cell is above every blocked cell of that column.
- * - RAIL(g)(ix, iy) valid ⇔ inside the grid, no collision, gap passable (rules' `canPassGap`), K-12 alignment (every
+ * Nodes (TECH §4.2, §2R.1):
+ * - FREE(ix, iy) valid ⇔ every cell inside the level's board + crane area (`x < wy + ws`, `y < h + 2`; Ağır Yük
+ *   (I5/Q9, K-08, K-44): every cell inside the yard, `x ≤ wy − 1`, `y ≤ hy − 1` — no yard air, no crane area, no
+ *   boundary, no rail), no collision, every row that has block cells on BOTH sides of the boundary is open in FREE
+ *   mode (`y ≥ wall.height`), and open sky (K-11, K-13): in every site column the block covers, its lowest cell is
+ *   above every blocked cell of that column. Yard air and site air are empty cells.
+ * - RAIL(g)(ix, iy) valid ⇔ inside the board, no collision, gap passable (rules' `canPassGap`), K-12 alignment (every
  *   block row inside the gap rows) and the block straddles the boundary or is fully on the site.
  * Edges (unit steps; in a horizontal step every cell that changes side must be in a row open in the step's mode —
  * FREE: `openFree`, any step touching RAIL(g): the rows of g):
@@ -38,20 +41,9 @@ import {
 import type { GameState } from './state.ts';
 import { Zone } from './types.ts';
 import type { DragMode, DragNode, PieceId } from './types.ts';
-import {
-  BOARD_ROWS,
-  BOUNDARY_X,
-  CRANE_ROW,
-  GRID_COLS,
-  GRID_ROWS,
-  ROW_MASK_ALL,
-  SITE_COLS,
-  SITE_X,
-  YARD_COLS,
-  boundaryAllows,
-  openFreeMask,
-  rowRangeMask,
-} from './coords.ts';
+import { boundaryAllows, openFreeMask, rowRangeMask } from './coords.ts';
+import { MAX_COLS, MAX_ROWS } from './geometry.ts';
+import type { BoardGeo } from './geometry.ts';
 import { shapeByIndex } from './shapes.ts';
 import type { ShapeDef } from './shapes.ts';
 import { collisionMasks, siteColumnTops, visibleSegment } from './grid.ts';
@@ -64,15 +56,13 @@ export function railMode(gap: number): DragMode {
   return gap + 1;
 }
 
-/** Nodes per mode: 8 × 10 anchors. */
-export const NODES_PER_MODE = GRID_COLS * GRID_ROWS;
+/** Nodes per mode: the 8 × 10 maximum frame of anchors (every geometry, §2R.0 item 2). */
+export const NODES_PER_MODE = MAX_COLS * MAX_ROWS;
 /** K-08: a new node is taken only when its squared distance is at least this much smaller than the current one. */
 export const HYSTERESIS_D2 = 0.2;
 /** Float tolerance of the K-08 comparisons (TECH §4.4). */
 export const D2_EPSILON = 1e-9;
 
-const YARD_BITS = (1 << YARD_COLS) - 1;
-const SITE_BITS = ((1 << SITE_COLS) - 1) << SITE_X;
 const UNKNOWN = 0;
 const VALID = 1;
 const INVALID = 2;
@@ -103,6 +93,14 @@ export interface DragRules {
 
 /** Rules of a level without obstacle hooks (Phase 2: W1 static gaps are always open). */
 export const DEFAULT_DRAG_RULES: DragRules = Object.freeze({});
+
+/**
+ * Ağır Yük (Y5, GDD K-44 Faz 2R): I5 and Q9 in every orientation. Cargo is carried inside the yard only (K-08): every
+ * drag node keeps all its cells at `x ≤ wy − 1`, `y ≤ hy − 1`. Other shapes are material blocks, whatever their width.
+ */
+export function isCargoShape(shape: ShapeDef): boolean {
+  return shape.kind === 'I5' || shape.kind === 'Q9';
+}
 
 /** K-07 row 5 (E-27): `deliveryCursor` counts completed segments; the site is closed once all S are complete. */
 export function isSiteClosed(s: GameState): boolean {
@@ -148,6 +146,12 @@ export interface FollowResult {
   readonly enteredRail: boolean;
   /** K-05 presentation signal, at most once per drag. */
   readonly blockedByWallHeight: boolean;
+  /**
+   * K-44 `blockedCargo { pieceId: session.pieceId }` (TECH §2R.15 item 5): an Ağır Yük drag whose target point `p` left
+   * the yard (`p.x ≥ wy` or `p.y ≥ hy`) for the first time in this hold. At most once per drag; never a move, never in
+   * the event log, the replay or the tutorial `done` vocabulary.
+   */
+  readonly blockedCargo: boolean;
 }
 
 /** A drag in progress: read-only queries over the frozen board (TECH §1.4, §4). */
@@ -156,6 +160,8 @@ export interface DragSession {
   readonly shape: ShapeDef;
   /** FREE start node (the piece's anchor; site pieces: board row = plan row + elevator offset). */
   readonly start: DragNode;
+  /** Ağır Yük (K-44): R holds yard nodes only and `follow` may emit `blockedCargo`. */
+  readonly cargo: boolean;
   /** FREE start, plus RAIL(g) for debris whose rows are all inside an open gap (TECH §4.1/3). */
   readonly startNodes: readonly DragNode[];
   readonly current: DragNode;
@@ -176,7 +182,10 @@ export interface DragSession {
   neighbours(node: DragNode): DragNode[];
   /** K-08 nearest node of R to the target anchor point `(px, py)`, tie-breaks applied, no hysteresis. */
   nearest(px: number, py: number): DragNode;
-  /** K-08 sticky follow: moves the current node to `nearest(p)` when the hysteresis allows it. */
+  /**
+   * K-08 sticky follow: moves the current node to `nearest(p)` when the hysteresis allows it. `(px, py)` = the target
+   * anchor point `p` in cells. Emits `blockedByWallHeight` (K-05) and `blockedCargo` (K-44) at most once per drag.
+   */
   follow(px: number, py: number): FollowResult;
   /** BFS path from the current node (excluded) to `node` (included); null outside R. Allocates. */
   pathTo(node: DragNode): DragNode[] | null;
@@ -242,6 +251,7 @@ class Session implements DragSession {
   readonly pieceId: PieceId;
   readonly shape: ShapeDef;
   readonly start: DragNode;
+  readonly cargo: boolean;
   readonly startNodes: readonly DragNode[];
   reachableCount = 0;
   canCrossWall = false;
@@ -249,10 +259,13 @@ class Session implements DragSession {
   /** K-09 (a). */
   movable = false;
 
+  private readonly geo: BoardGeo;
   private readonly w: number;
   private readonly h: number;
-  /** Exclusive bound of `ix + w` (heavy pieces stay over the yard, Y5). */
+  /** Exclusive bound of `ix + w`: `wy + ws`, cargo `wy` (K-44: Ağır Yük stays in the yard). */
   private readonly maxX: number;
+  /** Exclusive bound of `iy + h`: `h + 2` (crane area included), cargo `hy` (K-44). */
+  private readonly maxY: number;
   private readonly rows: readonly number[];
   private readonly colRows: readonly number[];
   private readonly colBottom: readonly number[];
@@ -287,28 +300,33 @@ class Session implements DragSession {
   private crossedEmitted = false;
   private railEmitted = false;
   private blockedEmitted = false;
+  private cargoEmitted = false;
 
   constructor(s: GameState, pieceId: PieceId, rules: DragRules) {
     const { lvl } = s;
+    const geo = lvl.geo;
+    this.geo = geo;
     this.pieceId = pieceId;
     this.shape = shapeByIndex(pieceShape(s, pieceId));
     this.w = this.shape.w;
     this.h = this.shape.h;
-    this.maxX = this.shape.heavy ? YARD_COLS : GRID_COLS;
+    this.cargo = isCargoShape(this.shape);
+    this.maxX = this.cargo ? geo.wy : geo.cols;
+    this.maxY = this.cargo ? geo.hy : geo.rows;
     this.rows = this.shape.rows;
     this.colRows = this.shape.colRows;
     this.colBottom = this.shape.colBottom;
     this.masks = collisionMasks(s, pieceId);
     this.colTop = siteColumnTops(s, pieceId);
-    this.openFree = openFreeMask(lvl.wallHeight);
-    this.tooTall = this.h > GRID_ROWS - lvl.wallHeight;
+    this.openFree = openFreeMask(geo, lvl.wallHeight);
+    this.tooTall = this.h > geo.rows - lvl.wallHeight;
     this.siteClosed = (rules.siteClosed ?? isSiteClosed)(s);
     for (let g = 0; g < lvl.gaps.length; g++) {
       const gap = lvl.gaps[g];
       const y = gapField(s, g, GF.y);
       const size = gap?.size ?? 0;
       const passable = rules.canPassGap ? rules.canPassGap(s, g, pieceId) : gapField(s, g, GF.open) !== 0;
-      this.railOpen.push(passable ? rowRangeMask(y, size) : 0);
+      this.railOpen.push(passable ? rowRangeMask(geo, y, size) : 0);
       this.gapLo.push(y);
       this.gapHi.push(y + size);
       this.railDrops.push(Object.freeze({ kind: 'siteRail', row: 7, gap: g }));
@@ -326,9 +344,9 @@ class Session implements DragSession {
     const zone = pieceZone(s, pieceId);
     const ix = pieceX(s, pieceId);
     const iy = pieceY(s, pieceId) + (zone === Zone.site ? hdr(s, H.elev) : 0);
-    this.startAnchor = iy * GRID_COLS + ix;
+    this.startAnchor = iy * MAX_COLS + ix;
     this.startCodes = [this.startAnchor];
-    if (zone === Zone.site && (pieceFlags(s, pieceId) & FLAG_BIT.debris) !== 0) {
+    if (zone === Zone.site && (pieceFlags(s, pieceId) & FLAG_BIT.debris) !== 0 && !this.cargo) {
       for (let g = 0; g < this.railOpen.length; g++) {
         if (this.validRail(g, ix, iy)) this.startCodes.push((1 + g) * NODES_PER_MODE + this.startAnchor);
       }
@@ -402,6 +420,11 @@ class Session implements DragSession {
       this.blockedEmitted = true;
       result = Object.freeze({ ...result, blockedByWallHeight: true });
     }
+    // K-44: the first time p leaves the yard during this hold (GDD: x ≥ Wy or y ≥ Hy)
+    if (this.cargo && !this.cargoEmitted && (px >= this.geo.wy || py >= this.geo.hy)) {
+      this.cargoEmitted = true;
+      result = Object.freeze({ ...result, blockedCargo: true });
+    }
     return result;
   }
 
@@ -423,12 +446,13 @@ class Session implements DragSession {
     if (code < 0 || (this.distStart[code] ?? -1) < 0) return DROP_INVALID;
     // row 1: start cells in one of the start modes (debris: either start node, TECH §4.1/3)
     if (this.startCodes.includes(code)) return DROP_SAME_SPOT;
+    const boundaryX = this.geo.boundaryX;
     const right = node.ix + this.w - 1;
-    if (node.mode === FREE && right <= BOUNDARY_X) {
-      // rows 2 / 3: over the yard; any cell in the crane area cancels (K-05)
-      return node.iy + this.h - 1 < BOARD_ROWS ? DROP_YARD : DROP_CRANE_OVER_YARD;
+    if (node.mode === FREE && right <= boundaryX) {
+      // rows 2 / 3: over the yard; any cell at y ≥ hy (yard air or crane area) cancels (K-05, E-56)
+      return node.iy + this.h - 1 < this.geo.hy ? DROP_YARD : DROP_CRANE_OVER_YARD;
     }
-    if (node.ix <= BOUNDARY_X) return DROP_STRADDLE; // row 4 (E-06, E-28)
+    if (node.ix <= boundaryX) return DROP_STRADDLE; // row 4 (E-06, E-28)
     if (this.siteClosed) return DROP_SITE_CLOSED; // row 5 (E-27)
     if (node.mode === FREE) return DROP_SITE_FREE; // row 6: falls (K-11)
     return this.railDrops[node.mode - 1] ?? DROP_INVALID; // row 7: stays on the rail (K-12)
@@ -440,13 +464,20 @@ class Session implements DragSession {
 
   // --- internals -------------------------------------------------------------------------------------------------
 
-  /** Code of a node, −1 when it is outside the node space of this level. */
+  /** Code of a node, −1 when it is outside the node space of this level (board + crane area, its gaps). */
   private codeOf(node: DragNode): number {
     const { ix, iy, mode } = node;
     if (!Number.isInteger(ix) || !Number.isInteger(iy) || !Number.isInteger(mode)) return -1;
-    if (ix < 0 || ix >= GRID_COLS || iy < 0 || iy >= GRID_ROWS || mode < 0 || mode > this.railOpen.length)
+    if (
+      ix < 0 ||
+      ix >= this.geo.cols ||
+      iy < 0 ||
+      iy >= this.geo.rows ||
+      mode < 0 ||
+      mode > this.railOpen.length
+    )
       return -1;
-    return mode * NODES_PER_MODE + iy * GRID_COLS + ix;
+    return mode * NODES_PER_MODE + iy * MAX_COLS + ix;
   }
 
   private node(code: number): DragNode {
@@ -454,7 +485,7 @@ class Session implements DragSession {
     if (!n) {
       const mode = Math.floor(code / NODES_PER_MODE);
       const rest = code - mode * NODES_PER_MODE;
-      n = Object.freeze({ ix: rest % GRID_COLS, iy: Math.floor(rest / GRID_COLS), mode });
+      n = Object.freeze({ ix: rest % MAX_COLS, iy: Math.floor(rest / MAX_COLS), mode });
       this.nodeCache[code] = n;
     }
     return n;
@@ -462,8 +493,8 @@ class Session implements DragSession {
 
   private d2(code: number, px: number, py: number): number {
     const rest = code % NODES_PER_MODE;
-    const dx = (rest % GRID_COLS) - px;
-    const dy = Math.floor(rest / GRID_COLS) - py;
+    const dx = (rest % MAX_COLS) - px;
+    const dy = Math.floor(rest / MAX_COLS) - py;
     return dx * dx + dy * dy;
   }
 
@@ -511,13 +542,14 @@ class Session implements DragSession {
   }
 
   /**
-   * K-05 `blockedByWallHeight` (TECH §4.4): the block is too tall for the wall (`h > 10 − height`, so no FREE node of
-   * it is fully on the site), the target box centre is past the boundary and the box reaches the crane rows, but the
+   * K-05 `blockedByWallHeight` (TECH §4.4): the block is too tall for the wall (`h > (H + 2) − height`, so no FREE node
+   * of it is fully on the site), the target box centre is past the boundary and the box reaches the crane rows, but the
    * current FREE node has not crossed (fully in the yard, or straddling with its top over the wall: S4_0 / Z4_0).
    */
   private isBlockedByWallHeight(px: number, py: number): boolean {
     if (!this.tooTall || this.cur >= NODES_PER_MODE) return false;
-    return this.cur % GRID_COLS < SITE_X && px + this.w / 2 > SITE_X && py + this.h > CRANE_ROW;
+    const siteX = this.geo.siteX;
+    return this.cur % MAX_COLS < siteX && px + this.w / 2 > siteX && py + this.h > this.geo.craneRow;
   }
 
   private advance(target: number): FollowResult {
@@ -527,11 +559,11 @@ class Session implements DragSession {
     let prev = this.cur;
     for (const next of codes) {
       if (prev < NODES_PER_MODE && next !== prev) {
-        const horizontal = next % NODES_PER_MODE !== prev % NODES_PER_MODE && (next - prev) % GRID_COLS !== 0;
+        const horizontal = next % NODES_PER_MODE !== prev % NODES_PER_MODE && (next - prev) % MAX_COLS !== 0;
         if (
           horizontal &&
           next < NODES_PER_MODE &&
-          this.stepCrossesBoundary(prev % GRID_COLS, next > prev ? 1 : -1)
+          this.stepCrossesBoundary(prev % MAX_COLS, next > prev ? 1 : -1)
         )
           crossed = true;
         if (horizontal && next >= NODES_PER_MODE) entered = true;
@@ -552,6 +584,7 @@ class Session implements DragSession {
       crossedWall,
       enteredRail,
       blockedByWallHeight: false,
+      blockedCargo: false,
     });
   }
 
@@ -563,6 +596,7 @@ class Session implements DragSession {
       crossedWall: false,
       enteredRail: false,
       blockedByWallHeight: false,
+      blockedCargo: false,
     });
   }
 
@@ -626,7 +660,7 @@ class Session implements DragSession {
       return;
     }
     if (v - u === 1 || u - v === 1) {
-      if (this.stepCrossesBoundary(u % GRID_COLS, v > u ? 1 : -1)) this.canCrossWall = true;
+      if (this.stepCrossesBoundary(u % MAX_COLS, v > u ? 1 : -1)) this.canCrossWall = true;
     }
   }
 
@@ -634,26 +668,27 @@ class Session implements DragSession {
   private neighbourCodes(code: number, out: Int16Array): number {
     const mode = Math.floor(code / NODES_PER_MODE);
     const rest = code - mode * NODES_PER_MODE;
-    const ix = rest % GRID_COLS;
-    const iy = (rest - ix) / GRID_COLS;
+    const ix = rest % MAX_COLS;
+    const iy = (rest - ix) / MAX_COLS;
+    const boundaryX = this.geo.boundaryX;
     let n = 0;
     if (mode === FREE) {
       if (this.validFree(ix - 1, iy) && this.crossOk(ix, iy, -1, this.openFree)) out[n++] = code - 1;
       if (this.validFree(ix + 1, iy) && this.crossOk(ix, iy, 1, this.openFree)) out[n++] = code + 1;
-      if (ix + this.w - 1 <= BOUNDARY_X) {
+      if (ix + this.w - 1 <= boundaryX) {
         // K-12: a rail is entered only from a node fully in the yard, by a step to the right
         for (let g = 0; g < this.railOpen.length; g++) {
           if (this.validRail(g, ix + 1, iy) && this.crossOk(ix, iy, 1, this.railOpen[g] ?? 0))
             out[n++] = (1 + g) * NODES_PER_MODE + rest + 1;
         }
       }
-      if (this.validFree(ix, iy - 1)) out[n++] = code - GRID_COLS;
-      if (this.validFree(ix, iy + 1)) out[n++] = code + GRID_COLS;
+      if (this.validFree(ix, iy - 1)) out[n++] = code - MAX_COLS;
+      if (this.validFree(ix, iy + 1)) out[n++] = code + MAX_COLS;
       return n;
     }
     const g = mode - 1;
     const open = this.railOpen[g] ?? 0;
-    if (ix - 1 + this.w - 1 <= BOUNDARY_X) {
+    if (ix - 1 + this.w - 1 <= boundaryX) {
       // leaving the rail to the left, fully into the yard: back to FREE
       if (this.validFree(ix - 1, iy) && this.crossOk(ix, iy, -1, open)) out[n++] = rest - 1;
     } else if (this.validRail(g, ix - 1, iy) && this.crossOk(ix, iy, -1, open)) {
@@ -665,7 +700,7 @@ class Session implements DragSession {
 
   /** In a horizontal step from `ix` by `dx`, the block column that changes side (−1 when none). */
   private crossingColumn(ix: number, dx: number): number {
-    const c = dx > 0 ? BOUNDARY_X - ix : BOUNDARY_X + 1 - ix;
+    const c = dx > 0 ? this.geo.boundaryX - ix : this.geo.siteX - ix;
     return c >= 0 && c < this.w ? c : -1;
   }
 
@@ -677,11 +712,11 @@ class Session implements DragSession {
   private crossOk(ix: number, iy: number, dx: number, open: number): boolean {
     const c = this.crossingColumn(ix, dx);
     if (c < 0) return true;
-    return boundaryAllows(((this.colRows[c] ?? 0) << iy) & ROW_MASK_ALL, open);
+    return boundaryAllows(((this.colRows[c] ?? 0) << iy) & this.geo.rowMaskAll, open);
   }
 
   private inBounds(ix: number, iy: number): boolean {
-    return ix >= 0 && iy >= 0 && ix + this.w <= this.maxX && iy + this.h <= GRID_ROWS;
+    return ix >= 0 && iy >= 0 && ix + this.w <= this.maxX && iy + this.h <= this.maxY;
   }
 
   private collides(ix: number, iy: number): boolean {
@@ -693,7 +728,7 @@ class Session implements DragSession {
 
   private validFree(ix: number, iy: number): boolean {
     if (!this.inBounds(ix, iy)) return false;
-    const code = iy * GRID_COLS + ix;
+    const code = iy * MAX_COLS + ix;
     const known = this.validity[code] ?? UNKNOWN;
     if (known !== UNKNOWN) return known === VALID;
     const ok = this.computeFree(ix, iy);
@@ -702,26 +737,27 @@ class Session implements DragSession {
   }
 
   private computeFree(ix: number, iy: number): boolean {
+    const { yardBits, siteBits, siteX } = this.geo;
     for (let r = 0; r < this.h; r++) {
       const bits = (this.rows[r] ?? 0) << ix;
       if (((this.masks[iy + r] ?? 0) & bits) !== 0) return false;
       // a row with block cells on both sides of the boundary must be open in FREE mode (TECH §2.2)
-      if ((bits & YARD_BITS) !== 0 && (bits & SITE_BITS) !== 0 && ((this.openFree >> (iy + r)) & 1) === 0)
+      if ((bits & yardBits) !== 0 && (bits & siteBits) !== 0 && ((this.openFree >> (iy + r)) & 1) === 0)
         return false;
     }
     // open sky (K-11, K-13): in every covered site column the lowest block cell is above every blocked cell
-    for (let x = Math.max(ix, SITE_X); x < ix + this.w; x++) {
+    for (let x = Math.max(ix, siteX); x < ix + this.w; x++) {
       const c = x - ix;
-      if ((this.colTop[x - SITE_X] ?? -1) >= iy + (this.colBottom[c] ?? 0)) return false;
+      if ((this.colTop[x - siteX] ?? -1) >= iy + (this.colBottom[c] ?? 0)) return false;
     }
     return true;
   }
 
   private validRail(g: number, ix: number, iy: number): boolean {
     if ((this.railOpen[g] ?? 0) === 0 || !this.inBounds(ix, iy)) return false;
-    if (ix + this.w - 1 < SITE_X) return false;
+    if (ix + this.w - 1 < this.geo.siteX) return false;
     if (iy < (this.gapLo[g] ?? 0) || iy + this.h > (this.gapHi[g] ?? 0)) return false;
-    const code = (1 + g) * NODES_PER_MODE + iy * GRID_COLS + ix;
+    const code = (1 + g) * NODES_PER_MODE + iy * MAX_COLS + ix;
     const known = this.validity[code] ?? UNKNOWN;
     if (known !== UNKNOWN) return known === VALID;
     const ok = !this.collides(ix, iy);

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE680"/><stop offset="1" stop-color="#F0A800"/></linearGradient>
+    <linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F0A800"/><stop offset="1" stop-color="#FFD663"/></linearGradient>
+    <circle id="f" cx="64" cy="57" r="46"/>
+    <clipPath id="c"><use href="#f"/></clipPath>
+    <path id="t" d="M0-25C11-15 15-4 11 4Q0 9-11 4C-15-4-11-15 0-25ZM-3 6h6v7h-6ZM-6 12h12v13a6 6 0 0 1-12 0Z"/>
+  </defs>
+  <circle cx="64" cy="68" r="46" fill="#3B2A1A" stroke="#3B2A1A" stroke-width="8"/>
+  <circle cx="64" cy="66" r="46" fill="#C98A00" stroke="#3B2A1A" stroke-width="8"/>
+  <use href="#f" fill="url(#g)"/>
+  <g clip-path="url(#c)">
+    <use href="#f" fill="#AD8412" fill-opacity=".35"/>
+    <use href="#f" y="-7" fill="url(#g)"/>
+  </g>
+  <circle cx="64" cy="57" r="31" fill="url(#r)" stroke="#C98A00" stroke-width="4"/>
+  <use href="#t" transform="translate(66 61) rotate(35)" fill="#AD8412"/>
+  <use href="#t" transform="translate(64 57) rotate(35)" fill="#FFE680" stroke="#C98A00" stroke-width="3" stroke-linejoin="round"/>
+  <ellipse cx="41" cy="30" rx="17" ry="8" transform="rotate(-38 41 30)" fill="#FFFFFF" fill-opacity=".5"/>
+  <circle cx="27" cy="49" r="5" fill="#FFFFFF" fill-opacity=".8"/>
+  <use href="#f" fill="none" stroke="#3B2A1A" stroke-width="8"/>
+</svg>

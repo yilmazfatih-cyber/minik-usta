@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { tryBeginDrag } from '../../src/core/movement.ts';
 import { GameSession } from '../../src/core/session.ts';
+import { allSegmentsComplete } from '../../src/core/goals.ts';
 import { planDragDesign } from '../../src/harness/plan.ts';
 import { grabAt, targetAnchor } from '../../src/scenes/level/dragMath.ts';
 import { pieceAtPoint } from '../../src/scenes/level/hitTest.ts';
@@ -67,7 +68,8 @@ describe.each(PHONES)('harness gesture plan on $name (TECH 10.7, 12.4)', (phone)
         );
         expect(session.commit(move).status, `${where}: commit`).toBe('applied');
       });
-      expect(session.outcome).toBe('won');
+      // every segment is built; the Faz 2 levels keep decoys, so K-48 holds back the win (WP-M ile yeniden üretilecek)
+      expect(allSegmentsComplete(session.state)).toBe(true);
     },
   );
 });

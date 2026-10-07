@@ -25,9 +25,9 @@ import { ctxOf, fakeRule } from './obstacles.fixtures.ts';
 const noop = (): void => undefined;
 
 describe('obstacle registry table (TECH 7.1, 7.3)', () => {
-  it('TECH 7.1 ALL_RULES is a valid table: W1, S1, S2, each in its zone hundred (W → Y → S → G)', () => {
+  it('TECH 7.1 ALL_RULES is a valid table: W1, Y3, S1 (Faz 2R: S2 out of the MVP), each in its zone hundred (W → Y → S → G)', () => {
     expect(validateRules(ALL_RULES)).toEqual([]);
-    expect(ALL_RULES.map((r) => r.id)).toEqual(['W1', 'S1', 'S2']);
+    expect(ALL_RULES.map((r) => r.id)).toEqual(['W1', 'Y3', 'S1']);
     for (const r of ALL_RULES) {
       expect(r.zone).toBe(ruleZone(r.id));
       const base = RULE_ORDER_BASE[r.zone];
@@ -40,12 +40,12 @@ describe('obstacle registry table (TECH 7.1, 7.3)', () => {
     expect(RULE_ORDER_BASE.site).toBeLessThan(RULE_ORDER_BASE.gravity);
   });
 
-  it('K-45 rule activation equals the OBSTACLES data signature of levels 1–5 (W1 from 3, S2 in 4, S1 in 5)', () => {
+  it('K-45 rule activation equals the OBSTACLES data signature of levels 1–5 (W1 from 3, S1 in 5; Faz 2R: S2 never)', () => {
     const expected: Readonly<Record<number, readonly RuleId[]>> = {
       1: [],
       2: [],
       3: ['W1'],
-      4: ['W1', 'S2'],
+      4: ['W1'],
       5: ['S1'],
     };
     for (const id of [1, 2, 3, 4, 5]) {
@@ -56,7 +56,7 @@ describe('obstacle registry table (TECH 7.1, 7.3)', () => {
     }
   });
 
-  it('TECH 7.1 Phase 2 levels 1–5 get empty hooks: W1, S1 and S2 are core models', () => {
+  it('TECH 7.1 Phase 2 levels 1–5 get empty hooks: W1 and S1 are core models', () => {
     for (const id of [1, 2, 3, 4, 5]) expect(levelHooks(levelFile(id)), `level ${id}`).toEqual({});
   });
 
@@ -64,8 +64,8 @@ describe('obstacle registry table (TECH 7.1, 7.3)', () => {
     const lvl = levelFile(4);
     expect(levelHooks(lvl)).toBe(levelHooks(lvl));
     const off = { disabled: new Set<RuleId>(['W1']) };
-    expect(activeRuleIds(lvl, off)).toEqual(['S2']);
-    expect(infoKeysFor(lvl, off)).toEqual(['obs.s2.desc']);
+    expect(activeRuleIds(lvl, off)).toEqual([]);
+    expect(infoKeysFor(lvl, off)).toEqual([]);
     expect(levelHooks(lvl, off)).not.toBe(levelHooks(lvl));
     const costly = [fakeRule('Y8', { moveCost: () => 2 })];
     expect(levelHooks(lvl, { rules: costly }).moveCost).toBeDefined();
@@ -75,7 +75,7 @@ describe('obstacle registry table (TECH 7.1, 7.3)', () => {
   it('TECH 7.1 info card keys follow the level mechanics (obs.{id}.desc, OBSTACLES R-08)', () => {
     expect(infoKeysFor(levelFile(1))).toEqual([]);
     expect(infoKeysFor(levelFile(3))).toEqual(['obs.w1.desc']);
-    expect(infoKeysFor(levelFile(4))).toEqual(['obs.w1.desc', 'obs.s2.desc']);
+    expect(infoKeysFor(levelFile(4))).toEqual(['obs.w1.desc']);
     expect(infoKeysFor(levelFile(5))).toEqual(['obs.s1.desc']);
     // S7 covers two mechanics: only the card of the one the level uses is shown
     const s7 = fakeRule('S7', {
@@ -167,7 +167,8 @@ describe('hook composition through the pipeline (TECH 7.1)', () => {
     expect(tryBeginDrag(s, 0, drag)).toMatchObject({ ok: false, reason: 'rule' });
     expect(tryBeginDrag(s, 1, drag)).toMatchObject({ ok: false, reason: 'rule' });
     expect(tryBeginDrag(s, 2, drag).ok).toBe(true);
-    expect(tryBeginDrag(s, 0, levelHooks(lvl).drag).ok).toBe(true);
+    // Faz 2R: the registry's own Y3 rule forbids the chained block too (K-09 (c))
+    expect(tryBeginDrag(s, 0, levelHooks(lvl).drag)).toMatchObject({ ok: false, reason: 'rule' });
     const r = run(s, dragTo(0, 3, 0), { hooks: levelHooks(lvl, { rules }), strict: false });
     expect(r.res).toMatchObject({ status: 'cancelled', reason: 'invalid' });
   });

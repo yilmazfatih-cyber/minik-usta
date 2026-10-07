@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF06A"/><stop offset="1" stop-color="#FFC21A"/></linearGradient>
+    <path id="s" d="M60.7 12.2Q64 6 67.3 12.2L78.6 33.8Q80.5 37.3 84.4 38L108.5 42.1Q115.4 43.3 110.5 48.3L93.4 65.8Q90.6 68.7 91.2 72.6L94.7 96.8Q95.7 103.7 89.5 100.6L67.6 89.8Q64 88 60.4 89.8L38.5 100.6Q32.3 103.7 33.3 96.8L36.8 72.6Q37.4 68.7 34.6 65.8L17.5 48.3Q12.6 43.3 19.5 42.1L43.6 38Q47.5 37.3 49.4 33.8Z"/>
+    <clipPath id="c"><use href="#s"/></clipPath>
+  </defs>
+  <use href="#s" transform="translate(0 5)" fill="#3B2A1A" stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round"/>
+  <use href="#s" fill="url(#g)"/>
+  <g clip-path="url(#c)">
+    <use href="#s" fill="#AD8412" fill-opacity=".35"/>
+    <use href="#s" y="-8" fill="url(#g)"/>
+  </g>
+  <path d="M63.1 42.8Q64 41 64.9 42.8L69.2 51.6Q69.9 52.9 71.4 53.1L81 54.5Q83 54.8 81.6 56.2L74.6 63Q73.5 64.1 73.8 65.6L75.4 75.2Q75.8 77.2 74 76.2L65.3 71.7Q64 71 62.7 71.7L54 76.2Q52.2 77.2 52.6 75.2L54.2 65.6Q54.5 64.1 53.4 63L46.4 56.2Q45 54.8 47 54.5L56.6 53.1Q58.1 52.9 58.8 51.6Z" fill="#FFF2A8" fill-opacity=".8"/>
+  <ellipse cx="45" cy="44" rx="11" ry="5.5" transform="rotate(-30 45 44)" fill="#FFFFFF" fill-opacity=".55"/>
+  <circle cx="58" cy="25" r="4" fill="#FFFFFF" fill-opacity=".8"/>
+  <use href="#s" fill="none" stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round"/>
+</svg>

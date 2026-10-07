@@ -1,8 +1,11 @@
 /**
- * Mechanic data signatures (GDD K-45/9, R-21; TECH_DESIGN §8.3): the code twin of the OBSTACLES "Veri imzası" table.
+ * Mechanic data signatures (GDD K-45/10, R-21; TECH_DESIGN §8.3, §2R.3 CL-2R-12): the code twin of the OBSTACLES
+ * "Veri imzası" table (Faz 2R: W1 first level 4, W2 `height = H`, Y5 = I5/Q9 Ağır Yük, S2 out of the MVP, S9 new).
  * A level's mechanic set is derived ONLY from its data; `teaches` adds nothing (it is checked by L-16).
  */
-import { shapeById } from '../shapes.ts';
+import { DEFAULT_SIZES, MAX_BOARD_ROWS } from '../geometry.ts';
+import { ALWAYS_HEAVY, shapeById } from '../shapes.ts';
+import type { ShapeDef } from '../shapes.ts';
 import { MECHANIC_IDS } from './schema.ts';
 import type { LevelData, MechanicId, PieceData } from './schema.ts';
 
@@ -26,10 +29,30 @@ function anyObstacle(level: LevelData, type: LevelData['obstacles'][number]['typ
   return level.obstacles.some((o) => o.type === type);
 }
 
-/** One row per OBSTACLES "Veri imzası" line, same order. */
+/**
+ * Ağır Yük (Y5, GDD K-44 Faz 2R): I5 and Q9 in every orientation; not material, no colour. Same predicate as
+ * movement.ts `isCargoShape` (a test keeps them equal); read from shapes.ts so the level modules stay out of the
+ * movement → grid → compile import cycle.
+ */
+export function isCargo(shape: ShapeDef): boolean {
+  return ALWAYS_HEAVY.has(shape.kind);
+}
+
+/**
+ * Board height H = max(Hy, Hs + eMax) (K-49) from the data, without building a `BoardGeo`: it never throws on a level
+ * whose sizes break the frame (L-28 reports those), and it clamps like `makeGeo`.
+ */
+export function boardHeight(level: LevelData): number {
+  const hy = level.yard.rows ?? DEFAULT_SIZES.hy;
+  const hs = level.site?.rows ?? DEFAULT_SIZES.hs;
+  const eMax = level.build.elevator ? Math.max(0, level.build.elevator.range[1]) : 0;
+  return Math.min(MAX_BOARD_ROWS, Math.max(hy, hs + eMax));
+}
+
+/** One row per OBSTACLES "Veri imzası" line (Faz 2R), same order. */
 export const MECHANICS: readonly MechanicSignature[] = [
-  { id: 'W1', firstLevel: 3, detect: (l) => anyGap(l, 'static') },
-  { id: 'W2', firstLevel: 6, detect: (l) => l.wall.height === 8 },
+  { id: 'W1', firstLevel: 4, detect: (l) => anyGap(l, 'static') },
+  { id: 'W2', firstLevel: 6, detect: (l) => l.wall.height === boardHeight(l) },
   // N2: W3 is a size, not a type.
   { id: 'W3', firstLevel: 9, detect: (l) => l.wall.gaps.some((g) => g.size === 1) },
   { id: 'W4', firstLevel: 13, detect: (l) => anyGap(l, 'shutter') },
@@ -41,16 +64,12 @@ export const MECHANICS: readonly MechanicSignature[] = [
   { id: 'Y2', firstLevel: 18, detect: (l) => anyObstacle(l, 'cement_bag') },
   { id: 'Y3', firstLevel: 24, detect: (l) => anyFlag(l, 'chained') },
   { id: 'Y4', firstLevel: 28, detect: (l) => anyFlag(l, 'wet') },
-  { id: 'Y5', firstLevel: 8, detect: (l) => allPieces(l).some((p) => shapeById(p.shape).heavy) },
+  // Faz 2R: Ağır Yük = I5/Q9 in any batch (K-44); the w ≥ 3 "heavy" orientations are material blocks now.
+  { id: 'Y5', firstLevel: 8, detect: (l) => allPieces(l).some((p) => isCargo(shapeById(p.shape))) },
   { id: 'Y6', firstLevel: 14, detect: (l) => l.gravity.yard },
   { id: 'Y7', firstLevel: 19, detect: (l) => anyObstacle(l, 'screw') },
   { id: 'Y8', firstLevel: 35, detect: (l) => anyFlag(l, 'mortar') },
   { id: 'S1', firstLevel: 5, detect: (l) => l.build.mode === 'segments' && l.build.segments.length >= 2 },
-  {
-    id: 'S2',
-    firstLevel: 4,
-    detect: (l) => l.build.segments.some((s) => s.rows.some((r) => r.includes('.'))),
-  },
   { id: 'S3', firstLevel: 21, detect: (l) => anyFlag(l, 'glass') },
   { id: 'S4', firstLevel: 17, detect: (l) => (l.build.debris?.length ?? 0) > 0 },
   { id: 'S5', firstLevel: 31, detect: (l) => l.build.mode === 'carousel' },
@@ -60,6 +79,8 @@ export const MECHANICS: readonly MechanicSignature[] = [
   { id: 'S8', firstLevel: 38, detect: (l) => anyFlag(l, 'balloon') },
   { id: 'G-H', firstLevel: 15, detect: (l) => l.gravity.build === 'high' },
   { id: 'G-L', firstLevel: 23, detect: (l) => l.gravity.build === 'low' },
+  // S9 Geniş Şantiye (K-49, R2-02): a site of 3 or 4 columns.
+  { id: 'S9', firstLevel: 12, detect: (l) => (l.site?.cols ?? DEFAULT_SIZES.ws) >= 3 },
 ];
 
 if (MECHANICS.length !== MECHANIC_IDS.length)

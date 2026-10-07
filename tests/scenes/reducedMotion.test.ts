@@ -12,7 +12,7 @@ describe('JUICE 0 rule 8 reduced motion stops the idle loops', () => {
   it('JUICE 0 rule 8 home "BÖLÜM 2" pulse, spotlight edge, glove loop and trowel cells read reduced motion', () => {
     const home = src('scenes/HomeScene.ts');
     expect(home).toMatch(/reducedMotion\(\)/);
-    expect(home).toMatch(/!this\.target\.pulse \|\| this\.reduced\) return;/);
+    expect(home).toMatch(/!this\.model\.pulse \|\| this\.reduced\) return;/);
     const overlay = src('scenes/level/TutorialOverlay.ts');
     expect(overlay).toMatch(/const k = this\.reduced\s*\?\s*1\s*:/);
     expect(overlay).toMatch(/if \(this\.reduced && now - this\.handSince >= move\)/);

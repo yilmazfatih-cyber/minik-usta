@@ -104,7 +104,19 @@ export interface Steer {
   readonly atRow: number;
 }
 
-/** A core move (TECH §6.1). The undo booster is a session action, not a core move (K-39). */
+/** K-36 hammer target: a piece (Ağır Yük, chained block, site debris, stuck mortar) or an obstacle (crate, bag). */
+export type HammerTarget = { readonly pieceId: PieceId } | { readonly obstacle: number };
+
+/**
+ * A core move (TECH §6.1, §2R.2). The undo booster is a session action, not a core move (K-39). Board coordinates are
+ * global (`x` 0 … wy+ws−1, board row `y`; a site target lies on the visible segment, board row = plan row + `e`).
+ * - `crane` (K-37): `to` = the block's anchor at the target; `rotation` = the block's orientation there (a yard target
+ *   keeps the current orientation; a site target may turn clockwise, width ≤ Ws; Ağır Yük never turns).
+ * - `paint` (K-38, Faz 2R): swaps the colours of the yard blocks `a` and `b`.
+ * - `goldTrowel` (K-33, Faz 2R): flies yard block `pieceId` to anchor `(x, y)` of its `P` set on the visible segment.
+ * - `trowel` (Faz 2 cell fill): **deprecated**, rejected since Faz 2R (`legacyTrowel`); kept until the scene moves to
+ *   `goldTrowel` (WP-G).
+ */
 export type Move =
   | {
       readonly kind: 'drag';
@@ -113,23 +125,43 @@ export type Move =
       readonly via?: number;
       readonly steer?: Steer;
     }
-  | {
-      readonly kind: 'hammer';
-      readonly target: { readonly pieceId: PieceId } | { readonly obstacle: number };
-    }
+  | { readonly kind: 'hammer'; readonly target: HammerTarget }
   | {
       readonly kind: 'crane';
       readonly pieceId: PieceId;
       readonly to: { readonly zone: 'yard' | 'site'; readonly x: number; readonly y: number };
       readonly rotation: Rotation;
     }
-  | { readonly kind: 'paint'; readonly pieceId: PieceId; readonly color: ColorCode }
-  | { readonly kind: 'trowel'; readonly seg: number; readonly x: 0 | 1; readonly y: number }
+  | { readonly kind: 'paint'; readonly a: PieceId; readonly b: PieceId }
+  | { readonly kind: 'goldTrowel'; readonly pieceId: PieceId; readonly x: number; readonly y: number }
+  | {
+      /** @deprecated Faz 2 cell trowel; applyMove rejects it (`legacyTrowel`). Use `goldTrowel` (K-33). */
+      readonly kind: 'trowel';
+      readonly seg: number;
+      readonly x: 0 | 1;
+      readonly y: number;
+    }
   | {
       readonly kind: 'addMoves';
       readonly amount: number;
       readonly source: 'offerCoins' | 'offerAd' | 'thermos' | 'streak';
     };
+
+/** GDD K-30 `teardown.cause`: D2 colour balance, D3a tiling, D3b access (solver table). */
+export type TeardownCause = 'color' | 'tiling' | 'access';
+
+/** Where a piece is in a teardown move: a board position, or off the board. */
+export type TeardownPlace = At | 'queue' | 'pending' | 'gone';
+
+/** One block a Söküm moves back (K-30): from its place after the action to its place before it. */
+export interface TeardownMove {
+  readonly pieceId: PieceId;
+  readonly from: TeardownPlace;
+  readonly to: TeardownPlace;
+}
+
+/** K-36 hammer target kinds (analytics `booster_used.target`, TECH §2R.16). */
+export type HammerTargetKind = 'cargo' | 'crate' | 'cementBag' | 'chain' | 'siteDebris' | 'stuckMortar';
 
 /** Pre-level boosters (META §4; economy.json keys). */
 export type PreBooster = 'thermos' | 'trowelStart' | 'openShutter';
@@ -254,7 +286,34 @@ export type GameEventBody =
       readonly delivered?: readonly PieceId[];
     }
   | { readonly t: 'boosterApplied'; readonly booster: BoosterName; readonly detail: unknown }
-  | { readonly t: 'boosterRejected'; readonly booster: BoosterName; readonly reason: string };
+  | { readonly t: 'boosterRejected'; readonly booster: BoosterName; readonly reason: string }
+  /** K-37 crane / K-33 Golden Trowel flight (no fall, no drag events; a site target locks like a correct placement). */
+  | {
+      readonly t: 'pieceLifted';
+      readonly pieceId: PieceId;
+      readonly by: 'crane' | 'trowel';
+      readonly from: At;
+      readonly to: At;
+      readonly shape: ShapeId;
+    }
+  /** K-38 paint brush: the colours of `a` and `b` are swapped (`aColor` / `bColor` = the new colours). */
+  | {
+      readonly t: 'colorsSwapped';
+      readonly a: PieceId;
+      readonly b: PieceId;
+      readonly aColor: ColorCode;
+      readonly bColor: ColorCode;
+    }
+  /** K-36 hammer: an Ağır Yük is smashed (gone). */
+  | { readonly t: 'cargoSmashed'; readonly pieceId: PieceId; readonly at: At }
+  /** K-30 Söküm: always the LAST event of an action's package (TECH §2R.15 item 3). */
+  | {
+      readonly t: 'teardown';
+      /** `m` after the Söküm (the action's start value). */
+      readonly toTurn: number;
+      readonly pieces: readonly TeardownMove[];
+      readonly cause: TeardownCause;
+    };
 
 export interface EvBase {
   /** 0, 1, 2 … inside one move. */

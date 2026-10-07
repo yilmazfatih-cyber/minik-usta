@@ -9,7 +9,6 @@ import {
 } from '../../src/core/session.ts';
 import { ArraySink } from '../../src/core/moves.ts';
 import type { MoveHooks } from '../../src/core/moves.ts';
-import { buildFront } from '../../src/core/placement.ts';
 import { tryBeginDrag } from '../../src/core/movement.ts';
 import { mulberry32 } from '../../src/core/rng.ts';
 import {
@@ -26,7 +25,7 @@ import {
   setHdr,
 } from '../../src/core/state.ts';
 import { Zone } from '../../src/core/types.ts';
-import type { Move, SessionAction } from '../../src/core/types.ts';
+import type { SessionAction } from '../../src/core/types.ts';
 import { compiledLevel } from '../fixtures/builders.ts';
 import type { LevelSpec } from '../fixtures/builders.ts';
 import { HAND, dragTo, expectConsistent, find, levelFile } from './moves.fixtures.ts';
@@ -43,6 +42,28 @@ const SHUTTLE: LevelSpec = {
     ['D2_0', 'W', 3, 0],
     ['B1_0', 'Y', 4, 0],
     ['B1_0', 'W', 5, 0],
+  ],
+};
+
+/** A full-cover board (K-47): plan 2 × 2 W, two D2_0 W blocks. */
+const FULL: LevelSpec = {
+  wall: { height: 2 },
+  plan: ['WW', 'WW'],
+  pieces: [
+    ['D2_0', 'W', 0, 0],
+    ['D2_0', 'W', 1, 0],
+  ],
+};
+
+/** Full cover, four W rows and four W dominoes. */
+const FULL4: LevelSpec = {
+  wall: { height: 2 },
+  plan: ['WW', 'WW', 'WW', 'WW'],
+  pieces: [
+    ['D2_0', 'W', 0, 0],
+    ['D2_0', 'W', 1, 0],
+    ['D2_0', 'W', 2, 0],
+    ['D2_0', 'W', 3, 0],
   ],
 };
 
@@ -116,14 +137,16 @@ describe('K-39 Undo', () => {
   });
 
   it('K-39 no Undo after a trowel use, after a +5 offer, in the out-of-moves window or after the win', () => {
-    const lvl5 = GameSession.start(levelFile(5));
-    for (const m of HAND[5].slice(0, 4)) lvl5.commit(m);
-    expect(hdr(lvl5.state, H.trowels)).toBe(1);
-    const cell = buildFront(lvl5.state)[0];
-    if (!cell) throw new Error('no build front cell');
-    const trowel: Move = { kind: 'trowel', seg: cell.seg ?? 0, x: cell.x === 6 ? 0 : 1, y: cell.y };
-    expect(lvl5.commit(trowel).status).toBe('applied');
-    expect(lvl5.undoBlock()).toBe('noDragMove');
+    const trowelled = GameSession.start(compiledLevel(FULL), { preBoosters: ['trowelStart'] });
+    expect(trowelled.commit(dragTo(0, 6, 8)).status).toBe('applied');
+    expect(trowelled.canUndo()).toBe(true);
+    expect(trowelled.commit({ kind: 'goldTrowel', pieceId: 1, x: 7, y: 0 }).status).toBe('applied');
+    expect(trowelled.undoBlock()).toBe('levelOver'); // the trowel completed the level (K-48)
+
+    const t2 = GameSession.start(compiledLevel(FULL4), { preBoosters: ['trowelStart'] });
+    t2.commit(dragTo(0, 6, 8));
+    expect(t2.commit({ kind: 'goldTrowel', pieceId: 1, x: 7, y: 0 }).status).toBe('applied');
+    expect(t2.undoBlock()).toBe('noDragMove');
 
     const session = GameSession.start(compiledLevel(SHUTTLE));
     runOut(session);
@@ -133,15 +156,16 @@ describe('K-39 Undo', () => {
     session.acceptOffer('offerCoins');
     expect(session.undoBlock()).toBe('noDragMove');
 
-    const won = GameSession.start(levelFile(1));
-    for (const m of HAND[1]) won.commit(m);
+    const won = GameSession.start(compiledLevel(FULL));
+    won.commit(dragTo(0, 6, 8));
+    won.commit(dragTo(1, 7, 8));
     expect([won.outcome, won.undoBlock()]).toEqual(['won', 'levelOver']);
-    expect(won.commit(dragTo(3, 0, 6)).reason).toBe('notPlaying');
+    expect(won.commit(dragTo(0, 3, 6)).reason).toBe('notPlaying');
   });
 });
 
 describe('K-29 +5 offers', () => {
-  it('K-29 an accepted offer sets 5 moves; m, timers and the streak stay; step 12 runs once (E-42)', () => {
+  it('K-29 an accepted offer sets 5 moves; m, timers and the streak stay; step 12 runs once (E-42; Faz 2R: also at 0 moves, before the window)', () => {
     const calls: number[] = [];
     const hooks: MoveHooks = {
       deadlock: (ctx) => {
@@ -152,7 +176,7 @@ describe('K-29 +5 offers', () => {
     const session = GameSession.start(compiledLevel(SHUTTLE), {}, { hooks });
     session.commit(dragTo(0, 6, 8)); // c = 1
     runOut(session);
-    expect(calls).toEqual([11]); // after the first move only: never at 0 moves
+    expect(calls).toEqual([11, 0]); // after every move, the last one (counter 0) included
     const m = session.movesMade;
     const sink = new ArraySink();
     const res = session.acceptOffer('offerAd', sink);
@@ -166,7 +190,7 @@ describe('K-29 +5 offers', () => {
       delta: OFFER_MOVES,
       movesLeft: 5,
     });
-    expect(calls).toEqual([11, 5]);
+    expect(calls).toEqual([11, 0, 5]);
     expect([session.movesLeft, session.movesMade, hdr(session.state, H.combo)]).toEqual([5, m, 1]);
     expect([session.outcome, session.offersUsed, session.adOfferUsed]).toEqual(['playing', 1, true]);
   });
@@ -201,7 +225,7 @@ describe('K-29 +5 offers', () => {
 });
 
 describe('K-43 exit and resume', () => {
-  it('K-43 E-41 exit at m = 0 is free: pre-level boosters come back, the streak bonus is not consumed', () => {
+  it('K-43 E-41 exit at movesSpent = 0 is free: pre-level boosters come back, the streak bonus is not consumed', () => {
     const session = GameSession.start(
       compiledLevel(SHUTTLE),
       { preBoosters: ['thermos', 'trowelStart'], streakTier: 2 },
@@ -211,6 +235,7 @@ describe('K-43 exit and resume', () => {
     expect(session.exit()).toEqual({
       kind: 'free',
       movesMade: 0,
+      movesSpent: 0,
       refundPreBoosters: ['thermos', 'trowelStart'],
       streakBonusConsumed: false,
     });
@@ -218,12 +243,13 @@ describe('K-43 exit and resume', () => {
     expect(() => session.exit()).toThrow(/not running/);
   });
 
-  it('K-43 exit after a move (m ≥ 1) is a loss', () => {
+  it('K-43 exit after a move (movesSpent ≥ 1) is a loss', () => {
     const session = GameSession.start(compiledLevel(SHUTTLE), { preBoosters: ['thermos'] });
     shuttle(session, 1);
     expect(session.exit()).toEqual({
       kind: 'loss',
       movesMade: 1,
+      movesSpent: 1,
       refundPreBoosters: [],
       streakBonusConsumed: true,
     });
@@ -249,8 +275,9 @@ describe('K-43 exit and resume', () => {
       resumed.commit(m);
     }
     expect(resumed.state.buf).toEqual(live.state.buf);
+    // the Faz 2 level 5 never wins under K-48 (decoys stay; WP-M ile yeniden üretilecek): replay = live is the point
     expect([resumed.outcome, resumed.movesLeft, resumed.yao()]).toEqual([
-      'won',
+      live.outcome,
       5,
       { overWall: 6, rail: 0, yao: 1 },
     ]);

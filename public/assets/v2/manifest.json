@@ -1,0 +1,342 @@
+{
+  "assets": {
+    "bg_home_town": {
+      "bytes": 23146,
+      "file": "bg_home_town.webp",
+      "group": "P2",
+      "h": 960,
+      "srcSha1": "1a78df06c947cc91effd29ff415416732650de64",
+      "status": "ok",
+      "w": 540
+    },
+    "bg_level_site_edge": {
+      "bytes": 2282,
+      "file": "bg_level_site_edge.webp",
+      "group": "P1",
+      "h": 960,
+      "srcSha1": "1bb44eea8bf052290379210cb00d8ebc3ac444ca",
+      "status": "ok",
+      "w": 60
+    },
+    "bg_win_plaza": {
+      "bytes": 26056,
+      "file": "bg_win_plaza.webp",
+      "group": "P3",
+      "h": 960,
+      "srcSha1": "9ddc99f20bc0bfd9260f9f915a7131a834e37eb8",
+      "status": "ok",
+      "w": 540
+    },
+    "chr_dede_bust": {
+      "bytes": 10664,
+      "file": "chr_dede_bust.webp",
+      "group": "P1",
+      "h": 320,
+      "srcSha1": "e1ec170820ac7c3b1f54b3282baaae4137ccb50d",
+      "status": "ok",
+      "w": 256
+    },
+    "chr_gribeton_bust": {
+      "bytes": 7360,
+      "file": "chr_gribeton_bust.webp",
+      "group": "P3",
+      "h": 320,
+      "srcSha1": "6c735c33f646e19dab88b54b8accffb13eecb824",
+      "status": "ok",
+      "w": 256
+    },
+    "chr_kepce_bust": {
+      "bytes": 9158,
+      "file": "chr_kepce_bust.webp",
+      "group": "P2",
+      "h": 206,
+      "srcSha1": "e7eebf0c861e2878181caded7bc7bd1db839a5cf",
+      "status": "ok",
+      "w": 300
+    },
+    "chr_tuna_bust": {
+      "bytes": 12524,
+      "file": "chr_tuna_bust.webp",
+      "group": "P1",
+      "h": 375,
+      "srcSha1": "bc1099bd86ff892dbdba895bfefae071fe9191a5",
+      "status": "ok",
+      "w": 300
+    },
+    "chr_tuna_cheer": {
+      "bytes": 16266,
+      "file": "chr_tuna_cheer.webp",
+      "group": "P3",
+      "h": 400,
+      "srcSha1": "db582e9da9da01d6aa4556caf66e99afeeec009a",
+      "status": "ok",
+      "w": 300
+    },
+    "icon_brush": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "acbc0e5d329494d0b85b5cee27d773859d9000ea",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_chest": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "ebb03df4dfac7ed29ebb2547aebb7d3417f2b897",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_coin": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "c29761afc290e68653f2ffb3c5968788eba9d9bd",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_crane": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "1a8d3f3f7a9850b425c90fb3ef18dbe17a6f88a8",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_gold_trowel": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "145159ab09e1ae0efa78fac8cb2ec667b0ff9d27",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_hammer": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "3995911b0fd0bc801aaad7ba1d8df89da3217927",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_kettlebell": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "7b421f1164c10607117b50fda561b139a846af7a",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_life": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "d642919cb3f7d70fcc3964f5fbd8bd18fa6331c5",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_lock": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "1b18adee40284d08d3d930a7d5555cf25cf1e9ad",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_moves": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "19b92a60849bc10ee25de8fd0f4d225763e5ddb5",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_nav_album": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "d35137dc39c45e61517d27f212cd11ae5e589210",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_nav_home": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "02a00d2553cc3edbcb589eeb7d49b2909b439f58",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_nav_league": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "ccbfdea73ae75ac50caf783483724a35549803b6",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_nav_shop": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "484170a2eb6281c6596f1627b9cfabd8c49adc8d",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_nav_team": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "bb45f17c41859f82427090b8f0efc3914f791c56",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_nextfloor": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "9bb1e170cc78ede7e97b748d64a7367277b5187c",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_piggy": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "009163883ee01a3267e377f8a69dac485799025e",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_settings": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "99947293616a9e46f953bc24af4d8d8fa462e594",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_star": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "c00b2395fc1a95385ce1b19d799b728761e21ccb",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_thermos": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "ff01142bfc07c3597d6e77b20a9af673cce84a26",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_undo": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "764f2b0f534e457a00c4b933418f4f2e6a8c288f",
+      "status": "ok",
+      "w": 128
+    },
+    "logo_emblem": {
+      "bytes": 12552,
+      "file": "logo_emblem.webp",
+      "group": "P2",
+      "h": 360,
+      "srcSha1": "54aeb6abbb42e4bad2e0057e08f0835d185aaf3e",
+      "status": "ok",
+      "w": 360
+    },
+    "town_ch1_treehouse": {
+      "bytes": 25840,
+      "file": "town_ch1_treehouse.webp",
+      "group": "P2",
+      "h": 820,
+      "srcSha1": "18bf2d61f5bb4deef8c22f80142e9827adcb77ac",
+      "status": "ok",
+      "w": 760
+    },
+    "town_ch1_treehouse_ghost": {
+      "bytes": 24486,
+      "file": "town_ch1_treehouse_ghost.webp",
+      "group": "P2",
+      "h": 820,
+      "status": "ok",
+      "w": 760
+    },
+    "ui_tutorial_glove": {
+      "bytes": 3752,
+      "file": "ui_tutorial_glove.webp",
+      "group": "P1",
+      "h": 160,
+      "srcSha1": "88e6536f3f9a82bccbacc484ea36517747dcaac0",
+      "status": "ok",
+      "w": 140
+    }
+  },
+  "atlases": {
+    "icons_v2": {
+      "bytes": 45060,
+      "file": "icons_v2.webp",
+      "frames": [
+        "icon_coin",
+        "icon_life",
+        "icon_star",
+        "icon_moves",
+        "icon_settings",
+        "icon_lock",
+        "icon_hammer",
+        "icon_crane",
+        "icon_brush",
+        "icon_undo",
+        "icon_thermos",
+        "icon_gold_trowel",
+        "icon_chest",
+        "icon_nav_shop",
+        "icon_nav_league",
+        "icon_nav_team",
+        "icon_piggy",
+        "icon_kettlebell",
+        "icon_nextfloor",
+        "icon_nav_home",
+        "icon_nav_album"
+      ],
+      "group": "P1",
+      "h": 768,
+      "json": "icons_v2.json",
+      "jsonBytes": 7379,
+      "w": 512
+    }
+  },
+  "generator": "tools/assets.ts",
+  "unknown": [
+    {
+      "path": "public/art/town/town_ch1_tree.svg",
+      "srcSha1": "781022df906cece7c6544899d0f1bff5cb3792e8"
+    }
+  ],
+  "version": 1
+}

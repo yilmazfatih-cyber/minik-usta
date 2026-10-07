@@ -20,7 +20,7 @@ import type { SessionOptions, StreakBonus } from '../../src/core/session.ts';
 import { panoramaView } from '../../src/core/panorama.ts';
 import { FREE, railMode, tryBeginDrag } from '../../src/core/movement.ts';
 import { buildFront, movePiece, yardPlace } from '../../src/core/placement.ts';
-import { goalViews } from '../../src/core/goals.ts';
+import { allSegmentsComplete, goalViews } from '../../src/core/goals.ts';
 import { activeRuleIds, infoKeysFor, levelHooks } from '../../src/core/obstacles/registry.ts';
 import { checkLevel } from '../../src/core/level/logic.ts';
 import { loadLevel } from '../../src/core/level/compile.ts';
@@ -466,7 +466,8 @@ describe('K-27 batch content (validator L-10)', () => {
     ).toEqual([]);
   });
 
-  it('K-27 too few W cells, or W only in a heavy block (not counted), is material_short', () => {
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails('K-27 too few W cells, or W only in a heavy block (not counted), is material_short', () => {
     expect(short(twoSegments([['O4_0', 'W', 0, 8]]))).toEqual(['material_short@build.segments[1]']);
     expect(
       short(
@@ -478,7 +479,8 @@ describe('K-27 batch content (validator L-10)', () => {
     ).toEqual(['material_short@build.segments[1]']);
   });
 
-  it('K-27 a later batch never supplies an earlier segment ("o ana kadar teslim edilmiş")', () => {
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails('K-27 a later batch never supplies an earlier segment ("o ana kadar teslim edilmiş")', () => {
     const l = twoSegments(
       [
         ['D2_90', 'R', 0, 8],
@@ -550,88 +552,104 @@ describe('K-28 / K-29 / K-35 step order', () => {
 });
 
 describe('K-33 Usta Serisi and Golden Trowel', () => {
-  it('K-33 a trowel use leaves the streak alone (c = 3 stays 3); the next correct drag earns the trowel back', () => {
-    const session = GameSession.start(compiledLevel(STREAK), { preBoosters: ['trowelStart'] });
-    const s = session.state;
-    session.commit(drag(0, N(6, 8)));
-    session.commit(drag(1, N(7, 8)));
-    session.commit(drag(2, N(6, 8)));
-    expect([hdr(s, H.combo), hdr(s, H.trowels)]).toEqual([3, 1]);
-    // build front: (6,4) and (7,2); the trowel fills (7,2)
-    expect(buildFront(s).map((c) => [c.x, c.y])).toEqual([
-      [6, 4],
-      [7, 2],
-    ]);
-    expect(session.commit(trowel(1, 2)).status).toBe('applied');
-    expect([hdr(s, H.combo), hdr(s, H.trowels), session.movesMade]).toEqual([3, 0, 3]);
-    // the trowel cell supports the next drop (silhouette) and counts as correctly filled for K-34
-    const sink = new ArraySink();
-    session.commit(drag(3, N(7, 8)), sink);
-    expect(first(sink.events, 'pieceFell').to).toMatchObject({ x: 7, y: 3 });
-    expect(first(sink.events, 'placementCorrect').pieceId).toBe(3);
-    expect(first(sink.events, 'trowelEarned').trowels).toBe(1);
-    expect([hdr(s, H.combo), hdr(s, H.trowels)]).toEqual([0, 1]);
-    // K-46: the trowel fill is not a drag placement
-    expect(session.yao()).toEqual({ overWall: 4, rail: 0, yao: 1 });
-  });
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel); the block trowel is tests/core/combo.test.ts
+  it.fails(
+    'K-33 a trowel use leaves the streak alone (c = 3 stays 3); the next correct drag earns the trowel back',
+    () => {
+      const session = GameSession.start(compiledLevel(STREAK), { preBoosters: ['trowelStart'] });
+      const s = session.state;
+      session.commit(drag(0, N(6, 8)));
+      session.commit(drag(1, N(7, 8)));
+      session.commit(drag(2, N(6, 8)));
+      expect([hdr(s, H.combo), hdr(s, H.trowels)]).toEqual([3, 1]);
+      // build front: (6,4) and (7,2); the trowel fills (7,2)
+      expect(buildFront(s).map((c) => [c.x, c.y])).toEqual([
+        [6, 4],
+        [7, 2],
+      ]);
+      expect(session.commit(trowel(1, 2)).status).toBe('applied');
+      expect([hdr(s, H.combo), hdr(s, H.trowels), session.movesMade]).toEqual([3, 0, 3]);
+      // the trowel cell supports the next drop (silhouette) and counts as correctly filled for K-34
+      const sink = new ArraySink();
+      session.commit(drag(3, N(7, 8)), sink);
+      expect(first(sink.events, 'pieceFell').to).toMatchObject({ x: 7, y: 3 });
+      expect(first(sink.events, 'placementCorrect').pieceId).toBe(3);
+      expect(first(sink.events, 'trowelEarned').trowels).toBe(1);
+      expect([hdr(s, H.combo), hdr(s, H.trowels)]).toEqual([0, 1]);
+      // K-46: the trowel fill is not a drag placement
+      expect(session.yao()).toEqual({ overWall: 4, rail: 0, yao: 1 });
+    },
+  );
 
-  it('K-33 the trowel refuses a cell that breaks K-34, a filled cell and a `.` cell; a refusal spends nothing', () => {
-    const s = createInitialState(
-      compiledLevel({ plan: ['WW', 'W.', 'WW'], pieces: [['B1_0', 'W', 0, 0]], wall: { height: 2 } }),
-    );
-    setHdr(s, H.trowels, 2);
-    const before = s.buf.slice();
-    for (const target of [trowel(0, 1), trowel(1, 1), trowel(1, 2), trowel(0, 0, 1)]) {
-      const m = play(s, target);
-      expect(m.res.status).toBe('rejected');
-      expect(m.ev.map((e) => e.t)).toEqual(['boosterRejected']);
-      expect(s.buf).toEqual(before);
-    }
-    // GDD K-33 example column 7: y0 filled, y1 `.`, y2 empty → (7,2) is allowed once (7,0) is filled
-    expect(play(s, trowel(1, 0)).res.status).toBe('applied');
-    expect(play(s, trowel(1, 2)).res.status).toBe('applied');
-    expect(hdr(s, H.trowels)).toBe(0);
-    expect(play(s, trowel(0, 0)).res.reason).toBe('noTrowel');
-  });
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel); refusals: tests/core/combo.test.ts
+  it.fails(
+    'K-33 the trowel refuses a cell that breaks K-34, a filled cell and a `.` cell; a refusal spends nothing',
+    () => {
+      const s = createInitialState(
+        compiledLevel({ plan: ['WW', 'W.', 'WW'], pieces: [['B1_0', 'W', 0, 0]], wall: { height: 2 } }),
+      );
+      setHdr(s, H.trowels, 2);
+      const before = s.buf.slice();
+      for (const target of [trowel(0, 1), trowel(1, 1), trowel(1, 2), trowel(0, 0, 1)]) {
+        const m = play(s, target);
+        expect(m.res.status).toBe('rejected');
+        expect(m.ev.map((e) => e.t)).toEqual(['boosterRejected']);
+        expect(s.buf).toEqual(before);
+      }
+      // GDD K-33 example column 7: y0 filled, y1 `.`, y2 empty → (7,2) is allowed once (7,0) is filled
+      expect(play(s, trowel(1, 0)).res.status).toBe('applied');
+      expect(play(s, trowel(1, 2)).res.status).toBe('applied');
+      expect(hdr(s, H.trowels)).toBe(0);
+      expect(play(s, trowel(0, 0)).res.reason).toBe('noTrowel');
+    },
+  );
 
-  it('K-33 E-09 a trowel that completes the last segment wins in mini-pipeline step 11; m and the counter stay', () => {
-    const s = createInitialState(compiledLevel({ plan: ['WW'], pieces: [['B1_0', 'W', 0, 0]], moves: 7 }));
-    play(s, drag(0, N(6, 8)));
-    setHdr(s, H.trowels, 1);
-    const m = play(s, trowel(1, 0));
-    expect(m.res.won).toBe(true);
-    expect(m.ev.map((e) => [e.t, e.step])).toEqual([
-      ['boosterApplied', 1],
-      ['segmentCompleted', 8],
-      ['goalProgress', 8],
-      ['levelWon', 11],
-    ]);
-    expect(first(m.ev, 'levelWon').movesLeft).toBe(6);
-    expect([hdr(s, H.turn), hdr(s, H.movesLeft)]).toEqual([1, 6]);
-    expect(measureYao(s)).toEqual({ overWall: 1, rail: 0, yao: 1 });
-  });
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel); E-09: tests/core/combo.test.ts
+  it.fails(
+    'K-33 E-09 a trowel that completes the last segment wins in mini-pipeline step 11; m and the counter stay',
+    () => {
+      const s = createInitialState(compiledLevel({ plan: ['WW'], pieces: [['B1_0', 'W', 0, 0]], moves: 7 }));
+      play(s, drag(0, N(6, 8)));
+      setHdr(s, H.trowels, 1);
+      const m = play(s, trowel(1, 0));
+      expect(m.res.won).toBe(true);
+      expect(m.ev.map((e) => [e.t, e.step])).toEqual([
+        ['boosterApplied', 1],
+        ['segmentCompleted', 8],
+        ['goalProgress', 8],
+        ['levelWon', 11],
+      ]);
+      expect(first(m.ev, 'levelWon').movesLeft).toBe(6);
+      expect([hdr(s, H.turn), hdr(s, H.movesLeft)]).toEqual([1, 6]);
+      expect(measureYao(s)).toEqual({ overWall: 1, rail: 0, yao: 1 });
+    },
+  );
 
-  it('K-35 the trowel mini pipeline runs step 12 while the level goes on, never after a trowel win', () => {
-    const calls: number[] = [];
-    const hooks: MoveHooks = {
-      deadlock: (ctx) => {
-        calls.push(hdr(ctx.s, H.turn));
-        ctx.emit({ t: 'deadlockDetected', reason: 'noMoves' });
-      },
-    };
-    const s = createInitialState(compiledLevel({ plan: ['WW', 'WW'], pieces: [['B1_0', 'W', 0, 0]] }));
-    setHdr(s, H.trowels, 4);
-    const a = play(s, trowel(0, 0), { hooks });
-    expect(a.ev.map((e) => [e.t, e.step])).toEqual([
-      ['boosterApplied', 1],
-      ['deadlockDetected', 12],
-    ]);
-    play(s, trowel(1, 0), { hooks });
-    play(s, trowel(0, 1), { hooks });
-    const win = play(s, trowel(1, 1), { hooks });
-    expect(win.res.won).toBe(true);
-    expect(calls).toEqual([0, 0, 0]);
-  });
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel)
+  it.fails(
+    'K-35 the trowel mini pipeline runs step 12 while the level goes on, never after a trowel win',
+    () => {
+      const calls: number[] = [];
+      const hooks: MoveHooks = {
+        deadlock: (ctx) => {
+          calls.push(hdr(ctx.s, H.turn));
+          ctx.emit({ t: 'deadlockDetected', reason: 'noMoves' });
+        },
+      };
+      const s = createInitialState(compiledLevel({ plan: ['WW', 'WW'], pieces: [['B1_0', 'W', 0, 0]] }));
+      setHdr(s, H.trowels, 4);
+      const a = play(s, trowel(0, 0), { hooks });
+      expect(a.ev.map((e) => [e.t, e.step])).toEqual([
+        ['boosterApplied', 1],
+        ['deadlockDetected', 12],
+      ]);
+      play(s, trowel(1, 0), { hooks });
+      play(s, trowel(0, 1), { hooks });
+      const win = play(s, trowel(1, 1), { hooks });
+      expect(win.res.won).toBe(true);
+      expect(calls).toEqual([0, 0, 0]);
+    },
+  );
 });
 
 describe('K-39 Undo', () => {
@@ -680,7 +698,8 @@ describe('K-39 Undo', () => {
 });
 
 describe('K-43 exit and resume', () => {
-  it('K-43 a trowel use does not raise m: an exit after it is still free (m = 0)', () => {
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel)
+  it.fails('K-43 a trowel use does not raise m: an exit after it is still free (m = 0)', () => {
     const session = GameSession.start(compiledLevel(STREAK), { preBoosters: ['trowelStart'] });
     expect(session.commit(trowel(0, 0)).status).toBe('applied');
     expect(session.movesMade).toBe(0);
@@ -696,6 +715,7 @@ describe('K-43 exit and resume', () => {
     expect(session.exit()).toEqual({
       kind: 'free',
       movesMade: 0,
+      movesSpent: 0,
       refundPreBoosters: ['thermos'],
       streakBonusConsumed: false,
     });
@@ -738,26 +758,30 @@ describe('K-43 exit and resume', () => {
 });
 
 describe('K-46 YAO', () => {
-  it('K-46 GDD example: 4 over-wall + 1 rail correct placements → 0.80; a wrong placement and a trowel fill do not count', () => {
-    const session = GameSession.start(compiledLevel(YAO_LEVEL), { preBoosters: ['trowelStart'] });
-    const s = session.state;
-    session.commit(drag(0, N(6, 8))); // (6,0)–(7,0) over the wall
-    const wrong = new ArraySink();
-    session.commit(drag(5, N(6, 8)), wrong); // Y onto W (6,1): bounces
-    expect(first(wrong.events, 'pieceBounced').reason).toBe('color');
-    session.commit(drag(1, N(6, 8))); // row 1
-    session.commit(drag(2, N(6, 8))); // row 2
-    const rail = new ArraySink();
-    session.commit(drag(3, RL(0, 6, 3)), rail); // R through the gap
-    expect(first(rail.events, 'placementCorrect').overWall).toBe(false);
-    // K-33: a correct rail placement is a correct drag placement for the streak too (wrong reset it to 0 before)
-    expect(hdr(s, H.combo)).toBe(3);
-    expect(session.commit(trowel(0, 4)).status).toBe('applied');
-    const last = session.commit(drag(4, N(7, 8)));
-    expect(last.won).toBe(true);
-    expect(measureYao(s)).toEqual({ overWall: 4, rail: 1, yao: 0.8 });
-    expect(hdr(s, H.wrongCount)).toBe(1);
-  });
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel)
+  it.fails(
+    'K-46 GDD example: 4 over-wall + 1 rail correct placements → 0.80; a wrong placement and a trowel fill do not count',
+    () => {
+      const session = GameSession.start(compiledLevel(YAO_LEVEL), { preBoosters: ['trowelStart'] });
+      const s = session.state;
+      session.commit(drag(0, N(6, 8))); // (6,0)–(7,0) over the wall
+      const wrong = new ArraySink();
+      session.commit(drag(5, N(6, 8)), wrong); // Y onto W (6,1): bounces
+      expect(first(wrong.events, 'pieceBounced').reason).toBe('color');
+      session.commit(drag(1, N(6, 8))); // row 1
+      session.commit(drag(2, N(6, 8))); // row 2
+      const rail = new ArraySink();
+      session.commit(drag(3, RL(0, 6, 3)), rail); // R through the gap
+      expect(first(rail.events, 'placementCorrect').overWall).toBe(false);
+      // K-33: a correct rail placement is a correct drag placement for the streak too (wrong reset it to 0 before)
+      expect(hdr(s, H.combo)).toBe(3);
+      expect(session.commit(trowel(0, 4)).status).toBe('applied');
+      const last = session.commit(drag(4, N(7, 8)));
+      expect(last.won).toBe(true);
+      expect(measureYao(s)).toEqual({ overWall: 4, rail: 1, yao: 0.8 });
+      expect(hdr(s, H.wrongCount)).toBe(1);
+    },
+  );
 });
 
 describe('K-35 step 5 and K-41 debris through the rail', () => {
@@ -829,8 +853,8 @@ describe('W1 static gap and S2 plan void', () => {
       { zone: 'site', x: 6, y: 3, seg: 0 },
       { zone: 'site', x: 7, y: 3, seg: 0 },
     ]);
-    // K-15: the `.` rows below stay empty, so the segment is complete
-    expect(m.res.won).toBe(true);
+    // K-15: the `.` rows below stay empty, so the segment is complete (K-48 (3): the fixture's D2_0 stays → no win)
+    expect(allSegmentsComplete(s)).toBe(true);
   });
 
   it('W1 K-12 the same gap refuses D2_0 (rows 3–4: row 4 is outside the gap); over the wall the D2_90 would fall onto a void', () => {
@@ -891,21 +915,25 @@ describe('W1 static gap and S2 plan void', () => {
     expect(rails(d1.session.reachableNodes())).toEqual([]);
   });
 
-  it('S2 a `.` on the bottom row: the cell above it is build front from the start; a 1-wide drop falls into the void', () => {
-    // plan bottom → top: y0 `W.`, y1 `WW`
-    const s = createInitialState(
-      compiledLevel({ wall: { height: 2 }, plan: ['WW', 'W.'], pieces: [['B1_0', 'W', 0, 0]] }),
-    );
-    expect(buildFront(s).map((c) => [c.x, c.y])).toEqual([
-      [6, 0],
-      [7, 1],
-    ]);
-    const m = play(s, drag(0, N(7, 8)));
-    expect(first(m.ev, 'pieceFell').to).toMatchObject({ x: 7, y: 0 });
-    expect(first(m.ev, 'placementWrong').reasons[0]).toBe('window');
-    setHdr(s, H.trowels, 1);
-    expect(play(s, trowel(1, 1)).res.status).toBe('applied');
-  });
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel); S2 is out of the MVP
+  it.fails(
+    'S2 a `.` on the bottom row: the cell above it is build front from the start; a 1-wide drop falls into the void',
+    () => {
+      // plan bottom → top: y0 `W.`, y1 `WW`
+      const s = createInitialState(
+        compiledLevel({ wall: { height: 2 }, plan: ['WW', 'W.'], pieces: [['B1_0', 'W', 0, 0]] }),
+      );
+      expect(buildFront(s).map((c) => [c.x, c.y])).toEqual([
+        [6, 0],
+        [7, 1],
+      ]);
+      const m = play(s, drag(0, N(7, 8)));
+      expect(first(m.ev, 'pieceFell').to).toMatchObject({ x: 7, y: 0 });
+      expect(first(m.ev, 'placementWrong').reasons[0]).toBe('window');
+      setHdr(s, H.trowels, 1);
+      expect(play(s, trowel(1, 1)).res.status).toBe('applied');
+    },
+  );
 
   it('S2 a rail placement with a cell on a `.` is wrong (window) and bounces back to its yard start', () => {
     const s = createInitialState(compiledLevel(gapOverVoids('R.')));
@@ -1123,19 +1151,23 @@ describe('Round 2 · K-25 / K-26 truck delivery geometry and the queue counter',
     expect(queueIds(s)).toEqual([]);
   });
 
-  it('K-28 K-26 the win does not wait for the truck: the last segment completes while an O4 still has no room → won, the O4 stays queued', () => {
-    const s = createInitialState(compiledLevel(WIN_WITH_TRUCK));
-    play(s, drag(0, N(6, 8)));
-    expect(at(s, 13)).toEqual([0, 7, Zone.yard]);
-    expect(queueIds(s)).toEqual([14]);
-    const last = play(s, drag(13, N(6, 8)));
-    expect(first(last.ev, 'segmentCompleted').seg).toBe(1);
-    expect(only(last.ev, 'siteShifted')).toEqual([]);
-    expect(only(last.ev, 'deliveryArrived')).toEqual([]); // (0,7) is free again, but an O4 needs 2 × 2
-    expect(last.res.won).toBe(true);
-    expect(first(last.ev, 'levelWon').step).toBe(11);
-    expect(queueIds(s)).toEqual([14]);
-  });
+  // Faz 2R K-48 (3): a queued material block holds back the win (rule changed)
+  it.fails(
+    'K-28 K-26 the win does not wait for the truck: the last segment completes while an O4 still has no room → won, the O4 stays queued',
+    () => {
+      const s = createInitialState(compiledLevel(WIN_WITH_TRUCK));
+      play(s, drag(0, N(6, 8)));
+      expect(at(s, 13)).toEqual([0, 7, Zone.yard]);
+      expect(queueIds(s)).toEqual([14]);
+      const last = play(s, drag(13, N(6, 8)));
+      expect(first(last.ev, 'segmentCompleted').seg).toBe(1);
+      expect(only(last.ev, 'siteShifted')).toEqual([]);
+      expect(only(last.ev, 'deliveryArrived')).toEqual([]); // (0,7) is free again, but an O4 needs 2 × 2
+      expect(last.res.won).toBe(true);
+      expect(first(last.ev, 'levelWon').step).toBe(11);
+      expect(queueIds(s)).toEqual([14]);
+    },
+  );
 });
 
 describe('Round 2 · K-35 step order of the other release kinds', () => {
@@ -1180,35 +1212,39 @@ describe('Round 2 · K-35 step order of the other release kinds', () => {
     expect(m.res.won).toBe(true);
   });
 
-  it('K-29 K-35 a move that empties the counter still runs steps 8–9 (shift, delivery) before the step-11 window; step 12 is skipped', () => {
-    const calls: number[] = [];
-    const hooks: MoveHooks = { deadlock: () => void calls.push(1) };
-    const s = createInitialState(
-      compiledLevel({
-        moves: 1,
-        plan: [['W.'], ['WW']],
-        pieces: [['B1_0', 'W', 0, 0]],
-        batches: [{ forSegment: 1, pieces: [['B1_0', 'R', 1, 8]] }],
-      }),
-    );
-    const m = play(s, drag(0, N(6, 8)), { hooks });
-    expect(m.res).toEqual({ status: 'applied', reason: null, won: false, outOfMoves: true });
-    expect(steps(m.ev).filter(([t]) => t !== 'deliveryQueued')).toEqual([
-      ['pieceMoved', 1],
-      ['pieceFell', 2],
-      ['placementCorrect', 3],
-      ['comboChanged', 3],
-      ['movesChanged', 4],
-      ['segmentCompleted', 8],
-      ['goalProgress', 8],
-      ['siteShifted', 8],
-      ['deliveryArrived', 9],
-      ['pieceFell', 9],
-      ['outOfMoves', 11],
-    ]);
-    expect(at(s, 1)).toEqual([1, 0, Zone.yard]);
-    expect(calls).toEqual([]);
-  });
+  // Faz 2R K-29/K-35: step 12 now runs at 0 moves too (see tests/core/moves.test.ts)
+  it.fails(
+    'K-29 K-35 a move that empties the counter still runs steps 8–9 (shift, delivery) before the step-11 window; step 12 is skipped',
+    () => {
+      const calls: number[] = [];
+      const hooks: MoveHooks = { deadlock: () => void calls.push(1) };
+      const s = createInitialState(
+        compiledLevel({
+          moves: 1,
+          plan: [['W.'], ['WW']],
+          pieces: [['B1_0', 'W', 0, 0]],
+          batches: [{ forSegment: 1, pieces: [['B1_0', 'R', 1, 8]] }],
+        }),
+      );
+      const m = play(s, drag(0, N(6, 8)), { hooks });
+      expect(m.res).toEqual({ status: 'applied', reason: null, won: false, outOfMoves: true });
+      expect(steps(m.ev).filter(([t]) => t !== 'deliveryQueued')).toEqual([
+        ['pieceMoved', 1],
+        ['pieceFell', 2],
+        ['placementCorrect', 3],
+        ['comboChanged', 3],
+        ['movesChanged', 4],
+        ['segmentCompleted', 8],
+        ['goalProgress', 8],
+        ['siteShifted', 8],
+        ['deliveryArrived', 9],
+        ['pieceFell', 9],
+        ['outOfMoves', 11],
+      ]);
+      expect(at(s, 1)).toEqual([1, 0, Zone.yard]);
+      expect(calls).toEqual([]);
+    },
+  );
 
   it('E-30 K-09 (e) at 0 moves no block can be picked: a drag record is cancelled as invalid and changes nothing', () => {
     const s = createInitialState(compiledLevel(STREAK));
@@ -1262,18 +1298,22 @@ describe('Round 2 · K-22 / K-33 / W1 / S2 across segments', () => {
     expect(measureYao(s)).toEqual({ overWall: 1, rail: 1, yao: 0.5 });
   });
 
-  it('K-33 the trowel works only on the active segment: a future and a completed segment are refused and spend nothing', () => {
-    const session = GameSession.start(compiledLevel(TWO_ROOMS), { preBoosters: ['trowelStart'] });
-    const s = session.state;
-    const future = session.commit(trowel(0, 0, 1));
-    expect([future.status, future.reason]).toEqual(['rejected', 'notVisibleSegment']);
-    expect(hdr(s, H.trowels)).toBe(1);
-    session.commit(drag(0, N(6, 8))); // Sol oda complete → segment 1
-    expect(session.commit(trowel(0, 0, 0)).status).toBe('rejected');
-    expect(hdr(s, H.trowels)).toBe(1);
-    expect(session.commit(trowel(0, 0, 1)).status).toBe('applied');
-    expect([hdr(s, H.trowels), siteOcc(s, 1, 0, 0) !== 0]).toEqual([0, true]);
-  });
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel)
+  it.fails(
+    'K-33 the trowel works only on the active segment: a future and a completed segment are refused and spend nothing',
+    () => {
+      const session = GameSession.start(compiledLevel(TWO_ROOMS), { preBoosters: ['trowelStart'] });
+      const s = session.state;
+      const future = session.commit(trowel(0, 0, 1));
+      expect([future.status, future.reason]).toEqual(['rejected', 'notVisibleSegment']);
+      expect(hdr(s, H.trowels)).toBe(1);
+      session.commit(drag(0, N(6, 8))); // Sol oda complete → segment 1
+      expect(session.commit(trowel(0, 0, 0)).status).toBe('rejected');
+      expect(hdr(s, H.trowels)).toBe(1);
+      expect(session.commit(trowel(0, 0, 1)).status).toBe('applied');
+      expect([hdr(s, H.trowels), siteOcc(s, 1, 0, 0) !== 0]).toEqual([0, true]);
+    },
+  );
 
   it('S2 K-34 a 2-wide block with one cell on a `.`: W over `W.` is wrong (window); R over `W.` reports [window, color], window first', () => {
     const same = createInitialState(compiledLevel({ plan: ['W.'], pieces: [['D2_90', 'W', 0, 0]] }));
@@ -1286,7 +1326,7 @@ describe('Round 2 · K-22 / K-33 / W1 / S2 across segments', () => {
     expect(first(b.ev, 'pieceBounced').reason).toBe('window');
   });
 
-  it('K-41 debris dropped back onto the site is wrong (K-16 (2)), returns to its site start (K-17) and does not count as cleared', () => {
+  it('K-41 debris dropped back onto the site wrongly (Faz 2R: by colour, K-16 (2) removed) returns to its site start (K-17) and does not count as cleared', () => {
     const s = createInitialState(
       compiledLevel({
         plan: ['WW', 'WW', 'WW', 'WW'],
@@ -1297,7 +1337,7 @@ describe('Round 2 · K-22 / K-33 / W1 / S2 across segments', () => {
     );
     const debris = 1;
     const m = play(s, drag(debris, N(6, 8)));
-    expect(first(m.ev, 'placementWrong').reasons[0]).toBe('debris');
+    expect(first(m.ev, 'placementWrong').reasons[0]).toBe('color');
     expect(first(m.ev, 'pieceBounced').to).toMatchObject({ zone: 'site', x: 6, y: 3 });
     expect(at(s, debris)).toEqual([6, 3, Zone.site]);
     expect(only(m.ev, 'goalProgress')).toEqual([]);
@@ -1315,31 +1355,35 @@ describe('Round 2 · K-22 / K-33 / W1 / S2 across segments', () => {
     expect(hdr(s, H.wrongCount)).toBe(2);
   });
 
-  it('K-27 TECH L-10 supply counts only blocks that can reach the site: I3_0 cannot cross an 8-high wall (K-05), so its W cells are short', () => {
-    const tall = (height: number, w: readonly PieceSpec[]) =>
-      checkLevel(
-        level({
-          wall: { height },
-          plan: [['RR'], ['WW', 'WW', 'WW']],
-          pieces: [['D2_90', 'R', 0, 0]],
-          batches: [{ forSegment: 1, pieces: w }],
-        }),
-        { only: ['L-10'] },
-      ).map((i) => `${i.code}@${i.path}`);
-    const i3: PieceSpec[] = [
-      ['I3_0', 'W', 0, 8],
-      ['I3_0', 'W', 1, 8],
-    ];
-    expect(tall(8, i3)).toEqual(['material_short@build.segments[1]']);
-    expect(tall(4, i3)).toEqual([]);
-    expect(
-      tall(8, [
-        ['D2_0', 'W', 0, 8],
-        ['D2_0', 'W', 1, 8],
-        ['D2_0', 'W', 2, 8],
-      ]),
-    ).toEqual([]);
-  });
+  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
+  it.fails(
+    'K-27 TECH L-10 supply counts only blocks that can reach the site: I3_0 cannot cross an 8-high wall (K-05), so its W cells are short',
+    () => {
+      const tall = (height: number, w: readonly PieceSpec[]) =>
+        checkLevel(
+          level({
+            wall: { height },
+            plan: [['RR'], ['WW', 'WW', 'WW']],
+            pieces: [['D2_90', 'R', 0, 0]],
+            batches: [{ forSegment: 1, pieces: w }],
+          }),
+          { only: ['L-10'] },
+        ).map((i) => `${i.code}@${i.path}`);
+      const i3: PieceSpec[] = [
+        ['I3_0', 'W', 0, 8],
+        ['I3_0', 'W', 1, 8],
+      ];
+      expect(tall(8, i3)).toEqual(['material_short@build.segments[1]']);
+      expect(tall(4, i3)).toEqual([]);
+      expect(
+        tall(8, [
+          ['D2_0', 'W', 0, 8],
+          ['D2_0', 'W', 1, 8],
+          ['D2_0', 'W', 2, 8],
+        ]),
+      ).toEqual([]);
+    },
+  );
 });
 
 describe('Round 2 · K-39 Undo corner cases', () => {
@@ -1442,45 +1486,49 @@ describe('Round 2 · K-43 resume and exit corner cases', () => {
     expect([resumed.movesLeft, resumed.offersUsed]).toEqual([5, 2]);
   });
 
-  it('K-43 a tampered log does not replay: an offer with no window, an Undo after a trowel, a cancelled drag (never logged), a Termos inside the log', () => {
-    const lvl = compiledLevel(STREAK);
-    const start = (pre: readonly PreBooster[] = []): SessionAction => ({
-      kind: 'start',
-      preBoosters: pre,
-      streakTier: 0,
-    });
-    const cases: [SessionAction[], number][] = [
-      [[start(), { kind: 'addMoves', amount: 5, source: 'offerCoins' }], 1],
-      [[start(['trowelStart']), drag(0, N(6, 8)), trowel(1, 0), { kind: 'undo' }], 3],
-      [[start(), drag(0, N(0, 0))], 1],
-      [[start(), { kind: 'addMoves', amount: 3, source: 'thermos' }], 1],
-    ];
-    for (const [log, index] of cases) {
-      let caught: unknown = null;
-      try {
-        GameSession.replay(lvl, log);
-      } catch (e) {
-        caught = e;
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel)
+  it.fails(
+    'K-43 a tampered log does not replay: an offer with no window, an Undo after a trowel, a cancelled drag (never logged), a Termos inside the log',
+    () => {
+      const lvl = compiledLevel(STREAK);
+      const start = (pre: readonly PreBooster[] = []): SessionAction => ({
+        kind: 'start',
+        preBoosters: pre,
+        streakTier: 0,
+      });
+      const cases: [SessionAction[], number][] = [
+        [[start(), { kind: 'addMoves', amount: 5, source: 'offerCoins' }], 1],
+        [[start(['trowelStart']), drag(0, N(6, 8)), trowel(1, 0), { kind: 'undo' }], 3],
+        [[start(), drag(0, N(0, 0))], 1],
+        [[start(), { kind: 'addMoves', amount: 3, source: 'thermos' }], 1],
+      ];
+      for (const [log, index] of cases) {
+        let caught: unknown = null;
+        try {
+          GameSession.replay(lvl, log);
+        } catch (e) {
+          caught = e;
+        }
+        expect(caught).toBeInstanceOf(ReplayError);
+        expect((caught as ReplayError).index).toBe(index);
       }
-      expect(caught).toBeInstanceOf(ReplayError);
-      expect((caught as ReplayError).index).toBe(index);
-    }
-  });
+    },
+  );
 
   it('K-43 E-42 a step-12 help that draws random numbers (after moves and after an accepted offer) replays bit for bit', () => {
     const lvl = compiledLevel({ ...STREAK, moves: 2 });
     const liveCalls: number[] = [];
     const live = GameSession.start(lvl, {}, { hooks: rngHelp(liveCalls) });
     live.commit(drag(0, N(6, 8))); // step 12 help #1
-    live.commit(drag(1, N(7, 8))); // 0 moves left: window, step 12 skipped
+    live.commit(drag(1, N(7, 8))); // 0 moves left: step 12 runs before the window (Faz 2R) → help #2
     expect(live.outcome).toBe('outOfMoves');
     const sink = new ArraySink();
-    live.acceptOffer('offerCoins', sink); // step 12 once (E-42) → help #2
+    live.acceptOffer('offerCoins', sink); // step 12 once (E-42) → help #3
     expect(steps(sink.events)).toEqual([
       ['movesChanged', 1],
       ['truckHelp', 12],
     ]);
-    expect(liveCalls.length).toBe(2);
+    expect(liveCalls.length).toBe(3);
     const replayCalls: number[] = [];
     const resumed = GameSession.replay(lvl, live.log, { hooks: rngHelp(replayCalls) });
     expect(replayCalls).toEqual(liveCalls);
@@ -1511,34 +1559,42 @@ describe('Round 2 · K-43 resume and exit corner cases', () => {
     expect(eventLogHash(b.events)).toBe(eventLogHash(a.events));
   });
 
-  it('K-43 K-40 the Mala Başlangıcı trowel used at m = 0: the exit is still free and the pre-level booster is refunded', () => {
-    const session = GameSession.start(compiledLevel(STREAK), { preBoosters: ['trowelStart'] });
-    expect(session.commit(trowel(0, 0)).status).toBe('applied');
-    expect(session.commit(drag(1, N(1, 0))).status).toBe('cancelled'); // K-07 row 1: not a move
-    expect(session.exit()).toEqual({
-      kind: 'free',
-      movesMade: 0,
-      refundPreBoosters: ['trowelStart'],
-      streakBonusConsumed: false,
-    });
-  });
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel)
+  it.fails(
+    'K-43 K-40 the Mala Başlangıcı trowel used at m = 0: the exit is still free and the pre-level booster is refunded',
+    () => {
+      const session = GameSession.start(compiledLevel(STREAK), { preBoosters: ['trowelStart'] });
+      expect(session.commit(trowel(0, 0)).status).toBe('applied');
+      expect(session.commit(drag(1, N(1, 0))).status).toBe('cancelled'); // K-07 row 1: not a move
+      expect(session.exit()).toEqual({
+        kind: 'free',
+        movesMade: 0,
+        refundPreBoosters: ['trowelStart'],
+        streakBonusConsumed: false,
+      });
+    },
+  );
 
-  it('K-43 E-09 a log that ends with a winning trowel replays to the won outcome (mini pipeline step 11)', () => {
-    const lvl = compiledLevel({ plan: ['WW'], pieces: [['B1_0', 'W', 0, 0]], moves: 7 });
-    const live = GameSession.start(lvl, { preBoosters: ['trowelStart'] });
-    live.commit(drag(0, N(6, 8)));
-    expect(live.commit(trowel(1, 0)).won).toBe(true);
-    expect(live.outcome).toBe('won');
-    const resumed = GameSession.replay(lvl, live.log);
-    expect([resumed.outcome, isLevelWon(resumed.state), resumed.movesLeft, resumed.movesMade]).toEqual([
-      'won',
-      true,
-      6,
-      1,
-    ]);
-    expect(resumed.state.buf).toEqual(live.state.buf);
-    expect(resumed.undoBlock()).toBe('levelOver');
-  });
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel)
+  it.fails(
+    'K-43 E-09 a log that ends with a winning trowel replays to the won outcome (mini pipeline step 11)',
+    () => {
+      const lvl = compiledLevel({ plan: ['WW'], pieces: [['B1_0', 'W', 0, 0]], moves: 7 });
+      const live = GameSession.start(lvl, { preBoosters: ['trowelStart'] });
+      live.commit(drag(0, N(6, 8)));
+      expect(live.commit(trowel(1, 0)).won).toBe(true);
+      expect(live.outcome).toBe('won');
+      const resumed = GameSession.replay(lvl, live.log);
+      expect([resumed.outcome, isLevelWon(resumed.state), resumed.movesLeft, resumed.movesMade]).toEqual([
+        'won',
+        true,
+        6,
+        1,
+      ]);
+      expect(resumed.state.buf).toEqual(live.state.buf);
+      expect(resumed.undoBlock()).toBe('levelOver');
+    },
+  );
 
   it('K-43 two moves and an Undo of the second leave m = 1: the confirmed exit is a loss', () => {
     const session = GameSession.start(compiledLevel(STREAK));
@@ -1549,6 +1605,7 @@ describe('Round 2 · K-43 resume and exit corner cases', () => {
     expect(session.exit()).toEqual({
       kind: 'loss',
       movesMade: 1,
+      movesSpent: 1,
       refundPreBoosters: [],
       streakBonusConsumed: true,
     });
@@ -1773,34 +1830,40 @@ describe('Round 3 · K-25 / K-26 / E-03 / E-34 truck delivery worked examples', 
 });
 
 describe('Round 3 · K-22 / K-33 / E-09 segment shift outside a drag', () => {
-  it('E-09 K-33 a trowel that completes a NON-final segment runs steps 8 (shift + batch), 9 (delivery) and 12; m, the counter and the streak stay', () => {
-    const calls: number[] = [];
-    const session = GameSession.start(
-      compiledLevel(TROWEL_SHIFT),
-      { preBoosters: ['trowelStart'] },
-      { hooks: deadlockSpy(calls) },
-    );
-    const s = session.state;
-    session.commit(drag(0, N(6, 8))); // (6,0), c = 1
-    const sink = new ArraySink();
-    const res = session.commit(trowel(1, 0), sink);
-    expect(res).toEqual({ status: 'applied', reason: null, won: false, outOfMoves: false });
-    expect(steps(sink.events)).toEqual([
-      ['boosterApplied', 1],
-      ['segmentCompleted', 8],
-      ['goalProgress', 8],
-      ['siteShifted', 8],
-      ['deliveryArrived', 9],
-      ['pieceFell', 9],
-      ['deadlockDetected', 12],
-    ]);
-    expect(first(sink.events, 'siteShifted').toSeg).toBe(1);
-    expect(at(s, 1)).toEqual([3, 0, Zone.yard]);
-    expect([session.movesMade, session.movesLeft, hdr(s, H.combo), hdr(s, H.trowels)]).toEqual([1, 19, 1, 0]);
-    expect(calls).toEqual([1, 1]);
-    // K-39: a trowel use in between closes Undo
-    expect(session.undoBlock()).toBe('noDragMove');
-  });
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel); E-09: tests/core/combo.test.ts
+  it.fails(
+    'E-09 K-33 a trowel that completes a NON-final segment runs steps 8 (shift + batch), 9 (delivery) and 12; m, the counter and the streak stay',
+    () => {
+      const calls: number[] = [];
+      const session = GameSession.start(
+        compiledLevel(TROWEL_SHIFT),
+        { preBoosters: ['trowelStart'] },
+        { hooks: deadlockSpy(calls) },
+      );
+      const s = session.state;
+      session.commit(drag(0, N(6, 8))); // (6,0), c = 1
+      const sink = new ArraySink();
+      const res = session.commit(trowel(1, 0), sink);
+      expect(res).toEqual({ status: 'applied', reason: null, won: false, outOfMoves: false });
+      expect(steps(sink.events)).toEqual([
+        ['boosterApplied', 1],
+        ['segmentCompleted', 8],
+        ['goalProgress', 8],
+        ['siteShifted', 8],
+        ['deliveryArrived', 9],
+        ['pieceFell', 9],
+        ['deadlockDetected', 12],
+      ]);
+      expect(first(sink.events, 'siteShifted').toSeg).toBe(1);
+      expect(at(s, 1)).toEqual([3, 0, Zone.yard]);
+      expect([session.movesMade, session.movesLeft, hdr(s, H.combo), hdr(s, H.trowels)]).toEqual([
+        1, 19, 1, 0,
+      ]);
+      expect(calls).toEqual([1, 1]);
+      // K-39: a trowel use in between closes Undo
+      expect(session.undoBlock()).toBe('noDragMove');
+    },
+  );
 
   it('K-22 K-06 the completed segment joins the panorama as done and the next one becomes active; reading the panorama changes nothing', () => {
     const s = createInitialState(compiledLevel(TWO_ROOMS));
@@ -1955,18 +2018,22 @@ describe('Round 3 · K-29 offers and K-39 Undo around the out-of-moves window', 
     expect([resumed.movesMade, resumed.canUndo()]).toEqual([0, false]);
   });
 
-  it('K-39 a trowel use is never undone: Undo of the drag after it goes back to the post-trowel state (cell stays filled, trowel spent)', () => {
-    const session = GameSession.start(compiledLevel(STREAK), { preBoosters: ['trowelStart'] });
-    const s = session.state;
-    expect(session.commit(trowel(0, 0)).status).toBe('applied');
-    expect(session.undoBlock()).toBe('noDragMove');
-    const afterTrowel = s.buf.slice();
-    expect(session.commit(drag(0, N(7, 8))).status).toBe('applied');
-    expect(session.undo()).toBe(true);
-    expect(s.buf).toEqual(afterTrowel);
-    expect([siteOcc(s, 0, 0, 0), hdr(s, H.trowels), session.movesMade]).toEqual([SITE_TROWEL, 0, 0]);
-    expect(session.undoBlock()).toBe('noDragMove');
-  });
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel)
+  it.fails(
+    'K-39 a trowel use is never undone: Undo of the drag after it goes back to the post-trowel state (cell stays filled, trowel spent)',
+    () => {
+      const session = GameSession.start(compiledLevel(STREAK), { preBoosters: ['trowelStart'] });
+      const s = session.state;
+      expect(session.commit(trowel(0, 0)).status).toBe('applied');
+      expect(session.undoBlock()).toBe('noDragMove');
+      const afterTrowel = s.buf.slice();
+      expect(session.commit(drag(0, N(7, 8))).status).toBe('applied');
+      expect(session.undo()).toBe(true);
+      expect(s.buf).toEqual(afterTrowel);
+      expect([siteOcc(s, 0, 0, 0), hdr(s, H.trowels), session.movesMade]).toEqual([SITE_TROWEL, 0, 0]);
+      expect(session.undoBlock()).toBe('noDragMove');
+    },
+  );
 
   it('K-39 K-28 a winning drag cannot be undone (level over), and the attempt cannot be exited any more', () => {
     const session = GameSession.start(compiledLevel({ plan: ['WW'], pieces: [['D2_90', 'W', 0, 0]] }));
@@ -1979,54 +2046,62 @@ describe('Round 3 · K-29 offers and K-39 Undo around the out-of-moves window', 
 });
 
 describe('Round 3 · K-43 resume and exit', () => {
-  it('K-43 K-39 level 5 hand solution: every prefix resumes bit for bit; Undo + redo of each non-winning move (shift and truck moves included) gives the same state and events', () => {
-    const lvl = levelFile(5);
-    const live = GameSession.start(lvl);
-    LEVEL5_HAND.forEach((move, i) => {
-      const before = live.state.buf.slice();
-      const a = new ArraySink();
-      expect(live.commit(move, a).status).toBe('applied');
-      const after = live.state.buf.slice();
-      if (i < LEVEL5_HAND.length - 1) {
-        expect(live.undo()).toBe(true);
-        expect(live.state.buf).toEqual(before);
-        const b = new ArraySink();
-        live.commit(move, b);
-        expect(live.state.buf).toEqual(after);
-        expect(eventLogHash(b.events)).toBe(eventLogHash(a.events));
-      }
-      const resumed = GameSession.replay(lvl, live.log);
-      expect(resumed.state.buf).toEqual(live.state.buf);
-      expect([resumed.resumed, resumed.canUndo(), resumed.outcome]).toEqual([
-        true,
-        live.canUndo(),
-        live.outcome,
-      ]);
-    });
-    expect([live.resumed, live.outcome, live.movesLeft, live.movesMade]).toEqual([false, 'won', 5, 6]);
-    expect(live.yao()).toEqual({ overWall: 6, rail: 0, yao: 1 });
-  });
+  // WP-M ile yeniden üretilecek: the Faz 2 level 5 keeps decoys, K-48 (3) never lets it win
+  it.fails(
+    'K-43 K-39 level 5 hand solution: every prefix resumes bit for bit; Undo + redo of each non-winning move (shift and truck moves included) gives the same state and events',
+    () => {
+      const lvl = levelFile(5);
+      const live = GameSession.start(lvl);
+      LEVEL5_HAND.forEach((move, i) => {
+        const before = live.state.buf.slice();
+        const a = new ArraySink();
+        expect(live.commit(move, a).status).toBe('applied');
+        const after = live.state.buf.slice();
+        if (i < LEVEL5_HAND.length - 1) {
+          expect(live.undo()).toBe(true);
+          expect(live.state.buf).toEqual(before);
+          const b = new ArraySink();
+          live.commit(move, b);
+          expect(live.state.buf).toEqual(after);
+          expect(eventLogHash(b.events)).toBe(eventLogHash(a.events));
+        }
+        const resumed = GameSession.replay(lvl, live.log);
+        expect(resumed.state.buf).toEqual(live.state.buf);
+        expect([resumed.resumed, resumed.canUndo(), resumed.outcome]).toEqual([
+          true,
+          live.canUndo(),
+          live.outcome,
+        ]);
+      });
+      expect([live.resumed, live.outcome, live.movesLeft, live.movesMade]).toEqual([false, 'won', 5, 6]);
+      expect(live.yao()).toEqual({ overWall: 6, rail: 0, yao: 1 });
+    },
+  );
 
-  it('K-43 E-41 K-40 Termos + streak tier 2 (+2 moves, +1 trowel): 20 → 25 moves and 1 trowel; using that trowel keeps m = 0, the exit is free and the bonus is not consumed', () => {
-    const lvl = compiledLevel({ ...STREAK, moves: 20 });
-    const bonus: Record<1 | 2 | 3, StreakBonus> = {
-      1: { moves: 1, trowels: 0 },
-      2: { moves: 2, trowels: 1 },
-      3: { moves: 3, trowels: 1 },
-    };
-    const opts: SessionOptions = { streakBonus: (tier) => bonus[tier] };
-    const session = GameSession.start(lvl, { preBoosters: ['thermos'], streakTier: 2 }, opts);
-    expect([session.movesLeft, hdr(session.state, H.trowels), session.movesMade]).toEqual([25, 1, 0]);
-    expect(session.commit(trowel(0, 0)).status).toBe('applied');
-    const resumed = GameSession.replay(lvl, session.log, opts);
-    expect(resumed.state.buf).toEqual(session.state.buf);
-    expect(resumed.exit()).toEqual({
-      kind: 'free',
-      movesMade: 0,
-      refundPreBoosters: ['thermos'],
-      streakBonusConsumed: false,
-    });
-  });
+  // Faz 2R K-33: the cell trowel is gone (legacyTrowel)
+  it.fails(
+    'K-43 E-41 K-40 Termos + streak tier 2 (+2 moves, +1 trowel): 20 → 25 moves and 1 trowel; using that trowel keeps m = 0, the exit is free and the bonus is not consumed',
+    () => {
+      const lvl = compiledLevel({ ...STREAK, moves: 20 });
+      const bonus: Record<1 | 2 | 3, StreakBonus> = {
+        1: { moves: 1, trowels: 0 },
+        2: { moves: 2, trowels: 1 },
+        3: { moves: 3, trowels: 1 },
+      };
+      const opts: SessionOptions = { streakBonus: (tier) => bonus[tier] };
+      const session = GameSession.start(lvl, { preBoosters: ['thermos'], streakTier: 2 }, opts);
+      expect([session.movesLeft, hdr(session.state, H.trowels), session.movesMade]).toEqual([25, 1, 0]);
+      expect(session.commit(trowel(0, 0)).status).toBe('applied');
+      const resumed = GameSession.replay(lvl, session.log, opts);
+      expect(resumed.state.buf).toEqual(session.state.buf);
+      expect(resumed.exit()).toEqual({
+        kind: 'free',
+        movesMade: 0,
+        refundPreBoosters: ['thermos'],
+        streakBonusConsumed: false,
+      });
+    },
+  );
 
   it('K-43 item 4 levelHash: 16 hex digits, independent of JSON key order, changed by any change of the level data', () => {
     const json = levelJson(TWO_ROOMS);
@@ -2051,7 +2126,7 @@ describe('Round 3 · K-43 resume and exit', () => {
 });
 
 describe('Round 3 · W1 / S1 / S2 plugins on the real levels', () => {
-  it('W1 S1 S2 the data signatures of levels 1–5 switch on exactly the OBSTACLES rules (3: W1, 4: W1 + S2, 5: S1) with their info cards and no pipeline hook', () => {
+  it('W1 S1 the data signatures of levels 1–5 switch on exactly the OBSTACLES rules (3: W1, 4: W1, 5: S1; Faz 2R: S2 out of the MVP) with their info cards and no pipeline hook', () => {
     const rules = [1, 2, 3, 4, 5].map((n) => {
       const lvl = levelFile(n);
       return [activeRuleIds(lvl), infoKeysFor(lvl), Object.keys(levelHooks(lvl))];
@@ -2060,7 +2135,7 @@ describe('Round 3 · W1 / S1 / S2 plugins on the real levels', () => {
       [[], [], []],
       [[], [], []],
       [['W1'], ['obs.w1.desc'], []],
-      [['W1', 'S2'], ['obs.w1.desc', 'obs.s2.desc'], []],
+      [['W1'], ['obs.w1.desc'], []],
       [['S1'], ['obs.s1.desc'], []],
     ]);
   });
@@ -2157,29 +2232,33 @@ describe('Round 3 · W1 / S2 placement through the pipeline', () => {
 });
 
 describe('Round 3 · K-35 steps 5, 7, 8 and 12', () => {
-  it('K-35 K-15 K-13 a rail block under a debris overhang is correct, but the segment completes only when the debris leaves: goalProgress 7 → segmentCompleted 8 → levelWon 11', () => {
-    const s = createInitialState(compiledLevel(UNDER_DEBRIS));
-    const debris = 1;
-    const rail = play(s, drag(0, RL(0, 6, 0)));
-    expect(first(rail.ev, 'placementCorrect')).toMatchObject({ pieceId: 0, overWall: false });
-    expect(only(rail.ev, 'segmentCompleted')).toEqual([]);
-    expect(rail.res.won).toBe(false);
-    const out = play(s, drag(debris, N(4, 2)));
-    expect(steps(out.ev)).toEqual([
-      ['pieceMoved', 1],
-      ['movesChanged', 4],
-      ['goalProgress', 7],
-      ['segmentCompleted', 8],
-      ['goalProgress', 8],
-      ['levelWon', 11],
-    ]);
-    expect(only(out.ev, 'goalProgress').map((e) => [e.goal, e.value, e.target])).toEqual([
-      [1, 1, 1],
-      [0, 1, 1],
-    ]);
-    expect(out.res.won).toBe(true);
-    expect(measureYao(s)).toEqual({ overWall: 0, rail: 1, yao: 0 });
-  });
+  // Faz 2R K-48 (3): the debris (a material block) in the yard holds back the win (rule changed)
+  it.fails(
+    'K-35 K-15 K-13 a rail block under a debris overhang is correct, but the segment completes only when the debris leaves: goalProgress 7 → segmentCompleted 8 → levelWon 11',
+    () => {
+      const s = createInitialState(compiledLevel(UNDER_DEBRIS));
+      const debris = 1;
+      const rail = play(s, drag(0, RL(0, 6, 0)));
+      expect(first(rail.ev, 'placementCorrect')).toMatchObject({ pieceId: 0, overWall: false });
+      expect(only(rail.ev, 'segmentCompleted')).toEqual([]);
+      expect(rail.res.won).toBe(false);
+      const out = play(s, drag(debris, N(4, 2)));
+      expect(steps(out.ev)).toEqual([
+        ['pieceMoved', 1],
+        ['movesChanged', 4],
+        ['goalProgress', 7],
+        ['segmentCompleted', 8],
+        ['goalProgress', 8],
+        ['levelWon', 11],
+      ]);
+      expect(only(out.ev, 'goalProgress').map((e) => [e.goal, e.value, e.target])).toEqual([
+        [1, 1, 1],
+        [0, 1, 1],
+      ]);
+      expect(out.res.won).toBe(true);
+      expect(measureYao(s)).toEqual({ overWall: 0, rail: 1, yao: 0 });
+    },
+  );
 
   it('K-41 a counter never passes its target: the 2nd debris leaving the site (count 1) emits no goalProgress and the goal stays 1/1 done', () => {
     const s = createInitialState(
@@ -2248,7 +2327,7 @@ describe('Round 3 · K-35 steps 5, 7, 8 and 12', () => {
     const s = createInitialState(compiledLevel(STREAK));
     const before = s.buf.slice();
     expect(play(s, drag(0, N(0, 0)), { hooks }).res.reason).toBe('sameSpot');
-    expect(play(s, trowel(0, 0), { hooks }).res.reason).toBe('noTrowel');
+    expect(play(s, { kind: 'goldTrowel', pieceId: 0, x: 6, y: 0 }, { hooks }).res.reason).toBe('noTrowel');
     expect(calls).toEqual([]);
     expect(s.buf).toEqual(before);
     const yard = play(s, drag(5, N(5, 1)), { hooks });
@@ -2278,21 +2357,25 @@ describe('review round 4: K-43 replay(sink) gives the caller every event of the 
     return { live: live.events, replayed: replayed.events, game };
   }
 
-  it('K-43 / TECH 6 level 5 with Termos (K-40 start bonus), two K-17 wrong placements, one Undo (K-39) and the hand solution (truck, segment slide): the replay sink equals the live stream', () => {
-    const lvl = levelFile(5);
-    const { live, replayed, game } = liveThenReplay(lvl, { preBoosters: ['thermos'] }, {}, (g, sink) => {
-      expect(g.commit(drag(1, N(6, 8)), sink).status).toBe('applied'); // a onto G: K-17 bounce
-      expect(g.undo()).toBe(true);
-      expect(g.commit(drag(0, N(6, 8)), sink).status).toBe('applied'); // c onto G: K-17 bounce
-      for (const m of LEVEL5_HAND) expect(g.commit(m, sink).status).toBe('applied');
-    });
-    expect(game.outcome).toBe('won');
-    expect(live.filter((e) => e.t === 'placementWrong')).toHaveLength(2);
-    expect(live.some((e) => e.t === 'deliveryArrived')).toBe(true);
-    expect(live.some((e) => e.t === 'movesChanged' && e.reason !== 'move')).toBe(true); // Termos +3 at the start
-    expect(replayed).toEqual(live);
-    expect(eventLogHash(replayed)).toBe(eventLogHash(live));
-  });
+  // WP-M ile yeniden üretilecek: the Faz 2 level 5 keeps decoys, K-48 (3) never lets it win
+  it.fails(
+    'K-43 / TECH 6 level 5 with Termos (K-40 start bonus), two K-17 wrong placements, one Undo (K-39) and the hand solution (truck, segment slide): the replay sink equals the live stream',
+    () => {
+      const lvl = levelFile(5);
+      const { live, replayed, game } = liveThenReplay(lvl, { preBoosters: ['thermos'] }, {}, (g, sink) => {
+        expect(g.commit(drag(1, N(6, 8)), sink).status).toBe('applied'); // a onto G: K-17 bounce
+        expect(g.undo()).toBe(true);
+        expect(g.commit(drag(0, N(6, 8)), sink).status).toBe('applied'); // c onto G: K-17 bounce
+        for (const m of LEVEL5_HAND) expect(g.commit(m, sink).status).toBe('applied');
+      });
+      expect(game.outcome).toBe('won');
+      expect(live.filter((e) => e.t === 'placementWrong')).toHaveLength(2);
+      expect(live.some((e) => e.t === 'deliveryArrived')).toBe(true);
+      expect(live.some((e) => e.t === 'movesChanged' && e.reason !== 'move')).toBe(true); // Termos +3 at the start
+      expect(replayed).toEqual(live);
+      expect(eventLogHash(replayed)).toBe(eventLogHash(live));
+    },
+  );
 
   it('K-43 / K-29 an accepted +5 offer (coins) and a K-40 streak bonus replay into the same events, in log order', () => {
     const lvl = compiledLevel({

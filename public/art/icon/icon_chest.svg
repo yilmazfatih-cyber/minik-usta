@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD27A"/><stop offset="1" stop-color="#D9933A"/></linearGradient>
+    <linearGradient id="m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E6E9EE"/><stop offset="1" stop-color="#B8BEC9"/></linearGradient>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE680"/><stop offset="1" stop-color="#F0A800"/></linearGradient>
+    <rect id="b" x="16" y="56" width="96" height="56" rx="10"/>
+    <rect id="l" x="10" y="40" width="108" height="24" rx="9"/>
+    <clipPath id="cb"><use href="#b"/></clipPath>
+    <clipPath id="cl"><use href="#l"/></clipPath>
+  </defs>
+  <path d="M46 42V31Q46 24 53 24H75Q82 24 82 31V42" fill="none" stroke="#3B2A1A" stroke-width="18" stroke-linejoin="round"/>
+  <path d="M46 42V31Q46 24 53 24H75Q82 24 82 31V42" fill="none" stroke="url(#m)" stroke-width="7" stroke-linejoin="round"/>
+  <use href="#b" transform="translate(0 5)" fill="#3B2A1A" stroke="#3B2A1A" stroke-width="8"/>
+  <use href="#b" fill="url(#w)"/>
+  <g clip-path="url(#cb)">
+    <use href="#b" fill="#946427" fill-opacity=".35"/>
+    <use href="#b" y="-8" fill="url(#w)"/>
+    <path d="M16 80H112M16 96H112" stroke="#8A5A26" stroke-width="3"/>
+  </g>
+  <use href="#b" fill="none" stroke="#3B2A1A" stroke-width="8"/>
+  <use href="#l" fill="url(#w)"/>
+  <g clip-path="url(#cl)"><use href="#l" fill="#946427" fill-opacity=".35"/><use href="#l" y="-6" fill="url(#w)"/></g>
+  <path d="M20 47H62" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="5" stroke-linecap="round"/>
+  <use href="#l" fill="none" stroke="#3B2A1A" stroke-width="8"/>
+  <g fill="url(#m)" stroke="#3B2A1A" stroke-width="5" stroke-linejoin="round">
+    <path d="M14 92H28V110H14Z"/><path d="M100 92H114V110H100Z"/>
+    <path d="M8 38H24V58H8Z"/><path d="M104 38H120V58H104Z"/>
+  </g>
+  <rect x="53" y="52" width="22" height="26" rx="6" fill="url(#g)" stroke="#3B2A1A" stroke-width="6"/>
+  <circle cx="64" cy="66" r="3.5" fill="#3B2A1A"/>
+</svg>

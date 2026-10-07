@@ -18,6 +18,66 @@ const TS_EXTENSION = {
 };
 const NO_PHASER = (message) => ({ name: 'phaser', message });
 const NO_UPWARD = { regex: '(^|/)(scenes|ui)(/|\\.|$)', message: 'no upward imports' };
+/**
+ * TECH §2R.1 (K-49, WP-A acceptance): the pre-2R board constants describe only the default 6×8 | 2×8 board. Outside
+ * core/coords.ts every size comes from the level geometry (`s.lvl.geo`, `CompiledLevel.geo`) or, for encodings, from
+ * core/geometry.ts (`MAX_COLS`, `MAX_ROWS`).
+ */
+const LEGACY_BOARD_MESSAGE =
+  'pre-2R board constant: read the level geometry (s.lvl.geo) or geometry.ts (TECH §2R.1)';
+const LEGACY_BOARD = [
+  {
+    regex: '(^|/)coords(\\.ts)?$',
+    importNames: [
+      'GRID_COLS',
+      'GRID_ROWS',
+      'GRID_CELLS',
+      'BOARD_ROWS',
+      'CRANE_ROW',
+      'YARD_COLS',
+      'SITE_X',
+      'SITE_COLS',
+      'BOUNDARY_X',
+      'YARD_CELLS',
+      'SEGMENT_CELLS',
+      'ROW_MASK_ALL',
+    ],
+    message: LEGACY_BOARD_MESSAGE,
+  },
+  {
+    regex: '(^|/)core/state(\\.ts)?$|^\\./state(\\.ts)?$',
+    importNames: ['YARD_OCC_ROWS'],
+    message: LEGACY_BOARD_MESSAGE,
+  },
+];
+/**
+ * Transition (TECH §2R.12): files that still read the default-board constants until their package moves them to the
+ * level geometry. WP-G removes the scene/UI entries; WP-B moved the validator (core list empty). Do not add files.
+ */
+const LEGACY_BOARD_SCENES = [
+  'src/ui/remaining.ts',
+  'src/scenes/level/BoardView.ts',
+  'src/scenes/level/TrowelPicker.ts',
+  'src/scenes/level/pieceState.ts',
+  'src/scenes/level/tutorial/highlights.ts',
+  'src/scenes/level/LevelScene.ts',
+  'src/scenes/level/hitTest.ts',
+  'src/scenes/level/EventPlayer.ts',
+];
+const LEGACY_BOARD_CORE = [];
+const BROWSER_PATTERNS = [DEBUG_HARNESS, { regex: '^node:', message: 'browser code: no Node APIs' }];
+const CORE_PATHS = [
+  NO_PHASER('core is pure: no Phaser'),
+  { name: 'zod', message: 'core uses zod/mini (bundle size, see TECH_DESIGN §8)' },
+];
+const CORE_PATTERNS = [
+  { regex: '^node:', message: 'core is pure: no Node APIs' },
+  {
+    regex: '(^|/)(scenes|ui|meta|services|theme|i18n|tools|debug|harness|config)(/|\\.|$)',
+    message: 'core must not import outer layers',
+  },
+  TS_EXTENSION,
+];
 
 export default tseslint.config(
   { ignores: ['dist', 'node_modules', 'artifacts', 'coverage'] },
@@ -37,10 +97,14 @@ export default tseslint.config(
     files: ['src/**/*.ts'],
     ignores: ['src/main.ts', 'src/debug/**', 'src/harness/**'],
     rules: {
-      'no-restricted-imports': [
-        'error',
-        { patterns: [DEBUG_HARNESS, { regex: '^node:', message: 'browser code: no Node APIs' }] },
-      ],
+      'no-restricted-imports': ['error', { patterns: [...BROWSER_PATTERNS, ...LEGACY_BOARD] }],
+    },
+  },
+  {
+    // main.ts and the dev-only debug/harness code: no pre-2R board constants either.
+    files: ['src/main.ts', 'src/debug/**/*.ts', 'src/harness/**/*.ts', 'tests/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: LEGACY_BOARD }],
     },
   },
   {
@@ -49,20 +113,7 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': [
         'error',
-        {
-          paths: [
-            NO_PHASER('core is pure: no Phaser'),
-            { name: 'zod', message: 'core uses zod/mini (bundle size, see TECH_DESIGN §8)' },
-          ],
-          patterns: [
-            { regex: '^node:', message: 'core is pure: no Node APIs' },
-            {
-              regex: '(^|/)(scenes|ui|meta|services|theme|i18n|tools|debug|harness|config)(/|\\.|$)',
-              message: 'core must not import outer layers',
-            },
-            TS_EXTENSION,
-          ],
-        },
+        { paths: CORE_PATHS, patterns: [...CORE_PATTERNS, ...LEGACY_BOARD] },
       ],
       'no-restricted-globals': [
         'error',
@@ -98,7 +149,12 @@ export default tseslint.config(
         'error',
         {
           paths: [NO_PHASER('meta/services are engine-free')],
-          patterns: [NO_UPWARD, DEBUG_HARNESS, { regex: '^node:', message: 'browser code: no Node APIs' }],
+          patterns: [
+            NO_UPWARD,
+            DEBUG_HARNESS,
+            { regex: '^node:', message: 'browser code: no Node APIs' },
+            ...LEGACY_BOARD,
+          ],
         },
       ],
     },
@@ -123,6 +179,7 @@ export default tseslint.config(
             NO_UPWARD,
             DEBUG_HARNESS,
             { regex: '^node:', message: 'browser code: no Node APIs' },
+            ...LEGACY_BOARD,
           ],
         },
       ],
@@ -138,9 +195,24 @@ export default tseslint.config(
           patterns: [
             { regex: '(^|/)(scenes|ui)(/|\\.|$)', message: 'tools may import core and theme/draw only' },
             TS_EXTENSION,
+            ...LEGACY_BOARD,
           ],
         },
       ],
     },
   },
+  {
+    // Transition (see LEGACY_BOARD_SCENES): the scene/UI layer rules without the board-constant ban.
+    files: LEGACY_BOARD_SCENES,
+    rules: { 'no-restricted-imports': ['error', { patterns: BROWSER_PATTERNS }] },
+  },
+  // Transition (see LEGACY_BOARD_CORE): the core layer rules without the board-constant ban.
+  ...(LEGACY_BOARD_CORE.length > 0
+    ? [
+        {
+          files: LEGACY_BOARD_CORE,
+          rules: { 'no-restricted-imports': ['error', { paths: CORE_PATHS, patterns: CORE_PATTERNS }] },
+        },
+      ]
+    : []),
 );

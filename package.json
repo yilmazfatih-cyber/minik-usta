@@ -8,9 +8,11 @@
   },
   "scripts": {
     "dev": "vite --host",
-    "build": "npm run typecheck && npm run build:verify",
+    "build": "npm run typecheck && npm run assets:check && npm run build:verify",
     "build:verify": "vite build && node tools/verify-dist.ts",
     "build:harness": "vite build --mode harness",
+    "assets": "node tools/assets.ts",
+    "assets:check": "node tools/assets.ts --check",
     "preview": "vite preview --host",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -630,8 +630,8 @@ describe('K-43 in-level record and resume (TECH 11.1)', () => {
     const h = harness();
     const s = h.open();
     s.beginAttempt(start({ preBoosters: ['openShutter'] }));
-    s.recordAction({ kind: 'paint', pieceId: 1, color: 'R' }, { movesMade: 0 });
-    s.recordAction({ kind: 'paint', pieceId: 2, color: 'B' }, { movesMade: 0 });
+    s.recordAction({ kind: 'paint', a: 1, b: 3 }, { movesMade: 0 });
+    s.recordAction({ kind: 'paint', a: 2, b: 4 }, { movesMade: 0 });
     s.recordAction({ kind: 'trowel', seg: 0, x: 1, y: 2 }, { movesMade: 0 });
     expect(attemptBoosters(s.data.inLevel as NonNullable<SaveData['inLevel']>)).toEqual({
       openShutter: 1,

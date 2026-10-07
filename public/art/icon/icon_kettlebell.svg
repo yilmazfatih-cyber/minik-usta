@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="k" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF8E3"/><stop offset="1" stop-color="#EBE0C5"/></linearGradient>
+    <linearGradient id="i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7A6E63"/><stop offset="1" stop-color="#362718"/></linearGradient>
+    <circle id="s" cx="64" cy="60" r="52"/>
+    <clipPath id="c"><use href="#s"/></clipPath>
+  </defs>
+  <use href="#s" transform="translate(0 5)" fill="#3B2A1A" stroke="#3B2A1A" stroke-width="8"/>
+  <use href="#s" fill="url(#k)"/>
+  <g clip-path="url(#c)"><use href="#s" fill="#ADA692" fill-opacity=".35"/><use href="#s" y="-8" fill="url(#k)"/></g>
+  <use href="#s" fill="none" stroke="#3B2A1A" stroke-width="8"/>
+  <path d="M46 64V44Q46 26 64 26Q82 26 82 44V64" fill="none" stroke="#3B2A1A" stroke-width="13" stroke-linejoin="round"/>
+  <path d="M30 76C30 56 46 48 64 48C82 48 98 56 98 76C98 90 90 98 84 100H44C38 98 30 90 30 76Z" fill="url(#i)" stroke="#3B2A1A" stroke-width="5"/>
+  <ellipse cx="48" cy="64" rx="9" ry="5" transform="rotate(-35 48 64)" fill="#FFFFFF" fill-opacity=".45"/>
+</svg>

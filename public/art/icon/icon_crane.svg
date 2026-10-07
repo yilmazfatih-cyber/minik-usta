@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="o" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFBA67"/><stop offset="1" stop-color="#EB8E1D"/></linearGradient>
+    <linearGradient id="m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E6E9EE"/><stop offset="1" stop-color="#B8BEC9"/></linearGradient>
+    <rect id="b" x="38" y="24" width="52" height="36" rx="11"/>
+    <path id="k" d="M64 56V80A18 18 0 1 1 30 72"/>
+    <clipPath id="c"><use href="#b"/></clipPath>
+  </defs>
+  <path d="M64 0V30" stroke="#3B2A1A" stroke-width="20"/>
+  <path d="M64 0V30" stroke="#E9C27A" stroke-width="10"/>
+  <path d="M60 5L68 9M60 13L68 17M60 21L68 25" stroke="#9E8453" stroke-width="3" stroke-linecap="round"/>
+  <use href="#k" transform="translate(0 5)" fill="none" stroke="#3B2A1A" stroke-width="32" stroke-linecap="round"/>
+  <use href="#k" fill="none" stroke="#3B2A1A" stroke-width="32" stroke-linecap="round"/>
+  <use href="#k" fill="none" stroke="url(#o)" stroke-width="16" stroke-linecap="round"/>
+  <path d="M60 64V80M32 70A16 16 0 0 1 36 62" fill="none" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="4" stroke-linecap="round"/>
+  <use href="#b" transform="translate(0 5)" fill="#3B2A1A" stroke="#3B2A1A" stroke-width="8"/>
+  <use href="#b" fill="url(#o)"/>
+  <g clip-path="url(#c)"><use href="#b" fill="#AD6915" fill-opacity=".35"/><use href="#b" y="-7" fill="url(#o)"/></g>
+  <path d="M46 31H62" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="5" stroke-linecap="round"/>
+  <use href="#b" fill="none" stroke="#3B2A1A" stroke-width="8"/>
+  <circle cx="64" cy="42" r="10" fill="url(#m)" stroke="#3B2A1A" stroke-width="5"/>
+  <circle cx="64" cy="42" r="3" fill="#3B2A1A"/>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#85D67C"/><stop offset="1" stop-color="#46B23A"/></linearGradient>
+    <linearGradient id="m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E6E9EE"/><stop offset="1" stop-color="#B8BEC9"/></linearGradient>
+    <path id="a" d="M96.9 112.5L102.8 105.5L107.5 98.2L111.1 90.7L113.6 83.1L115.1 75.4L115.4 67.8L114.7 60.4L113 53.3L110.3 46.6L106.6 40.3L102 34.7L96.5 29.7L90.3 25.6L83.3 22.5L75.7 20.3L67.6 19.3L59 19.4L50.1 20.7A9.5 9.5 0 0 0 53.9 39.3L60.5 38.3L66.5 38.3L71.9 39L76.8 40.3L81.1 42.3L84.9 44.8L88.2 47.7L91 51.1L93.2 54.9L94.9 59.1L96 63.6L96.4 68.3L96.2 73.3L95.2 78.4L93.5 83.6L91 88.9L87.5 94.2L83.1 99.5A9.5 9.5 0 0 0 96.9 112.5Z"/>
+    <path id="k" d="M63 28L43 9L15 37L52 53Z"/>
+    <clipPath id="c"><use href="#a"/></clipPath>
+  </defs>
+  <use href="#a" transform="translate(0 4)" fill="#3B2A1A" stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round"/>
+  <use href="#k" transform="translate(0 5)" fill="#3B2A1A" stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round"/>
+  <use href="#a" fill="url(#g)"/>
+  <g clip-path="url(#c)"><use href="#a" fill="#34842B" fill-opacity=".35"/><use href="#a" y="-5" fill="url(#g)"/></g>
+  <path d="M106 48Q112 62 110 80" fill="none" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="5" stroke-linecap="round"/>
+  <use href="#a" fill="none" stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round"/>
+  <use href="#k" fill="url(#m)" stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M58 31L24 37" stroke="#94979C" stroke-width="4" stroke-linecap="round"/>
+  <path d="M40 18L28 30" stroke="#FFFFFF" stroke-opacity=".8" stroke-width="4" stroke-linecap="round"/>
+</svg>

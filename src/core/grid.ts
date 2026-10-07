@@ -4,7 +4,7 @@
  */
 import { Zone } from './types.ts';
 import type { PieceId } from './types.ts';
-import { BOARD_ROWS, GRID_ROWS, SITE_COLS, SITE_X, YARD_COLS } from './coords.ts';
+import { MAX_ROWS } from './geometry.ts';
 import { shapeByIndex } from './shapes.ts';
 import { PLAN_OUTSIDE } from './level/compile.ts';
 import {
@@ -12,7 +12,6 @@ import {
   H,
   OF,
   SITE_TROWEL,
-  YARD_OCC_ROWS,
   filledMask,
   hdr,
   obstacleField,
@@ -77,22 +76,24 @@ function writePiece(s: GameState, id: PieceId, value: number): void {
     for (const c of shape.cells) setYardOcc(s, x + c.x, y + c.y, value);
   } else {
     const seg = pieceSeg(s, id);
-    for (const c of shape.cells) setSiteOcc(s, seg, x - SITE_X + c.x, y + c.y, value);
+    const siteX = s.lvl.geo.siteX;
+    for (const c of shape.cells) setSiteOcc(s, seg, x - siteX + c.x, y + c.y, value);
   }
 }
 
 /**
  * Recomputes `filled` (locked blocks + Golden Trowel cells on plan cells) and `wrongOcc` (plan-area rows holding
- * debris or a stuck mortar block, K-34 / E-43) of one segment from its siteOcc. O(16).
+ * debris or a stuck mortar block, K-34 / E-43) of one segment from its siteOcc. O(ws · hs).
  */
 export function refreshSiteMasks(s: GameState, seg: number): void {
   const plan = s.lvl.segments[seg];
   if (!plan) return;
-  for (let sx = 0; sx < SITE_COLS; sx++) {
+  const { ws, hs } = s.lvl.geo;
+  for (let sx = 0; sx < ws; sx++) {
     let filled = 0;
     let wrong = 0;
     const area = planAreaMask(s.lvl, seg, sx);
-    for (let sy = 0; sy < BOARD_ROWS; sy++) {
+    for (let sy = 0; sy < hs; sy++) {
       if (((area >> sy) & 1) === 0) continue;
       const v = siteOcc(s, seg, sx, sy);
       if (v === SITE_TROWEL) {
@@ -109,20 +110,22 @@ export function refreshSiteMasks(s: GameState, seg: number): void {
 }
 
 /**
- * Collision rows for the drag BFS (TECH §4.1 step 2): `out[y]` bit x is set when board/crane cell (x, y) is blocked.
- * Yard occupancy (minus `exclude`), the visible segment shifted by the elevator offset, and the platform rows
- * `y < elev` of the site columns. The wall boundary has no cells (R-03).
+ * Collision rows for the drag BFS (TECH §4.1 step 2, §2R.1): `out[y]` bit x is set when board/crane cell (x, y) is
+ * blocked, rows `0 … geo.rows − 1` of the frame. Yard occupancy (minus `exclude`; yard air and the crane area are
+ * empty), the visible segment shifted by the elevator offset (plan rows `sy < hs` on the board), and the platform rows
+ * `y < elev` of the site columns. Site air and the crane area are free. The wall boundary has no cells (R-03).
  */
 export function collisionMasks(
   s: GameState,
   exclude: PieceId,
-  out: Uint8Array = new Uint8Array(GRID_ROWS),
+  out: Uint8Array = new Uint8Array(MAX_ROWS),
 ): Uint8Array {
   out.fill(0);
+  const { wy, ws, hs, h, rows, siteX } = s.lvl.geo;
   const skip = exclude + 1;
-  for (let y = 0; y < YARD_OCC_ROWS; y++) {
+  for (let y = 0; y < rows; y++) {
     let row = 0;
-    for (let x = 0; x < YARD_COLS; x++) {
+    for (let x = 0; x < wy; x++) {
       const v = yardOcc(s, x, y);
       if (v !== 0 && v !== skip) row |= 1 << x;
     }
@@ -130,35 +133,36 @@ export function collisionMasks(
   }
   const seg = visibleSegment(s);
   const elev = hdr(s, H.elev);
-  for (let y = 0; y < GRID_ROWS; y++) {
-    for (let sx = 0; sx < SITE_COLS; sx++) {
+  for (let y = 0; y < rows; y++) {
+    for (let sx = 0; sx < ws; sx++) {
       const sy = y - elev;
       let blocked = y < elev;
-      if (!blocked && sy < BOARD_ROWS && y < BOARD_ROWS) {
+      if (!blocked && sy < hs && y < h) {
         const v = siteOcc(s, seg, sx, sy);
         blocked = v !== 0 && v !== skip;
       }
-      if (blocked) out[y] = (out[y] ?? 0) | (1 << (SITE_X + sx));
+      if (blocked) out[y] = (out[y] ?? 0) | (1 << (siteX + sx));
     }
   }
   return out;
 }
 
 /**
- * `colTop` of the site columns (TECH §4.1): highest blocked board row of x = 6 / x = 7 (platform included), −1 when
- * the column is empty. `out[0]` = x 6, `out[1]` = x 7.
+ * `colTop` of the site columns (TECH §4.1): highest blocked board row of each site column (platform included), −1
+ * when the column is empty. `out[sx]` = column `geo.siteX + sx` (default board: `out[0]` = x 6, `out[1]` = x 7).
  */
 export function siteColumnTops(
   s: GameState,
   exclude: PieceId,
-  out: Int8Array = new Int8Array(SITE_COLS),
+  out: Int8Array = new Int8Array(s.lvl.geo.ws),
 ): Int8Array {
+  const { ws, hs, h } = s.lvl.geo;
   const seg = visibleSegment(s);
   const elev = hdr(s, H.elev);
   const skip = exclude + 1;
-  for (let sx = 0; sx < SITE_COLS; sx++) {
+  for (let sx = 0; sx < ws; sx++) {
     let top = elev - 1;
-    for (let sy = 0; sy < BOARD_ROWS && sy + elev < BOARD_ROWS; sy++) {
+    for (let sy = 0; sy < hs && sy + elev < h; sy++) {
       const v = siteOcc(s, seg, sx, sy);
       if (v !== 0 && v !== skip) top = sy + elev;
     }
@@ -175,6 +179,7 @@ export function siteColumnTops(
 export function stateInvariantErrors(s: GameState): string[] {
   const errors: string[] = [];
   const { lvl } = s;
+  const { wy, hy, ws, hs, rows, siteX } = lvl.geo;
   const P = lvl.layout.counts.pieces;
   const expectYard = new Map<number, number>();
   const expectSite = new Map<string, number>();
@@ -189,25 +194,18 @@ export function stateInvariantErrors(s: GameState): string[] {
       const cx = x + c.x;
       const cy = y + c.y;
       if (zone === Zone.yard) {
-        if (cx < 0 || cx >= YARD_COLS || cy < 0 || cy >= BOARD_ROWS) {
+        if (cx < 0 || cx >= wy || cy < 0 || cy >= hy) {
           errors.push(`piece ${id}: yard cell (${cx},${cy}) outside the yard`);
           continue;
         }
-        const key = cy * YARD_COLS + cx;
+        const key = cy * wy + cx;
         if (expectYard.has(key))
           errors.push(`piece ${id}: overlaps piece ${expectYard.get(key)} at (${cx},${cy})`);
         expectYard.set(key, id + 1);
       } else {
         const seg = pieceSeg(s, id);
-        const sx = cx - SITE_X;
-        if (
-          seg < 0 ||
-          seg >= lvl.segments.length ||
-          sx < 0 ||
-          sx >= SITE_COLS ||
-          cy < 0 ||
-          cy >= BOARD_ROWS
-        ) {
+        const sx = cx - siteX;
+        if (seg < 0 || seg >= lvl.segments.length || sx < 0 || sx >= ws || cy < 0 || cy >= hs) {
           errors.push(`piece ${id}: site cell (${cx},${cy}) seg ${seg} outside the site`);
           continue;
         }
@@ -221,20 +219,20 @@ export function stateInvariantErrors(s: GameState): string[] {
   lvl.obstacles.forEach((o) => {
     if (o.type !== 'crate' && o.type !== 'cement_bag') return;
     if (obstacleField(s, o.index, OF.hp) <= 0) return;
-    const key = o.y * YARD_COLS + o.x;
+    const key = o.y * wy + o.x;
     if (expectYard.has(key)) errors.push(`obstacle ${o.index}: shares (${o.x},${o.y}) with a piece`);
     expectYard.set(key, -(o.index + 1));
   });
-  for (let y = 0; y < YARD_OCC_ROWS; y++) {
-    for (let x = 0; x < YARD_COLS; x++) {
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < wy; x++) {
       const got = yardOcc(s, x, y);
-      const want = expectYard.get(y * YARD_COLS + x) ?? 0;
+      const want = expectYard.get(y * wy + x) ?? 0;
       if (got !== want) errors.push(`yardOcc (${x},${y}) = ${got}, expected ${want}`);
     }
   }
   for (let seg = 0; seg < lvl.segments.length; seg++) {
-    for (let sy = 0; sy < BOARD_ROWS; sy++) {
-      for (let sx = 0; sx < SITE_COLS; sx++) {
+    for (let sy = 0; sy < hs; sy++) {
+      for (let sx = 0; sx < ws; sx++) {
         const got = siteOcc(s, seg, sx, sy);
         if (got === SITE_TROWEL) {
           if (expectSite.has(`${seg}:${sx},${sy}`))
@@ -250,7 +248,7 @@ export function stateInvariantErrors(s: GameState): string[] {
   const scratch: GameState = { lvl, buf: s.buf.slice() };
   for (let seg = 0; seg < lvl.segments.length; seg++) {
     refreshSiteMasks(scratch, seg);
-    for (let sx = 0; sx < SITE_COLS; sx++) {
+    for (let sx = 0; sx < ws; sx++) {
       if (filledMask(scratch, seg, sx) !== filledMask(s, seg, sx))
         errors.push(
           `filled seg ${seg} col ${sx} = ${filledMask(s, seg, sx)}, expected ${filledMask(scratch, seg, sx)}`,
@@ -277,7 +275,7 @@ export function stateInvariantErrors(s: GameState): string[] {
     if (!plan) continue;
     const shape = shapeByIndex(pieceShape(s, id));
     for (let c = 0; c < shape.w; c++) {
-      const sx = pieceX(s, id) - SITE_X + c;
+      const sx = pieceX(s, id) - siteX + c;
       const r = pieceY(s, id) + (shape.colBottom[c] ?? 0);
       const need = ((1 << r) - 1) & (plan.planMask[sx] ?? 0);
       if ((need & ~filledMask(s, seg, sx)) !== 0)
@@ -289,5 +287,7 @@ export function stateInvariantErrors(s: GameState): string[] {
 
 /** Plan colour index at a local cell: 0–7, PLAN_DOT (−1) or PLAN_OUTSIDE (−2). */
 export function planColorAt(s: GameState, seg: number, sx: number, sy: number): number {
-  return s.lvl.segments[seg]?.planColors[sy * SITE_COLS + sx] ?? PLAN_OUTSIDE;
+  const { ws, hs } = s.lvl.geo;
+  if (sx < 0 || sx >= ws || sy < 0 || sy >= hs) return PLAN_OUTSIDE;
+  return s.lvl.segments[seg]?.planColors[sy * ws + sx] ?? PLAN_OUTSIDE;
 }

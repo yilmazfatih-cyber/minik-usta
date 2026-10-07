@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import rawTokens from '../../src/theme/tokens.json' with { type: 'json' };
 import { COLOR_CODES } from '../../src/core/types.ts';
 import type { ColorCode } from '../../src/core/types.ts';
-import { TOKENS, parseTokens } from '../../src/theme/tokens.ts';
+import { PENDING_TOKEN_KEYS, TOKENS, parseTokens } from '../../src/theme/tokens.ts';
 import {
   blockPalette,
   css,
@@ -130,5 +130,68 @@ describe('palette rules (ART 2.1, ART 2.2, ART 4, ART 10)', () => {
     expect(css([255, 255, 255])).toBe('#FFFFFF');
     expect(css([255, 255, 255], 0.28)).toBe('rgba(255,255,255,0.28)');
     expect(css([1.4, 2.6, 300], 1 / 3)).toBe('rgba(1,3,255,0.3333)');
+  });
+});
+
+describe('tokens v2 schema (TECH 2R.7; ART 3A, 7.1, 14; UX 3, 5.8, 5.9, 6.1, 13.1)', () => {
+  it('TECH 2R.7 the v2 groups design-lead added are typed in the runtime tokens', () => {
+    expect(TOKENS.blockV2.lipPx).toBe(12);
+    expect(TOKENS.blockV2.studEnabled).toBe(true);
+    expect(TOKENS.blockV2.studGlossArc).toEqual([0.42, 205, 285]);
+    expect(TOKENS.kit.buttonColor.green.base).toBe('#4CC23F');
+    expect(TOKENS.kit.badge.shape).toBe('roundedSquare');
+    expect(TOKENS.kit.ribbon.gold.stroke).toMatch(/^#/);
+    expect(TOKENS.tutorial.visibleMs).toBe(4000);
+    expect(TOKENS.layout.adaptive.yardHolePx).toBe(12);
+    expect(TOKENS.layout.home.ch1CropStops.at(-1)).toBe(1);
+    expect(TOKENS.layout.hud.goalChipMax).toBe(4);
+    expect(TOKENS.layout.win.cardSize).toBe(600);
+    expect(TOKENS.color.scene.gameTop).toBe('#3B2C85');
+    expect(TOKENS.color.obstacle.cargoSteel).toBe('#7A7A7A');
+    expect(TOKENS.alpha.sceneGridMajor).toBe(0.07);
+    expect(TOKENS.stroke.yardPreviewPx).toBe(4);
+    expect(TOKENS.duration.placeSheen).toBe(260);
+    expect(TOKENS.particles.sparkle).toBe(6);
+    expect(PENDING_TOKEN_KEYS).toEqual(['audio.sfx.sfx_teardown']);
+    expect(Object.isFrozen(TOKENS.kit.buttonColor.green)).toBe(true);
+    expect('_doc' in TOKENS.blockV2 || '_docStud' in TOKENS.blockV2).toBe(false);
+  });
+
+  it('TECH 2R.7 every key of tokens.json (except _doc*, meta.units and check.*) reaches the runtime tokens', () => {
+    const missing: string[] = [];
+    const walk = (raw: unknown, typed: unknown, path: string): void => {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+      for (const [k, v] of Object.entries(raw)) {
+        if (k.startsWith('_doc') || k === 'check' || path + k === 'meta.units') continue;
+        if (PENDING_TOKEN_KEYS.includes(path + k)) continue;
+        const t = (typed as Record<string, unknown> | undefined)?.[k];
+        if (t === undefined) missing.push(path + k);
+        else walk(v, t, `${path}${k}.`);
+      }
+    };
+    walk(rawTokens, TOKENS, '');
+    expect(missing).toEqual([]);
+  });
+
+  it('TECH 2R.7 a missing v2 key is a boot error that names the path', () => {
+    const a = clone();
+    delete (a.blockV2 as Record<string, unknown>).lipPx;
+    expect(() => parseTokens(a)).toThrow(/blockV2\.lipPx/);
+    const b = clone();
+    delete ((b.kit as Record<string, Record<string, unknown>>).buttonColor?.green as Record<string, unknown>)
+      .top;
+    expect(() => parseTokens(b)).toThrow(/kit\.buttonColor\.green\.top/);
+    const c = clone();
+    delete ((c.layout as Record<string, unknown>).home as Record<string, unknown>).playButtonW;
+    expect(() => parseTokens(c)).toThrow(/layout\.home\.playButtonW/);
+  });
+
+  it('TECH 2R.1 layout.adaptive.cellMaxPx is optional: absent → the cell stays 120, present → typed', () => {
+    const t = clone();
+    ((t.layout as Record<string, unknown>).adaptive as Record<string, unknown>).cellMaxPx = 144;
+    expect(parseTokens(t).layout.adaptive.cellMaxPx).toBe(144);
+    const u = clone();
+    delete ((u.layout as Record<string, unknown>).adaptive as Record<string, unknown>).cellMaxPx;
+    expect(parseTokens(u).layout.adaptive.cellMaxPx).toBeUndefined();
   });
 });

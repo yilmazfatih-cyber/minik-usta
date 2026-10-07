@@ -8,19 +8,21 @@
  *   `support`), so `reasons[0]` is the primary reason.
  * - `buildFront` (= `eligibleTrowelCells`) is GDD K-34 visibility hook 1.
  * - `returnTarget` is the K-17 bounce-back search: (1) the start cells when they are empty, (2) a drop over the yard from
- *   y = 10 − h in the columns nearest the start x (ties: nearer the wall first), (3) the end of the truck queue. The
- *   wrong-placement bounce and the S3 broken-glass return (`skipStart`) share it.
+ *   y = (H + 2) − h in the columns nearest the start x (ties: nearer the wall first; a landing needs every cell at
+ *   y ≤ Hy − 1, E-57), (3) the end of the truck queue. The wrong-placement bounce and the S3 broken-glass return
+ *   (`skipStart`) share it.
  * - `movePiece` / `lockPiece` / `stickPiece` keep the piece table, the occupancy grids and the per-column `filled` /
  *   `wrongOcc` masks in step (O(cells)) and own the Y8 `stuck` lifecycle (TECH §5.2): `stuck` turns true only through
  *   `stickPiece`; it turns false when the piece leaves the site (yard, queue, gone — `movePiece`) or locks
  *   (`lockPiece`). A stuck block returned to its site start keeps `stuck`.
  *
- * Board coordinates: x 0–7, board row y (site: plan row + elevator offset, K-24). `At` values for the site carry the
- * visible segment. A `PiecePlace` mirrors the piece record instead (site y = plan row of the segment frame).
+ * Board coordinates: x 0 … wy+ws−1, board row y (site: plan row + elevator offset, K-24); sizes from `s.lvl.geo`
+ * (K-49). `At` values for the site carry the visible segment. A `PiecePlace` mirrors the piece record instead (site
+ * y = plan row of the segment frame).
  */
 import { COLOR_CODES, Zone } from './types.ts';
 import type { Anchor, At, ColorCode, PieceId, Verdict, VerdictReason, ZoneName } from './types.ts';
-import { BOARD_ROWS, GRID_ROWS, SITE_COLS, SITE_X, YARD_COLS } from './coords.ts';
+import type { BoardGeo } from './geometry.ts';
 import { shapeByIndex } from './shapes.ts';
 import type { ShapeDef } from './shapes.ts';
 import { PLAN_DOT, PLAN_OUTSIDE } from './level/compile.ts';
@@ -58,9 +60,9 @@ import { blockCells } from './movement.ts';
 /** Where a piece is, as stored in its record (TECH §2.4). */
 export interface PiecePlace {
   readonly zone: ZoneName;
-  /** Yard: anchor x 0–5. Site: global column 6–7. Queue: the yard column the truck tries first (K-25 stage 1). */
+  /** Yard: anchor x 0 … wy−1. Site: global column (wy …). Queue: the yard column the truck tries first (K-25 stage 1). */
   readonly x: number;
-  /** Yard: board row. Site: plan row in the segment frame (board row = y + elevator offset, K-24). Queue: 8. */
+  /** Yard: board row. Site: plan row in the segment frame (board row = y + elevator offset, K-24). Queue: hy. */
   readonly y: number;
   /** Site segment; −1 elsewhere. */
   readonly seg: number;
@@ -115,7 +117,7 @@ export function placeAt(s: GameState, place: PiecePlace): At | null {
  * `isCorrectPlacement(state, pieceId, cells)` (TECH §5.2, GDD K-16, K-34). `cells` are board cells on the visible
  * segment (the piece may still be at its start: its own `wrongOcc` bits are ignored, so a stuck block lifted from a
  * `.` cell does not block itself). Conditions, all evaluated, reasons in the fixed order:
- * 1. `debris` — the block is debris (S4: never correct anywhere, K-16 (2)).
+ * 1. `debris` — Faz 2R: never produced (S4 debris is a material block; GDD K-16 (2) removed, K-34 hook 2).
  * 2. `outside` — a cell is outside the active plan area (K-16 (1)).
  * 3. `window` — a cell is on a `.` plan cell (K-16 (1), S2).
  * 4. `color` — a plan colour (resolved `?` colour, K-32) differs from the block colour (K-16 (1)).
@@ -126,21 +128,24 @@ export function placeAt(s: GameState, place: PiecePlace): At | null {
 export function isCorrectPlacement(s: GameState, pieceId: PieceId, cells: readonly BoardCell[]): Verdict {
   const seg = visibleSegment(s);
   const plan = s.lvl.segments[seg];
+  const { siteX, ws, hs } = s.lvl.geo;
   const elev = hdr(s, H.elev);
   const color = pieceColor(s, pieceId);
   let outside = false;
   let window = false;
   let wrongColor = false;
-  const low = [NO_ROW, NO_ROW];
+  const low: number[] = [];
+  for (let sx = 0; sx < ws; sx++) low.push(NO_ROW);
   for (const c of cells) {
-    const sx = c.x - SITE_X;
+    const sx = c.x - siteX;
     const sy = c.y - elev;
-    if (sx < 0 || sx >= SITE_COLS || sy < 0) {
+    if (sx < 0 || sx >= ws || sy < 0) {
       outside = true;
       continue;
     }
     low[sx] = Math.min(low[sx] ?? NO_ROW, sy);
-    const v = plan && sy < BOARD_ROWS ? (plan.planColors[sy * SITE_COLS + sx] ?? PLAN_OUTSIDE) : PLAN_OUTSIDE;
+    // site air (sy ≥ hs, K-03) is outside the plan area
+    const v = plan && sy < hs ? (plan.planColors[sy * ws + sx] ?? PLAN_OUTSIDE) : PLAN_OUTSIDE;
     if (v === PLAN_OUTSIDE) outside = true;
     else if (v === PLAN_DOT) window = true;
     else if (v !== color) wrongColor = true;
@@ -148,9 +153,11 @@ export function isCorrectPlacement(s: GameState, pieceId: PieceId, cells: readon
 
   // K-34: missing support per covered column (the piece's own cells never count as a wrong object below itself)
   const own = ownSiteRows(s, pieceId, seg);
-  const miss = [0, 0];
+  const miss: number[] = [];
+  let support = false;
+  for (let sx = 0; sx < ws; sx++) miss.push(0);
   if (plan) {
-    for (let sx = 0; sx < SITE_COLS; sx++) {
+    for (let sx = 0; sx < ws; sx++) {
       const r = low[sx] ?? NO_ROW;
       if (r === NO_ROW || r <= 0) continue;
       const dot = plan.dotMask[sx] ?? 0;
@@ -158,22 +165,21 @@ export function isCorrectPlacement(s: GameState, pieceId: PieceId, cells: readon
       const wrong = wrongOccMask(s, seg, sx) & ~(own[sx] ?? 0);
       const counted = filledMask(s, seg, sx) | (dot & ~wrong);
       miss[sx] = rowsBelow(r) & area & ~counted;
+      if (miss[sx] !== 0) support = true;
     }
   }
-  const support = (miss[0] ?? 0) !== 0 || (miss[1] ?? 0) !== 0;
-  const debris = (pieceFlags(s, pieceId) & FLAG_BIT.debris) !== 0;
-  if (!debris && !outside && !window && !wrongColor && !support) return OK_VERDICT;
+  // Faz 2R (OBSTACLES S4, GDD K-16 (2) removed): debris is a material block; `debris` is never produced (K-34 hook 2).
+  if (!outside && !window && !wrongColor && !support) return OK_VERDICT;
 
   const reasons: VerdictReason[] = [];
-  if (debris) reasons.push('debris');
   if (outside) reasons.push('outside');
   if (window) reasons.push('window');
   if (wrongColor) reasons.push('color');
   if (support) reasons.push('support');
   const missingSupport: At[] = [];
-  for (let sx = 0; sx < SITE_COLS; sx++) {
+  for (let sx = 0; sx < ws; sx++) {
     for (let m = miss[sx] ?? 0; m !== 0; m &= m - 1) {
-      missingSupport.push({ zone: 'site', x: SITE_X + sx, y: lowestBit(m) + elev, seg });
+      missingSupport.push({ zone: 'site', x: siteX + sx, y: lowestBit(m) + elev, seg });
     }
   }
   return { ok: false, reasons, missingSupport };
@@ -194,17 +200,15 @@ export function reasonCells(
   if (reason === 'support') return [];
   if (reason === 'debris') return cells.map((c) => ({ x: c.x, y: c.y }));
   const plan = s.lvl.segments[visibleSegment(s)];
+  const { siteX, ws, hs } = s.lvl.geo;
   const elev = hdr(s, H.elev);
   const color = pieceColor(s, pieceId);
   const out: BoardCell[] = [];
   for (const c of cells) {
-    const sx = c.x - SITE_X;
+    const sx = c.x - siteX;
     const sy = c.y - elev;
-    const inside = sx >= 0 && sx < SITE_COLS && sy >= 0;
-    const v =
-      inside && plan && sy < BOARD_ROWS
-        ? (plan.planColors[sy * SITE_COLS + sx] ?? PLAN_OUTSIDE)
-        : PLAN_OUTSIDE;
+    const inside = sx >= 0 && sx < ws && sy >= 0;
+    const v = inside && plan && sy < hs ? (plan.planColors[sy * ws + sx] ?? PLAN_OUTSIDE) : PLAN_OUTSIDE;
     const hit =
       reason === 'outside'
         ? v === PLAN_OUTSIDE
@@ -220,12 +224,13 @@ export function reasonCells(
 export function allCellsInPlanArea(s: GameState, cells: readonly BoardCell[]): boolean {
   const plan = s.lvl.segments[visibleSegment(s)];
   if (!plan) return false;
+  const { siteX, ws, hs } = s.lvl.geo;
   const elev = hdr(s, H.elev);
   for (const c of cells) {
-    const sx = c.x - SITE_X;
+    const sx = c.x - siteX;
     const sy = c.y - elev;
-    if (sx < 0 || sx >= SITE_COLS || sy < 0 || sy >= BOARD_ROWS) return false;
-    if ((plan.planColors[sy * SITE_COLS + sx] ?? PLAN_OUTSIDE) === PLAN_OUTSIDE) return false;
+    if (sx < 0 || sx >= ws || sy < 0 || sy >= hs) return false;
+    if ((plan.planColors[sy * ws + sx] ?? PLAN_OUTSIDE) === PLAN_OUTSIDE) return false;
   }
   return true;
 }
@@ -235,15 +240,16 @@ export function allCellsInPlanArea(s: GameState, cells: readonly BoardCell[]): b
 /**
  * `buildFront(state)` (GDD K-34 hook 1, TECH §5.2): per column of the visible segment, the lowest plan cell that is
  * not correctly filled and not an empty `.` cell — when that cell is empty. A wrong object there (debris, stuck
- * mortar; also on a `.` cell, E-43) or a complete column gives no front cell. Column 6 first.
+ * mortar; also on a `.` cell, E-43) or a complete column gives no front cell. First site column (x = wy) first.
  */
 export function buildFront(s: GameState): At[] {
   const seg = visibleSegment(s);
   const plan = s.lvl.segments[seg];
   const out: At[] = [];
   if (!plan) return out;
+  const { siteX, ws } = s.lvl.geo;
   const elev = hdr(s, H.elev);
-  for (let sx = 0; sx < SITE_COLS; sx++) {
+  for (let sx = 0; sx < ws; sx++) {
     const dot = plan.dotMask[sx] ?? 0;
     const area = (plan.planMask[sx] ?? 0) | dot;
     const dotFree = dot & ~wrongOccMask(s, seg, sx);
@@ -251,7 +257,7 @@ export function buildFront(s: GameState): At[] {
     if (free === 0) continue;
     const row = lowestBit(free);
     if (siteOcc(s, seg, sx, row) !== 0) continue;
-    out.push({ zone: 'site', x: SITE_X + sx, y: row + elev, seg });
+    out.push({ zone: 'site', x: siteX + sx, y: row + elev, seg });
   }
   return out;
 }
@@ -263,17 +269,18 @@ export const eligibleTrowelCells: (s: GameState) => At[] = buildFront;
 
 /**
  * GDD K-15: segment `seg` is complete when every non-`.` plan cell is correctly filled (locked block or trowel) and no
- * other block is in the segment's site area (debris or a stuck mortar block anywhere in the 2 × 8 part, E-24).
+ * other block is in the segment's site area (debris or a stuck mortar block anywhere in the ws × hs part, E-24).
  */
 export function isSegmentComplete(s: GameState, seg: number): boolean {
   const plan = s.lvl.segments[seg];
   if (!plan) return false;
-  for (let sx = 0; sx < SITE_COLS; sx++) {
+  const { ws, hs } = s.lvl.geo;
+  for (let sx = 0; sx < ws; sx++) {
     const need = plan.planMask[sx] ?? 0;
     if ((filledMask(s, seg, sx) & need) !== need) return false;
   }
-  for (let sy = 0; sy < BOARD_ROWS; sy++) {
-    for (let sx = 0; sx < SITE_COLS; sx++) {
+  for (let sy = 0; sy < hs; sy++) {
+    for (let sx = 0; sx < ws; sx++) {
       const v = siteOcc(s, seg, sx, sy);
       if (v > 0 && (pieceFlags(s, v - 1) & FLAG_BIT.locked) === 0) return false;
     }
@@ -284,28 +291,34 @@ export function isSegmentComplete(s: GameState, seg: number): boolean {
 // --- K-17: bounce-back target ------------------------------------------------------------------------------------------
 
 /**
- * Yard drop columns (K-17 step 2; same order as K-25 stage 3): every anchor column `0 … 6 − w`, nearest to `x` first,
+ * Yard drop columns (K-17 step 2; same order as K-25 stage 3): every anchor column `0 … wy − w`, nearest to `x` first,
  * ties to the larger x (nearer the wall).
  */
-export function nearestColumnsFirst(x: number, w: number): number[] {
+export function nearestColumnsFirst(geo: BoardGeo, x: number, w: number): number[] {
   const out: number[] = [];
-  for (let c = 0; c <= YARD_COLS - w; c++) out.push(c);
+  for (let c = 0; c <= geo.wy - w; c++) out.push(c);
   return out.sort((a, b) => Math.abs(a - x) - Math.abs(b - x) || b - a);
 }
 
+/** K-17 step 2 / K-25 drop start row: `(H + 2) − h` (the block's top cell in the top crane row; default 10 − h). */
+export function yardDropRow(geo: BoardGeo, shape: ShapeDef): number {
+  return geo.rows - shape.h;
+}
+
 /**
- * Drop over the yard (K-17 step 2, K-25): the block falls from `y = 10 − h` in anchor column `ix`, whatever the yard
- * gravity setting, onto its first support (open sky from the top: the highest occupied cell of each covered column;
- * crates and bags support, hidden items do not). Returns the landing row, or −1 when a landed cell would be above
- * y = 7 (or the column range is invalid). `exclude` = a piece to ignore (the moving one).
+ * Drop over the yard (K-17 step 2, K-25): the block falls from `y = (H + 2) − h` in anchor column `ix`, whatever the
+ * yard gravity setting, onto its first support (open sky from the top: the highest occupied cell of each covered
+ * column; crates and bags support, hidden items do not). Returns the landing row, or −1 when a landed cell would be at
+ * y ≥ Hy (yard air or crane area; E-57) or the column range is invalid. `exclude` = a piece to ignore (the moving one).
  */
 export function dropIntoYard(s: GameState, shape: ShapeDef, ix: number, exclude: PieceId = -1): number {
-  if (!Number.isInteger(ix) || ix < 0 || ix + shape.w > YARD_COLS) return -1;
+  const { wy, hy, rows } = s.lvl.geo;
+  if (!Number.isInteger(ix) || ix < 0 || ix + shape.w > wy) return -1;
   const skip = exclude + 1;
   let land = 0;
   for (let c = 0; c < shape.w; c++) {
     let top = -1;
-    for (let y = GRID_ROWS - 1; y >= 0; y--) {
+    for (let y = rows - 1; y >= 0; y--) {
       const v = yardOcc(s, ix + c, y);
       if (v !== 0 && v !== skip) {
         top = y;
@@ -314,7 +327,7 @@ export function dropIntoYard(s: GameState, shape: ShapeDef, ix: number, exclude:
     }
     land = Math.max(land, top + 1 - (shape.colBottom[c] ?? 0));
   }
-  return land + shape.h <= BOARD_ROWS ? land : -1;
+  return land + shape.h <= hy ? land : -1;
 }
 
 /** Result of the K-17 search. */
@@ -322,7 +335,7 @@ export interface ReturnTarget {
   /** GDD K-17 step that found the target: 1 start cells, 2 drop over the yard, 3 end of the truck queue. */
   readonly step: 1 | 2 | 3;
   readonly to: PiecePlace;
-  /** Step 2: the anchor the block falls from (`x`, 10 − h); the bounce animation falls from here to `to`. */
+  /** Step 2: the anchor the block falls from (`x`, (H + 2) − h); the bounce animation falls from here to `to`. */
   readonly dropFrom: Anchor | null;
 }
 
@@ -337,35 +350,37 @@ export interface ReturnOptions {
  * `returnTarget(state, pieceId, opts)` (GDD K-17, TECH §5.2). Pure: finds the target, does not move the piece.
  * Step 1: every start cell is empty (the piece itself does not count; the board is frozen during a drag, K-08, so this
  * always holds for yard and debris starts). Step 2: `nearestColumnsFirst(start x, w)` with `dropIntoYard` — for a site
- * start (x 6 or 7) the first candidate is the column nearest the wall. Step 3: end of the truck queue (K-26); the
- * queued block keeps the start column clamped into the yard as its first truck column.
+ * start (x ≥ wy) the first candidate is the column nearest the wall (`wy − w`). Step 3: end of the truck queue (K-26);
+ * the queued block keeps the start column clamped into the yard as its first truck column.
  */
 export function returnTarget(s: GameState, pieceId: PieceId, opts: ReturnOptions = {}): ReturnTarget {
   const start = opts.start ?? piecePlace(s, pieceId);
   const shape = shapeByIndex(pieceShape(s, pieceId));
+  const geo = s.lvl.geo;
   if (opts.skipStart !== true && startCellsEmpty(s, pieceId, shape, start))
     return { step: 1, to: start, dropFrom: null };
-  for (const x of nearestColumnsFirst(start.x, shape.w)) {
+  for (const x of nearestColumnsFirst(geo, start.x, shape.w)) {
     const y = dropIntoYard(s, shape, x, pieceId);
     if (y >= 0)
-      return { step: 2, to: yardPlace({ ix: x, iy: y }), dropFrom: { ix: x, iy: GRID_ROWS - shape.h } };
+      return { step: 2, to: yardPlace({ ix: x, iy: y }), dropFrom: { ix: x, iy: yardDropRow(geo, shape) } };
   }
-  const qx = Math.min(Math.max(start.x, 0), YARD_COLS - shape.w);
-  return { step: 3, to: { zone: 'queue', x: qx, y: BOARD_ROWS, seg: -1 }, dropFrom: null };
+  const qx = Math.min(Math.max(start.x, 0), geo.wy - shape.w);
+  return { step: 3, to: { zone: 'queue', x: qx, y: geo.hy, seg: -1 }, dropFrom: null };
 }
 
 function startCellsEmpty(s: GameState, id: PieceId, shape: ShapeDef, start: PiecePlace): boolean {
   const self = id + 1;
+  const { wy, hy, siteX, ws, hs } = s.lvl.geo;
   for (const c of shape.cells) {
     const x = start.x + c.x;
     const y = start.y + c.y;
     if (start.zone === 'yard') {
-      if (x < 0 || x >= YARD_COLS || y < 0 || y >= BOARD_ROWS) return false;
+      if (x < 0 || x >= wy || y < 0 || y >= hy) return false;
       const v = yardOcc(s, x, y);
       if (v !== 0 && v !== self) return false;
     } else if (start.zone === 'site') {
-      const sx = x - SITE_X;
-      if (sx < 0 || sx >= SITE_COLS || y < 0 || y >= BOARD_ROWS) return false;
+      const sx = x - siteX;
+      if (sx < 0 || sx >= ws || y < 0 || y >= hs) return false;
       const v = siteOcc(s, start.seg, sx, y);
       if (v !== 0 && v !== self) return false;
     } else {
@@ -385,7 +400,7 @@ function startCellsEmpty(s: GameState, id: PieceId, shape: ShapeDef, start: Piec
  */
 export function movePiece(s: GameState, id: PieceId, to: PiecePlace): void {
   const shape = shapeByIndex(pieceShape(s, id));
-  assertPlaceFits(shape, to);
+  assertPlaceFits(s.lvl.geo, shape, to);
   leaveBoard(s, id, shape);
   setPieceField(s, id, PF.x, to.x);
   setPieceField(s, id, PF.y, to.y);
@@ -409,21 +424,22 @@ export function lockPiece(s: GameState, id: PieceId): RevealedCell[] {
   setFlag(s, id, 'stuck', false);
   const seg = pieceSeg(s, id);
   const plan = s.lvl.segments[seg];
+  const { siteX, ws } = s.lvl.geo;
   const elev = hdr(s, H.elev);
   const shape = shapeByIndex(pieceShape(s, id));
   let revealed = revealedMask(s, seg);
   const opened: RevealedCell[] = [];
   for (const c of shape.cells) {
-    const sx = pieceX(s, id) + c.x - SITE_X;
+    const sx = pieceX(s, id) + c.x - siteX;
     const sy = pieceY(s, id) + c.y;
     const bit = 1 << sy;
     setWrongOccMask(s, seg, sx, wrongOccMask(s, seg, sx) & ~bit);
     setFilledMask(s, seg, sx, filledMask(s, seg, sx) | (bit & (plan?.planMask[sx] ?? 0)));
-    const local = sy * SITE_COLS + sx;
+    const local = sy * ws + sx;
     if (plan && (plan.hiddenMask >> local) & 1 && !((revealed >> local) & 1)) {
       revealed |= 1 << local;
       opened.push({
-        x: SITE_X + sx,
+        x: siteX + sx,
         y: sy + elev,
         color: COLOR_CODES[plan.planColors[local] ?? 0] ?? 'W',
       });
@@ -549,28 +565,32 @@ function lowestBit(m: number): number {
   return 31 - Math.clz32(m & -m);
 }
 
-/** Plan-row bits of the piece's own cells per site column when it sits on segment `seg` (else 0, 0). */
-function ownSiteRows(s: GameState, id: PieceId, seg: number): readonly [number, number] {
-  if (id < 0 || pieceZone(s, id) !== Zone.site || pieceSeg(s, id) !== seg) return [0, 0];
+const NO_ROWS: readonly number[] = Object.freeze([]);
+
+/** Plan-row bits of the piece's own cells per site column when it sits on segment `seg` (else none). */
+function ownSiteRows(s: GameState, id: PieceId, seg: number): readonly number[] {
+  if (id < 0 || pieceZone(s, id) !== Zone.site || pieceSeg(s, id) !== seg) return NO_ROWS;
+  const { siteX, ws, hs } = s.lvl.geo;
   const shape = shapeByIndex(pieceShape(s, id));
-  const rows: [number, number] = [0, 0];
+  const rows: number[] = [];
+  for (let sx = 0; sx < ws; sx++) rows.push(0);
   for (const c of shape.cells) {
-    const sx = pieceX(s, id) + c.x - SITE_X;
+    const sx = pieceX(s, id) + c.x - siteX;
     const sy = pieceY(s, id) + c.y;
-    if (sx >= 0 && sx < SITE_COLS && sy >= 0 && sy < BOARD_ROWS) rows[sx] = (rows[sx] ?? 0) | (1 << sy);
+    if (sx >= 0 && sx < ws && sy >= 0 && sy < hs) rows[sx] = (rows[sx] ?? 0) | (1 << sy);
   }
   return rows;
 }
 
-function assertPlaceFits(shape: ShapeDef, to: PiecePlace): void {
+function assertPlaceFits(geo: BoardGeo, shape: ShapeDef, to: PiecePlace): void {
   if (to.zone !== 'yard' && to.zone !== 'site') return;
   for (const c of shape.cells) {
     const x = to.x + c.x;
     const y = to.y + c.y;
     const ok =
       to.zone === 'yard'
-        ? x >= 0 && x < YARD_COLS && y >= 0 && y < BOARD_ROWS
-        : x >= SITE_X && x < SITE_X + SITE_COLS && y >= 0 && y < BOARD_ROWS && to.seg >= 0;
+        ? x >= 0 && x < geo.wy && y >= 0 && y < geo.hy
+        : x >= geo.siteX && x < geo.cols && y >= 0 && y < geo.hs && to.seg >= 0;
     if (!ok)
       throw new RangeError(`movePiece: ${shape.id} at ${to.zone} (${to.x},${to.y}) leaves the ${to.zone}`);
   }
@@ -592,8 +612,9 @@ function leaveBoard(s: GameState, id: PieceId, shape: ShapeDef): void {
   if (zone !== Zone.yard && zone !== Zone.site) return;
   if (zone === Zone.site) {
     const seg = pieceSeg(s, id);
+    const siteX = s.lvl.geo.siteX;
     for (const c of shape.cells) {
-      const sx = pieceX(s, id) + c.x - SITE_X;
+      const sx = pieceX(s, id) + c.x - siteX;
       const bit = 1 << (pieceY(s, id) + c.y);
       setWrongOccMask(s, seg, sx, wrongOccMask(s, seg, sx) & ~bit);
       setFilledMask(s, seg, sx, filledMask(s, seg, sx) & ~bit);
@@ -617,8 +638,9 @@ function markSiteMasks(s: GameState, id: PieceId, shape: ShapeDef): void {
   if (!locked && !wrong) return;
   const seg = pieceSeg(s, id);
   const plan = s.lvl.segments[seg];
+  const siteX = s.lvl.geo.siteX;
   for (const c of shape.cells) {
-    const sx = pieceX(s, id) + c.x - SITE_X;
+    const sx = pieceX(s, id) + c.x - siteX;
     const bit = 1 << (pieceY(s, id) + c.y);
     if (locked) setFilledMask(s, seg, sx, filledMask(s, seg, sx) | (bit & (plan?.planMask[sx] ?? 0)));
     else setWrongOccMask(s, seg, sx, wrongOccMask(s, seg, sx) | (bit & planAreaMask(s.lvl, seg, sx)));
