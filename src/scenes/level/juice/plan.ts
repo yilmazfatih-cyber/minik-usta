@@ -11,6 +11,7 @@
  *
  * Durations come from the catalogue (tokens); falls from `tokens.physics` (motion.ts), never ms per row.
  */
+import { DEFAULT_GEO } from '../../../core/geometry.ts';
 import { TOKENS } from '../../../theme/tokens.ts';
 import type { At, GameEvent, PieceId } from '../../../core/types.ts';
 import { fallLeg, glideMs } from '../motion.ts';
@@ -70,6 +71,8 @@ export interface PlanContext {
   readonly movesBefore: number;
   /** Height (rows) of each piece, for the K-17 drop target above the yard. */
   readonly pieceHeight: (id: PieceId) => number;
+  /** Rows of the level grid incl. the crane area (`geo.rows`; default 10). */
+  readonly gridRows?: number;
 }
 
 export interface MovePlan {
@@ -93,9 +96,12 @@ export function yardFallMs(rows: number): number {
   return fallLeg(rows, ph.yardFallAccel, ph.yardFallMax).ms;
 }
 
-/** Rows a block above the yard falls to land at `to` (K-17 step 2 "sahanın üstünden düşürme", K-25 `y = 10 − h`). */
-export function dropRows(to: At, h: number): number {
-  return Math.max(0, TOKENS.layout.grid.rows + TOKENS.layout.grid.craneRows - h - to.y);
+/**
+ * Rows a block above the yard falls to land at `to` (K-17 step 2 "sahanın üstünden düşürme", K-25 `y0 = rows − h`;
+ * `gridRows` = the level's `geo.rows`, TECH §2R.1 "Düşüş kaynakları").
+ */
+export function dropRows(to: At, h: number, gridRows: number): number {
+  return Math.max(0, gridRows - h - to.y);
 }
 
 /** JUICE #13 bounce flight (after the wrong flash): arc to the target, or to above it and down (K-17 step 2). */
@@ -189,7 +195,7 @@ export function planMove(events: readonly GameEvent[], ctx: PlanContext, bonusMa
   for (const e of of('pieceBounced', 3)) {
     const toQueue = e.to === 'queue';
     const h = ctx.pieceHeight(e.pieceId);
-    const rows = toQueue ? 0 : dropRows(e.to as At, h);
+    const rows = toQueue ? 0 : dropRows(e.to as At, h, ctx.gridRows ?? DEFAULT_GEO.rows);
     const flight = toQueue ? 0 : bounceMs(r, e.viaDrop, rows);
     const wrongMs = (r ? 0 : JUICE_VIEW.wrongShakeMs) + flight;
     add(cue(13, t, wrongMs, { ev: e, piece: e.pieceId, flag: toQueue, n: rows }));

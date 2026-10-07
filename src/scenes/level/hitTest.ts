@@ -5,8 +5,9 @@
  * `siteOcc` of the visible segment), never with per-block Phaser hit tests. Every block cell is grown by
  * `touch.hitSlopPx` on each side (120 → 180 px); when several blocks cover the point, the touch goes to the block with
  * the nearest cell centre. Whether that block may be picked is the core's decision (`tryBeginDrag`, K-09, K-14).
+ * Regions come from the level geometry `s.lvl.geo` (K-49, TECH §2R.1): the yard columns (air and crane rows included)
+ * and the visible segment's site columns.
  */
-import { BOARD_ROWS, GRID_ROWS, SITE_COLS, SITE_X, YARD_COLS } from '../../core/coords.ts';
 import { visibleSegment } from '../../core/grid.ts';
 import { H, hdr, siteOcc, yardOcc } from '../../core/state.ts';
 import type { GameState } from '../../core/state.ts';
@@ -41,16 +42,17 @@ export function pieceAtPoint(
       best = occ - 1;
     }
   };
-  for (let y = 0; y < GRID_ROWS; y++) {
-    for (let x = 0; x < YARD_COLS; x++) consider(yardOcc(s, x, y), x, y);
+  const geo = s.lvl.geo;
+  for (let y = 0; y < geo.rows; y++) {
+    for (let x = 0; x < geo.wy; x++) consider(yardOcc(s, x, y), x, y);
   }
   const seg = visibleSegment(s);
   if (seg < s.lvl.segments.length) {
     const elev = hdr(s, H.elev);
-    for (let sy = 0; sy < BOARD_ROWS; sy++) {
+    for (let sy = 0; sy < geo.hs; sy++) {
       const y = sy + elev;
-      if (y >= GRID_ROWS) break;
-      for (let sx = 0; sx < SITE_COLS; sx++) consider(siteOcc(s, seg, sx, sy), SITE_X + sx, y);
+      if (y >= geo.h) break;
+      for (let sx = 0; sx < geo.ws; sx++) consider(siteOcc(s, seg, sx, sy), geo.siteX + sx, y);
     }
   }
   return best;

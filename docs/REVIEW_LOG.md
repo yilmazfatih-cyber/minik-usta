@@ -1239,3 +1239,47 @@ Proje sahibine sorular:
   girdiler) → 512×768; `ui_tutorial_glove` atlas dışı tek doku (katalogda var).
 - [design-lead → orkestratör] ölçüt düzeltmesi bilgi: arka plan doygunluk kabulü HSL'den CIE LCh kromaya çevrildi (ART §7,
   ASSET §16.3 #1); HSL açık pastellerde %100 veriyor. Ölçüm %40 / %38 düşük, eşik %25.
+
+## Faz 2R uygulama — WP-I ana sayfa v2 + kazanma v2 (code-lead, 2026-10-07)
+
+Uygulama notu TECH §2R.8 sonunda. Görüntüler (git dışı): `artifacts/screens/2r/wp-i/`.
+
+- [code-lead → design-lead] ana sayfa EXPAND: `bg_home_town` alta çapalı değil, orta grupla `(H − 1920) × 0,5` kayar;
+  fazla yükseklik üstte ve altta görselin ilk / son piksel satırı gerilerek dolar (dikişsiz). Alta çapalıyken 390 × 844'te
+  yapı tabanı çimen çizgisinin ≈ 85 px üstünde kalıyordu. UX §0.1 / ART §7 "fazla yükseklik üstte prosedürel gök"
+  cümlesi buna göre güncellenmeli ya da itiraz edilmeli. Aynı kural `bg_win_plaza` için de uygulandı.
+- [code-lead → design-lead] karakter köşesi uzun ekranda `(H − 1920) × 1` kayar (`ui/kit/layout.ts`
+  `CHARACTER_EXPAND_SHARE`): 0,5'te Tuna + Kepçe ufuk çizgisinde kalıyor, düğmenin üstünde ≈ 450 px boş çimen oluyordu;
+  1'de ön plan çimenine iniyorlar (referans ekranlardaki "karakterler düğmenin üstünde" düzeni). Kabulse
+  `layout.home.characterExpandShare` token'ı ekleyin, kod onu okusun.
+- [code-lead → design-lead] `chr_tuna_bust`'ın düz alt kenarı çimenin üstünde "karton kesik" gibi okunuyordu: önüne
+  prosedürel bir çalı çizildi (`ui/kit/scenery.ts` `drawHedge`, ch1 `near` / `mid`, 8 px kontur, solid). Kalıcı çözüm
+  önerisi: ana sayfa için tam boy bir Tuna duruşu ya da bir ön plan SVG'si (`town_ch1_foreground`). Kepçe Tuna'nın
+  sağına alındı (başparmağı örtmüyor).
+- [code-lead → design-lead] `audio.sfx.sfx_locked` (JUICE #73) tokens'ta yok; kilitli sekme ve "Yakında" balonunda
+  geçici olarak `sfx_blocked` çalıyor. Satır eklenince `ui/kit/feel.ts` bir kelimeyle değişir.
+- [code-lead → design-lead] kazanma ışını: `fx_sunburst` normal karışımla α 0,35'te `bg_win_plaza`'nın kendi
+  parlamasında kayboluyor; ADD karışım + α `rayAlpha + 0,1` kullanıldı. Uygunsa `kit.sunburst.blend` /
+  `rayAlpha` değerini sabitleyin.
+- [code-lead → design-lead] "DEVAM" etiketi 80 px (UX §6.1 boyut vermiyor; 176 px'lik birincil düğmede "Bölüm N" ile
+  aynı). Kart: yapı hayaleti krem zeminde gri okunuyor; kart için ayrı bir hayalet tonu isterseniz söyleyin.
+- [code-lead → orkestratör] `town_ch1_tree` katalog satırı (design-lead isteği, yukarıda) WP-J'nin dosyasında
+  (`services/assetCatalog.ts`) ve `npm run assets` çıktısında; WP-I dosya alanı dışında kaldığı için eklenmedi. HomeScene
+  ağacı `town_ch1_treehouse`'un altında aynı kutuda zaten çiziyor (yedeği olmadığı için görsel gelince solarak belirir).
+  Satır eklenince başka değişiklik gerekmez; benzetimle çekilen görüntü `home-tree-sim-390x844.png`.
+- [code-lead → WP-L] ana sayfada eksik anahtarlar `tDynamic` ile anahtarın kendisini gösteriyor: `nav.shop`,
+  `nav.league`, `nav.home`, `nav.team`, `nav.album`, `town.ch1.title`, `hud.livesFull`, `settings.title`,
+  `common.comingSoon` (STORY §7.5, §7.7). tr.json / en.json'a girince kod değişmez.
+- [code-lead → WP-G / WP-K] bağlanacaklar: (1) deneme başında `isSliceReplay(save, id)` okunup kazanmada
+  `sliceWinRewards({ …, replay })` kullanılmalı (META §10: tekrarda yıldız yok, yalnız taban altın); bugün
+  `LevelScene.settle` `winRewards`'ı çağırıyor, `attempt.ts` her kazanmada yıldız ekliyor. (2) `WinScreen`'e 7. değişken
+  `{ context: { structureRatio, reduced, assets } }` verilebilir; verilmezse oyunun hizmetlerinden okunur.
+  (3) `LevelWindows.press` / `openWin`'in 6. değişkeni v2'de kullanılmıyor; tip `OptionButton` yerine juice
+  `ButtonTarget` olursa `KitButton` doğrudan #69'a verilebilir. (4) Kit atlası ilk kez ana sayfada ya da ilk kazanmada
+  pişiyor (≤ 200 ms); FTUE'de Bölüm 1 kazanılınca bu bir kare takılması olabilir — bölüm başında (`LevelScene` HUD v2)
+  `ensureKitAtlas(game)` çağrılmalı. (5) `scenes/flow/launch.ts` `homeTarget` artık kullanılmıyor (yerine
+  `meta/home.ts` `homeNextLevel`); testleri duruyor, silmek sahibinin işi. (6) HUD hamle plakasının kazanma katmanının
+  üstünde kalması (UX §6.1) LevelScene derinliğidir.
+- [code-lead → orkestratör] can kapsülü META §2 yenilenmesini **gösterir** (`regenAnchor`'dan 30 dk'da +1), ama kayıtta
+  yenilenmeyi yazan ve can 0'da bölümü durduran `meta/lives` Faz 4'te; dilimde sayaç ile gerçek davranış ayrışabilir.
+  Can penceresi (UX §3.1) dilim dışında kaldı: kapsüle dokunmak yalnız ikon zıplatır.

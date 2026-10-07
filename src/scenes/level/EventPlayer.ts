@@ -14,7 +14,6 @@
  * dots, chips and coins are created once and reused; nothing is allocated per frame on the drag path.
  */
 import Phaser from 'phaser';
-import { SITE_X } from '../../core/coords.ts';
 import { visibleSegment } from '../../core/grid.ts';
 import { PLAN_DOT, PLAN_OUTSIDE } from '../../core/level/compile.ts';
 import type { CompiledLevel } from '../../core/level/compile.ts';
@@ -687,6 +686,11 @@ export class EventPlayer implements JuiceStage {
     return this.host.layout().grid.cellRect(x, y);
   }
 
+  siteTopCell(): Rect {
+    const g = this.host.layout().grid;
+    return g.cellRect(g.geo.siteX, g.geo.h - 1);
+  }
+
   pieceColor(id: PieceId): number {
     const s = this.host.state();
     const code = s ? COLOR_CODES[pieceColor(s, id)] : undefined;
@@ -983,7 +987,8 @@ export class EventPlayer implements JuiceStage {
     const fade = Math.min(D.scaffoldFade, ms);
     const doneAlpha = TOKENS.alpha.segmentDoneScaffold;
     this.drive(time, fade, linear, (k) => board.setScaffoldAlpha(1 + (doneAlpha - 1) * k), true);
-    const siteViews = [...host.pieces.views()].filter((v) => v.pose.ax >= SITE_X - 0.01 && !v.isDragged);
+    const siteX = host.layout().grid.geo.siteX;
+    const siteViews = [...host.pieces.views()].filter((v) => v.pose.ax >= siteX - 0.01 && !v.isDragged);
     if (!reduced) {
       for (const v of siteViews) {
         this.fx.add({
@@ -1351,8 +1356,9 @@ export class EventPlayer implements JuiceStage {
   }
 
   siteGlow(time: number, ms: number): void {
+    const siteX = this.host.layout().grid.geo.siteX;
     for (const v of this.host.pieces.views()) {
-      if (v.pose.ax < SITE_X - 0.01) continue;
+      if (v.pose.ax < siteX - 0.01) continue;
       this.fx.add({
         start: time,
         ms,

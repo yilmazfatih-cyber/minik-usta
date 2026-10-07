@@ -134,6 +134,8 @@ export interface JuiceStage {
   /** Box a piece would have at board anchor `at` (yard / site At, board coordinates). */
   boxAt(id: PieceId, at: At): Rect | null;
   cellRect(x: number, y: number): Rect;
+  /** Top-left cell of the site (first site column, board row h − 1; level geometry, TECH §2R.1). */
+  siteTopCell(): Rect;
   /** Block colour (0xRRGGBB) of a piece / a colour code. */
   pieceColor(id: PieceId): number;
   colorOf(code: string): number;

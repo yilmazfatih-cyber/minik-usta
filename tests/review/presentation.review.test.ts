@@ -176,6 +176,7 @@ const ANSWERS: Partial<Record<keyof JuiceStage, unknown>> = {
   boardRect: RECT,
   screenRect: RECT,
   cellRect: RECT,
+  siteTopCell: RECT,
   pieceBox: RECT,
   boxAt: RECT,
   restAnchor: { ax: 0, ay: 0 },

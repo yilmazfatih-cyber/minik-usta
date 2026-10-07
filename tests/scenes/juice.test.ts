@@ -136,6 +136,7 @@ function recorder(): { stage: JuiceStage; calls: Call[] } {
     pieceBox: RECT,
     boxAt: RECT,
     cellRect: RECT,
+    siteTopCell: RECT,
     pieceColor: 0xff0000,
     colorOf: 0x00ff00,
     siteColors: [0x0000ff],

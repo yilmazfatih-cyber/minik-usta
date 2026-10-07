@@ -1182,6 +1182,53 @@ Görsel sonradan gelirse 200 ms'lik çapraz solmayla değişir (UX §3 "Yükleni
   ise kendiliğinden, ≥ 2 ise `ghost_<şekil>_valid` vurgusu; Fırça iki blok seçimi (Faz 3); hedefsiz yuvada #108 ve
   `booster.*.noTarget`. Yeni doku yok.
 
+**Uygulama notu (WP-I, 2026-10-07):**
+- **`meta/home.ts`** (saf, motorsuz): `homeModel(input, ch1CropStops)` → can görünümü (`stored − reserved`, 30 dk'da +1,
+  saat geri alınınca `lastSeenNow`'da donar), altın, yıldız, `nextLevel`, `sliceEnd`, `progress` (ilk kez kazanılan
+  farklı bölüm / `SLICE_LEVEL_COUNT` 10), `structureRatio` (ART §7.2 dilim kuralı: doğrusal), `structureStage`
+  (geçilen kırpma durağı sayısı, Faz 4 için), `chest` (n / `levelChest.everyLevels`), `tabs` (dilimde yalnız `home`
+  açık), `difficultyTag`, `contentEnd`, `replayLoop`, `pulse`. Döngü, paketteki **boşluksuz son bölümde** biter
+  (`sliceEndOf(availableLevels())`): bugünkü 5 JSON ile 1–5, Bölüm 6–10 gelince kendiliğinden 1–10. Ödül tarafı
+  `sliceWinRewards({ …, replay })` (META §10: tekrar = yalnız kazanma tabanı, yıldız yok) ve `isSliceReplay`;
+  `ui/rewards.ts` `WinRewards` ile yapısal olarak aynı. **Bağlanmadı:** kazanma anında `LevelScene.settle` hâlâ
+  `winRewards`'ı çağırıyor ve `attempt.ts` her kazanmada `stars += 1` yazıyor; `replay` deneme başında
+  `isSliceReplay(save, id)` ile okunup `sliceWinRewards`'a verilmeli (WP-G / WP-K).
+- **`ui/kit/*`** (Phaser): `atlas.ts` (`ensureKitAtlas`, `kitRef`, `kitSlice`, `kitButtonRef` — kit atlası oyun başına
+  bir kez, `RESTORE_WEBGL`'de yeniden yüklenir; listedeki dışında bir düğme yüksekliği isteğe bağlı pişirilir),
+  `KitButton` (3-dilim kit karesi + basılı kare, #97: yüz 10 px iner, ölçek 0,97, bırakınca 1,04 → 1,0; azaltılmış
+  harekette yalnız kalınlık; `setLip` #69'un v1 dudağını v2 basışa çevirir, `ButtonTarget` olarak kullanılabilir),
+  `Capsule`, `Ribbon`, `ProgressBar`, `NavBar`, `RingIcon` (sandık halkası), `HintBubble` ("Yakında" balonu, 1,2 s),
+  `ArtImage` (SVG raster / yedek + 200 ms çapraz solma + her doku değişiminde kutu ve `setCrop`'u yeniden uygular; yedeği
+  olmayan kimlik gizli başlar, görsel gelince solarak belirir; `extend` ile 1080 × 1920 görselin ilk / son piksel satırı
+  EXPAND fazlasına gerilir — düz renk bandında dikiş olmaz), `IconBinder` (ikon atlası P1'le gelince `refresh`),
+  `InlineText` (`{coin}` = v2 `icon_coin`), `text.ts` (`kitTextStyle`, `addKitText`: ART §8.1 dört stil), `layout.ts`
+  (saf: `homeLayout`, `winLayout`, `winRows`), `scenery.ts` (`drawHedge`), `feel.ts` (`sfx_button` + hafif haptik),
+  `gameContext.ts`.
+- **Yerleşim kararı (EXPAND):** arka plan görseli de orta grupla `(H − 1920) × 0,5` kayar; fazla yükseklik üstte ve
+  altta (alt bant gezinme çubuğunun arkasında) kenar satırı gerilerek dolar. Alta çapalı görselde 390 × 844'te yapı
+  tabanı çimen çizgisinin ≈ 85 px üstünde kalıyordu (WP-F notu). Karakter köşesi `CHARACTER_EXPAND_SHARE = 1` ile
+  düğmeye FIT mesafesini korur (uzun ekranda ön plan çimenine iner); design-lead onayına (REVIEW_LOG).
+- **HomeScene:** sahne `homeModel` + `homeLayout`'tan kurulur; yeniden boyutta ve dil değişiminde baştan kurulur.
+  Kit atlası `create`'te pişer (giriş soluşunun arkasında); `loadGroup('P1')` → ikonlar, `startBackground()` → P2/P3.
+  Ana sayfa görselleri sahne kapanınca **bırakılmaz** (≈ 4,5 MB / 64 MB): bırakılırsa her bölüm dönüşünde yedek +
+  çapraz solma görünür. Ayarlar düğmesi v1 `Popup` ile ses / müzik / titreşim satırlarını açar (`changeSetting`).
+  Kilitli sekme: `nav_tap { tab, locked }`, kilit sallanır, "Yakında" balonu; altın kapsülü / "+" aynı balonu verir;
+  yıldız kapsülü yapıya 300 ms ADD parlaması verir; sandık halkası statik (önizleme penceresi Faz 4, kesme 3).
+  Giriş ve bölüme geçiş 150 ms solmadır (kesme 2); "Bölüm 2" nabzı ve azaltılmış harekette altın kenar korunur.
+  Zorluk etiketi sonraki bölümün JSON'u yüklenince (tembel parça) çizilir.
+- **WinScreen v2:** `LevelWindows.openWin`'in 6 bağımsız değişkenli çağrısı değişmedi; 6. (v1 `OptionButton` #69
+  kancası) kullanılmaz, düğme #97'yi kendisi ve sesi `ui/kit/feel` ile çalar. İsteğe bağlı 7. değişken
+  `{ context: { assets, reduced, structureRatio } }`; verilmezse `ui/kit/gameContext` oyunun hizmetlerinden okur
+  (kazanma kayda zaten yazılmıştır). `target = { dim: null, panel: kart, options: [Devam] }`: #70 kartı açar, katman
+  kendi 200 ms soluşunu, Tuna'nın 40 px yükselişini, şerit / satır / kapsül 150 ms soluşlarını ve ışın dönüşünü oynar.
+  Satırlar ödülden okunur (`winRows`): Bonus `bonusMoves > 0`, mala `trowels > 0`, ★ kapsülü `stars > 0` — döngü
+  tekrarında yalnız altın kapsülü ortada kalır.
+- **Ölçüm (scratch, 390 × 844, DPR 3, headless SwiftShader):** ana sayfa ve kazanma katmanında CPU adımı (Phaser
+  `prestep` → `postrender`) 1×'te p50 ≈ 0,6 ms, 4× CPU'da p50 3 ms / p95 ≤ 16 ms; rAF hızı SwiftShader dolum hızıyla
+  sınırlı (3 M piksel, tam ekran 3–4 katman), gerçek GPU kapısı `tools/perf.ts`'tedir (WP-K). İlk yük 564 KB / 620 KB.
+- Gözle doğrulama görüntüleri: `artifacts/screens/2r/wp-i/` (gerçek `HomeScene` harness derlemesinde; kazanma katmanı
+  aynı sınıfla scratch önizleme sayfasında — çekirdek şeridi yarım iken Bölüm 1'i başsız oynatmak 5 dk'yı aşıyordu).
+
 ### 2R.9 Hafif öğretici denetleyicisi (K-53, UX §13.1)
 
 Öğretici üç parçaya ayrılır:

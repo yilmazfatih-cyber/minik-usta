@@ -1,7 +1,6 @@
 /**
  * Pure reads of a piece for its view (no Phaser): where it rests on the board and which baked frame shows it.
  */
-import { GRID_ROWS } from '../../core/coords.ts';
 import { pieceBoardCells, visibleSegment } from '../../core/grid.ts';
 import { shapeByIndex } from '../../core/shapes.ts';
 import {
@@ -48,7 +47,7 @@ export function blockersAbove(s: GameState, id: PieceId): PieceId[] {
   for (const c of pieceBoardCells(s, id)) top.set(c.x, Math.max(top.get(c.x) ?? -1, c.y));
   const out = new Set<PieceId>();
   for (const [x, y] of top) {
-    if (y + 1 >= GRID_ROWS) continue;
+    if (y + 1 >= s.lvl.geo.rows) continue;
     const occ = yardOcc(s, x, y + 1);
     if (occ > 0 && occ - 1 !== id) out.add(occ - 1);
   }

@@ -3,7 +3,6 @@
  * hole geometry (UX §13.1 "Spot ışığı": rounded holes with a 12 px pad; JUICE §0 rule 11: no mask, no filter — the dark
  * layer is rectangles around the holes). Pure: layout geometry + state reads, no Phaser.
  */
-import { SITE_X } from '../../../core/coords.ts';
 import { buildFront } from '../../../core/placement.ts';
 import { Zone } from '../../../core/types.ts';
 import { shapeByIndex } from '../../../core/shapes.ts';
@@ -306,7 +305,7 @@ export function handStrips(layout: Layout, path: readonly (readonly [number, num
 /** The site column: from the wall's left edge to the right, from the crane area's top to row 0's bottom. */
 export function siteColumn(layout: Layout): Rect {
   const top = layout.board.crane.y;
-  const bottom = rectBottom(layout.grid.cellRect(SITE_X, 0));
+  const bottom = rectBottom(layout.grid.cellRect(layout.grid.geo.siteX, 0));
   return { x: layout.grid.wallX, y: top, w: layout.W - layout.grid.wallX, h: bottom - top };
 }
 
