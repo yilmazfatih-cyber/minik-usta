@@ -51,8 +51,6 @@ export type DragSignal = 'crossedWall' | 'enteredRail' | 'blockedByWallHeight';
 export interface DragHost {
   /** The state to pick on; null while the board takes no input (loading, level over, blocking sequence, R-12). */
   boardState(): GameState | null;
-  /** Tutorial input gate (required step: only its highlighted blocks); a refused press gets no reaction. */
-  mayPick(id: PieceId): boolean;
   layout(): Layout;
   /** `levelHooks(lvl).drag` (K-09 (c) `canPick`, RAIL `canPassGap`, K-07 row 5 `siteClosed`). */
   dragRules(): DragRules;
@@ -193,7 +191,8 @@ export class DragController {
     const s = host.boardState();
     if (!s) return;
     const id = pieceAtPoint(s, layout.grid, x, y, layout.touch.hitSlopPx);
-    if (id === null || !host.mayPick(id)) return;
+    // K-53/2: the tutorial never gates a pick (no host hook: the controller does not know the tutorial)
+    if (id === null) return;
     const attempt = tryBeginDrag(s, id, host.dragRules());
     if (!attempt.ok) {
       host.pickFailed(id, attempt.reason);

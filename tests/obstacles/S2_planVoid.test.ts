@@ -9,9 +9,9 @@ import { ArraySink } from '../../src/core/moves.ts';
 import { H, hdr, pieceX, pieceY, pieceZone, siteOcc } from '../../src/core/state.ts';
 import { Zone } from '../../src/core/types.ts';
 import type { At } from '../../src/core/types.ts';
-import { initialState } from '../fixtures/builders.ts';
+import { compiledLevel, initialState } from '../fixtures/builders.ts';
 import type { LevelSpec } from '../fixtures/builders.ts';
-import { N, RAIL, dragTo, expectConsistent, find, levelFile, run, types } from '../core/moves.fixtures.ts';
+import { N, RAIL, dragTo, expectConsistent, find, run, types } from '../core/moves.fixtures.ts';
 import { i18nText } from './obstacles.fixtures.ts';
 
 const site = (x: number, y: number): At => ({ zone: 'site', x, y, seg: 0 });
@@ -44,11 +44,29 @@ const DEBRIS_IN_VOID: LevelSpec = {
   debris: [['B1_0', 'R', 7, 0]],
 };
 
+/**
+ * The Faz 2 "Pencere" board (old level 4) without its decoys, as a full-cover builder level: plan (bottom → top) `YY`,
+ * `WW`, `W.`, `WW`, `RR`; wall 6 with a static gap at rows 3–4. The lintel (c) reaches row 3 above the window only by
+ * rail. S2 is out of the Faz 2R MVP (CL-2R-12: no level has a `.` cell), so the void rules are kept on builder boards.
+ */
+const PENCERE: LevelSpec = {
+  moves: 12,
+  wall: { height: 6, gaps: [{ type: 'static', y: 3, size: 2 }] },
+  plan: ['RR', 'WW', 'W.', 'WW', 'YY'],
+  pieces: [
+    ['D2_90', 'Y', 0, 6],
+    ['C3_0', 'W', 2, 0],
+    ['D2_90', 'W', 4, 3],
+    ['D2_90', 'R', 0, 2],
+  ],
+};
+
 describe('S2 Plan Boşluğu — plan void (OBSTACLES S2, GDD K-15, K-16, K-17, K-34, E-43)', () => {
   it('S2 is out of the MVP (R2-01): no rule plugin, not even for a `.` plan; the void rules stay core (K-34) and the obs.s2.desc card is kept', () => {
     expect(ALL_RULES.map((r) => r.id)).not.toContain('S2');
-    expect(activeRuleIds(levelFile(4))).toEqual(['W1']);
-    expect(levelHooks(levelFile(4))).toEqual({});
+    const pencere = compiledLevel(PENCERE);
+    expect(activeRuleIds(pencere)).toEqual(['W1']);
+    expect(levelHooks(pencere)).toEqual({});
     for (const locale of ['tr', 'en'] as const) expect(i18nText(locale, 'obs.s2.desc')).toMatch(/\S/);
   });
 
@@ -136,8 +154,8 @@ describe('S2 Plan Boşluğu — plan void (OBSTACLES S2, GDD K-15, K-16, K-17, K
     expect(types(run(clean, dragTo(1, 6, 8)).ev)).toContain('placementCorrect');
   });
 
-  it('S2 K-34 level 4: the lintel railed in before the wall below the window is wrong for support (LEVELS note)', () => {
-    const session = GameSession.start(levelFile(4));
+  it('S2 K-34 the Pencere board: the lintel railed in before the wall below the window is wrong for support', () => {
+    const session = GameSession.start(compiledLevel(PENCERE));
     session.commit(dragTo(0, 6, 8)); // a: Y row 0
     const { state } = session;
     // (6,1), (6,2), (7,1) are still empty W cells; the empty window (7,2) counts as filled
@@ -153,19 +171,15 @@ describe('S2 Plan Boşluğu — plan void (OBSTACLES S2, GDD K-15, K-16, K-17, K
     });
   });
 
-  // WP-M ile yeniden üretilecek: the old level 4 keeps decoys in the yard → K-48 (3) holds back the win.
-  it.fails(
-    'S2 level 4 hand solution: the lintel goes through the gap above the window (4 moves, 8 left, YAO 3/4)',
-    () => {
-      const session = GameSession.start(levelFile(4));
-      const moves = [dragTo(0, 6, 8), dragTo(1, 6, 8), dragTo(2, 6, 3, 0), dragTo(3, 6, 8)];
-      const results = moves.map((m) => session.commit(m));
-      expect(results.map((r) => r.status)).toEqual(['applied', 'applied', 'applied', 'applied']);
-      expect(session.outcome).toBe('won');
-      expect(session.movesLeft).toBe(8);
-      expect(session.yao()).toEqual({ overWall: 3, rail: 1, yao: 0.75 });
-      expect(siteOcc(session.state, 0, 1, 2)).toBe(0); // the window (7,2) stays open
-      expect(hdr(session.state, H.wrongCount)).toBe(0);
-    },
-  );
+  it('S2 the Pencere board solution: the lintel goes through the gap above the window (4 moves, 8 left, YAO 3/4)', () => {
+    const session = GameSession.start(compiledLevel(PENCERE));
+    const moves = [dragTo(0, 6, 8), dragTo(1, 6, 8), dragTo(2, 6, 3, 0), dragTo(3, 6, 8)];
+    const results = moves.map((m) => session.commit(m));
+    expect(results.map((r) => r.status)).toEqual(['applied', 'applied', 'applied', 'applied']);
+    expect(session.outcome).toBe('won');
+    expect(session.movesLeft).toBe(8);
+    expect(session.yao()).toEqual({ overWall: 3, rail: 1, yao: 0.75 });
+    expect(siteOcc(session.state, 0, 1, 2)).toBe(0); // the window (7,2) stays open
+    expect(hdr(session.state, H.wrongCount)).toBe(0);
+  });
 });

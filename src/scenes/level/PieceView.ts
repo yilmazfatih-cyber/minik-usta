@@ -8,6 +8,11 @@
  * or, while dragged, from the DragController; motions after a move are `Track`s (motion.ts). Cosmetic layers are added
  * on top and never change the pose: shake / tap hop (UX §5.3), lift hop (#1), squash (#9, #11), nudge (#4), tilt (#3),
  * the silhouette's crane transition (#5) and a group transform (the #18 segment flight).
+ *
+ * Faz 2R (TECH §2R.7, §2R.15 item 1; UX §5.3 "Tutulabilirlik görünümü", DL-2R-17): a fourth image carries the
+ * colourless stud gloss `blk_gloss_<shape>`; it shows only on HOLDABLE blocks (core `TurnSummary.holdable`), a block
+ * that cannot be held loses it and darkens × 0.92 (`blockV2.notHoldableTint`), both over `duration.holdableFade`.
+ * The K-34 hook 5 / stuck pulse (`startPulse`) is a cosmetic scale layer like the tap hop.
  */
 import Phaser from 'phaser';
 import type { ShapeDef } from '../../core/shapes.ts';
@@ -23,6 +28,9 @@ import { DEPTH, overTutorial } from './depth.ts';
 import { linear } from './motion.ts';
 import type { Ease, Pose, Track } from './motion.ts';
 import { VIEW } from './viewConstants.ts';
+
+/** `blockV2.notHoldableTint` (#EBEBEB: × 0.92, UX §5.3) as one grey channel. */
+const NOT_HOLDABLE_CHANNEL = Number.parseInt(TOKENS.blockV2.notHoldableTint.slice(1, 3), 16);
 
 interface Anim {
   readonly from: number;
@@ -62,6 +70,8 @@ export class PieceView {
   readonly silhouette: Phaser.GameObjects.Image;
   /** Flash overlay (same frame, tint-filled). */
   readonly overlay: Phaser.GameObjects.Image;
+  /** v2 holdable gloss (`blk_gloss_<shape>`); hidden when the level bake has none (cargo, v1 frames). */
+  readonly gloss: Phaser.GameObjects.Image;
 
   id: PieceId = -1;
   shape: ShapeDef | null = null;
@@ -93,20 +103,43 @@ export class PieceView {
   private hop: { start: number; ms: number; pulse: boolean } | null = null;
   private flashOn = false;
   private frames: Frames | null = null;
+  private hasGloss = false;
+  /** Holdable look 0 (not holdable: no gloss, tinted) … 1 (holdable), animated over `duration.holdableFade`. */
+  private holdAnim: Anim = { from: 1, to: 1, start: 0, ms: 0, ease: linear };
+  private holdShown = -1;
+  /** The not-holdable darkening applies to yard blocks only; a placed site block keeps its colours (no gloss). */
+  private holdTint = true;
+  private pulse: { start: number; ms: number; count: number; peak: number } | null = null;
 
   constructor(scene: Phaser.Scene) {
     this.silhouette = scene.add.image(0, 0, BOOT_ATLAS_KEY, FRAME.whitePixel).setVisible(false);
     this.image = scene.add.image(0, 0, BOOT_ATLAS_KEY, FRAME.whitePixel).setVisible(false);
     this.overlay = scene.add.image(0, 0, BOOT_ATLAS_KEY, FRAME.whitePixel).setVisible(false);
+    this.gloss = scene.add.image(0, 0, BOOT_ATLAS_KEY, FRAME.whitePixel).setVisible(false);
   }
 
-  /** Gives the view piece `id` with block frame `ref`. */
-  bind(id: PieceId, shape: ShapeDef, frameName: string, frames: Frames): void {
+  /** Gives the view piece `id` with block frame `frameName` (and the holdable gloss `glossName`, if baked). */
+  bind(
+    id: PieceId,
+    shape: ShapeDef,
+    frameName: string,
+    frames: Frames,
+    glossName: string | null = null,
+  ): void {
     this.id = id;
     this.shape = shape;
     this.frames = frames;
     this.frameName = '';
     this.setBlockFrame(frameName);
+    this.hasGloss = glossName !== null && (frames.has?.(glossName) ?? false);
+    if (this.hasGloss && glossName) {
+      const g = frames.ref(glossName);
+      this.gloss.setTexture(g.key, g.frame).setOrigin(0.5, 0.5);
+    }
+    this.gloss.setVisible(this.hasGloss).setAlpha(1);
+    this.holdAnim = { from: 1, to: 1, start: 0, ms: 0, ease: linear };
+    this.holdShown = -1;
+    this.pulse = null;
     this.track = null;
     this.flying = false;
     this.hideAtEnd = false;
@@ -134,6 +167,32 @@ export class PieceView {
     this.image.setVisible(false).setTexture(BOOT_ATLAS_KEY, FRAME.whitePixel);
     this.silhouette.setVisible(false).setTexture(BOOT_ATLAS_KEY, FRAME.whitePixel);
     this.overlay.setVisible(false).setTexture(BOOT_ATLAS_KEY, FRAME.whitePixel).setCrop();
+    this.gloss.setVisible(false).setTexture(BOOT_ATLAS_KEY, FRAME.whitePixel);
+    this.hasGloss = false;
+    this.pulse = null;
+  }
+
+  /**
+   * K-09 holdable look (UX §5.3, DL-2R-17): `on` shows the gloss and the plain colours; off hides the gloss and darkens
+   * × 0.92. `ms` 0 switches at once (level start, reduced motion).
+   */
+  setHoldable(on: boolean, now: number, ms: number = TOKENS.duration.holdableFade, tint = true): void {
+    this.holdTint = tint;
+    const to = on ? 1 : 0;
+    if (this.holdAnim.to === to) return;
+    const from = animAt(this.holdAnim, now);
+    this.holdAnim = { from, to, start: now, ms, ease: linear };
+    this.holdShown = -1;
+  }
+
+  /** Holdable look now (0…1; tests and the tutorial glove read the target through `holdableTarget`). */
+  get holdableTarget(): boolean {
+    return this.holdAnim.to === 1;
+  }
+
+  /** K-34 hook 5 stuck pulse / unlocked glint (GDD; presentation JUICE): `count` scale pulses to `peak` over `ms` each. */
+  startPulse(now: number, count: number, ms: number, peak: number): void {
+    this.pulse = { start: now, ms, count, peak };
   }
 
   private resetCosmetics(): void {
@@ -279,6 +338,11 @@ export class PieceView {
       if (u >= 1 || u < 0) this.hopAnim = null;
       else oy -= this.hopAnim.px * Math.sin(Math.PI * u);
     }
+    if (this.pulse) {
+      const u = (now - this.pulse.start) / this.pulse.ms;
+      if (u >= this.pulse.count || u < 0) this.pulse = null;
+      else pulse *= 1 + (this.pulse.peak - 1) * Math.sin(Math.PI * (u % 1));
+    }
     const scale = (this.dragged ? this.dragScale(now) : this.pose.scale) * pulse;
     const sx = scale * this.squashX;
     const sy = scale * this.squashY;
@@ -300,6 +364,23 @@ export class PieceView {
       .setAngle(this.tiltDeg)
       .setAlpha(alpha);
     this.drawnNow = { cx, cy, scale: scale * gs };
+    const hk = this.dragged ? 1 : animAt(this.holdAnim, now);
+    if (hk !== this.holdShown) {
+      this.holdShown = hk;
+      if (hk >= 1 || !this.holdTint) this.image.clearTint();
+      else {
+        const v = Math.round(255 - (255 - NOT_HOLDABLE_CHANNEL) * (1 - hk));
+        this.image.setTint((v << 16) | (v << 8) | v);
+      }
+    }
+    if (this.hasGloss) {
+      this.gloss
+        .setPosition(cx, cy)
+        .setScale(sx * gs, sy * gs)
+        .setAngle(this.tiltDeg)
+        .setAlpha(alpha * hk)
+        .setVisible(this.image.visible && hk > 0.001);
+    }
     if (this.flashOn)
       this.overlay
         .setPosition(cx, cy)
@@ -333,6 +414,7 @@ export class PieceView {
     const top = this.dragged || this.flying;
     const z = this.dragged ? overTutorial : (d: number): number => d;
     this.image.setDepth(z(top ? DEPTH.draggedBlock : DEPTH.placedBlocks));
+    this.gloss.setDepth(z(top ? DEPTH.draggedBlock : DEPTH.placedBlocks));
     this.overlay.setDepth(z((top ? DEPTH.draggedBlock : DEPTH.placedBlocks) + 1));
     this.silhouette.setDepth(z(top ? DEPTH.draggedShadow : DEPTH.contactShadow));
   }

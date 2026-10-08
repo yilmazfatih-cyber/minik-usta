@@ -82,9 +82,13 @@ export type TapTarget =
 
 export interface TutorialInfo {
   readonly index: number;
-  readonly required: boolean;
+  /** K-53 presence of the active step (UX §13.1): waiting to show, on screen, or hidden until the player is idle. */
+  readonly phase: 'wait' | 'shown' | 'hidden';
   readonly pieces: readonly PieceId[];
   readonly textKey: string;
+  /** The Usta Dede bubble on screen (design px) and its dock (UX §13.1), null when it is not shown. */
+  readonly bubble: { readonly x: number; readonly y: number; readonly w: number; readonly h: number } | null;
+  readonly dock: 'top' | 'bottom' | null;
 }
 
 /** Cheap per-frame view of the game (waits poll this; `state()` adds the board, log and hash). */
@@ -120,7 +124,7 @@ export interface HarnessState extends HarnessStatus {
   readonly busy: boolean;
   readonly locked: boolean;
   readonly tutorial: TutorialInfo | null;
-  /** The glove of the step on screen (UX §13.1): its gesture and whether the first right touch hid it (null: none). */
+  /** The glove of the active step (UX §13.1): its gesture and whether it is off screen now (null: the step has none). */
   readonly tutorialHand: { readonly kind: 'tap' | 'drag' | 'hold'; readonly hidden: boolean } | null;
   /**
    * Contextual Usta Dede lines (UX §13.2, `tut.ctx.<topic>`): the one on screen, the ones waiting, and the topics the

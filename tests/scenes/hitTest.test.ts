@@ -9,7 +9,9 @@ import { pieceAtPoint } from '../../src/scenes/level/hitTest.ts';
 import { pieceFrameName, statePose } from '../../src/scenes/level/pieceState.ts';
 import { dragTo, levelFile } from '../core/moves.fixtures.ts';
 
-const layout = createLayout(TOKENS, 2337);
+/** Level 1 (4×4 | 2×5, H 5; LEVELS §2 Bölüm 1) on its own board layout (K-49 adaptive cell). */
+const lvl = levelFile(1);
+const layout = createLayout(TOKENS, 2337, lvl.geo);
 const g = layout.grid;
 const SLOP = layout.touch.hitSlopPx;
 const centre = (x: number, y: number): { x: number; y: number } => {
@@ -18,8 +20,6 @@ const centre = (x: number, y: number): { x: number; y: number } => {
 };
 
 describe('block hit test (TECH 10.3, UX 0.1 hitSlopPx)', () => {
-  const lvl = levelFile(1);
-
   it('TECH 10.3 every cell centre of every yard block picks that block', () => {
     const { state: s } = GameSession.start(lvl);
     for (let id = 0; id < lvl.layout.counts.pieces; id++) {
@@ -33,7 +33,7 @@ describe('block hit test (TECH 10.3, UX 0.1 hitSlopPx)', () => {
 
   it('UX 0.1 a block cell is grown by touch.hitSlopPx (30 px): inside the pad picks, beyond it does not', () => {
     const { state: s } = GameSession.start(lvl);
-    const cell = g.cellRect(0, 0); // `y y` corner block of level 1 (D2_0 Y at (0, 0))
+    const cell = g.cellRect(0, 0); // `e e` corner block of level 1 (D2_90 W at (0, 0))
     const id = pieceAtPoint(s, g, cell.x + 10, cell.y + 10, SLOP);
     expect(id).not.toBeNull();
     expect(pieceAtPoint(s, g, cell.x - SLOP + 1, cell.y + 60, SLOP)).toBe(id);
@@ -42,24 +42,24 @@ describe('block hit test (TECH 10.3, UX 0.1 hitSlopPx)', () => {
 
   it('UX 0.1 overlapping pads: the touch goes to the block with the nearest cell centre', () => {
     const { state: s } = GameSession.start(lvl);
-    // the boundary between yard cells (2, 1) and (3, 1) belongs to two different blocks in level 1
-    const a = pieceAtPoint(s, g, g.colLeft(3) - 5, centre(2, 1).y, SLOP);
-    const b = pieceAtPoint(s, g, g.colLeft(3) + 5, centre(3, 1).y, SLOP);
-    expect(a).toBe(pieceAtPoint(s, g, centre(2, 1).x, centre(2, 1).y, SLOP));
-    expect(b).toBe(pieceAtPoint(s, g, centre(3, 1).x, centre(3, 1).y, SLOP));
+    // the boundary between yard cells (1, 1) (`c`) and (2, 1) (`d`) belongs to two different blocks in level 1
+    const a = pieceAtPoint(s, g, g.colLeft(2) - 5, centre(1, 1).y, SLOP);
+    const b = pieceAtPoint(s, g, g.colLeft(2) + 5, centre(2, 1).y, SLOP);
+    expect(a).toBe(pieceAtPoint(s, g, centre(1, 1).x, centre(1, 1).y, SLOP));
+    expect(b).toBe(pieceAtPoint(s, g, centre(2, 1).x, centre(2, 1).y, SLOP));
     expect(a).not.toBe(b);
   });
 
   it('K-22 site blocks of the shown segment are picked; empty crane rows are not', () => {
     const game = GameSession.start(lvl);
-    expect(game.commit(dragTo(0, 6, 8)).status).toBe('applied');
+    expect(game.commit(dragTo(0, 4, 5)).status).toBe('applied'); // a (D2_0 Y) falls to (4, 0)
     const s = game.state;
-    const p = centre(6, 0);
+    const p = centre(4, 0);
     expect(pieceAtPoint(s, g, p.x, p.y, SLOP)).toBe(0);
-    const sky = centre(3, 9);
+    const sky = centre(3, 6);
     expect(pieceAtPoint(s, g, sky.x, sky.y, SLOP)).toBeNull();
-    expect(statePose(s, 0)).toEqual({ ax: 6, ay: 0, scale: 1, alpha: 1 });
-    expect(pieceFrameName(s, 0)).toBe('blk_D2_90_Y');
+    expect(statePose(s, 0)).toEqual({ ax: 4, ay: 0, scale: 1, alpha: 1 });
+    expect(pieceFrameName(s, 0)).toBe('blk_D2_0_Y');
   });
 
   it('TECH 1.4 the hit test and the pose reads never change the state', () => {

@@ -513,7 +513,10 @@ tasarım notu, test gerektirmez.
   sütun sayısından bağımsızdır), şu iki not dışında: W8 ve G-L kaymaları şantiye sütunları (x = Wy … Wy+Ws−1) içinde
   kalır; genişliği Ws olan blok kaymaz.
 - **N45** [kural] (Faz 2R) — Y5 Ağır Yük + kamyon (S1): parti bloğu Ağır Yük yüzünden sahaya düşemezse kuyrukta bekler
-  (GDD E-54); Ağır Yük kaydırılınca o hamlenin 9. adımında düşer.
+  (GDD E-54); Ağır Yük kaydırılınca o hamlenin 9. adımında düşer. Tasarım notu (solver turu): kuyruktaki blok, yer açan
+  hamleye göre başka bir gereken bloğun üstüne düşebilir; bilinçli kuyruk yalnız GDD K-51 madde 2'nin bütün uzay
+  çıkmaz kapısından geçen bölümde kullanılır (Bölüm 10'un eski taslağı geçemedi, LEVELS §2.11). Y5 + S1'de partinin
+  yükün hangi yanına kurulacağı oyuncunun yükü nereye koyduğuna bağlıdır; teslimat adaleti (GDD K-51 madde 5) denetlenir.
 - **N46** [kural] (Faz 2R) — Y5 + Y1/Y2: kasa, torba ve Ağır Yük malzeme değildir; üçü de bölüm sonunda sahada kalabilir
   (GDD K-48). Ağır Yük taşınırken başlangıç hücrelerine komşu kasa/torba/zincir K-35 adım 5 ile etkilenir.
 - **N47** [kural] (Faz 2R) — S4 Moloz + S1: moloz arza sayıldığı için taşınan malzeme olabilir: dilim 0'daki moloz

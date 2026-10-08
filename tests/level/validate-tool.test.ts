@@ -53,8 +53,8 @@ describe('levels:validate tool (TECH §8.3, §12.2)', () => {
     expect(run('--dir', fixturePath('cli-valid'), '--no-i18n').out).toContain('note: --no-i18n');
   });
 
-  it('K-45 the Faz 2R drafts of LEVELS levels 1–10 validate (WP-M input; i18n keys are WP-L)', () => {
-    const r = run('--dir', fixturePath('levels-2r'), '--no-i18n');
+  it('K-45 GDD 14.1 the Faz 2R drafts of LEVELS levels 1–10 validate with the i18n key lookup (WP-M input; tut.m.* keys from WP-L)', () => {
+    const r = run('--dir', fixturePath('levels-2r'));
     expect(r.code, r.out).toBe(0);
     for (let n = 1; n <= 10; n++) expect(r.out).toContain(`level_${String(n).padStart(3, '0')}.json  OK`);
     expect(r.out).toContain('level_004.json  OK  mechanics: W1');
@@ -72,11 +72,12 @@ describe('K-45/9 tools/levels-allow.json (TECH §2R.3 L-34, E-54)', () => {
     message: 'm',
   });
 
-  it('K-45/9 the project allow list silences only level 10 batch_queued (LEVELS Bölüm 10, dilim 2 kuyruğu)', () => {
-    const allow = loadAllowList();
+  it('K-45/9 the project allow list is empty (WP-M: levels 1–10 have no warning); a parsed entry silences only its level and code', () => {
     expect(ALLOW_FILE.endsWith(join('tools', 'levels-allow.json'))).toBe(true);
-    expect([...allow].map(([id, set]) => [id, [...set]])).toEqual([[10, ['batch_queued']]]);
+    expect(loadAllowList().size).toBe(0);
+    const allow = parseAllowList({ 10: ['batch_queued'] });
     expect(isAllowed(allow, 10, warn('batch_queued'))).toBe(true);
+    expect(isAllowed(allow, 10, warn('metric_out_of_band'))).toBe(false);
     expect(isAllowed(allow, 9, warn('batch_queued'))).toBe(false);
     expect(isAllowed(allow, 10, { ...warn('batch_queued'), severity: 'error' })).toBe(false); // errors never
   });

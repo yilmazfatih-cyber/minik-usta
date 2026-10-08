@@ -121,18 +121,19 @@ describe('drag geometry (TECH 4.4, UX 5.3)', () => {
 });
 
 describe('scene target point + core sticky follow (K-08, TECH 1.4)', () => {
-  const g = createLayout(TOKENS, 2337).grid;
-  it('K-08 a finger path over the wall brings level 1 piece a to its golden release node (6, 8)', () => {
-    const lvl = levelFile(1);
+  it('K-08 a finger path over the wall brings level 1 piece a to its tutorial release node (4, 4)', () => {
+    const lvl = levelFile(1); // 4×4 | 2×5, H 5 (LEVELS §2 Bölüm 1)
+    const g = createLayout(TOKENS, 2337, lvl.geo).grid;
     const s = createInitialState(lvl);
-    const session = beginDrag(s, 0) as DragSession; // `a`: D2_90 Y at (4, 7)
+    const session = beginDrag(s, 0) as DragSession; // `a`: D2_0 Y at (0, 2)
     expect(session).not.toBeNull();
     const c0 = session.shape.cells[0] ?? { x: 0, y: 0 };
     const pick = screenOf(g, session.start.ix + c0.x + 0.5, session.start.iy + c0.y + 0.5);
     const grab = grabAt(g, pick.x, pick.y, session.start, session.shape.cells);
     const fingerFor = (ix: number, iy: number): { x: number; y: number } =>
       screenOf(g, ix + grab.cell.x + 0.5, iy + grab.cell.y + 0.5 - OFFSET);
-    const path = [fingerFor(4, 7), fingerFor(4, 8), fingerFor(6, 8)];
+    // tutorial step 1 glove: up above the yard, then over the wall (anchors (0,2) → (0,4) → (4,4))
+    const path = [fingerFor(0, 2), fingerFor(0, 4), fingerFor(4, 4)];
     let node = session.current;
     for (let i = 1; i < path.length; i++) {
       const a = path[i - 1] as { x: number; y: number };
@@ -144,7 +145,7 @@ describe('scene target point + core sticky follow (K-08, TECH 1.4)', () => {
         node = session.follow(t.px, t.py).node;
       }
     }
-    expect(node).toEqual({ ix: 6, iy: 8, mode: 0 });
+    expect(node).toEqual({ ix: 4, iy: 4, mode: 0 });
     expect(session.classify()).toMatchObject({ kind: 'siteFree', row: 6 });
   });
 });

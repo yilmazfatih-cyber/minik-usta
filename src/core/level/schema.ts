@@ -376,20 +376,18 @@ export type TutCondition = z.output<typeof TutCond>;
 /** A parsed Faz 2R tutorial step. */
 export type TutorialStep2R = NonNullable<ParsedLevel['tutorial']>[number];
 /**
- * @deprecated Faz 2R transition (TECH §2R.9, WP-H): the pre-2R timed step `{ timeoutMs }`. The schema no longer accepts
- * or produces it (`schema_invalid`, CL-2R-10); it stays in the level TYPES so the tutorial scene code and its tests,
- * which compile level data directly, keep compiling until WP-H removes the timed-step branch.
+ * The pre-2R timed step `{ timeoutMs }` (K-53/3, CL-2R-10): the schema rejects it (`schema_invalid`). It stays in the
+ * INPUT type only, so validator tests can write the rejected legacy data; a parsed level never has it (WP-H removed the
+ * timed-step branch of the tutorial scene).
  */
 export interface LegacyTimedDone {
   readonly timeoutMs: number;
 }
-/** The tutorial step as the scene reads it (every parsed step is one; see `LegacyTimedDone`). */
-export type TutorialStepData = Omit<TutorialStep2R, 'done'> & {
-  readonly done: TutCondition | LegacyTimedDone;
-};
+/** The tutorial step as the scene reads it (a parsed Faz 2R step). */
+export type TutorialStepData = TutorialStep2R;
 /** Parsed level (defaults applied: shutter `phase`, slider `dir`; cargo colour placeholder). */
-export type LevelData = Omit<ParsedLevel, 'tutorial'> & { tutorial?: TutorialStepData[] | undefined };
-/** Level as written in JSON (tutorial steps widened like `LevelData`, see `LegacyTimedDone`). */
+export type LevelData = ParsedLevel;
+/** Level as written in JSON (tutorial steps widened with the rejected legacy `timeoutMs`, see `LegacyTimedDone`). */
 export type LevelInput = Omit<InputLevel, 'tutorial'> & {
   tutorial?: (Omit<InputStep, 'done'> & { done: InputStep['done'] | LegacyTimedDone })[] | undefined;
 };

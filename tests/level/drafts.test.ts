@@ -1,7 +1,9 @@
 /**
- * The LEVELS §2 drafts of levels 1–10 transcribed to the Faz 2R level format (tests/level/fixtures/levels-2r; WP-B
- * acceptance: "a level written in the new format validates"). product-lead writes the real levels/*.json (WP-M);
- * these fixtures pin that the validator accepts the drafts and catches the GDD counter-examples.
+ * Levels 1–10 in the Faz 2R format. WP-B accepted the LEVELS §2 drafts (tests/level/fixtures/levels-2r: "a level
+ * written in the new format validates"); since WP-M the checks run on the real levels/level_001…010.json that
+ * product-lead wrote from the solver round (LEVELS §2.11) and that replaced the drafts of Bölüm 4, 5, 7 and 10. They pin
+ * that the validator accepts the levels, that each level matches its LEVELS §2 summary row and that the GDD
+ * counter-examples are caught.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -14,12 +16,12 @@ import type { LevelInput, MechanicId } from '../../src/core/level/schema.ts';
 import { geoFromLevel } from '../../src/core/geometry.ts';
 import { shapeById } from '../../src/core/shapes.ts';
 import { loadBoosterUnlock } from '../../tools/lib/levels.ts';
-import { loadFixture } from '../fixtures/builders.ts';
 
 const ROOT = join(import.meta.dirname, '..', '..');
 const LEVELS = readFileSync(join(ROOT, 'docs', 'LEVELS.md'), 'utf8');
+/** levels/level_NNN.json (a fresh copy: the counter-example tests change it). */
 const draft = (n: number): LevelInput =>
-  loadFixture('levels-2r', `level_${String(n).padStart(3, '0')}`) as LevelInput;
+  JSON.parse(readFileSync(join(ROOT, 'levels', `level_${String(n).padStart(3, '0')}.json`), 'utf8')) as LevelInput;
 const IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const codes = (issues: readonly Issue[]): string[] => [...new Set(issues.map((i) => i.code))].sort();
 
@@ -51,8 +53,8 @@ function summaryRows(): Map<number, string[]> {
   return out;
 }
 
-describe('K-45 LEVELS 2 drafts of levels 1–10 in the Faz 2R format', () => {
-  it('K-45 every draft passes the schema and every validate check (mechanic history, booster unlocks)', () => {
+describe('K-45 levels 1–10 (levels/*.json) in the Faz 2R format', () => {
+  it('K-45 every level passes the schema and every validate check (mechanic history, booster unlocks)', () => {
     for (const n of IDS) expect(validateDraft(n), `level ${n}`).toEqual([]);
   });
 
@@ -79,7 +81,7 @@ describe('K-45 LEVELS 2 drafts of levels 1–10 in the Faz 2R format', () => {
     });
   });
 
-  it('K-49 K-02 K-47 each draft matches its LEVELS 2 summary row: sizes, H, wall, E, N, colours, moves', () => {
+  it('K-49 K-02 K-47 each level matches its LEVELS 2 summary row: sizes, H, wall, E, N, colours, moves', () => {
     const rows = summaryRows();
     expect([...rows.keys()]).toEqual(IDS);
     for (const n of IDS) {
@@ -105,7 +107,7 @@ describe('K-45 LEVELS 2 drafts of levels 1–10 in the Faz 2R format', () => {
     }
   });
 
-  it('GDD 14.1/1 every draft textKey is a key of LEVELS 2.0 item 8 (STORY 6A tut.m.*)', () => {
+  it('GDD 14.1/1 every level textKey is a key of LEVELS 2.0 item 8 (STORY 6A tut.m.*)', () => {
     const start = LEVELS.indexOf('8. **Metin anahtarları');
     const section = LEVELS.slice(start, LEVELS.indexOf('**Bölüm 1–10 özeti**', start));
     const listed = new Set([...section.matchAll(/`(tut\.[a-z]+\.[A-Za-z]+)`/g)].map((m) => m[1]));
@@ -115,7 +117,7 @@ describe('K-45 LEVELS 2 drafts of levels 1–10 in the Faz 2R format', () => {
   });
 });
 
-describe('K-45 GDD counter-examples on the drafts', () => {
+describe('K-45 GDD counter-examples on levels 1–10', () => {
   it('K-47 GDD example level 3: one more D2_90 Y makes the Y supply 6 > 4: cover_mismatch', () => {
     const json = draft(3);
     json.yard.batches[0]?.pieces.push({ shape: 'D2_90', color: 'Y', x: 2, y: 1 });

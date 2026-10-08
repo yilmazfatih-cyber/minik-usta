@@ -1028,6 +1028,68 @@ Sonuçlar LEVEL_REPORT'ta "geçitsiz min" ve "Çekiç'le min" sütunlarına yaz�
 - "K-50 fast yard path equals applyMove".
 - "K-53 tutorial hand path reachable and not cancel".
 
+**Uygulama notu (WP-E, 2026-10-07; şartnameden ayrılan ya da şartnamenin açık bıraktığı yerler):**
+
+1. **Modüller.** `tools/solver/`: `space.ts` (durum deposu), `expand.ts` (hamle üretimi), `explore.ts` (BFS + CSR),
+   `distance.ts`, `metrics.ts` (K-50 + L-19/L-27/L-32…L-34 + K-52 bandı), `tutorial.ts` (L-35), `verify.ts` (kanonik
+   çözümün `GameSession.replay` ile oynatılması), `variants.ts`, `astar.ts`, `report.ts`, `solveLevel.ts` (bölüm başına
+   akış), `worker.ts`; CLI `tools/solve.ts`. Ayrı bir `explore` CSR dosyası yoktur; CSR `explore.ts`'in çıktısıdır.
+2. **Durum kaydı.** Parça başına bayt kaydı yerine tampon, normalleştirilmiş başlangıç tamponuyla XOR'lanır ve sıfır
+   olmayan sözcükler (atlama, değer) varint çiftleri olarak yazılır (Bölüm 10'da ≈ 40–150 B/durum, açma ≈ 1 µs).
+   Normalleştirme yalnız karmaya girmeyen alanlara dokunur: sayaç `1 000 000` (K-50: hamle sınırı yok), seri, Mala,
+   istatistik sayaçları ve `movesSpent` 0; adım 10 zamanlayıcısı olmayan bölümde `m` 0.
+3. **Hamle üretimi ve hız.** R, `reachableNodes()` sıralaması olmadan `isReachable` ile düğüm kodu sırasında taranır.
+   Sahadaki blok için K-09 (a)'nın gerekli koşulu (bir birim ötelemede yeni hücreler boş) tutmuyorsa çekirdek BFS hiç
+   çağrılmaz. **R önbelleği:** anahtar (şekil, blok hariç çarpışma satırları, geçit açık/y, şantiye kapalı); sürükleme
+   grafiğinin kenarları iki yönlü olduğundan aynı bileşendeki her başlangıç aynı R'yi görür; değişen tek şey K-07 satır
+   1'dir (o anki başlangıç iptal, girdiyi kuran oturumun başlangıcı satır 2 saha konumu). Önbellek `canPick`,
+   `canPassGap`, `siteClosed` kancası ya da boya kapısı olan bölümde kapalıdır; eşdeğerlik testi "K-50 reach cache
+   equals a fresh core drag session". Bölüm 10'da çekirdek sürükleme oturumu 2,07 M → 147 k. Hızlı saha yolunun artımlı
+   Zobrist'i `hash.ts`'in karıştırmasını (sabitler dahil) tekrarlar; eşitliği "K-50 fast yard path equals applyMove"
+   sabitler (10 000 rastgele hamle, tampon ve karma).
+4. **Kenar birleştirme.** Aynı (durum, sonraki durum) çiftine giden hamlelerden kenar en küçük türü (duvar üstü < ray <
+   kaydırma < bekleme), sonra en küçük maliyeti tutar. Kanonik seçimde aynı kenarın hamleleri arasından yalnız kenarın
+   türündeki hamleler aday olur.
+5. **Kanonik çözüm.** `dist` Dial kova kuyruğuyla (maliyet 1–3), en kısa yollar DAG'ında en çok duvar üstü yerleşim DP'si
+   (K-46; tam örtüde payda N sabit), ardından her adımda K-50 madde 4 demeti. "Hedef çapa" = bloğun **iniş** çapası
+   (serbest bırakmada düşüş sonrası). Demet eşitse (geçerli veride görülmedi) küçük parça kimliği, sonra bırakma
+   düğümü. Hamle kaydı bırakma düğümü olarak sütunun en alçak erişilebilir serbest düğümünü taşır.
+6. **`deadRate` paydası.** K-50 madde 8'deki "K içindeki bütün doğru yerleşim geçişleri" canlı K durumlarından çıkan
+   yerleşim (ve W6) kenarları olarak okundu: çıkmaz durumdan çıkan kenar tuzak değildir, ikisinde de sayılmaz.
+   1–10'da tuzak olmadığı için iki okuma da 0 verir. Ayrıca bütün uzayda canlı → çıkmaz geçişleri (her tür) ve bunların
+   D1/D2/D3a ile yakalanıp yakalanmadığı `metrics.deadEntries` olarak raporlanır (not, kod değil).
+7. **`choices@k` bütçesi** her zaman JSON `moves`'tur (şema `moves`'u zorunlu tutar).
+8. **L-35.** Adım başlangıcı kanonik çözümün olaylarıyla bulunur (`done`/`startOn` süzgeçleri `piece`, `at` …,
+   tam parça kimliğiyle). Sürükleme sinyalleri hamleden okunur: `overWall`/`holdOverBuild` = serbest kipte şantiyeye
+   bırakma, `gapPass` = ray yerleşimi. Eldiven yolu sürükleme grafiğinde yürütülür (önce aynı kip komşusu); bir nokta
+   komşu değilse R üyeliği yeter (şartnamedeki koşul).
+9. **Doğrulama oynatması.** Kanonik çözüm `GameSession.replay` (strict, adım 12 açık) ile oynatılır: her hamle sonrası
+   Zobrist solver'ınkiyle aynı, son hamlede kazanma, hatalı yerleşim / iptal / `outOfMoves` / `deadlockDetected` /
+   `truckHelp` / `teardown` yok. Bu, kanonik yolda D3a'nın yanlış "çıkmaz" demediğini de sınar. `eventLogHash`
+   rapora yazılır. `min > moves` ise oynatma atlanır (not; `moves_budget` zaten hata verir).
+10. **Varyantlar A* ile.** `hammer-start` uzayı bölümün kendisinden büyüktür (Ağır Yük 9 hücre boşaltır: Bölüm 10'da
+    BFS 1,28 M durum / 62 s). Varyantlar yalnız `min` ister; `astar.ts` (sezgisel = yerleşmemiş malzeme bloğu sayısı;
+    kabul edilebilir ve tutarlı) aynı sonucu 372 durumda / 4 ms'de verir. Aynı A* Faz 3 büyük uzay yedeğinin
+    çekirdeğidir; bugün ana ölçütlerde kullanılmaz (sınır aşılırsa sonuç `unknown`).
+11. **Araç kapıları** (K-45 kodu değil, `check: 'tool'`): `level_invalid` (validate aşaması hatalı), `solve_unknown`
+    (durum/süre sınırı: bütün ölçütler bilinmiyor, error), `solver_replay_mismatch`, `dead_table_missing` (kesme 1:
+    `deadRate > 0`).
+12. **CLI.** Şartnamedeki bayraklara ek olarak `--dir`, `--max-ms`, `--jobs`, `--no-variants`, `--no-d3a`, `--allow`,
+    `--out <dizin>`, `--report` (LEVEL_REPORT "Bulmaca ölçütleri" bölümünü işaretler arasına yazar) ve `--check`.
+    `--json`'da stdout yalnız JSON'dur, özet satırı stderr'e gider. Çıktı `artifacts/solver/level_NNN.json` (levels/),
+    başka dizinde `artifacts/solver/<dizin adı>/`; önbellek anahtarı ham JSON'un FNV'si + `RULES_VERSION` +
+    `SOLVER_VERSION` (1) + seçenekler. `levels:check` = `node tools/solve.ts --check`: `validate-levels.ts` alt süreç
+    olarak aynı `--dir`, `--level`, `--allow`, `--no-i18n` ile koşar; geçerse solve; `tools/playtest-bot.ts` yoksa bot
+    adımı notla atlanır. `--emit-tables` kesme 1 notu basar, dosya yazmaz.
+13. **Ölçüm** (bu makine, 4 çekirdek, Node 22, `levels-2r` taslakları, önbelleksiz): Bölüm 1–10 toplam **14,9 s** duvar
+    saati (4 işçi). Tek tek keşif: B1 10 401 durum 0,3 s; B5 13 377 / 0,7 s; B7 26 040 / 1,6 s; B8 431 006 durum,
+    7,26 M kenar, 80 MB / 9–12 s; B10 446 138 durum (LEVELS §0 sayısıyla aynı), 7,46 M kenar, 113 MB / 10–13 s. Bütün
+    durumlar açıldı (`complete`); `d3aMaxExpansions` ≤ 10. Vitest'te solver testleri ≈ 25 s duvar saati ekler (B8 ve
+    B10 ayrı dosyalarda paralel).
+14. **Yapılmayanlar:** D3b tablo yayımı (kesme 1), ana ölçütler için A* yedeği (Faz 3), G-L `steer` girdilerinin
+    üretimi (G-L'li bölümde not düşülür; Faz 3), `--update-golden` dosyaları (bayrak hazır; WP-K/WP-M koşar).
+    `artifacts/solver/` `.gitignore`'da değildir (yapılandırma notu WP-K'ye).
+
 ### 2R.6 Görsel boru hattı (R2-08 güncellemesi, ASSET §16)
 
 **Akış:** design-lead SVG'yi elle yazar → `public/art/<kategori>/<kimlik>.svg` (depoda) → `npm run assets`
@@ -1229,6 +1291,39 @@ Görsel sonradan gelirse 200 ms'lik çapraz solmayla değişir (UX §3 "Yükleni
 - Gözle doğrulama görüntüleri: `artifacts/screens/2r/wp-i/` (gerçek `HomeScene` harness derlemesinde; kazanma katmanı
   aynı sınıfla scratch önizleme sayfasında — çekirdek şeridi yarım iken Bölüm 1'i başsız oynatmak 5 dk'yı aşıyordu).
 
+**Uygulama notu (WP-G, 2026-10-07; oyun sahnesi):**
+- **Yerleşim:** `createLayout(tokens, H, geo = DEFAULT_GEO)`; tahta grubu `boardLayout(tokens, geo, H)` (saf) ve
+  `adaptiveCellPx(tokens, geo)` (§2R.1 formülü; `cellMaxPx` yokken her bölümde 120). `BoardGeometry` ek alanlar:
+  `geo`, `k`, `siteRight`, `yardTopY`; `layout.board` ek `yardAir`. Ölçek `k` duvar şeridini ve `hitSlopPx`'i büyütür.
+  Kurdele genişliği `max(306, wallW + Ws·c)`; varsayılan tahtada token dikdörtgeni (750, 960) birebir korunur.
+  `LevelScene.layout` bölümün yerleşimidir; harness ve debug köprüsü artık onu okur (varsayılan tahtayı değil).
+- **Geçiş listesi boşaldı:** `LEGACY_BOARD_SCENES = []` (8 dosya `s.lvl.geo`'ya geçti; `juice/plan.ts` `dropRows`
+  `geo.rows` alır, #18 konfetisi `siteTopCell()`'den). `TrowelPicker.ts` genel hedef seçicisi oldu (Mala, Çekiç, Vinç).
+- **Görsel v2:** önyükleme atlası `v2` (delikli saha + `ui_yard_preview`), bölüm pişirmesi `v2` + `k`
+  (`levelBakeSpecs`; Faz 3 bayrak katmanlı parça varsa v1'e düşer). `PieceView` 4. görüntü `blk_gloss_<şekil>`:
+  yalnız `TurnSummary.holdable` saha bloklarında; tutulamaz saha bloğu `notHoldableTint`, şantiyedeki kilitli blok
+  renk değiştirmez. Ağır Yük `cargo_q9` / `cargo_i5` karesiyle çizilir. Sahne zemini çivit gradyanı + 120 px ozalit
+  çizgileri + tahta tepsisi (tahta grubu ve durum şeridi; referans ekranlardaki "çerçeveli tahta") + alt bant.
+- **HUD v2:** hedef paneli kit HUD paneli + çipler (`goalChips`, `chipMetrics`; kalan blok + "+n" kamyon alt rozeti +
+  0'da ✓); hamle plakası kit paneli, uyarı `lowMovesWarning` (DL-2R-19; plan `#51` `blocksLeft` alır); duraklat krem
+  hacimli düğme; Usta Serisi koyu kapsül; alt grup: Tuna + Kepçe (`attachArt`), `BoosterBar` (K-54 `slotState`,
+  sayı = envanter + açılış deneme hakkı − bu denemede kullanılan, `boosterSlotModels`). Kalan blok çipi #12 / #17 /
+  Vinç / #107 / #94 ipuçlarında durumdan okunur (`EventPlayerHost.blocksSync`).
+- **Paket:** bütün eylemler `GameSession.apply` → `ActionResult`; özet `planEnded`'de HUD'a uygulanır (tutulabilirlik,
+  yuvalar). Söküm paketi: #12/#15/#16/#83 düşer (JUICE kural 14), `teardown` kilitli son tahta ipucudur (yerleşme
+  120 ms + 600 ms + blok başına 80 ms; `sfx_teardown` ASSET §13'e girene kadar `sfx_bounce`). #94 `yardClear` #55'ten
+  hemen önce. Çekiç `smash`, Vinç `lift`; Mala #17 uçuşu yeniden yazıldı (`boosterApplied.detail.pieceId/to`).
+- **Akış farkı (maliyet):** Vinç sürükle + döndürme okları yerine dokun-seç: blok seçilince her yönelimdeki doğru
+  şantiye konumları gölge olarak çıkar (`craneSiteSpots`), boş saha hücresine dokunma K-37 (a)'dır. Geri Al #64 ters
+  uçuşu yok (görünümler yeniden eşitlenir). Bunlar Faz 5 cilasına kalabilir; kural davranışı tamdır.
+- **Takılma nabzı / K-34 kanca 5:** `stuckPulse.ts` (saf; Kolay 6000, Normal 12000 ms, dönem başına bir kez 2 nabız,
+  öğretici adımı / pencere / sürükleme sırasında susar); `unlockedNeeded` paket oynamaya başladıktan sonraki karede.
+- **Geri koruması:** `scenes/backGuard.ts` + `main.ts`; `popstate` → `BACK_EVENT` → Duraklat. Çıkış penceresi
+  `movesSpent`'e bakar. Dev/harness bölüm kaynağı: `levels.ts` `setLevelSource(id, data)` (LEVELS §2 taslaklarının
+  ekran görüntüleri; üretim kodu çağırmaz).
+- Gözle doğrulama: `artifacts/screens/2r/game/` (Vite geliştirme sunucusu, gerçek `LevelScene`, 390 × 844 ve
+  360 × 800, 4×4 | 2×5, 4×5 | 2×7, 6×5 | 2×6, 6×5 | 2×7; başlangıç, sürükleme, bırakma, Çekiç, Vinç, Mala, Söküm, #94).
+
 ### 2R.9 Hafif öğretici denetleyicisi (K-53, UX §13.1)
 
 Öğretici üç parçaya ayrılır:
@@ -1261,6 +1356,30 @@ other piece", "K-53 no tutorial on replay", "K-53 teardown line skips the queue"
 (doğrulayıcı), "K-53 tutorial hand path reachable and not cancel" (§2R.5). Mevcut "GDD 14.1 …" olay sayım testleri
 kalır; yalnız `required` dalları silinir.
 
+**Uygulama notu (WP-H, 2026-10-07; şartnameden ayrılan ya da açık bırakılan yerler):**
+
+- Dosyalar: `tutorial/TutorialController.ts` (etkin adım, `createTutorial` K-53/6, `TutorialResume.isTail`),
+  `tutorial/TutorialPresence.ts` (saf indirgeyici + `presenceLook` / `presenceReport`), `tutorial/glove.ts`
+  (DL-2R-20 `glovePlays`, parmak ucu yolu, 24 px köşe, iz noktaları), `tutorial/highlights.ts` (vurgu kimlikleri +
+  `placeBubble` üst/alt yuva), `TutorialView.ts` (Phaser). `TutorialOverlay.ts`, `spotPieces.ts`, `tutorial/guarantee.ts`
+  silindi; `DragController` host'unda öğretici kancası (`mayPick`) yok. `LegacyTimedDone` yalnız giriş tipinde kaldı
+  (doğrulayıcı testleri reddedilen veriyi yazabilsin); ayrıştırılmış adım `TutorialStep2R`'dir.
+- Etkin adım = denetleyicide başlamış, bitmemiş adım; `wait` (600 ms, önceki adımdan sonra 400 + 600 ms) de etkindir:
+  olay sayımı adım başlayınca başlar, bekleme sırasında gelen bağlamsal satır da kuyruğa girer.
+- Kuyruk kuralı tek yuvalı: bekleyen satır en çok 1; bir hamlenin birden çok satırından öncelik sırasındaki ilki
+  (`triggerFirst`). Adım bitince bekleyen satır 400 ms sonra, sonraki adım etkin olsa da gösterilir; bir satır
+  balondayken etkin adımın sunumu duraklar (`windowOpen` / `windowClose`, pencerelerle aynı sayaç). Söküm satırı
+  `applyAction` anında (`res.teardown`) açılır, 1200 ms (`TEARDOWN_LINE_MS`; token yok), sökülen blokları vurgular.
+  Bağlamsal satırlar 4000 ms (`tutorial.visibleMs`) görünür, sürükleme sırasında kapanmaz, α `dragFadeAlpha`'ya iner.
+- `correctAction` = adımın sayılan ama bitirmeyen olayı (`count` > 1). Dokunuş girdileri sahnenin `pointerdown` /
+  `pointerup` / `pointerupoutside` dinleyicilerinden gelir; girdi engellenmez.
+- Eldiven yolu: `path[0]` dokunulan hücrenin merkezi, sonraki noktalar `drag.fingerOffsetCells` satır aşağıda
+  (oyuncunun parmağının gerçekten gittiği yer; saha içi 1 hücrelik kaydırma çapraz görünür, design-lead'e soruldu).
+  Koşul adım etkinleşince ve her hamle sonunda bir BFS ile denetlenir; `tap` eldiveni ilk vurgu dikdörtgenine basar.
+- ANALYTICS `tutorial_step`: `shows` ≥ 1 (bekleme sırasında biten adım 1 sayılır, `msToDone` 0). K-43 devamında kayıtlı
+  konumdan sonraki (kuyruk) eylemlerde biten adım devam sonrası bir kez gönderilir (`TutorialResume.isTail`).
+- Harness `TutorialInfo`: `required` yerine `phase`, `bubble`, `dock`; `tutorialHand.hidden` = eldiven ekranda değil.
+
 ### 2R.10 Kayıt, golden ve veri göçü
 
 - `RULES_VERSION = 2`. Yeni JSON'larla `levelHash` değişir; eski `inLevel` K-43/4 ile cezasız kapanır
@@ -1281,7 +1400,11 @@ kalır; yalnız `required` dalları silinir.
   kaldırılır:
   - imza tablosu ↔ `MECHANICS` (fark: W1 4, S2 yok, S9 12) → WP-B;
   - STORY ↔ i18n (fark: `booster.hint.trowel`, `tut.ctx.goldtrowel`, `tut.ctx.truckhelp.material`; metin, Faz 2
-    çekirdeğindeki eski Mala ve kamyon yardımı davranışıyla birlikte değişir) → WP-C, WP-D, WP-L.
+    çekirdeğindeki eski Mala ve kamyon yardımı davranışıyla birlikte değişir) → WP-C, WP-D, WP-L. **WP-L kapattı
+    (2026-10-07):** fark listesi boş, sıkı "D-017 …" testi `it.fails`'siz geçiyor; STORY §6 bağlamsal/meta, §6A, §7.1–§7.7
+    satırları (§7.4 ad ızgarası hariç, Faz 4) ve OBSTACLES kartlarının tamamı i18n'de; `lose.left` ve
+    `tut.ctx.truckhelp.material` silindi; `tut.l1…l5` satırları `levels/*.json` onları kullandıkça kalır (test korur,
+    WP-M'den sonra silinir); STORY'de olmayan `booster.crane.noTarget` bekliyor.
 
   LEVELS §2 ↔ `levels/*.json` inceleme kümeleri (`tests/review/data.review.test.ts`, 5 küme) LEVELS Faz 2R
   biçimindeyken kayıt edilmez ve yerine bir `it.todo` durur; WP-M yeni biçime göre yeniden yazar.

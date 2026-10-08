@@ -27,6 +27,18 @@ const LOADERS: ReadonlyMap<number, () => Promise<unknown>> = new Map(
   }),
 );
 
+/**
+ * Development / harness level sources (TECH §12.3 debug panel, §2R.11 harness `loadAscii`; Faz 2R screen shots of the
+ * LEVELS §2 drafts before `levels/*.json` are rewritten): data registered here wins over the bundled file of the same
+ * id and goes through the same `loadLevel` check. Production code never calls it.
+ */
+const EXTRA = new Map<number, unknown>();
+
+export function setLevelSource(id: number, data: unknown): void {
+  if (data === null || data === undefined) EXTRA.delete(id);
+  else EXTRA.set(id, data);
+}
+
 /** Ids of the level files bundled with the game, ascending. */
 export function availableLevels(): number[] {
   return [...LOADERS.keys()].sort((a, b) => a - b);
@@ -47,6 +59,7 @@ export type LevelLoad =
 
 /** Fetches, validates and compiles level `id` (TECH §8.3). */
 export async function loadLevelById(id: number): Promise<LevelLoad> {
+  if (EXTRA.has(id)) return loadLevel(structuredClone(EXTRA.get(id)));
   const load = LOADERS.get(id);
   if (!load) return { ok: false, stage: 'missing', issues: [] };
   return loadLevel(await load());

@@ -1283,3 +1283,42 @@ Uygulama notu TECH §2R.8 sonunda. Görüntüler (git dışı): `artifacts/scree
 - [code-lead → orkestratör] can kapsülü META §2 yenilenmesini **gösterir** (`regenAnchor`'dan 30 dk'da +1), ama kayıtta
   yenilenmeyi yazan ve can 0'da bölümü durduran `meta/lives` Faz 4'te; dilimde sayaç ile gerçek davranış ayrışabilir.
   Can penceresi (UX §3.1) dilim dışında kaldı: kapsüle dokunmak yalnız ikon zıplatır.
+
+## Faz 2R solver turu — Bölüm 1–10 JSON (product-lead, 2026-10-07)
+
+- [product-lead → code-lead] WP-M testler: `levels/level_001…010.json` yazıldı (eski Faz 2 001–005'in yerine; 006–010
+  yeni). `npm run levels:check` (i18n dahil) 10/10 geçerli + çözüldü, 0 hata, 0 uyarı. `npx vitest run` şimdi 33 dosyada
+  127 test kırmızı; 126'sı eski `levels/` verisine bağlı (en çok: `tests/review/presentation.review.test.ts` 22,
+  `tests/core/moves.test.ts` 10, `tests/debug/dragPlan.test.ts` 10, `tests/e2e/plan.test.ts` 10, `tests/scenes/shadowLook.test.ts`
+  7, `tests/golden/hand.test.ts` 5, `tests/review/pipeline.review.test.ts` 5, `tests/theme/textures.test.ts` 4,
+  `tests/ui/windows.test.ts` 2 …). Test ya da kod değiştirmedim. Fikstürler (`tests/level/fixtures/levels-2r`) Bölüm 4, 5, 7
+  ve 10 için eski taslaktır; `levels.expected.ts` ve golden dosyaları yeni JSON'larla (LEVELS §2, §2.11) güncellenmeli.
+  LEVELS §2 özet tablosu artık gerçek `levels/` verisini yazar; bu yüzden `tests/level/drafts.test.ts` "each draft
+  matches its LEVELS 2 summary row" fikstürlerle 4, 5, 7, 10'da ayrışıyor (127. kırmızı test). Öneri: fikstürleri
+  `levels/` kopyasıyla yenile ya da testi `levels/`'e çevir; tablo ile `levels/*.json` 10/10 tutuyor (yerel karşılaştırma).
+- [product-lead → code-lead] `tools/levels-allow.json`: `"10": ["batch_queued"]` artık gereksiz (Bölüm 10'da kuyruk yok);
+  silmek senin dosyan.
+- [product-lead → code-lead] GDD K-51 madde 2 "Bütün uzay kapısı" (araç kuralı, error): D3b tablosu olmayan bölümde
+  `metrics.deadEntries.states − caught > 0` hata olmalı (bugün yalnız not). WP-E önerdiğin sıkılaştırmanın bütün uzay
+  sürümü; kod adını sen seç (`dead_table_missing` genişletilebilir).
+- [product-lead → code-lead] GDD K-51 madde 5 "Teslimat adaleti" (`delivery_foresight`, warn): her parti k ≥ 1 için
+  `D(k)` = teslim sonrası durumlara başlangıçtan en az hamle, `T(k)` = bu durumlar; `g = D + min dist(T) − min`,
+  `f = max dist(T) − min dist(T)`; `g ≠ 0` ya da `f ≠ 0` → warn. Karalama aracımla 5, 7, 10'da `g = 0`, `f = 0`.
+  Faz 3 çok dilimli bölümlerde gerekli; Faz 2R'de acil değil.
+- [product-lead → code-lead] GDD §14 "`hand.path` anlamı" madde 5 genişledi: çalışma anında eldivenin yolu o anki `R`'de
+  değilse eldiven gizlenir (adım başında ve her hamle sonunda denetim). İlk kullanım Bölüm 4 adım 2 (tıkaç koridorda
+  kalırsa).
+- [product-lead → code-lead] TECH §2R.4: satır 804 "+5 kabulünden sonra … (D1 yardım yaptıysa ardından D3)" ile madde 4
+  (satır 899) "ardından D3 denetlenmez" çelişiyor; GDD K-29 artık ikincisini bağlar (WP-E sorusu 2 KABUL). E-42, K-35
+  adım 12 satırı ve `config/economy.json` `_doc` buna göre düzeltildi.
+- [product-lead → code-lead] `artifacts/solver/` hâlâ `.gitignore`'da değil; bu turda `levels:solve`/`levels:check`'i
+  `--out` ile oturum karalama dizinine yazdırdım, depoda çıktı yok.
+- [product-lead → design-lead] Öğretici verisi değişti (LEVELS §2): Bölüm 4 adım 1 `tut.m.dig` artık sütun 2'nin kapağı
+  `e` içindir (eldiven `[[2,3],[1,3]]`), adım 2 `tut.m.gap` tıkaç kaydırılınca başlar (`startOn`, `piece:2`) ve `gapPass`
+  ile biter; Bölüm 5 adım 2 dört yeni bloğu vurgular (`k1_0…k1_3`). Bölüm 6, 7, 8, 9, 10 adımları aynı. Bölüm 10'un
+  kanonik çözümünde kuyruk yok; kamyon göstergesi ve `tut.ctx.queue` yalnız oyuncu yükü dilim 1 sonunda başka bir yerde
+  bırakırsa görünür (solver: 559 797 durumun 17 795'inde kuyruk var, hiçbiri çıkmaz değil). Bölüm 5 ve 7'de kuyruk hiçbir
+  durumda oluşmaz. Ekran görüntüleri (Bölüm 4, 5, 7, 10 tahtaları değişti) yeni veriyle yeniden alınmalı.
+- [product-lead → entrepreneur] 1–10 hamleleri solver'la kesinleşti: 11, 9, 11, 13, 17, 13, 17, 14, 13, 18 (taslak 12,
+  15, 16 → 13, 17, 18). Çekiç'in Ağır Yüklü bölümdeki değeri 3–4 hamle (Bölüm 8: 3, Bölüm 10: 4; META §4.1 güncellendi);
+  fiyat 600 değişmedi, hamle başı 150–200 altın.

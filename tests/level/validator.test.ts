@@ -773,12 +773,14 @@ describe('K-45 Faz 2R logic details', () => {
     ).toEqual(['build.debris[0]', 'build.debris[1]', 'build.debris[2]']);
   });
 
-  it('K-45 runtime subset (Faz 2R transition): L-02, L-04, L-08, L-09, L-24, L-25, L-26, L-28; L-05 is validate-only until WP-M', () => {
-    expect(RUNTIME_CHECKS).toEqual(['L-02', 'L-04', 'L-08', 'L-09', 'L-24', 'L-25', 'L-26', 'L-28']);
+  it('K-45 runtime subset: L-02, L-04, L-05, L-08, L-09, L-24, L-25, L-26, L-28 (WP-M put L-05 back after the Faz 2R levels)', () => {
+    expect(RUNTIME_CHECKS).toEqual(['L-02', 'L-04', 'L-05', 'L-08', 'L-09', 'L-24', 'L-25', 'L-26', 'L-28']);
     const run = (file: string): string[] =>
       validateLevelJson(loadFixture('invalid', file), { only: RUNTIME_CHECKS }).issues.map((i) => i.code);
     expect(run('yard_fill_low')).toEqual([]);
-    expect(run('plan_size_rows')).toEqual([]);
+    expect(run('plan_size_rows')).toEqual(['plan_size']);
+    expect(run('plan_has_window')).toEqual(['plan_has_window']);
+    expect(loadLevel(loadFixture('invalid', 'plan_size_rows')).ok).toBe(false);
     expect(run('gap_touches_top')).toEqual(['gap_touches_top']);
     expect(run('board_too_wide')).toEqual(['board_too_wide']);
     expect(run('piece_too_wide')).toEqual(['piece_too_wide']);
@@ -930,9 +932,8 @@ describe('GDD 14.1 L-17 tutorial checks (Faz 2R)', () => {
     ]);
   });
 
-  it('L-17 every Faz 2 level 1–5 glove starts on its highlighted block; none ends a step on holdOverBuild', () => {
-    // Faz 2 levels/*.json: WP-M replaces them with the Faz 2R levels; the check itself is unchanged.
-    for (const id of [1, 2, 3, 4, 5]) {
+  it('L-17 every level 1–10 glove starts on its highlighted block; none ends a step on holdOverBuild', () => {
+    for (const id of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
       const data = JSON.parse(
         readFileSync(join(ROOT, 'levels', `level_${String(id).padStart(3, '0')}.json`), 'utf8'),
       ) as LevelData;

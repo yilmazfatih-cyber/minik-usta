@@ -12,7 +12,8 @@ import { ArraySink } from '../../src/core/moves.ts';
 import { GameSession } from '../../src/core/session.ts';
 import { pieceShape, queueIds } from '../../src/core/state.ts';
 import { shapeByIndex } from '../../src/core/shapes.ts';
-import type { At, GameEvent, GameEventBody } from '../../src/core/types.ts';
+import type { At, GameEvent, GameEventBody, Move } from '../../src/core/types.ts';
+import type { CompiledLevel } from '../../src/core/level/compile.ts';
 import { TOKENS } from '../../src/theme/tokens.ts';
 import { resolveSound } from '../../src/services/audio.ts';
 import { HAPTIC_NAMES } from '../../src/services/haptics.ts';
@@ -35,7 +36,9 @@ import type { MoveCue, PlanContext } from '../../src/scenes/level/juice/plan.ts'
 import { LOCK_SPEEDUP, Playback } from '../../src/scenes/level/juice/playback.ts';
 import type { JuiceCue, JuiceStage, Tweenable } from '../../src/scenes/level/juice/stage.ts';
 import { JUICE_VIEW } from '../../src/scenes/level/viewConstants.ts';
-import { HAND, levelFile } from '../core/moves.fixtures.ts';
+import { craneMoves, levelFile } from '../core/moves.fixtures.ts';
+import type { SliceLevel } from '../core/moves.fixtures.ts';
+import { compiledLevel } from '../fixtures/builders.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const JUICE_MD = readFileSync(join(ROOT, 'docs/JUICE.md'), 'utf8');
@@ -255,7 +258,8 @@ function variants(id: JuiceId): Partial<JuiceCue>[] {
             {
               t: 'boosterApplied',
               booster: 'trowel',
-              detail: { cell: siteAt(6, 1), color: 'R', trowels: 0 },
+              // K-33 Faz 2R (WP-G): the Golden Trowel flies a yard block to its `P` spot
+              detail: { pieceId: 0, to: siteAt(6, 1), trowels: 0 },
             },
             1,
           ),
@@ -549,12 +553,16 @@ describe('JUICE P0 handlers against a recording stage', () => {
 
 // --- plan (K-35 order) ----------------------------------------------------------------------------------------------------
 
-function playHand(level: 1 | 2 | 3 | 4 | 5, reduced = false): { plans: MoveCue[][]; ctxs: PlanContext[] } {
-  const lvl = levelFile(level);
+/** Plans of `moves` played on `lvl` (one plan per committed move). */
+function playMoves(
+  lvl: CompiledLevel,
+  moves: readonly Move[],
+  reduced = false,
+): { plans: MoveCue[][]; ctxs: PlanContext[] } {
   const session = GameSession.start(lvl);
   const plans: MoveCue[][] = [];
   const ctxs: PlanContext[] = [];
-  for (const move of HAND[level]) {
+  for (const move of moves) {
     const s = session.state;
     const ctx: PlanContext = {
       reduced,
@@ -569,6 +577,11 @@ function playHand(level: 1 | 2 | 3 | 4 | 5, reduced = false): { plans: MoveCue[]
     ctxs.push(ctx);
   }
   return { plans, ctxs };
+}
+
+/** The canonical solution of a Faz 2R level with finger drops from the crane area (`craneMoves`: the blocks fall). */
+function playHand(level: SliceLevel, reduced = false): { plans: MoveCue[][]; ctxs: PlanContext[] } {
+  return playMoves(levelFile(level), craneMoves(level), reduced);
 }
 
 const kinds = (cues: readonly MoveCue[]): string[] => cues.map((c) => String(c.kind));
@@ -588,45 +601,83 @@ describe('EventPlayer schedule (JUICE 0 rule 10, TECH 6.3)', () => {
     expect(first.every((c) => !c.lock)).toBe(true);
   });
 
-  it('W1 rail park (#23) precedes the validation (level 3 move 2)', () => {
-    const { plans } = playHand(3);
-    expect(kinds(plans[1] ?? []).slice(0, 2)).toEqual(['23', '12']);
-    expect(startOf(plans[1] ?? [], 12)).toBe(TOKENS.duration.clamp);
+  it('W1 rail park (#23) precedes the validation (level 4 move 3)', () => {
+    const { plans } = playHand(4);
+    expect(kinds(plans[2] ?? []).slice(0, 2)).toEqual(['23', '12']);
+    expect(startOf(plans[2] ?? [], 12)).toBe(TOKENS.duration.clamp);
   });
 
-  // WP-M ile yeniden üretilecek: the Faz 2 level data keep decoys, so K-48 (3) never lets them win.
-  it.fails(
-    'K-22 / K-28 last move: segment slide (#18) then win (#55) and bonus (#56), all locked and last',
-    () => {
-      const { plans } = playHand(1);
-      const last = plans.at(-1) ?? [];
-      const k = kinds(last);
-      expect(k.indexOf('18')).toBeGreaterThan(k.indexOf('50'));
-      expect(k.indexOf('55')).toBeGreaterThan(k.indexOf('18'));
-      expect(k.indexOf('56')).toBe(k.indexOf('55') + 1);
-      for (const c of last) if (c.kind === 18 || c.kind === 55 || c.kind === 56) expect(c.lock).toBe(true);
-      expect(startOf(last, 55)).toBe(startOf(last, 18) + TOKENS.duration.segment);
-      const bonus = last.find((c) => c.kind === 56);
-      expect(bonus?.ms).toBeLessThanOrEqual(TOKENS.duration.bonusMax);
-    },
-  );
+  it('K-22 / K-28 K-48 last move: segment slide (#18), "all blocks in place" (#94), then win (#55) and bonus (#56), all locked and last', () => {
+    const { plans } = playHand(1);
+    const last = plans.at(-1) ?? [];
+    const k = kinds(last);
+    expect(k.indexOf('18')).toBeGreaterThan(k.indexOf('50'));
+    // JUICE #94: #18 (if the segment ended in this action) → #94 → #55
+    expect(k.indexOf('yardClear')).toBe(k.indexOf('18') + 1);
+    expect(k.indexOf('55')).toBe(k.indexOf('yardClear') + 1);
+    expect(k.indexOf('56')).toBe(k.indexOf('55') + 1);
+    for (const c of last)
+      if (c.kind === 18 || c.kind === 'yardClear' || c.kind === 55 || c.kind === 56) expect(c.lock).toBe(true);
+    expect(startOf(last, 'yardClear')).toBe(startOf(last, 18) + TOKENS.duration.segment);
+    const clear = last.find((c) => c.kind === 'yardClear');
+    expect(startOf(last, 55)).toBe(startOf(last, 'yardClear') + (clear?.ms ?? Number.NaN));
+    const bonus = last.find((c) => c.kind === 56);
+    expect(bonus?.ms).toBeLessThanOrEqual(TOKENS.duration.bonusMax);
+  });
 
-  it('K-25 / K-26 level 5: truck (#19, locked) after the slide, the queue chip (#20) after the truck; later the chip delivers', () => {
+  it('K-25 level 5: the truck (#19, locked) comes after the slide (#18) and drops every block, staggered; no queue chip', () => {
     const { plans } = playHand(5);
-    const third = plans[2] ?? [];
-    const k = kinds(third);
+    const fifth = plans[4] ?? []; // Sol Oda complete (LEVELS §2 Bölüm 5 move 5)
+    const k = kinds(fifth);
     expect(k.indexOf('19')).toBeGreaterThan(k.indexOf('18'));
-    expect(k.indexOf('20')).toBeGreaterThan(k.indexOf('19'));
-    const truck = third.find((c) => c.kind === 19);
+    expect(k).not.toContain('20');
+    const truck = fifth.find((c) => c.kind === 19);
     expect(truck?.lock).toBe(true);
     expect(truck?.ms).toBeGreaterThanOrEqual(TOKENS.duration.truck);
     const drops = truck?.drops ?? [];
+    expect(drops).toHaveLength(4);
     drops.forEach((d, i) =>
       expect(d.delay).toBe(JUICE_VIEW.truckEnterMs + i * TOKENS.physics.truckDropStaggerMs),
     );
-    expect(third.find((c) => c.kind === 20)?.n).toBe(1);
+  });
+
+  it('K-26 a truck block without room: the queue chip (#20) after the truck; a later move delivers through the chip', () => {
+    // 3×4 | 2×4 board: a carried D2_0 Y hangs at (1,2), so the truck's O4 G has no room and waits (K-25, K-26)
+    const lvl = compiledLevel({
+      yard: { cols: 3, rows: 4 },
+      site: { cols: 2, rows: 4 },
+      wall: { height: 4 },
+      plan: [
+        ['WW', 'WW', 'WW', 'WW'],
+        ['GG', 'GG', 'YY', 'YY'],
+      ],
+      pieces: [
+        ['D2_0', 'W', 0, 2],
+        ['D2_0', 'W', 0, 0],
+        ['D2_0', 'W', 2, 2],
+        ['D2_0', 'W', 2, 0],
+        ['D2_0', 'Y', 1, 2],
+      ],
+      batches: [
+        {
+          forSegment: 1,
+          pieces: [
+            ['O4_0', 'G', 0, 4],
+            ['D2_0', 'Y', 2, 4],
+          ],
+        },
+      ],
+    });
+    const N4 = (pieceId: number, ix: number): Move => ({ kind: 'drag', pieceId, to: { ix, iy: 4, mode: 0 } });
+    const { plans } = playMoves(lvl, [N4(0, 3), N4(1, 3), N4(2, 4), N4(3, 4), N4(4, 3)]);
     const fourth = plans[3] ?? [];
-    const chip = fourth.find((c) => c.kind === 20);
+    const k = kinds(fourth);
+    expect(k.indexOf('19')).toBeGreaterThan(k.indexOf('18'));
+    expect(k.indexOf('20')).toBeGreaterThan(k.indexOf('19'));
+    expect(fourth.find((c) => c.kind === 19)?.drops?.length).toBe(1);
+    expect(fourth.find((c) => c.kind === 20)?.n).toBe(1);
+    const fifth = plans[4] ?? [];
+    const chip = fifth.find((c) => c.kind === 20);
     expect(chip?.drops?.length).toBe(1); // the queued block leaves through the chip (FIFO)
     expect(chip?.lock).toBe(false);
   });

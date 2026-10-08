@@ -153,23 +153,79 @@ describe('K-26 FIFO truck queue', () => {
     expect(queueIds(s)).toEqual([young]);
   });
 
-  it("E-03 no room for the truck: blocks wait in the queue and drop in a later move's step 9 (level 5, k1_3)", () => {
-    const s = createInitialState(levelFile(5));
-    for (const m of HAND[5].slice(0, 3)) run(s, m);
-    expect(queueIds(s)).toEqual([16]);
+  /**
+   * E-03 board (the Faz 2R levels 1–10 never queue in their canonical solutions, LEVELS §2.0 3f): 3×4 yard, 2×4
+   * site (x 3–4). Four D2_0 W build Taban; a carried D2_0 Y hangs at (1,2) (yard gravity off), so the truck's O4 G finds
+   * no two free top cells (K-25) and waits, while the D2_0 Y behind it lands (K-26: every queued block is tried once).
+   */
+  const QUEUE: LevelSpec = {
+    yard: { cols: 3, rows: 4 },
+    site: { cols: 2, rows: 4 },
+    wall: { height: 4 },
+    plan: [
+      ['WW', 'WW', 'WW', 'WW'],
+      ['GG', 'GG', 'YY', 'YY'],
+    ],
+    pieces: [
+      ['D2_0', 'W', 0, 2],
+      ['D2_0', 'W', 0, 0],
+      ['D2_0', 'W', 2, 2],
+      ['D2_0', 'W', 2, 0],
+      ['D2_0', 'Y', 1, 2],
+    ],
+    batches: [
+      {
+        forSegment: 1,
+        pieces: [
+          ['O4_0', 'G', 0, 4],
+          ['D2_0', 'Y', 2, 4],
+        ],
+      },
+    ],
+  };
+  const QUEUE_SEG0 = [dragTo(0, 3, 0), dragTo(1, 3, 2), dragTo(2, 4, 0), dragTo(3, 4, 2)];
+
+  it("E-03 no room for the truck: blocks wait in the queue and drop in a later move's step 9", () => {
+    const s = initialState(QUEUE);
+    const [o4, d2] = s.lvl.batches[1]?.pieceIds ?? [];
+    const runs = QUEUE_SEG0.map((m) => run(s, m));
+    const completing = runs[3]?.ev ?? [];
+    expect(find(completing, 'segmentCompleted').seg).toBe(0);
+    expect(find(completing, 'deliveryArrived').pieces).toEqual([d2]);
+    expect(find(completing, 'deliveryQueued').queued).toBe(1);
+    expect(queueIds(s)).toEqual([o4]);
     expect(hdr(s, H.queueLen)).toBe(1);
-    const next = run(s, HAND[5][3] ?? dragTo(0, 0, 0));
-    expect(find(next.ev, 'pieceFell')).toMatchObject({ cause: 'release' });
+    expect(at(s, d2 ?? -1)).toEqual([Zone.yard, 2, 0]);
+    // the hanging Y leaves for the site: step 9 of that move drops the waiting O4 into the freed columns 0–1
+    const next = run(s, dragTo(4, 3, 0));
+    expect(find(next.ev, 'placementCorrect').pieceId).toBe(4);
     const truck = next.ev.filter((e) => e.t === 'pieceFell' && e.cause === 'delivery');
     expect(truck).toHaveLength(1);
-    expect(truck[0]).toMatchObject({ step: 9, pieceId: 16, to: { zone: 'yard', x: 0, y: 6 } });
+    expect(truck[0]).toMatchObject({ step: 9, pieceId: o4, to: { zone: 'yard', x: 0, y: 0 } });
     expect(queueIds(s)).toEqual([]);
+    expectConsistent(s);
   });
 
   it('K-25 a delivered block remembers the move it arrived in (E-31: wet blocks keep their counter that move)', () => {
+    const s = initialState(QUEUE);
+    const [o4, d2] = s.lvl.batches[1]?.pieceIds ?? [];
+    for (const m of QUEUE_SEG0) run(s, m);
+    expect(pieceField(s, d2 ?? -1, PF.arrivedTurn)).toBe(4);
+    expect(pieceField(s, o4 ?? -1, PF.arrivedTurn)).toBe(-1);
+    run(s, dragTo(4, 3, 0));
+    expect(pieceField(s, o4 ?? -1, PF.arrivedTurn)).toBe(5);
+  });
+
+  it('K-25 level 5 (LEVELS §2 Bölüm 5): the four truck blocks of Sağ Oda land in the 5th move, none waits', () => {
     const s = createInitialState(levelFile(5));
-    for (const m of HAND[5].slice(0, 3)) run(s, m);
-    expect([13, 14, 15].map((id) => pieceField(s, id, PF.arrivedTurn))).toEqual([3, 3, 3]);
-    expect(pieceField(s, 16, PF.arrivedTurn)).toBe(-1);
+    for (const m of HAND[5].slice(0, 5)) run(s, m);
+    expect([4, 5, 6, 7].map((id) => at(s, id))).toEqual([
+      [Zone.yard, 0, 0],
+      [Zone.yard, 0, 2],
+      [Zone.yard, 1, 2],
+      [Zone.yard, 2, 0],
+    ]);
+    expect([4, 5, 6, 7].map((id) => pieceField(s, id, PF.arrivedTurn))).toEqual([5, 5, 5, 5]);
+    expect(queueIds(s)).toEqual([]);
   });
 });

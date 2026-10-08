@@ -12,6 +12,7 @@
  * Durations come from the catalogue (tokens); falls from `tokens.physics` (motion.ts), never ms per row.
  */
 import { DEFAULT_GEO } from '../../../core/geometry.ts';
+import { lowMovesWarning } from '../../../ui/remaining.ts';
 import { TOKENS } from '../../../theme/tokens.ts';
 import type { At, GameEvent, PieceId } from '../../../core/types.ts';
 import { fallLeg, glideMs } from '../motion.ts';
@@ -20,7 +21,21 @@ import { juiceMs } from './catalog.ts';
 import type { JuiceId } from './catalog.ts';
 
 /** Cues of non-P0 events the board still has to show (glass return, balloon, yard cascade …) or bookkeeping. */
-export type InternalCue = 'yardFall' | 'glide' | 'return' | 'streakReset' | 'resync' | 'end';
+export type InternalCue =
+  | 'yardFall'
+  | 'glide'
+  | 'return'
+  | 'streakReset'
+  | 'resync'
+  | 'end'
+  /** Faz 2R: K-37 crane flight (`pieceLifted` by crane). */
+  | 'lift'
+  /** Faz 2R: K-36 hammer on an Ağır Yük (`cargoSmashed`, JUICE #61). */
+  | 'smash'
+  /** Faz 2R: JUICE #94 "Bütün bloklar yerinde" (K-48 reached), before #55. */
+  | 'yardClear'
+  /** Faz 2R: JUICE #107 Söküm (K-30), the package's last board cue. */
+  | 'teardown';
 export type CueKind = JuiceId | InternalCue;
 
 /** One block entering the yard: from the truck bed (#19) or out of the queue chip (#20). */
@@ -73,6 +88,11 @@ export interface PlanContext {
   readonly pieceHeight: (id: PieceId) => number;
   /** Rows of the level grid incl. the crane area (`geo.rows`; default 10). */
   readonly gridRows?: number;
+  /**
+   * Blocks left after the move (`TurnSummary.blocksLeft`, K-48): with it the #51 warning follows UX §5.1 Faz 2R
+   * (`movesLeft − blocksLeft ≤ 1` or `movesLeft ≤ 2`); without it, the Faz 2 "last 5 moves" rule.
+   */
+  readonly blocksLeft?: number;
 }
 
 export interface MovePlan {
@@ -152,6 +172,22 @@ export function planMove(events: readonly GameEvent[], ctx: PlanContext, bonusMa
     add(cue(17, t, ms(17), { ev: e }));
     t += ms(17);
   }
+  // Faz 2R boosters (K-36, K-37): the crane flight, the hammer's smash, a site object knocked back to the yard
+  for (const e of of('pieceLifted', 1)) {
+    if (e.by !== 'crane') continue;
+    const fly = r ? D.reducedFade : D.craneBooster;
+    add(cue('lift', t, fly, { ev: e, piece: e.pieceId }));
+    t += fly;
+  }
+  for (const e of of('cargoSmashed', 1)) {
+    const hit = r ? D.reducedFade : D.hammer;
+    add(cue('smash', t, hit, { ev: e, piece: e.pieceId }));
+    t += hit;
+  }
+  for (const e of of('pieceReturned', 1)) {
+    add(cue('return', t, D.placeBad, { ev: e, piece: e.pieceId }));
+    t += D.placeBad;
+  }
   for (const e of of('movesChanged')) {
     if (e.reason !== 'offer') continue;
     add(cue(53, t, ms(53), { ev: e, n: e.movesLeft }));
@@ -221,8 +257,10 @@ export function planMove(events: readonly GameEvent[], ctx: PlanContext, bonusMa
   for (const e of of('movesChanged', 4)) {
     if (e.reason !== 'move') continue;
     add(cue(50, t, ms(50), { ev: e, n: e.movesLeft }));
-    const at = JUICE_VIEW.lastMovesAt;
-    if (e.movesLeft <= at) add(cue(51, t, ms(51), { ev: e, n: e.movesLeft, first: ctx.movesBefore > at }));
+    const bl = ctx.blocksLeft;
+    const warn = (moves: number): boolean =>
+      bl === undefined ? moves <= JUICE_VIEW.lastMovesAt : lowMovesWarning(moves, bl);
+    if (warn(e.movesLeft)) add(cue(51, t, ms(51), { ev: e, n: e.movesLeft, first: !warn(ctx.movesBefore) }));
     t += ms(50);
   }
 
@@ -284,7 +322,12 @@ export function planMove(events: readonly GameEvent[], ctx: PlanContext, bonusMa
     t += chipMs;
   }
 
-  // --- step 11: level end (locked; last)
+  // --- step 11: level end (locked; last). JUICE #94 first: K-48 reached (every block in place) → the yard sweep
+  for (const e of of('levelWon')) {
+    const clear = r ? D.reducedFade : Math.max(D.yardClear, JUICE_VIEW.yardClearRibbonMs);
+    add(cue('yardClear', t, clear, { ev: e, lock: true }));
+    t += clear;
+  }
   for (const e of of('levelWon')) {
     add(cue(55, t, ms(55), { ev: e, lock: true, n: e.movesLeft }));
     t += ms(55);
@@ -299,9 +342,21 @@ export function planMove(events: readonly GameEvent[], ctx: PlanContext, bonusMa
     t += ms(57);
   }
 
-  // --- step 12 (K-30 truck help, Phase 3 presentation #21) and the end: re-sync the board with the state
+  // --- step 12: JUICE #107 Söküm (K-30, locked; a touch plays it 3× faster), then (K-30 truck help, Phase 3
+  // presentation #21) the end: re-sync the board with the state
+  const torn = of('teardown')[0];
+  if (torn) {
+    const n = Math.max(1, torn.pieces.length);
+    const tear = r ? D.reducedFade : D.teardownSettle + D.teardown + (n - 1) * D.teardownStagger;
+    add(cue('teardown', t, tear, { ev: torn, lock: true }));
+    t += tear;
+  }
   if (events.some((e) => e.step === 12)) add(cue('resync', t, 0));
   const last = Math.max(t, end);
   add(cue('end', last, 0));
-  return { cues, ms: last };
+  // JUICE §0 rule 14 (DL-2R-24): a package that ends in a Söküm plays no correct-placement reward (#12's sound /
+  // haptic / sparks, #15, #16, #83 — the block only settles, then #107)
+  const rewards: readonly CueKind[] = [12, 15, 16, 83];
+  const kept = torn ? cues.filter((c) => !rewards.includes(c.kind)) : cues;
+  return { cues: kept, ms: last };
 }

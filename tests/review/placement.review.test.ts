@@ -729,52 +729,6 @@ describe('review: segment, trowel, steer record and yard support edges', () => {
     expect(stateInvariantErrors(s)).toEqual([]);
   });
 
-  // Faz 2R K-33: the cell trowel is gone (legacyTrowel); P set: tests/core/combo.test.ts
-  it.fails(
-    'K-34 the Golden Trowel obeys the support rule (K-33 = buildFront): above a wrong object refused, a hole under it allowed',
-    () => {
-      // E-43 board: (7,0) filled, mortar stuck on the `.` (7,1) → (7,2) is not a front cell
-      const a = initialState({
-        plan: ['WW', 'W.', 'WW'],
-        pieces: [
-          ['B1_0', 'W', 0, 0],
-          ['B1_0', 'R', 1, 0, ['mortar']],
-        ],
-      });
-      toSite(a, 0, 7, 0);
-      toSite(a, 1, 7, 1, { locked: false, stuck: true });
-      setHdr(a, H.trowels, 2);
-      const refused = applyMove(a, { kind: 'trowel', seg: 0, x: 1, y: 2 }, new ArraySink(), {
-        noTruckHelp: true,
-      });
-      expect(refused).toMatchObject({ status: 'rejected', reason: 'notBuildFront' });
-      expect(siteOcc(a, 0, 1, 2)).toBe(0);
-      const ok = applyMove(a, { kind: 'trowel', seg: 0, x: 0, y: 0 }, new ArraySink(), { noTruckHelp: true });
-      expect(ok.status).toBe('applied');
-      expect(filledMask(a, 0, 0)).toBe(0b1);
-      // hook-4 board: a right-colour mortar stuck at (6,1)–(7,1) over the empty (7,0): (7,0) is a front cell
-      const b = initialState({
-        plan: WW(2),
-        pieces: [
-          ['B1_0', 'W', 0, 0],
-          ['D2_90', 'W', 1, 0, ['mortar']],
-        ],
-      });
-      toSite(b, 0, 6, 0);
-      toSite(b, 1, 6, 1, { locked: false, stuck: true });
-      setHdr(b, H.trowels, 2);
-      expect(
-        applyMove(b, { kind: 'trowel', seg: 0, x: 0, y: 1 }, new ArraySink(), { noTruckHelp: true }).status,
-      ).toBe('rejected');
-      expect(
-        applyMove(b, { kind: 'trowel', seg: 0, x: 1, y: 0 }, new ArraySink(), { noTruckHelp: true }).status,
-      ).toBe('applied');
-      expect(filledMask(b, 0, 1)).toBe(0b1);
-      expect(stateInvariantErrors(a)).toEqual([]);
-      expect(stateInvariantErrors(b)).toEqual([]);
-    },
-  );
-
   it('K-19 normal gravity has no steering: a drag record with steer never shifts the block (refused or ignored)', () => {
     const s = initialState({ plan: WW(2), pieces: [['B1_0', 'W', 0, 0]] });
     const before = s.buf.slice();
@@ -1580,98 +1534,67 @@ describe('review round 2: GDD examples through applyMove', () => {
 // =====================================================================================================================
 
 describe('review round 3: S4 debris through the pipeline (K-15, K-16 (2), K-17, K-34, E-43)', () => {
-  // Faz 2R K-48 (3): the debris (a material block) in the yard holds back the win (rule changed)
-  it.fails(
-    'K-15 S4 a filled plan with debris above it completes only on the move that takes the debris out; that yard move wins on the last move (E-01)',
-    () => {
-      // K-15: "dilim alanında (2×8 sütun parçası) başka hiçbir blok bulunmayınca dilim tamamlanır";
-      // OBSTACLES S4: "Dilim, alanında moloz varken tamamlanmaz"; E-01: adım 11 önce kazanma
-      const s = initialState({
-        moves: 2,
-        wall: { height: 1, gaps: [{ type: 'static', y: 0, size: 1 }] },
-        plan: ['WW'],
-        pieces: [['D2_90', 'W', 4, 0]],
-        debris: [['B1_0', 'R', 7, 2]],
-      });
-      const debris = 1;
-      expect(wrongOccMask(s, 0, 1)).toBe(0); // above the plan (h = 1): no K-34 bit
-      const first = drag(s, 0, R(0, 6, 0));
-      expect(eventsOf(first.events, 'placementCorrect')).toMatchObject([
-        { pieceId: 0, cells: [site(6, 0), site(7, 0)], overWall: false },
-      ]);
-      expect([filledMask(s, 0, 0), filledMask(s, 0, 1)]).toEqual([0b1, 0b1]);
-      expect(eventsOf(first.events, 'segmentCompleted')).toEqual([]);
-      expect(eventsOf(first.events, 'levelWon')).toEqual([]);
-      expect(isSegmentComplete(s, 0)).toBe(false);
-      expect(buildFront(s)).toEqual([]);
-      expect(hdr(s, H.movesLeft)).toBe(1);
-      // the debris goes left through the open row 2 (≥ height 1) into the yard: a yard move (K-07 row 2)
-      const sink = new ArraySink();
-      const res = applyMove(s, { kind: 'drag', pieceId: debris, to: N(5, 2) }, sink, {
-        strict: true,
-        noTruckHelp: true,
-      });
-      expect(res).toMatchObject({ status: 'applied', won: true, outOfMoves: false });
-      expect(piecePlace(s, debris)).toEqual({ zone: 'yard', x: 5, y: 2, seg: -1 });
-      expect(eventsOf(sink.events, 'segmentCompleted')).toMatchObject([{ seg: 0 }]);
-      expect(eventsOf(sink.events, 'levelWon')).toMatchObject([{ movesLeft: 0 }]);
-      expect(eventsOf(sink.events, 'outOfMoves')).toEqual([]);
-      expect(isSegmentComplete(s, 0)).toBe(true);
-      expect(stateInvariantErrors(s)).toEqual([]);
-    },
-  );
+  it('K-15 S4 a filled plan with debris above it completes only on the move that takes the debris out; Faz 2R K-48 (3): the debris is then a yard block, so the last move is no win but out of moves (E-01 order)', () => {
+    // K-15: "dilim alanında başka hiçbir blok bulunmayınca dilim tamamlanır"; OBSTACLES S4: "Dilim, alanında moloz varken
+    // tamamlanmaz"; GDD E-44 (Faz 2R): the debris that leaves its spot is an ordinary material block (K-48 (3))
+    const s = initialState({
+      moves: 2,
+      wall: { height: 1, gaps: [{ type: 'static', y: 0, size: 1 }] },
+      plan: ['WW'],
+      pieces: [['D2_90', 'W', 4, 0]],
+      debris: [['B1_0', 'R', 7, 2]],
+    });
+    const debris = 1;
+    expect(wrongOccMask(s, 0, 1)).toBe(0); // above the plan (h = 1): no K-34 bit
+    const first = drag(s, 0, R(0, 6, 0));
+    expect(eventsOf(first.events, 'placementCorrect')).toMatchObject([
+      { pieceId: 0, cells: [site(6, 0), site(7, 0)], overWall: false },
+    ]);
+    expect([filledMask(s, 0, 0), filledMask(s, 0, 1)]).toEqual([0b1, 0b1]);
+    expect(eventsOf(first.events, 'segmentCompleted')).toEqual([]);
+    expect(eventsOf(first.events, 'levelWon')).toEqual([]);
+    expect(isSegmentComplete(s, 0)).toBe(false);
+    expect(buildFront(s)).toEqual([]);
+    expect(hdr(s, H.movesLeft)).toBe(1);
+    // the debris goes left through the open row 2 (≥ height 1) into the yard: a yard move (K-07 row 2)
+    const sink = new ArraySink();
+    const res = applyMove(s, { kind: 'drag', pieceId: debris, to: N(5, 2) }, sink, {
+      strict: true,
+      noTruckHelp: true,
+    });
+    expect(res).toMatchObject({ status: 'applied', won: false, outOfMoves: true });
+    expect(piecePlace(s, debris)).toEqual({ zone: 'yard', x: 5, y: 2, seg: -1 });
+    expect(eventsOf(sink.events, 'segmentCompleted')).toMatchObject([{ seg: 0 }]);
+    expect(eventsOf(sink.events, 'levelWon')).toEqual([]);
+    expect(eventsOf(sink.events, 'outOfMoves')).toHaveLength(1);
+    expect(isSegmentComplete(s, 0)).toBe(true);
+    expect(stateInvariantErrors(s)).toEqual([]);
+  });
 
-  // Faz 2R OBSTACLES S4: debris leaving its spot is an ordinary block (rule reversed)
-  it.fails(
-    'K-16 S4 debris carried to the yard stays debris: dropped on a cell of its own colour with full support it is wrong and bounces to its yard start',
-    () => {
-      // OBSTACLES S4: "Sahaya bırakılınca … sahada sıradan, kullanılamaz bir blok olur"; K-16 (2): "blok moloz (S4) değildir"
-      // plan (top → bottom) WW / RR → (6,0) = R
-      const s = initialState({
-        moves: 10,
-        plan: ['WW', 'RR'],
-        pieces: [['B1_0', 'W', 0, 0]],
-        debris: [['B1_0', 'R', 7, 3]],
-      });
-      const debris = 1;
-      drag(s, debris, N(5, 3));
-      expect(piecePlace(s, debris)).toEqual({ zone: 'yard', x: 5, y: 3, seg: -1 });
-      expect(hasFlag(s, debris, 'debris')).toBe(true);
-      const fall = computeFall(s, debris, N(6, 8));
-      expect(fall.landing).toEqual({ ix: 6, iy: 0 });
-      expect(fall.verdict).toEqual({ ok: false, reasons: ['debris'], missingSupport: [] });
-      expect(shadowInfo(fall, 'easy')).toEqual({
-        tone: 'wrong',
-        reasons: ['debris'],
-        missingSupport: [],
-        breaks: false,
-      });
-      expect(shadowInfo(fall, 'hard')).toEqual({
-        tone: 'neutral',
-        reasons: [],
-        missingSupport: [],
-        breaks: false,
-      });
-      const sink = drag(s, debris, N(6, 8));
-      expect(eventsOf(sink.events, 'placementCorrect')).toEqual([]);
-      expect(eventsOf(sink.events, 'pieceBounced')).toMatchObject([
-        {
-          pieceId: debris,
-          from: site(6, 0),
-          to: { zone: 'yard', x: 5, y: 3 },
-          viaDrop: false,
-          reason: 'debris',
-          missingSupport: [],
-        },
-      ]);
-      expect(piecePlace(s, debris)).toEqual({ zone: 'yard', x: 5, y: 3, seg: -1 });
-      expect(siteOcc(s, 0, 0, 0)).toBe(0);
-      expect([filledMask(s, 0, 0), wrongOccMask(s, 0, 0)]).toEqual([0, 0]);
-      expect(buildFront(s)).toEqual([site(6, 0), site(7, 0)]);
-      expect(hdr(s, H.movesLeft)).toBe(8);
-      expect(stateInvariantErrors(s)).toEqual([]);
-    },
-  );
+  it('K-16 S4 Faz 2R (E-44): debris carried to the yard loses the debris flag and is placed like any block (its own colour with full support is correct)', () => {
+    // OBSTACLES S4 Faz 2R / GDD E-44: debris is supply; once it leaves its start spot it is an ordinary block
+    // plan (top → bottom) WW / RR → (6,0) = R
+    const s = initialState({
+      moves: 10,
+      plan: ['WW', 'RR'],
+      pieces: [['B1_0', 'W', 0, 0]],
+      debris: [['B1_0', 'R', 7, 3]],
+    });
+    const debris = 1;
+    drag(s, debris, N(5, 3));
+    expect(piecePlace(s, debris)).toEqual({ zone: 'yard', x: 5, y: 3, seg: -1 });
+    expect(hasFlag(s, debris, 'debris')).toBe(false);
+    const fall = computeFall(s, debris, N(6, 8));
+    expect(fall.landing).toEqual({ ix: 6, iy: 0 });
+    expect(fall.verdict).toEqual({ ok: true, reasons: [], missingSupport: [] });
+    const sink = drag(s, debris, N(6, 8));
+    expect(eventsOf(sink.events, 'placementCorrect')).toMatchObject([{ pieceId: debris, cells: [site(6, 0)] }]);
+    expect(eventsOf(sink.events, 'pieceBounced')).toEqual([]);
+    expect(piecePlace(s, debris)).toEqual({ zone: 'site', x: 6, y: 0, seg: 0 });
+    expect([filledMask(s, 0, 0), wrongOccMask(s, 0, 0)]).toEqual([0b1, 0]);
+    expect(hdr(s, H.movesLeft)).toBe(8);
+    expect(stateInvariantErrors(s)).toEqual([]);
+  });
 
   it('K-12 K-17 debris that starts on its rail and is released at another site cell is wrong (Faz 2R: support only) and returns to its own start (step 1)', () => {
     // K-12 tek istisna (moloz ray kipinde başlayabilir); S4: "Şantiyede başka yere bırakılırsa hatalı → başlangıcına döner"
@@ -1752,9 +1675,8 @@ describe('review round 3: S4 debris through the pipeline (K-15, K-16 (2), K-17, 
     expect(stateInvariantErrors(s)).toEqual([]);
   });
 
-  // Faz 2R K-48 (3): the debris (a material block) in the yard holds back the win (rule changed)
-  it.fails(
-    'E-43 S2 debris in a `.` cell: a bridge over it is wrong (support); once the debris is in the yard the same bridge is correct, the `.` stays empty and the level is won',
+  it(
+    'E-43 S2 debris in a `.` cell: a bridge over it is wrong (support); once the debris is in the yard the same bridge is correct and the `.` stays empty; Faz 2R K-48 (3): the yard debris block holds back the win',
     () => {
       // S4: "Bir `.` hücresindeki moloz o hücreyi K-34'te 'dolu' yapmaz"; S2: "`.` üstündeki hücre … iki sütuna köprü kuran
       // 2 geniş blok (duvar üstü)" ile dolar; plan (top → bottom) WW / W. / WW
@@ -1801,7 +1723,9 @@ describe('review round 3: S4 debris through the pipeline (K-15, K-16 (2), K-17, 
       expect(eventsOf(sink.events, 'placementCorrect')).toMatchObject([
         { pieceId: 3, cells: [site(6, 2), site(7, 2)], overWall: true },
       ]);
-      expect(res.won).toBe(true);
+      // GDD E-44 (Faz 2R): the debris is an ordinary material block now, still in the yard (K-48 (3)): no win yet
+      expect(isSegmentComplete(s, 0)).toBe(true);
+      expect(res.won).toBe(false);
       expect(siteOcc(s, 0, 1, 1)).toBe(0);
       expect([filledMask(s, 0, 0), filledMask(s, 0, 1)]).toEqual([0b111, 0b101]);
       expect(hdr(s, H.movesLeft)).toBe(7);
@@ -2157,34 +2081,30 @@ describe('review round 3: K-12 rail placements through applyMove', () => {
 describe('review round 4: K-34 hook 2 reasonCells — the cells behind each verdict reason (UX 5.4; fixed: Faz 2 tur 1 #1)', () => {
   const key = (cells: readonly { x: number; y: number }[]): string[] => cells.map((c) => `${c.x},${c.y}`);
 
-  // Faz 2R K-34 hook 2: `debris` is never produced (S4 rule changed)
-  it.fails(
-    'K-16 (1) / K-34 hook 2: color → only the cells whose plan colour differs; window → only `.` cells; outside → only cells off the plan; support → none (its cells are missingSupport); debris → every cell',
-    () => {
-      // plan (bottom → top): y0 WY, y1 W., y2 off the plan
-      const s = initialState({
-        plan: ['W.', 'WY'],
-        pieces: [
-          ['B1_0', 'Y', 0, 0],
-          ['C3_0', 'W', 2, 0],
-        ],
-        debris: [['B1_0', 'W', 7, 1]],
-      });
-      const cells = cellsOf('C3_0', 6, 0); // (6,0) W ✓, (7,0) Y ✗ colour, (6,1) W ✓
-      expect(isCorrectPlacement(s, 1, cells).reasons).toEqual(['color']);
-      expect(key(reasonCells(s, 1, cells, 'color'))).toEqual(['7,0']);
-      const high = cellsOf('C3_0', 6, 1); // (6,1) W ✓, (7,1) `.`, (6,2) off the plan
-      expect(isCorrectPlacement(s, 1, high).reasons.slice(0, 2)).toEqual(['outside', 'window']);
-      expect(key(reasonCells(s, 1, high, 'outside'))).toEqual(['6,2']);
-      expect(key(reasonCells(s, 1, high, 'window'))).toEqual(['7,1']);
-      expect(reasonCells(s, 1, high, 'color')).toEqual([]);
-      expect(reasonCells(s, 1, high, 'support')).toEqual([]);
-      const debris = 2;
-      const on = cellsOf('B1_0', 6, 0); // a W debris block over a W cell is still wrong (K-16 (2))
-      expect(isCorrectPlacement(s, debris, on).reasons[0]).toBe('debris');
-      expect(key(reasonCells(s, debris, on, 'debris'))).toEqual(['6,0']);
-    },
-  );
+  it('K-16 (1) / K-34 hook 2: color → only the cells whose plan colour differs; window → only `.` cells; outside → only cells off the plan; support → none (its cells are missingSupport); Faz 2R: a debris block is judged like any block', () => {
+    // plan (bottom → top): y0 WY, y1 W., y2 off the plan
+    const s = initialState({
+      plan: ['W.', 'WY'],
+      pieces: [
+        ['B1_0', 'Y', 0, 0],
+        ['C3_0', 'W', 2, 0],
+      ],
+      debris: [['B1_0', 'W', 7, 1]],
+    });
+    const cells = cellsOf('C3_0', 6, 0); // (6,0) W ✓, (7,0) Y ✗ colour, (6,1) W ✓
+    expect(isCorrectPlacement(s, 1, cells).reasons).toEqual(['color']);
+    expect(key(reasonCells(s, 1, cells, 'color'))).toEqual(['7,0']);
+    const high = cellsOf('C3_0', 6, 1); // (6,1) W ✓, (7,1) `.`, (6,2) off the plan
+    expect(isCorrectPlacement(s, 1, high).reasons.slice(0, 2)).toEqual(['outside', 'window']);
+    expect(key(reasonCells(s, 1, high, 'outside'))).toEqual(['6,2']);
+    expect(key(reasonCells(s, 1, high, 'window'))).toEqual(['7,1']);
+    expect(reasonCells(s, 1, high, 'color')).toEqual([]);
+    expect(reasonCells(s, 1, high, 'support')).toEqual([]);
+    // OBSTACLES S4 Faz 2R: the `debris` reason is gone; a W debris block over a W cell is correct (K-16, K-47)
+    const debris = 2;
+    const on = cellsOf('B1_0', 6, 0);
+    expect(isCorrectPlacement(s, debris, on)).toMatchObject({ ok: true, reasons: [] });
+  });
 
   it('K-32 / K-16 (1) the colour reason reads the RESOLVED `?` colour (the shadow is neutral there, K-18, but the cell is named)', () => {
     const s = initialState({

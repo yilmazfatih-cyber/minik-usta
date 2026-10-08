@@ -50,21 +50,22 @@ describe('K-06 build panorama', () => {
 
   it('K-06 reading the panorama never changes the game state (bit-identical buffer, same m)', () => {
     const s = createInitialState(levelFile(5));
-    for (const m of HAND[5].slice(0, 3)) run(s, m);
+    for (const m of HAND[5].slice(0, 5)) run(s, m); // Sol Oda complete (LEVELS §2 Bölüm 5 move 5)
     const before = s.buf.slice();
     const views = [panoramaView(s), panoramaView(s), panoramaView(s)];
     expect(s.buf).toEqual(before);
-    expect(hdr(s, H.turn)).toBe(3);
+    expect(hdr(s, H.turn)).toBe(5);
     expect(views[1]).toEqual(views[0]);
     expect(views[0]).toEqual([
       {
         index: 0,
         status: 'done',
         rows: [
+          ['W', 'W'],
+          ['W', 'Y'],
+          ['W', 'Y'],
           ['R', 'R'],
-          ['W', 'W'],
-          ['W', 'W'],
-          ['G', 'G'],
+          ['R', 'R'],
         ],
       },
       {
@@ -72,26 +73,35 @@ describe('K-06 build panorama', () => {
         status: 'active',
         rows: [
           ['R', 'R'],
-          ['G', 'G'],
-          ['W', 'G'],
+          ['R', 'R'],
           ['W', 'W'],
+          ['Y', 'Y'],
+          ['Y', 'Y'],
         ],
       },
     ]);
   });
 
-  it('K-06 an S2 window cell stays `.` in the panorama (level 4)', () => {
-    const view = panoramaView(createInitialState(levelFile(4)));
+  it('K-06 an S2 window cell stays `.` in the panorama (builder board: S2 is outside the Faz 2R MVP, CL-2R-12)', () => {
+    const view = panoramaView(
+      initialState({
+        wall: { height: 2 },
+        plan: ['WW', 'W.', 'WW'],
+        pieces: [
+          ['D2_90', 'W', 0, 0],
+          ['B1_0', 'W', 2, 0],
+          ['D2_90', 'W', 3, 0],
+        ],
+      }),
+    );
     expect(view).toEqual([
       {
         index: 0,
         status: 'active',
         rows: [
-          ['R', 'R'],
           ['W', 'W'],
           ['W', '.'],
           ['W', 'W'],
-          ['Y', 'Y'],
         ],
       },
     ]);

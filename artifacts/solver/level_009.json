@@ -1,0 +1,350 @@
+{
+  "level": 9,
+  "file": "level_009.json",
+  "levelHash": "31e21c053c2225a5",
+  "rulesVersion": 2,
+  "solverVersion": 2,
+  "variant": null,
+  "status": "solved",
+  "geometry": "4x4|2x6 H6",
+  "difficulty": "normal",
+  "teaches": "W3",
+  "moves": 13,
+  "metrics": {
+    "N": 4,
+    "min": 7,
+    "minShifts": 3,
+    "minIsNPlusShifts": true,
+    "shiftsBySegment": [
+      3
+    ],
+    "firstNeedDepth": 1,
+    "F0": [
+      "piece:0"
+    ],
+    "cover": {
+      "piece:0": 1,
+      "piece:1": 1,
+      "piece:2": 0,
+      "piece:3": 0
+    },
+    "firstNeedCover": 1,
+    "scope": {
+      "maxShifts": 4,
+      "states": 100,
+      "placementEdges": 51
+    },
+    "trapCount": 0,
+    "deadRate": 0,
+    "deadStates": 0,
+    "deadEntries": {
+      "edges": 0,
+      "shiftEdges": 0,
+      "states": 0,
+      "caught": 0
+    },
+    "delivery": [],
+    "liveStates": 224,
+    "wonStates": 1,
+    "budget": 13,
+    "choices": [
+      3,
+      5,
+      5
+    ],
+    "bestChoices": [
+      1,
+      1,
+      1
+    ],
+    "yao": {
+      "overWall": 3,
+      "rail": 1,
+      "value": 0.75
+    }
+  },
+  "band": {
+    "row": "easy",
+    "T": 6,
+    "floor": 4,
+    "A": 1,
+    "nominal": 13,
+    "lo": 12,
+    "hi": 14
+  },
+  "canonical": [
+    {
+      "kind": "start",
+      "preBoosters": [],
+      "streakTier": 0
+    },
+    {
+      "kind": "drag",
+      "pieceId": 1,
+      "to": {
+        "ix": 2,
+        "iy": 1,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 0,
+      "to": {
+        "ix": 4,
+        "iy": 0,
+        "mode": 1
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 2,
+      "to": {
+        "ix": 0,
+        "iy": 0,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 3,
+      "to": {
+        "ix": 0,
+        "iy": 2,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 1,
+      "to": {
+        "ix": 4,
+        "iy": 1,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 3,
+      "to": {
+        "ix": 4,
+        "iy": 2,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 2,
+      "to": {
+        "ix": 4,
+        "iy": 4,
+        "mode": 0
+      }
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "kind": "shift",
+      "pieceId": 1,
+      "ref": "piece:1",
+      "shape": "D2_90",
+      "color": "G",
+      "from": [
+        2,
+        0
+      ],
+      "to": [
+        2,
+        1
+      ],
+      "node": {
+        "ix": 2,
+        "iy": 1,
+        "mode": 0
+      },
+      "cost": 1,
+      "segment": 0,
+      "queueAfter": 0
+    },
+    {
+      "n": 2,
+      "kind": "rail",
+      "pieceId": 0,
+      "ref": "piece:0",
+      "shape": "D2_90",
+      "color": "R",
+      "from": [
+        0,
+        0
+      ],
+      "to": [
+        4,
+        0
+      ],
+      "node": {
+        "ix": 4,
+        "iy": 0,
+        "mode": 1
+      },
+      "cost": 1,
+      "segment": 0,
+      "queueAfter": 0
+    },
+    {
+      "n": 3,
+      "kind": "shift",
+      "pieceId": 2,
+      "ref": "piece:2",
+      "shape": "O4_0",
+      "color": "R",
+      "from": [
+        0,
+        1
+      ],
+      "to": [
+        0,
+        0
+      ],
+      "node": {
+        "ix": 0,
+        "iy": 0,
+        "mode": 0
+      },
+      "cost": 1,
+      "segment": 0,
+      "queueAfter": 0
+    },
+    {
+      "n": 4,
+      "kind": "shift",
+      "pieceId": 3,
+      "ref": "piece:3",
+      "shape": "O4_0",
+      "color": "W",
+      "from": [
+        2,
+        2
+      ],
+      "to": [
+        0,
+        2
+      ],
+      "node": {
+        "ix": 0,
+        "iy": 2,
+        "mode": 0
+      },
+      "cost": 1,
+      "segment": 0,
+      "queueAfter": 0
+    },
+    {
+      "n": 5,
+      "kind": "overWall",
+      "pieceId": 1,
+      "ref": "piece:1",
+      "shape": "D2_90",
+      "color": "G",
+      "from": [
+        2,
+        1
+      ],
+      "to": [
+        4,
+        1
+      ],
+      "node": {
+        "ix": 4,
+        "iy": 1,
+        "mode": 0
+      },
+      "cost": 1,
+      "segment": 0,
+      "queueAfter": 0
+    },
+    {
+      "n": 6,
+      "kind": "overWall",
+      "pieceId": 3,
+      "ref": "piece:3",
+      "shape": "O4_0",
+      "color": "W",
+      "from": [
+        0,
+        2
+      ],
+      "to": [
+        4,
+        2
+      ],
+      "node": {
+        "ix": 4,
+        "iy": 2,
+        "mode": 0
+      },
+      "cost": 1,
+      "segment": 0,
+      "queueAfter": 0
+    },
+    {
+      "n": 7,
+      "kind": "overWall",
+      "pieceId": 2,
+      "ref": "piece:2",
+      "shape": "O4_0",
+      "color": "R",
+      "from": [
+        0,
+        0
+      ],
+      "to": [
+        4,
+        4
+      ],
+      "node": {
+        "ix": 4,
+        "iy": 4,
+        "mode": 0
+      },
+      "cost": 1,
+      "segment": 0,
+      "queueAfter": 0
+    }
+  ],
+  "replay": {
+    "ok": true,
+    "message": null,
+    "eventLogHash": "24e449d7f2eb77c9",
+    "events": 30
+  },
+  "variants": [
+    {
+      "name": "no-gaps",
+      "status": "solved",
+      "min": 8,
+      "bandOk": true,
+      "states": 79,
+      "ms": 16
+    }
+  ],
+  "issues": [],
+  "notes": [],
+  "stats": {
+    "states": 224,
+    "expanded": 224,
+    "edges": 1299,
+    "ms": 45,
+    "bytes": 155971,
+    "dragSessions": 164,
+    "applyMoves": 155,
+    "fastYardMoves": 1144,
+    "d3aRuns": 10,
+    "d3aMaxExpansions": 4,
+    "d3aUnknown": 0,
+    "complete": true,
+    "limit": null,
+    "totalMs": 86
+  },
+  "cacheKey": "e196e723:rules2:solver2:level:var:d3a"
+}

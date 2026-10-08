@@ -109,6 +109,13 @@ export const JUICE_VIEW = Object.freeze({
   comboIconRest: 1.1,
   /** #17 trowel: flight (arc 1,5 cells) then the plaster sweep (`setCrop`, 200 ms); 12 gold + colour sparks. */
   trowelSweepMs: 200,
+  /** #61 hammer (Faz 2R): the Ağır Yük shrinks to this scale while it fades out. */
+  smashScale: 0.6,
+  /** #94 "Bütün bloklar yerinde": the gold band's width (share of the yard) and its peak alpha. */
+  yardClearBandRatio: 0.35,
+  yardClearAlpha: 0.5,
+  /** #94: the `win.clear` ribbon stays this long. */
+  yardClearRibbonMs: 600,
   trowelArcCells: 1.5,
   trowelSparks: 12,
   /** #18 segment: screen shake 3 px; the outgoing segment flies to its panorama slot, the next one enters from the right. */

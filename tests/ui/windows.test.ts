@@ -129,17 +129,17 @@ describe('STORY 7.5 exit confirm and loss lines (K-43 item 2, D-022)', () => {
 });
 
 describe('UX 7 "Kalan: n hücre" (K-15)', () => {
-  it('K-15 remaining plan cells fall to 0 along the level 1 hand solution', () => {
+  it('K-15 remaining plan cells fall to 0 along the level 1 canonical solution', () => {
     const lvl = levelFile(1);
     const g = GameSession.start(lvl);
     const total = remainingPlanCells(g.state);
-    expect(total).toBe(6);
+    expect(total).toBe(10); // 2 × 5 plan (LEVELS §2 Bölüm 1)
     const seen = [total];
     for (const m of handMoves(1)) {
       g.commit(m);
       seen.push(remainingPlanCells(g.state));
     }
-    expect(seen).toEqual([6, 4, 2, 0]);
+    expect(seen).toEqual([10, 8, 6, 4, 2, 0]);
   });
 });
 
@@ -152,10 +152,10 @@ describe('ANALYTICS §2 v6 level_end.blocksLeft (UX 5.9, K-48)', () => {
       g.commit(m);
       seen.push(remainingBlocks(g.state));
     }
-    // Faz 2 level 1: 23 blocks, three hand moves, each a correct placement (TECH §2R.2 "N − correctly placed"). The
-    // Faz 2 data has no full cover yet, so 20 blocks stay; the Faz 2R levels end at 0 (K-48; WP-M golden asserts it).
-    expect(seen).toEqual([23, 22, 21, 20]);
-    expect(lvl.data.yard.batches.flatMap((b) => b.pieces)).toHaveLength(23); // D2 help slots are not blocks
+    // level 1: N = 5 blocks, five canonical moves, each a correct placement (TECH §2R.2 "N − correctly placed"); the
+    // full cover ends at 0 (K-48)
+    expect(seen).toEqual([5, 4, 3, 2, 1, 0]);
+    expect(lvl.data.yard.batches.flatMap((b) => b.pieces)).toHaveLength(5); // D2 help slots are not blocks
   });
 });
 

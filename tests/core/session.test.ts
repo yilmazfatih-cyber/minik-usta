@@ -111,28 +111,29 @@ describe('K-39 Undo', () => {
 
   it('K-39 Undo takes a correctly placed (locked) block back to the yard — the only K-14 exception', () => {
     const session = GameSession.start(levelFile(5));
-    session.commit(HAND[5][0] ?? dragTo(0, 0, 0));
+    session.commit(HAND[5][0] ?? dragTo(0, 0, 0)); // d shifts
+    session.commit(HAND[5][1] ?? dragTo(0, 0, 0)); // a (O4 R) → (4,0), locked
     const s = session.state;
-    expect(pieceField(s, 2, PF.flags) & FLAG_BIT.locked).not.toBe(0);
+    expect(pieceField(s, 0, PF.flags) & FLAG_BIT.locked).not.toBe(0);
     session.undo();
-    expect([pieceZone(s, 2), pieceX(s, 2), pieceY(s, 2)]).toEqual([Zone.yard, 2, 6]);
-    expect(pieceField(s, 2, PF.flags) & FLAG_BIT.locked).toBe(0);
+    expect([pieceZone(s, 0), pieceX(s, 0), pieceY(s, 0)]).toEqual([Zone.yard, 0, 0]);
+    expect(pieceField(s, 0, PF.flags) & FLAG_BIT.locked).toBe(0);
   });
 
   it('E-21 Undo of a move with a segment shift and a delivery restores everything', () => {
     const session = GameSession.start(levelFile(5));
-    session.commit(HAND[5][0] ?? dragTo(0, 0, 0));
-    session.commit(HAND[5][1] ?? dragTo(0, 0, 0));
+    for (const m of HAND[5].slice(0, 4)) session.commit(m);
     const before = session.state.buf.slice();
     const first = new ArraySink();
-    session.commit(HAND[5][2] ?? dragTo(0, 0, 0), first);
+    session.commit(HAND[5][4] ?? dragTo(0, 0, 0), first); // Sol Oda complete: shift + truck (k1_0…k1_3)
     expect(hdr(session.state, H.activeSeg)).toBe(1);
-    expect(queueIds(session.state)).toEqual([16]);
+    expect([4, 5, 6, 7].map((id) => pieceZone(session.state, id))).toEqual(Array(4).fill(Zone.yard));
+    expect(queueIds(session.state)).toEqual([]);
     expect(session.undo()).toBe(true);
     expect(session.state.buf).toEqual(before);
-    expect([13, 14, 15, 16].map((id) => pieceZone(session.state, id))).toEqual(Array(4).fill(Zone.pending));
+    expect([4, 5, 6, 7].map((id) => pieceZone(session.state, id))).toEqual(Array(4).fill(Zone.pending));
     const again = new ArraySink();
-    session.commit(HAND[5][2] ?? dragTo(0, 0, 0), again);
+    session.commit(HAND[5][4] ?? dragTo(0, 0, 0), again);
     expect(again.events).toEqual(first.events);
   });
 
@@ -260,27 +261,28 @@ describe('K-43 exit and resume', () => {
     const lvl = levelFile(5);
     const live = GameSession.start(lvl);
     live.commit(HAND[5][0] ?? dragTo(0, 0, 0));
-    live.commit(dragTo(3, 6, 8)); // wrong (bounces)
-    live.undo();
     live.commit(HAND[5][1] ?? dragTo(0, 0, 0));
+    live.commit(dragTo(1, 5, 5)); // b (W) onto the Y column: wrong (bounces)
+    live.undo();
     live.commit(HAND[5][2] ?? dragTo(0, 0, 0));
+    live.commit(HAND[5][3] ?? dragTo(0, 0, 0));
     const resumed = GameSession.replay(lvl, live.log);
     expect(resumed.resumed).toBe(true);
     expect(live.resumed).toBe(false);
     expect(resumed.state.buf).toEqual(live.state.buf);
     expect(resumed.log).toEqual(live.log);
     expect([resumed.canUndo(), resumed.outcome]).toEqual([live.canUndo(), live.outcome]);
-    for (const m of HAND[5].slice(3)) {
+    for (const m of HAND[5].slice(4)) {
       live.commit(m);
       resumed.commit(m);
     }
     expect(resumed.state.buf).toEqual(live.state.buf);
-    // the Faz 2 level 5 never wins under K-48 (decoys stay; WP-M ile yeniden üretilecek): replay = live is the point
     expect([resumed.outcome, resumed.movesLeft, resumed.yao()]).toEqual([
-      live.outcome,
-      5,
-      { overWall: 6, rail: 0, yao: 1 },
+      'won',
+      6,
+      { overWall: 8, rail: 0, yao: 1 },
     ]);
+    expect(live.outcome).toBe('won');
   });
 
   it('K-43 the out-of-moves window survives a restart with the same offer number', () => {
@@ -302,7 +304,7 @@ describe('K-43 exit and resume', () => {
     const lvl = levelFile(5);
     const start: SessionAction = { kind: 'start', preBoosters: [], streakTier: 0 };
     expect(() => GameSession.replay(lvl, [])).toThrow(ReplayError);
-    const buried: SessionAction[] = [start, dragTo(4, 0, 6)];
+    const buried: SessionAction[] = [start, dragTo(0, 4, 5)]; // a (O4 R) lies under d (K-09)
     expect(() => GameSession.replay(lvl, buried)).toThrow(/action 1/);
     expect(() => GameSession.replay(lvl, [start, start])).toThrow(/second start/);
     expect(() => GameSession.replay(lvl, [start, { kind: 'undo' }])).toThrow(/undo/);

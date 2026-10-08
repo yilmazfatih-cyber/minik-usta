@@ -6,6 +6,7 @@ import { IntroScene } from './scenes/IntroScene';
 import { LevelScene } from './scenes/level/LevelScene';
 import { installAudioUnlock } from './scenes/level/sceneServices';
 import { installQuietTouchCancel } from './scenes/touchCancel';
+import { BACK_EVENT, installBackGuard } from './scenes/backGuard';
 import { changeSetting } from './scenes/appServices';
 import { getLocale, t } from './services/i18n';
 import { TOKENS } from './theme/tokens';
@@ -43,6 +44,8 @@ const game = new Phaser.Game({
 installAudioUnlock();
 // TECH §4.6: a system-cancelled touch is no release (`pointer.wasCanceled`) and logs no console error
 installQuietTouchCancel(game);
+// TECH §2R.1 web back guard: an edge "back" gesture opens Pause instead of leaving the page (DL-2R-16, UX §5.8)
+installBackGuard(window, () => game.events.emit(BACK_EVENT));
 
 if (import.meta.env.DEV) {
   // development hooks: the game, and the settings stub (e.g. `__settings('lang', 'en')`) until the Settings screen

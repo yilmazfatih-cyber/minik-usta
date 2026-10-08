@@ -28,6 +28,11 @@
  * Golden Trowel; the LEVELS §5 glove-start rule at the moment a step opens; the required-step touch blockers around the
  * pause button and the merged hole (UX §13.1); LEVELS §5 "zamandan bağımsız" for level 2's `holdOverBuild` step.
  *
+ * Faz 2R (K-53, WP-H): the light tutorial removed the required step, its input gate, the spotlight holes and the old
+ * bubble candidates; the round 2 and round 3 tests of those (and the it.fails that walked the Faz 2 levels through them)
+ * left this file. The K-53 tests (presence, queue rule, Söküm line, dock, glove condition, K-43 resume with the Faz 2R
+ * drafts) are in tests/scenes/tutorial.test.ts.
+ *
  * Round 4 (very bottom, after the Faz 2 tur 3 fixes #0–#2): the saved K-43 tutorial position (`inLevel.tutorial`,
  * `TutorialResume` / `restore` / `accepts`) driven exactly as `LevelScene` saves and resumes it — three kill points per
  * position of every level 1–5 ✓ sequence (after the cues, while the last move's cues play, mid-drag after a drag
@@ -40,33 +45,16 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import economy from '../../config/economy.json' with { type: 'json' };
-import { loadLevel } from '../../src/core/level/compile.ts';
 import type { CompiledLevel } from '../../src/core/level/compile.ts';
 import { levelHooks } from '../../src/core/obstacles/registry.ts';
-import { trowelsOf } from '../../src/core/combo.ts';
 import { computeFall } from '../../src/core/gravity.ts';
-import { pieceBoardCells, visibleSegment } from '../../src/core/grid.ts';
-import { buildFront } from '../../src/core/placement.ts';
-import { DEFAULT_GEO } from '../../src/core/geometry.ts';
-import { FREE, blockCells, tryBeginDrag } from '../../src/core/movement.ts';
+import { FREE, tryBeginDrag } from '../../src/core/movement.ts';
 import { ArraySink } from '../../src/core/moves.ts';
 import { GameSession, RULES_VERSION, levelHash } from '../../src/core/session.ts';
 import type { StreakBonus } from '../../src/core/session.ts';
 import { shapeByIndex } from '../../src/core/shapes.ts';
-import {
-  FLAG_BIT,
-  H,
-  cloneState,
-  hdr,
-  pieceColor,
-  pieceFlags,
-  pieceShape,
-  pieceX,
-  pieceY,
-  pieceZone,
-  queueIds,
-} from '../../src/core/state.ts';
-import { COLOR_CODES, Zone } from '../../src/core/types.ts';
+import { FLAG_BIT, H, hdr, pieceColor, pieceFlags, pieceShape, queueIds } from '../../src/core/state.ts';
+import { COLOR_CODES } from '../../src/core/types.ts';
 import type { DragNode, GameEvent, Move, PieceId, SessionAction } from '../../src/core/types.ts';
 import { Analytics } from '../../src/services/analytics.ts';
 import type { AnalyticsEvent, AnalyticsEventOf } from '../../src/services/analytics.ts';
@@ -86,44 +74,25 @@ import {
   ctxMoveHighlight,
 } from '../../src/scenes/level/tutorial/contextTips.ts';
 import type { CtxTopic } from '../../src/scenes/level/tutorial/contextTips.ts';
-import {
-  blockerRects,
-  bubbleForbidden,
-  bubblePenalties,
-  highlightAll,
-  highlightRects,
-  padRect,
-  pidHighlight,
-  placeBubble,
-  siteColumn,
-  spotlight,
-  yardBlockRects,
-} from '../../src/scenes/level/tutorial/highlights.ts';
-import type { BubbleCandidate, BubbleQuery } from '../../src/scenes/level/tutorial/highlights.ts';
-import { pauseHitRect } from '../../src/ui/PauseButton.ts';
+import { highlightRects, pidHighlight } from '../../src/scenes/level/tutorial/highlights.ts';
 import { JUICE_HANDLERS } from '../../src/scenes/level/juice/handlers.ts';
 import type { JuiceId } from '../../src/scenes/level/juice/catalog.ts';
 import { planMove } from '../../src/scenes/level/juice/plan.ts';
 import type { MoveCue, PlanContext } from '../../src/scenes/level/juice/plan.ts';
 import type { JuiceCue, JuiceStage, Tweenable } from '../../src/scenes/level/juice/stage.ts';
-import {
-  TutorialController,
-  TutorialResume,
-  replayTutorialAction,
-} from '../../src/scenes/level/tutorial/TutorialController.ts';
+import { TutorialController, TutorialResume } from '../../src/scenes/level/tutorial/TutorialController.ts';
 import type {
   SavedTutorialPosition,
   TutorialPosition,
 } from '../../src/scenes/level/tutorial/TutorialController.ts';
 import { moveMatches } from '../../src/scenes/level/tutorial/tutorialEvents.ts';
-import { createLayout, designHeight, rectsOverlap } from '../../src/theme/layout.ts';
-import type { Layout, Rect } from '../../src/theme/layout.ts';
+import { createLayout, designHeight } from '../../src/theme/layout.ts';
+import type { Layout } from '../../src/theme/layout.ts';
 import { TOKENS } from '../../src/theme/tokens.ts';
 import { offerModel } from '../../src/ui/offer.ts';
 import type { OfferModel } from '../../src/ui/offer.ts';
 import { remainingPlanCells } from '../../src/ui/remaining.ts';
 import { winRewards } from '../../src/ui/rewards.ts';
-import { UI } from '../../src/ui/uiConstants.ts';
 import { exitLines, lossLines } from '../../src/ui/windowLines.ts';
 import { compiledLevel } from '../fixtures/builders.ts';
 import type { LevelSpec } from '../fixtures/builders.ts';
@@ -567,13 +536,6 @@ describe('review: K-33 worked examples through the cue plan (#15, #16, streak re
 
 // --- tutorial -----------------------------------------------------------------------------------------------------------
 
-/** A level compiled with another `tutorial[]` (board and pieces unchanged). */
-function withTutorial(base: CompiledLevel, tutorial: readonly unknown[]): CompiledLevel {
-  const loaded = loadLevel({ ...base.data, tutorial });
-  if (!loaded.ok) throw new Error(`tutorial variant does not load: ${JSON.stringify(loaded.issues)}`);
-  return loaded.level;
-}
-
 describe('review: GDD 14.1/3 tutorial done events', () => {
   const TROWEL_BONUS = (): StreakBonus => ({ moves: 0, trowels: 1 });
 
@@ -611,63 +573,6 @@ describe('review: GDD 14.1/3 tutorial done events', () => {
     expect(moveMatches({ event: 'placementCorrect', count: 1 }, rail, l3.state)).toBe(true);
     expect(moveMatches({ event: 'landed', count: 1 }, rail, l3.state)).toBe(false);
   });
-
-  // Faz 2R (WP-B, TECH §2R.3): timeoutMs / required steps are invalid (K-53, CL-2R-10). WP-M ile yeniden üretilecek.
-  it.fails(
-    'GDD 14.1/3 count only counts events after the step started (level 4 board, timed step 1: two correct placements during step 1 do not finish step 2)',
-    () => {
-      // the pre-round level 4 tutorial (step 1 timeoutMs 2500, step 2 placementCorrect ×2) on the level 4 board; the data
-      // itself now ends step 1 with an event (LEVELS Bölüm 4, Faz 2 tur 1 #0)
-      const lvl = withTutorial(levelFile(4), [
-        {
-          step: 1,
-          mode: 'soft',
-          highlight: ['cell:7,2'],
-          textKey: 'tut.l4.window',
-          done: { timeoutMs: 2500 },
-        },
-        {
-          step: 2,
-          mode: 'soft',
-          highlight: ['front'],
-          textKey: 'tut.ctx.support',
-          done: { event: 'placementCorrect', count: 2 },
-        },
-      ]);
-      const game = GameSession.start(lvl);
-      const hooks = levelHooks(lvl);
-      const ended: [number, boolean][] = [];
-      const tut = new TutorialController(lvl, {
-        state: () => game.state,
-        dragRules: () => hooks.drag ?? {},
-        hooks: () => hooks,
-        markContextTip: () => {},
-        stepEnded: (step, skipped) => ended.push([step, skipped]),
-      });
-      tut.start(0);
-      expect(tut.current?.data.step).toBe(1); // timeoutMs 2500
-      const [m1, m2, m3] = handMoves(4);
-      if (!m1 || !m2 || !m3) throw new Error('level 4 hand solution');
-      for (const [m, now] of [
-        [m1, 500],
-        [m2, 1500],
-      ] as const) {
-        const sink = new ArraySink();
-        expect(game.commit(m, sink).status).toBe('applied');
-        expect(sink.events.some((e) => e.t === 'placementCorrect')).toBe(true);
-        tut.moveEnded(sink.events, now);
-      }
-      expect(tut.current?.data.step).toBe(1);
-      tut.update(2500);
-      expect(ended).toEqual([[1, false]]);
-      expect(tut.current?.data.step).toBe(2); // placementCorrect ×2, counted from now on
-      const sink = new ArraySink();
-      expect(game.commit(m3, sink).status).toBe('applied');
-      tut.moveEnded(sink.events, 3000);
-      expect(tut.current?.data.step).toBe(2);
-      expect(ended).toEqual([[1, false]]);
-    },
-  );
 });
 
 // --- K-29 / K-43 attempt record -----------------------------------------------------------------------------------------
@@ -1317,475 +1222,6 @@ describe('review round 2: UX 5.4 fall shadow look (K-18, K-34 hook 2; fixed: Faz
   });
 });
 
-// --- tutorial gate and the LEVELS §2 tutorial sequences ------------------------------------------------------------------
-
-type Signal = 'overWall' | 'gapPass';
-interface TutMove {
-  readonly move: Move;
-  readonly signals: readonly Signal[];
-  readonly yard: boolean;
-}
-interface TutRun {
-  readonly game: GameSession;
-  readonly tut: TutorialController;
-  readonly ended: [number, boolean][];
-  readonly shown: Set<number>;
-  /** After each move: the step on screen, the correct placements so far, piece 2's zone. */
-  readonly after: { readonly step: number | null; readonly correct: number; readonly p2Zone: number }[];
-}
-
-function tutController(
-  lvl: CompiledLevel,
-  game: GameSession,
-  ended: [number, boolean][] = [],
-  markContextTip: (topic: string) => void = () => {},
-): TutorialController {
-  const hooks = levelHooks(lvl);
-  return new TutorialController(lvl, {
-    state: () => game.state,
-    dragRules: () => hooks.drag ?? {},
-    hooks: () => hooks,
-    markContextTip,
-    stepEnded: (step, skipped) => ended.push([step, skipped]),
-  });
-}
-
-/** Plays `seq` as the scene does: lift (gate checked) → drag signals → commit → move-end events after the cues. */
-function tutorialRun(lvl: CompiledLevel, seq: readonly TutMove[]): TutRun {
-  const game = GameSession.start(lvl, {}, { hooks: levelHooks(lvl) });
-  const ended: [number, boolean][] = [];
-  const shown = new Set<number>();
-  const tut = tutController(lvl, game, ended);
-  const after: TutRun['after'] = [];
-  let now = 0;
-  let correct = 0;
-  const mark = (): void => {
-    const c = tut.current;
-    if (c) shown.add(c.data.step);
-  };
-  tut.start(now);
-  mark();
-  for (const m of seq) {
-    if (m.move.kind !== 'drag') throw new Error('drag moves only');
-    expect(tut.allowsPick(m.move.pieceId)).toBe(true);
-    now += 40;
-    tut.dragStarted(m.move.pieceId);
-    for (const sig of m.signals) {
-      tut.dragSignal(sig, now);
-      mark();
-    }
-    const sink = new ArraySink();
-    expect(game.commit(m.move, sink).status).toBe('applied');
-    if (sink.events.some((e) => e.t === 'placementCorrect')) correct += 1;
-    now += 2000;
-    tut.moveEnded(sink.events, now);
-    tut.update(now);
-    mark();
-    after.push({ step: tut.current?.data.step ?? null, correct, p2Zone: pieceZone(game.state, 2) });
-  }
-  return { game, tut, ended, shown, after };
-}
-
-/** Moves the gate allows now: every ✓ site release (one per landing) and, while `yardLeft` > 0, every yard move. */
-function tutorialMoves(lvl: CompiledLevel, run: TutRun, yardLeft: number): TutMove[] {
-  const out: TutMove[] = [];
-  const s = run.game.state;
-  const rules = levelHooks(lvl).drag ?? {};
-  for (let pid = 0; pid < lvl.layout.counts.pieces; pid++) {
-    if (!run.tut.allowsPick(pid)) continue;
-    const a = tryBeginDrag(s, pid, rules);
-    if (!a.ok) continue;
-    const landings = new Set<string>();
-    for (const node of a.session.reachableNodes()) {
-      const drop = a.session.classify(node);
-      const move: Move = { kind: 'drag', pieceId: pid, to: node };
-      if (drop.kind === 'yard') {
-        if (yardLeft > 0) out.push({ move, signals: [], yard: true });
-      } else if (drop.kind === 'siteFree' || drop.kind === 'siteRail') {
-        const fall = computeFall(s, pid, node);
-        const key = `${fall.mode}:${fall.landing.ix},${fall.landing.iy}`;
-        if (!fall.verdict.ok || landings.has(key)) continue;
-        landings.add(key);
-        out.push({ move, signals: drop.kind === 'siteRail' ? ['gapPass'] : ['overWall'], yard: false });
-      }
-    }
-  }
-  return out;
-}
-
-describe('review round 2: GDD 14.1/4 required-step gate and the LEVELS 2 tutorial sequences (fixed: Faz 2 tur 1 #12)', () => {
-  it('GDD 14.1/4 / UX 13.1 "Zorunlu adımda delik dışındaki dokunuşlar yok sayılır": on a required step only its `piece:` blocks may be picked; soft steps and a finished tutorial leave every block free (levels 1–5 hand solutions)', () => {
-    let required = 0;
-    for (const id of [1, 2, 3, 4, 5] as const) {
-      const lvl = levelFile(id);
-      const seq = handMoves(id).map((move) => ({
-        move,
-        signals: (move.kind === 'drag' && move.to.mode !== FREE
-          ? ['gapPass']
-          : ['overWall']) as readonly Signal[],
-        yard: false,
-      }));
-      for (let k = 0; k <= seq.length; k++) {
-        const { tut } = tutorialRun(lvl, seq.slice(0, k));
-        const step = tut.current;
-        // TECH §8.2 / UX §13.1: `piece:<i>` = batch-0 index i (no truck pieces are highlighted in levels 1–5)
-        const highlighted = (step?.data.highlight ?? [])
-          .filter((h) => h.startsWith('piece:'))
-          .map((h) => Number(h.slice(6)));
-        if (step?.required) required += 1;
-        for (let pid = 0; pid < lvl.layout.counts.pieces; pid++) {
-          expect(tut.allowsPick(pid)).toBe(step?.required ? highlighted.includes(pid) : true);
-        }
-      }
-    }
-    expect(required).toBeGreaterThanOrEqual(3); // L1 step 1, L3 step 2, L4 step 3
-  });
-
-  it('GDD 14.1/3 drag signals: on the required level 1 step 1 an `overWall` of a non-highlighted block does not count; on a soft `holdOverBuild` step (the pre-Faz 2 tur 3 level 2 step 2) a hold of any block counts', () => {
-    const l1 = levelFile(1);
-    const g1 = GameSession.start(l1);
-    const t1 = tutController(l1, g1);
-    t1.start(0);
-    expect(t1.current?.data.step).toBe(1);
-    t1.dragStarted(1);
-    t1.dragSignal('overWall', 10);
-    expect(t1.current?.data.step).toBe(1);
-    t1.dragStarted(0);
-    t1.dragSignal('overWall', 20);
-    expect(t1.current?.data.step).toBe(2); // opens mid-drag (LEVELS Bölüm 1 step 2)
-
-    // `holdOverBuild` stays in the GDD §14.1/3 vocabulary; levels 1–50 no longer use it (LEVELS §5, PL-F2T3-0), so the
-    // old level 2 step 2 (soft, highlight c, hold ≥ 500 ms) is a synthetic tutorial here
-    const l2 = withTutorial(levelFile(2), [
-      {
-        step: 1,
-        mode: 'soft',
-        highlight: ['panorama', 'build'],
-        textKey: 'tut.l2.pattern',
-        done: { event: 'placementCorrect', count: 1 },
-      },
-      {
-        step: 2,
-        mode: 'soft',
-        highlight: ['piece:2', 'build'],
-        textKey: 'tut.l2.shadow',
-        done: { event: 'holdOverBuild', count: 1, minMs: 500 },
-      },
-      {
-        step: 3,
-        mode: 'soft',
-        highlight: ['piece:1'],
-        textKey: 'tut.l1.match',
-        done: { event: 'placementCorrect', count: 1 },
-      },
-    ]);
-    const g2 = GameSession.start(l2);
-    const t2 = tutController(l2, g2);
-    t2.start(0);
-    const sink = new ArraySink();
-    expect(g2.commit(handMove(2, 0), sink).status).toBe('applied');
-    t2.moveEnded(sink.events, 100);
-    expect(t2.current?.data.step).toBe(2);
-    expect(t2.current?.required).toBe(false);
-    t2.dragStarted(1); // b, not the highlighted c
-    t2.dragSignal('holdOverBuild', 200, 499);
-    expect(t2.current?.data.step).toBe(2); // minMs 500 not reached
-    t2.dragSignal('holdOverBuild', 300, 600);
-    expect(t2.current?.data.step).toBe(3);
-  });
-
-  // WP-M ile yeniden üretilecek: the Faz 2 levels keep decoys, K-48 (3) never lets them win
-  it.fails(
-    "LEVELS Bölüm 1 / 3 / 4 / 5 every ✓ sequence (+ ≤ 2 yard moves) through the gate: every step is shown, none is skipped, no step is open at the win; Bölüm 3 step 3 is on screen right after f's rail placement; Bölüm 4 step 3 opens with the 2nd correct placement while p is in the yard",
-    () => {
-      for (const id of [1, 3, 4, 5] as const) {
-        const lvl = levelFile(id);
-        const steps = lvl.data.tutorial?.length ?? 0;
-        let wins = 0;
-        const dfs = (seq: TutMove[], yardLeft: number): void => {
-          const run = tutorialRun(lvl, seq);
-          expect(run.ended.filter(([, skipped]) => skipped)).toEqual([]);
-          if (id === 3) {
-            seq.forEach((m, i) => {
-              if (m.move.kind === 'drag' && m.move.pieceId === 1 && !m.yard)
-                expect(run.after[i]?.step).toBe(3);
-            });
-          }
-          if (id === 4) {
-            const i = run.after.findIndex((a) => a.correct === 2);
-            if (i >= 0) {
-              expect(run.after[i]?.step).toBe(3);
-              expect(run.after[i]?.p2Zone).toBe(Zone.yard);
-            }
-          }
-          if (run.game.outcome === 'won') {
-            wins += 1;
-            expect(run.tut.finished).toBe(true);
-            expect(run.shown.size).toBe(steps);
-            return;
-          }
-          if (run.game.outcome !== 'playing') return;
-          for (const m of tutorialMoves(lvl, run, yardLeft)) dfs([...seq, m], yardLeft - (m.yard ? 1 : 0));
-        };
-        dfs([], id === 5 ? 1 : 2);
-        expect(wins).toBeGreaterThan(0);
-      }
-    },
-    60_000,
-  );
-
-  it('UX 13.1 "oyuncu ilk doğru dokunuşu yapınca el kaybolur" level 3 step 3 (LEVELS §5 tap rule, PL-F2T4-0; was FINDING: the glove tapped the locked f): f on the rail is only highlighted, the glove drags b from one of its cells via the crane over the wall, and lifting b hides it', () => {
-    const lvl = levelFile(3);
-    const game = GameSession.start(lvl);
-    const tut = tutController(lvl, game);
-    tut.start(0);
-    let now = 0;
-    for (const m of [handMove(3, 0), handMove(3, 1)]) {
-      const sink = new ArraySink();
-      if (m.kind === 'drag') tut.dragStarted(m.pieceId);
-      expect(game.commit(m, sink).status).toBe('applied');
-      tut.moveEnded(sink.events, (now += 1000));
-    }
-    const step = tut.current;
-    expect([step?.data.step, step?.data.hand?.kind]).toEqual([3, 'drag']);
-    expect(step?.pieces).toEqual([1, 2]); // f (on the rail), b (the next move)
-    expect(step?.handHidden).toBe(false);
-    const f = 1;
-    const b = 2;
-    expect(tryBeginDrag(game.state, f)).toEqual({ ok: false, reason: 'locked' }); // K-14: the scene drops the press
-    // the glove starts on a cell of b, passes the crane area (row 8) and ends over the wall (x = 6)
-    const path = step?.data.hand?.path ?? [];
-    const [x0, y0] = path[0] ?? [-1, -1];
-    expect(pieceBoardCells(game.state, b)).toContainEqual({ x: x0, y: y0 });
-    expect(path.some(([, y]) => y === 8)).toBe(true);
-    expect(path.at(-1)?.[0]).toBe(6);
-    // the next hand move is b's, and its first lift hides the glove (no tap on a locked block needed)
-    const next = handMove(3, 2);
-    expect(next.kind === 'drag' ? next.pieceId : null).toBe(b);
-    expect(tryBeginDrag(game.state, b).ok).toBe(true);
-    tut.dragStarted(b);
-    expect(tut.current?.handHidden).toBe(true);
-  });
-});
-
-// --- spotlight holes and the Usta Dede bubble ----------------------------------------------------------------------------
-
-interface StepView {
-  readonly step: number;
-  readonly highlight: readonly string[];
-  readonly required: boolean;
-  readonly hand: readonly (readonly [number, number])[];
-  readonly state: ReturnType<typeof cloneState>;
-  readonly dragging: { readonly pieceId: number; readonly ix: number; readonly iy: number } | null;
-}
-
-/** The state (and the drag node, for a step that opens mid-drag) at the moment each step of level `id` is shown. */
-function stepViews(id: 1 | 2 | 3 | 4 | 5): { lvl: CompiledLevel; views: StepView[] } {
-  const lvl = levelFile(id);
-  const game = GameSession.start(lvl);
-  const tut = tutController(lvl, game);
-  const views: StepView[] = [];
-  const snap = (dragging: StepView['dragging']): void => {
-    const c = tut.current;
-    if (c && !views.some((v) => v.step === c.data.step))
-      views.push({
-        step: c.data.step,
-        highlight: c.data.highlight,
-        required: c.required,
-        hand: c.data.hand?.path ?? [],
-        state: cloneState(game.state),
-        dragging,
-      });
-  };
-  tut.start(0);
-  snap(null);
-  let now = 0;
-  for (const m of handMoves(id)) {
-    if (m.kind !== 'drag') continue;
-    const a = tryBeginDrag(game.state, m.pieceId);
-    if (!a.ok) throw new Error(a.reason);
-    tut.dragStarted(m.pieceId);
-    for (const node of a.session.pathTo(m.to) ?? []) {
-      const r = a.session.moveTo(node);
-      const sig: Signal | null = r.crossedWall ? 'overWall' : r.enteredRail ? 'gapPass' : null;
-      if (sig) {
-        tut.dragSignal(sig, (now += 10));
-        snap({ pieceId: m.pieceId, ix: node.ix, iy: node.iy });
-      }
-      // the scene's hold timer (level 2 step 2 `holdOverBuild`): the block rests FREE over the site long enough
-      const min = tut.holdMinMs();
-      if (min !== null && node.mode === FREE && node.ix >= DEFAULT_GEO.siteX) {
-        tut.dragSignal('holdOverBuild', (now += min), min);
-        snap({ pieceId: m.pieceId, ix: node.ix, iy: node.iy });
-      }
-    }
-    const sink = new ArraySink();
-    expect(game.commit(m, sink).status).toBe('applied');
-    tut.moveEnded(sink.events, (now += 2000));
-    snap(null);
-  }
-  return { lvl, views };
-}
-
-/**
- * UX 13.1 bubble (Faz 2 tur 2b): bust 200 + 16 + box; every level 1–5 line fits 2 lines in the wide box (760) → the bust
- * height, ≤ 3 lines in the narrow box (494) → at most 229 px (`narrowH`).
- */
-function bubbleQuery(layout: Layout, lvl: CompiledLevel, v: StepView, narrowH = 200): BubbleQuery {
-  const rects = highlightAll(v.highlight, {
-    layout,
-    state: v.state,
-    level: lvl,
-    hud: { truck: null, streak: null },
-    dragging: v.dragging,
-  });
-  return {
-    layout,
-    lit: rects.map((r) => padRect(r, UI.spotPadPx)),
-    handPath: v.hand,
-    yardBlocks: v.required ? [] : yardBlockRects(layout, v.state, v.dragging?.pieceId ?? null),
-    panoramaLit: v.highlight.includes('panorama'),
-    size: (maxW) => ({
-      w: UI.dedeBustPx + 16 + Math.min(maxW, 700),
-      h: maxW < 700 ? narrowH : UI.dedeBustPx,
-      lines: maxW < 700 ? 3 : 2,
-    }),
-  };
-}
-
-function bubbleFor(layout: Layout, lvl: CompiledLevel, v: StepView, narrowH = 200) {
-  const q = bubbleQuery(layout, lvl, v, narrowH);
-  const pause = pauseHitRect(layout.top.pause);
-  const place = placeBubble(q, TOKENS.layout.marginPx, UI.dedeBustPx, UI.bubbleMaxW, pause);
-  return { place, forbidden: bubbleForbidden(q, pause), penalties: bubblePenalties(layout, q.panoramaLit) };
-}
-
-/** UX 13.1: the bubble touches no forbidden area (lit holes, glove path, site column, pause, lower half, soft-step yard blocks). */
-function bubbleProblems(width: number, height: number, narrowH = 200): string[] {
-  const layout = layoutOf(width, height);
-  const out: string[] = [];
-  for (const id of [1, 2, 3, 4, 5] as const) {
-    const { lvl, views } = stepViews(id);
-    for (const v of views) {
-      const { place, forbidden } = bubbleFor(layout, lvl, v, narrowH);
-      const where = `${width}×${height} L${id} step ${v.step} (candidate ${place.candidate})`;
-      const r = place.rect;
-      if (r.y + r.h > layout.H / 2) out.push(`${where}: lower half (y ${r.y}–${r.y + r.h})`);
-      if (forbidden.some((f) => rectsOverlap(f, r))) out.push(`${where}: touches a forbidden area`);
-      if (rectsOverlap(siteColumn(layout), r)) out.push(`${where}: covers the site column`);
-    }
-  }
-  return out;
-}
-
-/** UX 13.1 "Beklenen sonuç" (2026-10-07) on the short screens: required → 2, glove not via the crane → 3, else 4. */
-const SHORT_EXPECTED: Readonly<Record<string, BubbleCandidate>> = {
-  'L1·1': 2,
-  'L3·2': 2,
-  'L4·3': 2,
-  'L2·1': 3,
-  'L4·1': 3,
-  'L4·2': 3,
-  'L5·1': 3,
-  'L5·2': 3,
-  // the step opens at `overWall` with the block's hole at node (5, 7) (rows 7, padded to y 612.5 at 390×763): a 3-line
-  // narrow box (229 px) from the crane top touches it → 4, as in the UX table; a 2-line one (200 px) does not → 3
-  'L1·2': 4,
-  'L1·3': 4,
-  'L2·2': 4,
-  'L2·3': 4,
-  'L3·1': 4,
-  // Faz 2 tur 4 (PL-F2T4-0): the step 3 glove drags b (2,7) → crane (2,8) → over the wall (6,8), so it passes the crane
-  'L3·3': 4,
-};
-
-function candidatesOf(width: number, height: number, narrowH = 200): Record<string, BubbleCandidate> {
-  const layout = layoutOf(width, height);
-  const out: Record<string, BubbleCandidate> = {};
-  for (const id of [1, 2, 3, 4, 5] as const) {
-    const { lvl, views } = stepViews(id);
-    for (const v of views) out[`L${id}·${v.step}`] = bubbleFor(layout, lvl, v, narrowH).place.candidate;
-  }
-  return out;
-}
-
-describe('review round 2: UX 13.1 spotlight holes and the Usta Dede bubble (fixed: Faz 2 tur 1 #3, #4)', () => {
-  it('UX 13.1 a `piece:` hole sits on the block where it is: at the drag node while the step opens mid-drag (level 1 step 2), on the landed block after the move (level 1 a, level 3 f on the rail)', () => {
-    const layout = layoutOf(390, 844);
-    const l1 = stepViews(1);
-    const step2 = l1.views.find((v) => v.step === 2);
-    if (!step2?.dragging) throw new Error('level 1 step 2 opens mid-drag');
-    const box = (s: StepView['state'], pid: number, ix: number, iy: number): Rect => {
-      const shape = shapeByIndex(pieceShape(s, pid));
-      return layout.grid.pieceRect(ix, iy, shape.w, shape.h);
-    };
-    const input = { layout, level: l1.lvl, hud: { truck: null, streak: null } };
-    expect(highlightRects('piece:0', { ...input, state: step2.state, dragging: step2.dragging })).toEqual([
-      box(step2.state, 0, step2.dragging.ix, step2.dragging.iy),
-    ]);
-    const game = GameSession.start(l1.lvl);
-    play(game, [handMove(1, 0)]);
-    const landed = game.state;
-    expect(pieceZone(landed, 0)).toBe(Zone.site);
-    expect(highlightRects('piece:0', { ...input, state: landed, dragging: null })).toEqual([
-      box(landed, 0, 6, 0),
-    ]);
-    const l3 = stepViews(3);
-    const step3 = l3.views.find((v) => v.step === 3);
-    if (!step3) throw new Error('level 3 step 3');
-    expect(
-      highlightRects('piece:1', {
-        layout,
-        level: l3.lvl,
-        hud: { truck: null, streak: null },
-        state: step3.state,
-        dragging: null,
-      }),
-    ).toEqual([box(step3.state, 1, 6, 2)]);
-  });
-
-  it('UX 13.1 on 390×844 and 360×800 the bubble of every level 1–5 step is in the upper half, under the HUD (candidate 1), over no forbidden area and no pause / goals / moves panel', () => {
-    expect([...bubbleProblems(390, 844), ...bubbleProblems(360, 800)]).toEqual([]);
-    for (const [w, h] of [
-      [390, 844],
-      [360, 800],
-    ] as const) {
-      const layout = layoutOf(w, h);
-      for (const id of [1, 2, 3, 4, 5] as const) {
-        const { lvl, views } = stepViews(id);
-        for (const v of views) {
-          const { place, penalties } = bubbleFor(layout, lvl, v);
-          expect(place.candidate, `${w}×${h} L${id}·${v.step}`).toBe(1);
-          expect(penalties.some((p) => rectsOverlap(p, place.rect))).toBe(false);
-        }
-      }
-    }
-  });
-
-  it('UX 13.1 "ekranın üst yarısında (hedefi kapatmayacak yerde)" on short screens too: 390×763 (TECH 10.1, 390×844 in Safari), 360×740, 412×846, 375×667 — the level 1 step 1 bubble stays in the upper half, off the plan (fixed: Faz 2 tur 2 #15)', () => {
-    expect([
-      ...bubbleProblems(390, 763),
-      ...bubbleProblems(360, 740),
-      ...bubbleProblems(412, 846),
-      ...bubbleProblems(375, 667),
-      ...bubbleProblems(390, 763, 229),
-      ...bubbleProblems(375, 667, 229),
-    ]).toEqual([]);
-  });
-
-  it('UX 13.1 Faz 2 tur 2b "Beklenen sonuç": on 390×763, 360×740, 412×846 and 375×667 required steps take the yard band (2), soft steps whose glove avoids the crane the crane band (3), the others the band over the HUD (4)', () => {
-    for (const [w, h] of [
-      [390, 763],
-      [360, 740],
-      [412, 846],
-      [375, 667],
-    ] as const) {
-      expect(candidatesOf(w, h), `${w}×${h}`).toEqual({ ...SHORT_EXPECTED, 'L1·2': 3 });
-      expect(candidatesOf(w, h, 229), `${w}×${h} 3-line narrow box`).toEqual(SHORT_EXPECTED);
-    }
-  });
-});
-
 // --- contextual lines ----------------------------------------------------------------------------------------------------
 
 const STREAK_AT = economy.combo.correctPlacementsPerTrowel - 1;
@@ -1797,6 +1233,10 @@ function topicsOf(game: GameSession, move: Move): CtxTopic[] {
   expect(game.commit(move, sink).status).toBe('applied');
   return ctxFromMove(sink.events, before, STREAK_AT, LAST_MOVES_AT);
 }
+
+/** `ContextTips.update` gates: nothing in the way / a tutorial step active (K-53/4: the line waits). */
+const FREE_GATE = { stepActive: false, blocked: false } as const;
+const STEP_GATE = { stepActive: true, blocked: false } as const;
 
 function tipHost(): { seen: Set<string>; tips: ContextTips } {
   const seen = new Set<string>();
@@ -1864,58 +1304,6 @@ describe('review round 2: contextual lines (GDD K-34 hook 4, LEVELS 0, TECH 8.2,
     expect(queued.some((t) => t.includes('queue'))).toBe(true); // LEVELS Bölüm 5: "Kamyonda: 1" (K-26)
   });
 
-  // WP-M ile yeniden üretilecek: the Faz 2 levels keep decoys, K-48 (3) never lets them win
-  it.fails(
-    'GDD K-34 hook 4 / LEVELS 0: level 3 f on the rail before a → the support line waits while the steps are on screen and never shows in level 3; level 4 step 2 shows it and marks it; a later support bounce shows nothing',
-    () => {
-      const { seen, tips } = tipHost();
-      let now = 0;
-      const shownTips: CtxTopic[] = [];
-      const frame = (tut: TutorialController, game: GameSession): void => {
-        tips.update((now += 16), tut.current === null, TOKENS.duration.hint, (_t, serial) => {
-          return game.outcome === 'playing' && serial === game.log.length; // TECH 8.2: a moment, until the next action
-        });
-        if (tips.showing) shownTips.push(tips.showing);
-      };
-      const step = (tut: TutorialController, game: GameSession, move: Move): void => {
-        if (move.kind === 'drag') {
-          tut.dragStarted(move.pieceId);
-          if (move.to.mode !== FREE) tut.dragSignal('gapPass', now);
-          else if (move.to.ix >= 6) tut.dragSignal('overWall', now);
-        }
-        const before = game.movesLeft;
-        const sink = new ArraySink();
-        expect(game.commit(move, sink).status).toBe('applied');
-        tut.moveEnded(sink.events, (now += 1500));
-        for (const t of ctxFromMove(sink.events, before, STREAK_AT, LAST_MOVES_AT))
-          tips.trigger(t, game.log.length);
-        for (let i = 0; i < 10; i++) frame(tut, game);
-      };
-
-      const l3 = levelFile(3);
-      const g3 = GameSession.start(l3);
-      const t3 = tutController(l3, g3, [], (t) => seen.add(t));
-      t3.start(now);
-      step(t3, g3, handMove(3, 1)); // f before a: K-34 bounce
-      expect(tips.queued).toEqual(['support']);
-      for (const m of handMoves(3)) step(t3, g3, m);
-      expect(g3.outcome).toBe('won');
-      tips.clear(); // level change
-      expect([shownTips, seen.has('support')]).toEqual([[], false]);
-
-      const l4 = levelFile(4);
-      const g4 = GameSession.start(l4);
-      const t4 = tutController(l4, g4, [], (t) => seen.add(t));
-      t4.start(now);
-      step(t4, g4, handMove(4, 0)); // a: step 1 done → step 2 `tut.ctx.support`
-      expect(t4.current?.data.textKey).toBe('tut.ctx.support');
-      expect(seen.has('support')).toBe(true); // GDD 14.1/2: marked the moment the step is shown
-      step(t4, g4, handMove(4, 2)); // p before b: K-34 bounce (LEVELS Bölüm 4)
-      expect(tips.queued).toEqual([]);
-      expect(shownTips).toEqual([]);
-    },
-  );
-
   it('GDD K-34 hook 4: with no tutorial step on screen the first support bounce shows the line at once and marks it; the next one shows nothing', () => {
     const { seen, tips } = tipHost();
     const game = GameSession.start(
@@ -1930,24 +1318,24 @@ describe('review round 2: contextual lines (GDD K-34 hook 4, LEVELS 0, TECH 8.2,
     );
     play(game, [drag(0, 6, 8)]);
     for (const t of topicsOf(game, drag(1, 6, 8))) tips.trigger(t, game.log.length);
-    tips.update(100, true, TOKENS.duration.hint, () => true);
+    tips.update(100, FREE_GATE, TOKENS.duration.hint, () => true);
     expect([tips.showing, seen.has('support')]).toEqual(['support', true]);
-    tips.update(100 + TOKENS.duration.hint, true, TOKENS.duration.hint, () => true);
+    tips.update(100 + TOKENS.duration.hint, FREE_GATE, TOKENS.duration.hint, () => true);
     expect(tips.showing).toBe(null);
     for (const t of topicsOf(game, drag(1, 6, 8))) tips.trigger(t, game.log.length);
-    tips.update(10_000, true, TOKENS.duration.hint, () => true);
+    tips.update(10_000, FREE_GATE, TOKENS.duration.hint, () => true);
     expect([tips.showing, tips.queued]).toEqual([null, []]);
   });
 
   it('TECH 8.2: a queued tip whose trigger no longer holds when it could show is dropped UNMARKED and the next occurrence brings it back', () => {
     const { seen, tips } = tipHost();
     tips.trigger('bounce.color', 3);
-    tips.update(0, false, TOKENS.duration.hint, () => true); // a step is on screen
+    tips.update(0, STEP_GATE, TOKENS.duration.hint, () => true); // a step is on screen
     expect(tips.showing).toBe(null);
-    tips.update(50, true, TOKENS.duration.hint, () => false); // the player moved on
+    tips.update(50, FREE_GATE, TOKENS.duration.hint, () => false); // the player moved on
     expect([tips.showing, tips.queued, seen.has('bounce.color')]).toEqual([null, [], false]);
     tips.trigger('bounce.color', 7);
-    tips.update(100, true, TOKENS.duration.hint, () => true);
+    tips.update(100, FREE_GATE, TOKENS.duration.hint, () => true);
     expect([tips.showing, seen.has('bounce.color')]).toEqual(['bounce.color', true]);
   });
 
@@ -2000,7 +1388,7 @@ describe('review round 2: contextual lines (GDD K-34 hook 4, LEVELS 0, TECH 8.2,
     // "blocked": the scene triggers it with the block it could not pick; the tip lights it
     const { tips } = tipHost();
     tips.trigger('blocked', 0, [pidHighlight(3)]);
-    tips.update(0, true, TOKENS.duration.hint, () => true);
+    tips.update(0, FREE_GATE, TOKENS.duration.hint, () => true);
     expect(tips.highlight).toEqual([pidHighlight(3)]);
     const l1 = GameSession.start(levelFile(1));
     const layout = layoutOf(390, 844);
@@ -2018,7 +1406,7 @@ describe('review round 2: contextual lines (GDD K-34 hook 4, LEVELS 0, TECH 8.2,
 
 type PointerHandler = (pointer: unknown, over?: unknown[]) => void;
 
-function dragRig(game: GameSession, mayPick: (id: PieceId) => boolean = () => true) {
+function dragRig(game: GameSession) {
   const handlers = new Map<string, PointerHandler>();
   const scene = {
     input: {
@@ -2033,7 +1421,6 @@ function dragRig(game: GameSession, mayPick: (id: PieceId) => boolean = () => tr
   const view = { pose: { ax: 0, ay: 0, scale: 1, alpha: 1 }, render: () => undefined };
   const host: DragHost = {
     boardState: () => game.state,
-    mayPick,
     layout: () => layout,
     dragRules: () => ({}),
     view: () => view as unknown as PieceView,
@@ -2118,14 +1505,8 @@ describe('review round 2: DragController (K-07 tap / drag, K-08 finger offset, T
     expect(game.state.buf).toEqual(before);
   });
 
-  it('GDD 14.1/4 a block the tutorial gate refuses gets no reaction (no tap, no shake); TECH 4.6 a second finger is ignored', () => {
-    const gated = dragRig(GameSession.start(levelFile(1)), (id) => id !== A.id);
-    const c = gated.centre(A.x, A.y);
-    gated.fire('pointerdown', 1, c.x, c.y);
-    gated.fire('pointermove', 1, c.x, c.y - 200);
-    gated.fire('pointerup', 1, c.x, c.y - 200);
-    expect(gated.log).toEqual([]);
-
+  it('TECH 4.6 a second finger is ignored (K-53/2: no tutorial gate exists in the DragController host)', () => {
+    const c = dragRig(GameSession.start(levelFile(1))).centre(A.x, A.y);
     const two = dragRig(GameSession.start(levelFile(1)));
     two.fire('pointerdown', 1, c.x, c.y);
     const other = two.centre(5, 7);
@@ -2320,380 +1701,6 @@ describe('review round 2: TECH 12.2 test:rules really fails on a phase whose rul
 });
 
 // =========================================================================================================================
-// Round 3 (after the Faz 2 tur 2 fixes #0–#18): the K-43 tutorial rebuild (`replayTutorialAction`, #8) against the live
-// controller over every ✓ sequence with a yard move, a wrong drop and a Golden Trowel use; the LEVELS §5 glove-start
-// rule at the moment a step opens; the required-step blockers around the pause button and the merged hole (#0, #9);
-// LEVELS §5 "zamandan bağımsız" for level 2.
-// =========================================================================================================================
-
-interface TutSnap {
-  readonly at: string;
-  readonly required: boolean | null;
-  readonly pieces: readonly number[];
-  readonly handHidden: boolean | null;
-  /** `allowsPick` of every block ("1" = may be picked). */
-  readonly gate: string;
-}
-
-function tutSnap(tut: TutorialController, pieceCount: number): TutSnap {
-  const c = tut.current;
-  const w = tut.waiting;
-  const at = tut.finished ? 'finished' : c ? `shown:${c.data.step}` : w ? `waiting:${w.step}` : 'idle';
-  let gate = '';
-  for (let pid = 0; pid < pieceCount; pid++) gate += tut.allowsPick(pid) ? '1' : '0';
-  return {
-    at,
-    required: c?.required ?? null,
-    pieces: c ? [...c.pieces] : [],
-    handHidden: c?.handHidden ?? null,
-    gate,
-  };
-}
-
-/**
- * A level attempt with its tutorial, driven as `LevelScene` does: live (drag start → drag signals along the BFS path →
- * commit → move-end events after the cues), or rebuilt after a kill from the saved log (`startLevel` resume branch:
- * `GameSession.replay` + `replayTutorialAction` with the replaying session's state).
- */
-class TutDriver {
-  readonly lvl: CompiledLevel;
-  readonly hooks: ReturnType<typeof levelHooks>;
-  readonly tut: TutorialController;
-  readonly ended: [number, boolean][] = [];
-  now = 0;
-  private live: GameSession | null = null;
-  private replaying: GameSession | null = null;
-
-  constructor(lvl: CompiledLevel, log?: readonly SessionAction[]) {
-    this.lvl = lvl;
-    this.hooks = levelHooks(lvl);
-    this.tut = new TutorialController(lvl, {
-      state: () => (this.replaying ?? this.live)?.state ?? null,
-      dragRules: () => this.hooks.drag ?? {},
-      hooks: () => this.hooks,
-      markContextTip: () => {},
-      stepEnded: (step, skipped) => this.ended.push([step, skipped]),
-    });
-    if (!log) {
-      this.live = GameSession.start(lvl, {}, { hooks: this.hooks });
-      this.tut.start(this.now);
-      return;
-    }
-    const sink = new ArraySink();
-    let mark = 0;
-    this.live = GameSession.replay(lvl, log, { hooks: this.hooks }, sink, (index, action, at) => {
-      this.replaying = at;
-      const events = sink.events.slice(mark);
-      mark = sink.events.length;
-      if (index === 0) this.tut.start(this.now);
-      else replayTutorialAction(this.tut, action, events, this.now);
-    });
-    this.replaying = null;
-  }
-
-  get game(): GameSession {
-    if (!this.live) throw new Error('no session');
-    return this.live;
-  }
-
-  snap(): TutSnap {
-    return tutSnap(this.tut, this.lvl.layout.counts.pieces);
-  }
-
-  play(move: Move): GameEvent[] {
-    const game = this.game;
-    this.now += 40;
-    if (move.kind === 'drag') {
-      const a = tryBeginDrag(game.state, move.pieceId, this.hooks.drag ?? {});
-      if (!a.ok) throw new Error(`pick ${move.pieceId}: ${a.reason}`);
-      this.tut.dragStarted(move.pieceId);
-      for (const node of a.session.pathTo(move.to) ?? []) {
-        const r = a.session.moveTo(node);
-        if (r.crossedWall) this.tut.dragSignal('overWall', this.now);
-        if (r.enteredRail) this.tut.dragSignal('gapPass', this.now);
-      }
-      // the scene's hold timer: the released block rested FREE over the site long enough (the replay assumes the same)
-      const min = this.tut.holdMinMs();
-      if (min !== null && a.session.classify(move.to).kind === 'siteFree')
-        this.tut.dragSignal('holdOverBuild', (this.now += min), min);
-    }
-    const sink = new ArraySink();
-    const res = game.commit(move, sink);
-    if (res.status !== 'applied') throw new Error(`${move.kind} not applied: ${res.reason}`);
-    this.now += 2000;
-    this.tut.moveEnded(sink.events, this.now);
-    this.tut.update(this.now);
-    return sink.events;
-  }
-}
-
-type R3Kind = 'ok' | 'yard' | 'wrong' | 'trowel';
-interface R3Move {
-  readonly move: Move;
-  readonly kind: R3Kind;
-}
-
-/**
- * Moves the scene allows now: every ✓ site release (one per landing), a few wrong site releases (K-17 bounce), every yard
- * move and every Golden Trowel target (K-33) while the budgets last.
- */
-function r3Moves(d: TutDriver, budget: Readonly<Record<'yard' | 'wrong', number>>): R3Move[] {
-  const s = d.game.state;
-  const out: R3Move[] = [];
-  for (let pid = 0; pid < d.lvl.layout.counts.pieces; pid++) {
-    if (!d.tut.allowsPick(pid)) continue;
-    const a = tryBeginDrag(s, pid, d.hooks.drag ?? {});
-    if (!a.ok) continue;
-    const seen = new Set<string>();
-    let wrongs = 0;
-    for (const node of a.session.reachableNodes()) {
-      const drop = a.session.classify(node);
-      const move: Move = { kind: 'drag', pieceId: pid, to: node };
-      if (drop.kind === 'yard') {
-        if (budget.yard > 0) out.push({ move, kind: 'yard' });
-        continue;
-      }
-      if (drop.kind !== 'siteFree' && drop.kind !== 'siteRail') continue;
-      const fall = computeFall(s, pid, node, { rules: d.hooks.fall });
-      const key = `${fall.mode}:${fall.landing.ix},${fall.landing.iy}:${fall.verdict.ok}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      if (fall.verdict.ok) out.push({ move, kind: 'ok' });
-      else if (budget.wrong > 0 && wrongs < 2) {
-        wrongs += 1;
-        out.push({ move, kind: 'wrong' });
-      }
-    }
-  }
-  if (trowelsOf(s) > 0) {
-    const seg = visibleSegment(s);
-    for (const c of buildFront(s))
-      out.push({
-        move: { kind: 'trowel', seg, x: (c.x - DEFAULT_GEO.siteX) as 0 | 1, y: c.y },
-        kind: 'trowel',
-      });
-  }
-  return out;
-}
-
-/** Depth-first walk over `r3Moves` sequences of level `id`, at most `cap` sequences; `visit` sees every prefix. */
-function r3Walk(
-  id: 1 | 2 | 3 | 4 | 5,
-  budget: Readonly<Record<'yard' | 'wrong', number>>,
-  cap: number,
-  visit: (seq: readonly R3Move[], live: TutDriver) => void,
-): { sequences: number; wins: number } {
-  const lvl = levelFile(id);
-  let sequences = 0;
-  let wins = 0;
-  const dfs = (seq: R3Move[], left: Record<'yard' | 'wrong', number>): void => {
-    if (sequences >= cap) return;
-    sequences += 1;
-    const live = new TutDriver(lvl);
-    for (const m of seq) live.play(m.move);
-    visit(seq, live);
-    if (live.game.outcome !== 'playing') {
-      if (live.game.outcome === 'won') wins += 1;
-      return;
-    }
-    for (const m of r3Moves(live, left)) {
-      const next = { ...left };
-      if (m.kind === 'yard' || m.kind === 'wrong') next[m.kind] -= 1;
-      dfs([...seq, m], next);
-    }
-  };
-  dfs([], { ...budget });
-  return { sequences, wins };
-}
-
-const r3Label = (seq: readonly R3Move[]): string =>
-  seq
-    .map((m) =>
-      m.move.kind === 'drag'
-        ? `${m.kind}:${m.move.pieceId}@${m.move.to.ix},${m.move.to.iy},${m.move.to.mode}`
-        : `${m.kind}@${m.move.kind === 'trowel' ? `${m.move.x},${m.move.y}` : ''}`,
-    )
-    .join(' ');
-
-describe('review round 3: K-43 resume rebuilds the tutorial step (fixed: Faz 2 tur 2 #8; TECH 8.2 "K-43 devamında öğretici")', () => {
-  // WP-M ile yeniden üretilecek (+ Faz 2R K-33 legacyTrowel): the Faz 2 levels never win under K-48
-  it.fails(
-    'K-43 / TECH 8.2 "Kapanış anında ekrandaki adım (zorunlu kapısı, sayacı) aynen geri gelir": levels 1–5, every ✓ sequence with ≤ 1 yard move, ≤ 1 wrong drop and the Golden Trowel — at every kill point the rebuilt controller shows the same step, gate, highlighted blocks and glove state, has ended the same steps, and plays the rest of the game identically',
-    () => {
-      const problems: string[] = [];
-      let total = 0;
-      for (const id of [1, 2, 3, 4, 5] as const) {
-        const lvl = levelFile(id);
-        const kinds = new Set<string>();
-        const { sequences, wins } = r3Walk(id, { yard: 1, wrong: 1 }, 2500, (seq, live) => {
-          for (const m of seq) kinds.add(m.kind);
-          const resumed = new TutDriver(lvl, live.game.log);
-          const a = live.snap();
-          const b = resumed.snap();
-          if (
-            JSON.stringify(a) !== JSON.stringify(b) ||
-            JSON.stringify(live.ended) !== JSON.stringify(resumed.ended)
-          )
-            problems.push(
-              `L${id} kill after [${r3Label(seq)}]: live ${JSON.stringify(a)} ended ${JSON.stringify(live.ended)} · resumed ${JSON.stringify(b)} ended ${JSON.stringify(resumed.ended)}`,
-            );
-          // a kill halfway through a won game: the rest of the game gives the same steps
-          if (live.game.outcome === 'won' && seq.length >= 2) {
-            const k = Math.floor(seq.length / 2);
-            const before = new TutDriver(lvl);
-            for (const m of seq.slice(0, k)) before.play(m.move);
-            const cont = new TutDriver(lvl, before.game.log);
-            for (const m of seq.slice(k)) cont.play(m.move);
-            if (JSON.stringify(cont.snap()) !== JSON.stringify(a))
-              problems.push(
-                `L${id} kill at ${k} of [${r3Label(seq)}]: continued ${JSON.stringify(cont.snap())} vs ${JSON.stringify(a)}`,
-              );
-          }
-        });
-        expect(wins, `level ${id} wins`).toBeGreaterThan(0);
-        expect([...kinds].sort(), `level ${id} move kinds`).toEqual(
-          id === 5 ? ['ok', 'trowel', 'wrong', 'yard'] : ['ok', 'wrong', 'yard'],
-        );
-        total += sequences;
-      }
-      expect(total).toBeGreaterThan(100);
-      expect(problems.slice(0, 5)).toEqual([]);
-    },
-    120_000,
-  );
-});
-
-describe('review round 3: LEVELS 5 "Eldiven vurgulu bloktan başlar" at the moment the step opens (L-17 runtime half; fixed: Faz 2 tur 2 PL-F2T2-0)', () => {
-  // Faz 2R K-33: the cell trowel is gone (legacyTrowel); WP-M ile yeniden üretilecek
-  it.fails(
-    'LEVELS 5: whenever a drag / hold glove step opens (levels 1–5, every ✓ sequence with ≤ 1 yard move) and a highlighted block is still at its JSON start, `hand.path[0]` is a cell of such a block and that block can be picked then (K-09)',
-    () => {
-      const problems: string[] = [];
-      let checked = 0;
-      for (const id of [1, 2, 3, 4, 5] as const) {
-        const lvl = levelFile(id);
-        const check = (seq: readonly R3Move[], live: TutDriver): void => {
-          const step = live.tut.current;
-          const hand = step?.data.hand;
-          if (!step || !hand || hand.kind === 'tap' || !hand.path?.[0]) return;
-          // only the moment the step opened: at level start or at the end of the last move
-          if (seq.length > 0) {
-            const prev = new TutDriver(lvl);
-            for (const m of seq.slice(0, -1)) prev.play(m.move);
-            if (prev.tut.current?.index === step.index) return;
-          }
-          const s = live.game.state;
-          const unmoved = step.pieces.filter((pid) => {
-            const p = lvl.pieces[pid];
-            return (
-              p?.origin === 'yard' &&
-              p.batch === 0 &&
-              pieceZone(s, pid) === Zone.yard &&
-              pieceX(s, pid) === p.x &&
-              pieceY(s, pid) === p.y
-            );
-          });
-          if (unmoved.length === 0) return; // LEVELS 5 binds the JSON start only while the block has not moved
-          checked += 1;
-          const [fx, fy] = hand.path[0] as [number, number];
-          const owner = unmoved.find((pid) =>
-            blockCells(shapeByIndex(pieceShape(s, pid)), pieceX(s, pid), pieceY(s, pid)).some(
-              (c) => c.x === fx && c.y === fy,
-            ),
-          );
-          const where = `L${id} step ${step.data.step} after [${r3Label(seq)}]`;
-          if (owner === undefined) problems.push(`${where}: glove (${fx},${fy}) is on no highlighted block`);
-          else {
-            const a = tryBeginDrag(s, owner, live.hooks.drag ?? {});
-            if (!a.ok) problems.push(`${where}: the glove's block ${owner} cannot be picked (${a.reason})`);
-          }
-        };
-        r3Walk(id, { yard: 1, wrong: 0 }, 1500, check);
-      }
-      expect(checked).toBeGreaterThan(10);
-      expect(problems.slice(0, 5)).toEqual([]);
-    },
-    120_000,
-  );
-});
-
-describe('review round 3: required-step blockers, the pause button and the merged hole (fixed: Faz 2 tur 2 #0, #9; UX 13.1)', () => {
-  it('UX 13.1 "tek istisna Duraklat" + "Birleşen delik": on 390×844, 360×800, 390×763 and 360×740, for every required step of levels 1–5, the swallowing zones cover every point outside the lit highlights except the 128 px pause hit area, never touch a lit highlight or the pause area, and the merged box lights only its members (its fills never cover a highlight)', () => {
-    const problems: string[] = [];
-    let steps = 0;
-    for (const [w, h] of [
-      [390, 844],
-      [360, 800],
-      [390, 763],
-      [360, 740],
-    ] as const) {
-      const layout = layoutOf(w, h);
-      const pause = pauseHitRect(layout.top.pause);
-      const screen: Rect = { x: 0, y: 0, w: layout.W, h: layout.H };
-      const inside = (r: Rect, x: number, y: number): boolean =>
-        x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
-      for (const id of [1, 2, 3, 4, 5] as const) {
-        const { lvl, views } = stepViews(id);
-        for (const v of views.filter((x) => x.required)) {
-          steps += 1;
-          const where = `${w}×${h} L${id}·${v.step}`;
-          const rects = highlightAll(v.highlight, {
-            layout,
-            state: v.state,
-            level: lvl,
-            hud: { truck: null, streak: null },
-            dragging: v.dragging,
-          });
-          const lit = rects.map((r) => padRect(r, UI.spotPadPx));
-          const sp = spotlight(rects, UI.spotPadPx);
-          const blockers = blockerRects(screen, sp, [pause]);
-          if (blockers.some((b) => rectsOverlap(b, pause)))
-            problems.push(`${where}: a blocker covers the pause button`);
-          if (blockers.some((b) => lit.some((l) => rectsOverlap(b, l))))
-            problems.push(`${where}: a blocker covers a lit highlight`);
-          if (sp.fills.some((f) => lit.some((l) => rectsOverlap(f, l))))
-            problems.push(`${where}: a merged-hole fill darkens a highlight`);
-          for (let y = 3; y < layout.H; y += 9) {
-            for (let x = 3; x < layout.W; x += 9) {
-              const isLit = lit.some((l) => inside(l, x, y));
-              const blocked = blockers.some((b) => inside(b, x, y));
-              if (!isLit && !inside(pause, x, y) && !blocked) {
-                problems.push(`${where}: (${x},${y}) is dark but takes touches`);
-                y = layout.H;
-                break;
-              }
-              const inHole = sp.holes.some((hh) => inside(hh, x, y));
-              if (inHole && !isLit && !sp.fills.some((f) => inside(f, x, y))) {
-                problems.push(`${where}: (${x},${y}) in a merged hole is neither lit nor filled`);
-                y = layout.H;
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-    expect(steps).toBe(12); // L1·1, L3·2, L4·3 × 4 profiles
-    expect(problems.slice(0, 5)).toEqual([]);
-  });
-});
-
-describe('review round 3: LEVELS 5 "Öğretici zamandan bağımsız ve görünür" for level 2 (fixed: product-lead PL-F2T3-0, Faz 2 tur 3)', () => {
-  // WP-M ile yeniden üretilecek: the Faz 2 levels keep decoys, K-48 (3) never lets them win
-  it.fails(
-    'LEVELS 5 "her erişilebilir hamle sırasında her adım gösterilir" level 2: a player who never rests a block 500 ms over the site (no `holdOverBuild`) sees steps 2 and 3, and none is open at the win',
-    () => {
-      const lvl = levelFile(2);
-      const seq = handMoves(2).map((move) => ({ move, signals: ['overWall'] as const, yard: false }));
-      const run = tutorialRun(lvl, seq);
-      expect(run.game.outcome).toBe('won');
-      expect(run.shown.size).toBe(3); // LEVELS 5: every step is shown …
-      expect(run.tut.finished).toBe(true); // … and none is open at the win
-    },
-  );
-});
-
-// =========================================================================================================================
 // Round 4 (after the Faz 2 tur 3 fixes #0–#2): the saved tutorial position of K-43 (`inLevel.tutorial`, #1) through
 // `TutorialResume` exactly as LevelScene saves and resumes it; `ContextTips.retire` (#0).
 // =========================================================================================================================
@@ -2735,8 +1742,6 @@ class SceneTut {
     this.hooks = levelHooks(lvl);
     this.tut = new TutorialController(lvl, {
       state: () => (this.replaying ?? this.live).state,
-      dragRules: () => this.hooks.drag ?? {},
-      hooks: () => this.hooks,
       markContextTip: () => {},
       stepEnded: (step) => {
         if (this.replaying === null) this.sent.push(step);
@@ -2826,87 +1831,16 @@ class SceneTut {
     this.planEnded(this.commit(move));
   }
 
-  /** What a resume must give back: step, required gate, highlighted blocks, counter (the glove comes back by design). */
-  view(): { snap: Omit<TutSnap, 'handHidden'>; pos: TutorialPosition | null } {
-    const t = tutSnap(this.tut, this.lvl.layout.counts.pieces);
-    return {
-      snap: { at: t.at, required: t.required, pieces: t.pieces, gate: t.gate },
-      pos: this.tut.position(),
-    };
+  /** What a resume must give back: step, highlighted blocks, counter (its presence starts again by design). */
+  view(): { at: string; pieces: readonly number[]; pos: TutorialPosition | null } {
+    const c = this.tut.current;
+    const w = this.tut.waiting;
+    const at = this.tut.finished ? 'finished' : c ? `shown:${c.data.step}` : w ? `waiting:${w.step}` : 'idle';
+    return { at, pieces: c ? [...c.pieces] : [], pos: this.tut.position() };
   }
 }
 
 describe('review round 4: K-43 resume from the saved tutorial position (fixed: Faz 2 tur 3 #1; TECH 8.2 "K-43 devamında öğretici", 11.1 InLevel.tutorial)', () => {
-  // Faz 2R K-33: the cell trowel is gone (legacyTrowel); WP-M ile yeniden üretilecek
-  it.fails(
-    'K-43 / TECH 8.2 "kapanış anında ekrandaki adım aynen geri gelir, hiçbir zaman daha ileri bir adım değil": levels 1–5, every ✓ sequence with ≤ 1 yard move, ≤ 1 wrong drop and the Golden Trowel — killed after the cues, while the last move\'s cues play (the saved position + its move end) and mid-drag after a drag signal (cancelled), the resume uses the saved position (`accepts` it), gives the same step, gate, highlighted blocks and counter, and a second kill right after the resume gives the same again',
-    () => {
-      const problems: string[] = [];
-      const kills = { after: 0, cues: 0, tail: 0, midDrag: 0 };
-      for (const id of [1, 2, 3, 4, 5] as const) {
-        const lvl = levelFile(id);
-        r3Walk(id, { yard: 1, wrong: 1 }, 1200, (seq, live) => {
-          const where = (k: string): string => `L${id} ${k} after [${r3Label(seq)}]`;
-          const check = (k: string, a: SceneTut, expected: SceneTut): void => {
-            if (a.usable !== true) problems.push(`${where(k)}: saved ${JSON.stringify(a.saved)} not used`);
-            const got = JSON.stringify(a.view());
-            const want = JSON.stringify(expected.view());
-            if (got !== want) problems.push(`${where(k)}: resumed ${got} · live ${want}`);
-            const again = a.resume(); // killed again before anything else happened
-            if (JSON.stringify(again.view()) !== got || again.usable !== true)
-              problems.push(`${where(k)}: second resume ${JSON.stringify(again.view())} · first ${got}`);
-          };
-          const last = seq[seq.length - 1];
-          if (last) {
-            // (b) killed while the last move's cues play: the log holds it, the saved position does not
-            const s = SceneTut.fresh(lvl);
-            for (const m of seq.slice(0, -1)) s.play(m.move);
-            s.dragTo(last.move);
-            const events = s.commit(last.move);
-            if (s.resumable) {
-              kills.cues += 1;
-              if (s.saved !== null && s.saved.actions === s.game.log.length - 1) kills.tail += 1;
-              const back = s.resume();
-              s.planEnded(events); // what the player would have seen once the cues ended
-              check('kill during the cues', back, s);
-            }
-          }
-          // (a) killed after the cues of the last move
-          const s = SceneTut.fresh(lvl);
-          for (const m of seq) s.play(m.move);
-          if (!s.resumable) return;
-          kills.after += 1;
-          check('kill after the cues', s.resume(), s);
-          // (c) killed mid-drag right after a drag signal: the drag is cancelled, its signal stays (GDD 14.1/3)
-          if (live.game.outcome !== 'playing') return;
-          const next = r3Moves(live, { yard: 0, wrong: 1 }).find((m) => {
-            if (m.move.kind !== 'drag') return false;
-            const a = tryBeginDrag(live.game.state, m.move.pieceId, live.hooks.drag ?? {});
-            return (
-              a.ok &&
-              (a.session.pathTo(m.move.to) ?? []).some((n) => {
-                const r = a.session.moveTo(n);
-                return r.crossedWall || r.enteredRail;
-              })
-            );
-          });
-          if (!next) return;
-          kills.midDrag += 1;
-          const d = SceneTut.fresh(lvl);
-          for (const m of seq) d.play(m.move);
-          d.dragTo(next.move);
-          check('kill mid-drag', d.resume(), d);
-        });
-      }
-      expect(kills.after).toBeGreaterThan(200);
-      expect(kills.cues).toBeGreaterThan(200);
-      expect(kills.tail).toBe(kills.cues); // every such kill resumes through `restore` + the logged move's end
-      expect(kills.midDrag).toBeGreaterThan(100);
-      expect(problems.slice(0, 5)).toEqual([]);
-    },
-    180_000,
-  );
-
   it('K-43 / TECH 8.2 `accepts`: every position the live controller of levels 1–5 reaches is accepted; a position one event past its step (`count` = the step\'s `count`), a wait on a step without `startOn`, a finished position that is shown or counts, a negative or fractional field, and an index past "finished" are refused', () => {
     for (const id of [1, 2, 3, 4, 5] as const) {
       const lvl = levelFile(id);
@@ -2936,35 +1870,11 @@ describe('review round 4: K-43 resume from the saved tutorial position (fixed: F
       ];
       s.tut.steps.forEach((st, index) => {
         if (!st.startOn) bad.push({ index, shown: false, count: 0 });
-        if ('event' in st.done) bad.push({ index, shown: true, count: st.done.count ?? 1 });
+        bad.push({ index, shown: true, count: st.done.count ?? 1 });
       });
       for (const p of bad) expect(s.tut.accepts(p), `L${id} ${JSON.stringify(p)}`).toBe(false);
     }
   });
-
-  it.fails(
-    'FINDING ANALYTICS tutorial_step ("FTUE hunisi") after a K-43 kill while the cues of a step-ending move play: level 1 `a` is logged, the app dies before its cues end, the resume ends step 2 inside the replay where `tutorial_step` is muted — step 2 is never sent ([1, 3] instead of [1, 2, 3])',
-    () => {
-      const lvl = levelFile(1);
-      const whole = SceneTut.fresh(lvl);
-      for (const m of handMoves(1)) whole.play(m);
-      expect(whole.game.outcome).toBe('won');
-      expect(whole.sent).toEqual([1, 2, 3]);
-
-      const [ma, ...rest] = handMoves(1);
-      if (!ma) throw new Error('hand moves');
-      const killed = SceneTut.fresh(lvl);
-      killed.dragTo(ma); // overWall: step 1 ends live and is sent
-      killed.commit(ma); // a lands (✓); the action is in the log, its cues play …
-      expect(killed.saved).toEqual({ index: 1, shown: true, count: 0, actions: 1 }); // … and the app is killed
-      const back = killed.resume();
-      expect(back.usable).toBe(true);
-      expect(back.view().snap.at).toBe('shown:3'); // the step is right (a's move end was read on resume) …
-      for (const m of rest) back.play(m);
-      expect(back.game.outcome).toBe('won');
-      expect([...killed.sent, ...back.sent]).toEqual(whole.sent); // … but its tutorial_step 2 never went out
-    },
-  );
 });
 
 describe('review round 4: UX 13.2 "Altın Mala ilk kez kazanıldı" — ContextTips.retire (fixed: Faz 2 tur 3 #0)', () => {
@@ -2973,26 +1883,28 @@ describe('review round 4: UX 13.2 "Altın Mala ilk kez kazanıldı" — ContextT
     return { seen, tips: new ContextTips({ seen: (t) => seen.has(t), markSeen: (t) => void seen.add(t) }) };
   };
 
-  it('UX 13.2 "satır ekrandaysa kapanır, kuyruktaysa düşer; iki durumda da görülmüş sayılır": another line on screen stays and the queue keeps its order; a retired line never comes back; a line never triggered is not marked and still shows on its first trigger', () => {
+  it('UX 13.2 "satır ekrandaysa kapanır, kuyruktaysa düşer; iki durumda da görülmüş sayılır": another line on screen stays; a retired line never comes back; a line never triggered is not marked and still shows on its first trigger (K-53/4: at most one line waits)', () => {
     const a = host();
     a.tips.trigger('queue', 1);
+    a.tips.update(0, FREE_GATE, 3000);
+    expect(a.tips.showing).toBe('queue');
     a.tips.trigger('goldtrowel', 1);
-    a.tips.trigger('lastmoves', 1);
-    a.tips.update(0, true, 3000);
+    expect(a.tips.queued).toEqual(['goldtrowel']);
+    a.tips.retire('goldtrowel'); // waiting behind the line on screen
     expect(a.tips.showing).toBe('queue');
-    a.tips.retire('goldtrowel'); // queued behind the line on screen
-    expect(a.tips.showing).toBe('queue');
-    expect(a.tips.queued).toEqual(['lastmoves']);
+    expect(a.tips.queued).toEqual([]);
     expect(a.seen.has('goldtrowel')).toBe(true);
-    a.tips.trigger('goldtrowel', 2); // the next trowel earned: seen, never again
-    a.tips.update(3000, true, 3000);
+    a.tips.trigger('lastmoves', 1);
+    a.tips.trigger('goldtrowel', 2); // the next trowel earned: seen, never again (it does not replace lastmoves)
+    expect(a.tips.queued).toEqual(['lastmoves']);
+    a.tips.update(3000, FREE_GATE, 3000);
     expect(a.tips.showing).toBe('lastmoves');
-    a.tips.update(6000, true, 3000);
+    a.tips.update(6000, FREE_GATE, 3000);
     expect(a.tips.showing).toBeNull();
 
     const b = host();
     b.tips.trigger('goldtrowel', 1);
-    b.tips.update(0, true, 3000);
+    b.tips.update(0, FREE_GATE, 3000);
     expect(b.tips.showing).toBe('goldtrowel');
     const v = b.tips.version;
     b.tips.retire('goldtrowel'); // on screen: closes now (the overlay redraws on the version bump)
@@ -3004,7 +1916,7 @@ describe('review round 4: UX 13.2 "Altın Mala ilk kez kazanıldı" — ContextT
     c.tips.retire('goldtrowel'); // the pick opened before the line was ever triggered
     expect(c.seen.has('goldtrowel')).toBe(false);
     c.tips.trigger('goldtrowel', 1);
-    c.tips.update(0, true, 3000);
+    c.tips.update(0, FREE_GATE, 3000);
     expect(c.tips.showing).toBe('goldtrowel');
   });
 });

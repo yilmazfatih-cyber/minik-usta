@@ -1722,13 +1722,15 @@ describe('round 3 — K-08 tie-break 4, off-grid targets, interleaved sessions',
   });
 });
 
-describe('round 3 — Bölüm 1–5 start boards (level data)', () => {
-  it('K-09 (a) Bölüm 1–5: a block is pickable iff one of its four unit translations is a valid K-08 position (independent cell oracle)', () => {
+describe('round 3 — Bölüm 1–10 start boards (level data)', () => {
+  it('K-09 (a) Bölüm 1–10: a block is pickable iff one of its four unit translations is a valid K-08 position (independent cell oracle)', () => {
     let pickable = 0;
     let stuck = 0;
-    for (let id = 1; id <= 5; id++) {
+    for (let id = 1; id <= 10; id++) {
       const s = levelState(id);
       const height = s.lvl.wallHeight;
+      // K-49 board of the level: yard x 0 … wy − 1, site x wy … wy + ws − 1, rows 0 … H + 1 (crane area)
+      const { wy, hy, cols, rows } = s.lvl.geo;
       const gaps = (
         JSON.parse(
           readFileSync(join(ROOT, 'levels', `level_${String(id).padStart(3, '0')}.json`), 'utf8'),
@@ -1747,9 +1749,12 @@ describe('round 3 — Bölüm 1–5 start boards (level data)', () => {
       for (let pid = 0; pid < n; pid++) {
         if (pieceZone(s, pid) !== Zone.yard) continue;
         const cells = cellsOf(pid);
+        // K-44 / DL-2R-08: the Ağır Yük only slides inside the yard (no air above it, no crane area, no site)
+        const cargo = isCargoShape(shapeByIndex(pieceShape(s, pid)));
         const free = (x: number, y: number) => {
           const o = occ.get(`${x},${y}`);
-          return x >= 0 && x <= 7 && y >= 0 && y <= 9 && (o === undefined || o === pid);
+          const inside = cargo ? x >= 0 && x < wy && y >= 0 && y < hy : x >= 0 && x < cols && y >= 0 && y < rows;
+          return inside && (o === undefined || o === pid);
         };
         let valid = false;
         for (const [dx, dy] of [
@@ -1761,12 +1766,12 @@ describe('round 3 — Bölüm 1–5 start boards (level data)', () => {
           const moved = cells.map((c) => ({ x: c.x + dx, y: c.y + dy }));
           if (!moved.every((c) => free(c.x, c.y))) continue;
           // FREE: every cell that changes side crosses in a row y ≥ height; every row cut by the block is open
-          const crossOk = cells.every((c) => !(c.x === 5 && c.x + dx === 6) || c.y >= height);
-          const rowsCut = new Set(moved.filter((c) => c.x <= 5).map((c) => c.y));
-          const cutOk = moved.every((c) => c.x <= 5 || !rowsCut.has(c.y) || c.y >= height);
+          const crossOk = cells.every((c) => !(c.x === wy - 1 && c.x + dx === wy) || c.y >= height);
+          const rowsCut = new Set(moved.filter((c) => c.x < wy).map((c) => c.y));
+          const cutOk = moved.every((c) => c.x < wy || !rowsCut.has(c.y) || c.y >= height);
           if (crossOk && cutOk) valid = true;
           // RAIL (K-12): right, from fully in the yard, every row of the block inside one gap
-          if (dx === 1 && cells.every((c) => c.x <= 5) && moved.some((c) => c.x >= 6))
+          if (!cargo && dx === 1 && cells.every((c) => c.x < wy) && moved.some((c) => c.x >= wy))
             if (gaps.some((g) => cells.every((c) => c.y >= g.y && c.y < g.y + g.size))) valid = true;
         }
         const got = tryBeginDrag(s, pid).ok;
@@ -1779,25 +1784,34 @@ describe('round 3 — Bölüm 1–5 start boards (level data)', () => {
     expect(stuck).toBeGreaterThan(10);
   });
 
-  it('K-11 K-12 GDD §14.1 Bölüm 1, 3 and 4 required drag steps: the hand path on the start board emits the step signal (overWall / gapPass) and ends where the step points', () => {
+  it('K-11 K-12 GDD §14 Bölüm 1, 4 and 9 drag gloves: the hand path on the board where the step starts emits the step signal (overWall / gapPass) and ends where the step points', () => {
+    // LEVELS §2: Bölüm 1 step 1 on the start board; Bölüm 4 step 2 after canonical moves 1–2 (startOn: the plug
+    // shifted); Bölüm 9 step 2 after canonical move 1 (step 1 done). Anchor paths of the gloves (cell − grabbed offset).
     const cases = [
       {
         level: 1,
+        before: 0,
         piece: 0,
         path: [
-          [4, 8],
-          [6, 8],
+          [0, 4],
+          [4, 4],
         ],
         signal: 'overWall',
-        end: F(6, 8),
+        end: F(4, 4),
       },
-      { level: 3, piece: 1, path: [[6, 2]], signal: 'gapPass', end: RL(0, 6, 2) },
-      { level: 4, piece: 2, path: [[6, 3]], signal: 'gapPass', end: RL(0, 6, 3) },
+      { level: 4, before: 2, piece: 0, path: [[4, 0]], signal: 'gapPass', end: RL(0, 4, 0) },
+      { level: 9, before: 1, piece: 0, path: [[4, 0]], signal: 'gapPass', end: RL(0, 4, 0) },
     ] as const;
     for (const c of cases) {
       const label = `Bölüm ${c.level}`;
-      const d = grab(levelState(c.level), c.piece);
-      // lock guarantee (GDD §14.1/4): the event is reachable from the pick
+      const s = levelState(c.level);
+      const golden = JSON.parse(
+        readFileSync(join(ROOT, 'tests', 'golden', `level_${String(c.level).padStart(3, '0')}.hand.json`), 'utf8'),
+      ) as { log: { kind: string }[] };
+      for (const m of golden.log.slice(1, 1 + c.before))
+        expect(applyMove(s, m as never, undefined, NO_HELP).status, label).toBe('applied');
+      const d = grab(s, c.piece);
+      // the event is reachable from the pick
       if (c.signal === 'overWall') expect(d.canCrossWall, label).toBe(true);
       else expect(d.canEnterRail, label).toBe(true);
       let crossed = false;

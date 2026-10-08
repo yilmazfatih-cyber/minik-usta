@@ -193,7 +193,7 @@ export class LevelWindows {
         {
           kind: 'custom',
           h: UI.loseInfoH,
-          build: (scene, w) => infoBox(scene, w, t('lose.left', { n: opts.remaining })),
+          build: (scene, w) => infoBox(scene, w, t('lose.blocksLeft', { n: opts.remaining })),
         },
         { kind: 'text', text: t(m.counterKey, { n: m.n, max: m.max }), role: 'small', color: C.inkSoft },
       ];

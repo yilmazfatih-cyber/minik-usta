@@ -53,16 +53,14 @@ describe('K-49 ESLint: no pre-2R board constants outside coords.ts', () => {
     ).toEqual([]);
   }, 30_000);
 
-  it('K-49 the transition list only shrinks: 8 scene/UI files (WP-G); level/logic.ts is off it (WP-B)', () => {
+  it('K-49 the transition list only shrinks: empty — WP-G moved the 8 scene/UI files, WP-B level/logic.ts', () => {
     const config = readFileSync(`${ROOT}eslint.config.js`, 'utf8');
     const list = (name: string): string[] => {
       const m = new RegExp(`const ${name} = \\[([^\\]]*)\\]`).exec(config);
       return [...(m?.[1] ?? '').matchAll(/'([^']+)'/g)].map((x) => x[1] ?? '');
     };
     expect(list('LEGACY_BOARD_CORE')).toEqual([]);
-    const scenes = list('LEGACY_BOARD_SCENES');
-    expect(scenes.length).toBeLessThanOrEqual(8);
-    for (const f of scenes) expect(f, f).toMatch(/^src\/(scenes|ui)\//);
+    expect(list('LEGACY_BOARD_SCENES')).toEqual([]);
   });
 });
 

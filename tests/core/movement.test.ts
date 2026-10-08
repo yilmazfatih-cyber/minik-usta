@@ -38,6 +38,7 @@ import { occupyPiece, refreshSiteMasks, vacatePiece, visibleSegment } from '../.
 import { compile, loadLevel } from '../../src/core/level/compile.ts';
 import type { CompiledLevel } from '../../src/core/level/compile.ts';
 import type { LevelInput } from '../../src/core/level/schema.ts';
+import { HAND, LEVELS_1_10, dragTo, handSteps, run } from './moves.fixtures.ts';
 import { SHAPES, shapeById } from '../../src/core/shapes.ts';
 import type { ShapeDef } from '../../src/core/shapes.ts';
 import { mulberry32 } from '../../src/core/rng.ts';
@@ -520,31 +521,31 @@ describe('K-08 BFS path and sticky follow', () => {
   });
 
   it('K-08 interleaved sessions (scene drag + solver / tutorial checks) never disturb each other', () => {
-    const s = createInitialState(levelFile(3));
+    const s = createInitialState(levelFile(1)); // 4×4 | 2×5, H 5: crane rows 5–6, site x 4–5
     const targets: [number, number][] = [
-      [6, 8],
-      [0, 9],
-      [6, 0],
-      [3, 8],
-      [7, 9],
+      [4, 5],
+      [0, 6],
+      [4, 0],
+      [3, 5],
+      [5, 6],
     ];
     const replay = (id: PieceId): string[] => {
       const d = drag(s, id);
       return targets.map(([x, y]) => keys(d.follow(x, y).path).join(' '));
     };
     const alone0 = replay(0);
-    const alone2 = replay(2);
+    const alone3 = replay(3);
     const a = drag(s, 0);
-    const b = drag(s, 2);
+    const b = drag(s, 3);
     const mixed0: string[] = [];
-    const mixed2: string[] = [];
+    const mixed3: string[] = [];
     for (const [x, y] of targets) {
       mixed0.push(keys(a.follow(x, y).path).join(' '));
       drag(s, 1); // a third BFS in between
-      mixed2.push(keys(b.follow(x, y).path).join(' '));
+      mixed3.push(keys(b.follow(x, y).path).join(' '));
     }
     expect(mixed0).toEqual(alone0);
-    expect(mixed2).toEqual(alone2);
+    expect(mixed3).toEqual(alone3);
   });
 });
 
@@ -879,26 +880,28 @@ describe('K-13 no free side entry on the site', () => {
 describe('drag signals for the tutorial (dragCrossedWall, dragEnteredRail)', () => {
   it('K-11 dragCrossedWall fires once, on the first FREE step across the boundary (Bölüm 1 overWall)', () => {
     const s = createInitialState(levelFile(1));
-    const d = drag(s, 0); // `a`, D2_90 Y at (4,7)
+    const d = drag(s, 0); // `a`, D2_0 Y at (0,2); wall 4, H 5 (LEVELS §2 Bölüm 1 tutorial step 1)
     expect(d.canCrossWall).toBe(true);
     expect(d.canEnterRail).toBe(false);
-    const up = d.follow(4, 8);
+    const up = d.follow(0, 4);
     expect(up.crossedWall).toBe(false);
-    const over = d.follow(6, 8);
-    expect(keys(over.path)).toEqual(['F(5,8)', 'F(6,8)']);
+    const over = d.follow(4, 4);
+    expect(keys(over.path)).toEqual(['F(1,4)', 'F(2,4)', 'F(3,4)', 'F(4,4)']);
     expect(over.crossedWall).toBe(true);
     expect(d.classify()).toMatchObject({ kind: 'siteFree' });
-    expect(d.follow(4, 8).crossedWall).toBe(false);
-    expect(d.follow(6, 8).crossedWall).toBe(false);
+    expect(d.follow(3, 4).crossedWall).toBe(false);
+    expect(d.follow(4, 4).crossedWall).toBe(false);
   });
 
-  it('K-12 dragEnteredRail fires on the first FREE → RAIL step (Bölüm 3 gapPass)', () => {
-    const s = createInitialState(levelFile(3));
-    const d = drag(s, 1); // `f`, D2_90 Y at (4,2), the yard is full
+  it('K-12 dragEnteredRail fires on the first FREE → RAIL step (Bölüm 4 gapPass)', () => {
+    const s = createInitialState(levelFile(4));
+    run(s, HAND[4][0] ?? dragTo(0, 0, 0)); // e: shift (LEVELS §2 Bölüm 4 moves 1–2)
+    run(s, HAND[4][1] ?? dragTo(0, 0, 0)); // c: shift, the corridor x 2–3 is open
+    const d = drag(s, 0); // `a`, O4 W at (0,0)
     expect(d.canEnterRail).toBe(true);
     expect(d.canCrossWall).toBe(false);
-    const r = d.follow(6, 2);
-    expect(keys(r.path)).toEqual(['R0(5,2)', 'R0(6,2)']);
+    const r = d.follow(4, 0);
+    expect(keys(r.path)).toEqual(['F(1,0)', 'F(2,0)', 'R0(3,0)', 'R0(4,0)']);
     expect(r.enteredRail).toBe(true);
     expect(r.crossedWall).toBe(false);
     expect(d.classify()).toMatchObject({ kind: 'siteRail', gap: 0 });
@@ -921,13 +924,14 @@ describe('drag signals for the tutorial (dragCrossedWall, dragEnteredRail)', () 
   });
 });
 
-// --- levels 1–5 ------------------------------------------------------------------------------------------------------
+// --- levels 1–10 -----------------------------------------------------------------------------------------------------
 
-describe('Bölüm 1–5 start positions', () => {
-  it('K-09 K-11 K-12 every piece of levels 1–5 is checked; the hand-solution first moves are reachable', () => {
-    for (let id = 1; id <= 5; id++) {
+describe('Bölüm 1–10 start positions', () => {
+  it('K-09 K-11 K-12 every piece of levels 1–10 is checked; the canonical first moves are reachable with their kind', () => {
+    for (const id of LEVELS_1_10) {
       const lvl = levelFile(id);
       const s = createInitialState(lvl);
+      const { wy, hy, rows } = lvl.geo;
       let pickable = 0;
       for (let p = 0; p < lvl.layout.counts.pieces; p++) {
         const attempt = tryBeginDrag(s, p);
@@ -935,19 +939,19 @@ describe('Bölüm 1–5 start positions', () => {
         pickable++;
         for (const n of attempt.session.reachableNodes()) {
           for (const c of attempt.session.cells(n)) {
-            expect(c.y).toBeLessThan(10);
-            if (c.x <= 5 && c.y <= 7) expect([0, p + 1]).toContain(yardOcc(s, c.x, c.y));
+            expect(c.y).toBeLessThan(rows);
+            if (c.x < wy && c.y < hy) expect([0, p + 1]).toContain(yardOcc(s, c.x, c.y));
           }
         }
       }
       expect(pickable, `level ${id}`).toBeGreaterThan(0);
+      // LEVELS §2 "Kanonik çözüm" move 1: shift (yard), over the wall (siteFree) or rail (siteRail)
+      const first = HAND[id][0];
+      const step = handSteps(id)[0];
+      if (first?.kind !== 'drag' || !step) throw new Error(`level ${id}: no canonical first move`);
+      const kind = step.kind === 'shift' ? 'yard' : step.kind === 'rail' ? 'siteRail' : 'siteFree';
+      expect(drag(s, first.pieceId).classify(first.to), `level ${id} move 1`).toMatchObject({ kind });
     }
-    // Bölüm 1 move 1: `a` over the wall to x = 6; Bölüm 3 move 1: `a` (O4) over the wall, move 2: `f` by rail
-    const l1 = drag(createInitialState(levelFile(1)), 0);
-    expect(l1.classify(N(6, 8))).toMatchObject({ kind: 'siteFree' });
-    const l3 = createInitialState(levelFile(3));
-    expect(drag(l3, 0).classify(N(6, 8))).toMatchObject({ kind: 'siteFree' });
-    expect(drag(l3, 1).classify(R(0, 6, 2))).toMatchObject({ kind: 'siteRail' });
   });
 });
 

@@ -36,3 +36,12 @@ export function remainingPlanCells(s: GameState): number {
 export function remainingBlocks(s: GameState): number {
   return blocksLeft(s);
 }
+
+/**
+ * UX §5.1 "Az hamle uyarısı" (Faz 2R, DL-2R-19; JUICE #51): the moves plate turns red and pulses when
+ * `movesLeft − blocksLeft ≤ 1` or `movesLeft ≤ 2` (a flawless player of levels 5–10 ends with 3–4 moves left and
+ * never sees it). The old "last 5 moves" trigger is gone.
+ */
+export function lowMovesWarning(movesLeft: number, blocksLeft: number): boolean {
+  return movesLeft - blocksLeft <= 1 || movesLeft <= 2;
+}

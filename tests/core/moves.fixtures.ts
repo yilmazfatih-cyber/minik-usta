@@ -70,10 +70,11 @@ export function levelFile(id: number): CompiledLevel {
 }
 
 /**
- * LEVELS §2 hand solutions as drag moves, read from the golden files (tests/golden/level_00N.hand.json, TECH §9.5):
- * one transcription for the golden replays and the pipeline tests. "Over the wall to x = c" = release at crane row 8
- * above column c; "through the gap" = the rail node. Piece ids: batch 0 in table order, then truck batches (`k1_i`;
- * level 5: 13 = k1_0, 14 = k1_1, 15 = k1_2, 16 = k1_3).
+ * The canonical solutions of the Faz 2R levels 1–10 (LEVELS §2 "Kanonik çözüm" = solver, GDD K-50 item 4) as drag
+ * moves, read from the golden files (tests/golden/level_NNN.hand.json, TECH §2R.10): one transcription for the golden
+ * replays and the pipeline tests. A move is a release node: a site placement (FREE node above the column, or a rail
+ * node through a gap) or a yard shift (FREE yard node, K-10). Piece ids: batch 0 in table order, then truck batches
+ * (`k1_i`; level 5: 4 = k1_0 … 7 = k1_3).
  */
 export function handMoves(id: number): Move[] {
   const file = join(ROOT, 'tests', 'golden', `level_${String(id).padStart(3, '0')}.hand.json`);
@@ -81,10 +82,54 @@ export function handMoves(id: number): Move[] {
   return log.filter((a): a is Move => a.kind !== 'start' && a.kind !== 'undo');
 }
 
-export const HAND: Readonly<Record<1 | 2 | 3 | 4 | 5, readonly Move[]>> = {
+/** One step of a golden (tests/golden/level_NNN.hand.json `steps`). */
+export interface HandStep {
+  readonly piece: string;
+  readonly ref: string;
+  readonly shape: string;
+  readonly color: string;
+  readonly from: readonly [number, number];
+  readonly kind: 'overWall' | 'rail' | 'shift';
+  readonly gap?: number;
+  readonly to: readonly [number, number];
+  readonly segmentCompleted?: number;
+  readonly delivered?: readonly (readonly [string, number, number])[];
+  readonly queue?: readonly string[];
+}
+
+/** The described steps of the golden of level `id` (same order as `handMoves(id)`). */
+export function handSteps(id: number): HandStep[] {
+  const file = join(ROOT, 'tests', 'golden', `level_${String(id).padStart(3, '0')}.hand.json`);
+  return (JSON.parse(readFileSync(file, 'utf8')) as { steps: HandStep[] }).steps;
+}
+
+/** Faz 2R vertical slice levels with a golden (EN-2R-17). */
+export const LEVELS_1_10 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+export type SliceLevel = (typeof LEVELS_1_10)[number];
+
+export const HAND: Readonly<Record<SliceLevel, readonly Move[]>> = {
   1: handMoves(1),
   2: handMoves(2),
   3: handMoves(3),
   4: handMoves(4),
   5: handMoves(5),
+  6: handMoves(6),
+  7: handMoves(7),
+  8: handMoves(8),
+  9: handMoves(9),
+  10: handMoves(10),
 };
+
+/**
+ * `handMoves(id)` with every over-the-wall placement released in the crane area (row H) above its landing column, as a
+ * finger drop: the block falls to the same landing (K-11, `pieceFell{release}` rows > 0). The canonical log releases
+ * at the landing node itself (the lowest reachable node of the column, TECH §2R.5), which falls 0 rows. Shifts and
+ * rail placements are unchanged; the state after every move is the canonical one.
+ */
+export function craneMoves(id: number): Move[] {
+  const steps = handSteps(id);
+  const h = levelFile(id).geo.h;
+  return handMoves(id).map((m, i) =>
+    steps[i]?.kind === 'overWall' && m.kind === 'drag' ? { ...m, to: N(m.to.ix, h) } : m,
+  );
+}

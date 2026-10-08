@@ -1,374 +1,641 @@
+/**
+ * Faz 2R light tutorial (docs/GDD.md K-53, §14.1; TECH_DESIGN §2R.9; UX_FLOWS §13.1–§13.2): `TutorialController`
+ * (which step is active, when it ends), `TutorialPresence` (what it shows, fake clock), the contextual lines and their
+ * queue rule, the bubble dock, the glove's play condition (DL-2R-20) and the K-43 resume of the tutorial position.
+ *
+ * Levels: the LEVELS §2 drafts of Bölüm 1–10 in the Faz 2R format (tests/level/fixtures/levels-2r; product-lead writes
+ * the real levels/*.json in WP-M). Their canonical solutions (LEVELS §2 "Kanonik çözüm", `letter from→to` anchors) are
+ * copied below for the levels these tests walk.
+ */
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { compile } from '../../src/core/level/compile.ts';
+import { pieceBoardCells } from '../../src/core/grid.ts';
+import { loadLevel } from '../../src/core/level/compile.ts';
 import type { CompiledLevel } from '../../src/core/level/compile.ts';
-import type { LevelData, TutCondition } from '../../src/core/level/schema.ts';
+import { validateLevelJson } from '../../src/core/level/logic.ts';
+import type { LevelInput } from '../../src/core/level/schema.ts';
+import { ArraySink, applyMove } from '../../src/core/moves.ts';
+import { tryBeginDrag } from '../../src/core/movement.ts';
 import { levelHooks } from '../../src/core/obstacles/registry.ts';
-import { ArraySink, applyMove, isLevelWon } from '../../src/core/moves.ts';
-import { FREE, railMode, tryBeginDrag } from '../../src/core/movement.ts';
 import { GameSession } from '../../src/core/session.ts';
-import { cloneState, createInitialState, pieceZone } from '../../src/core/state.ts';
+import { cloneState } from '../../src/core/state.ts';
 import type { GameState } from '../../src/core/state.ts';
-import { Zone } from '../../src/core/types.ts';
-import type { DragNode, GameEvent, Move, SessionAction } from '../../src/core/types.ts';
-import { createLayout } from '../../src/theme/layout.ts';
+import type { DragNode, GameEvent, Move, PieceId, SessionAction } from '../../src/core/types.ts';
+import { createLayout, designHeight, rectsOverlap } from '../../src/theme/layout.ts';
+import type { Layout } from '../../src/theme/layout.ts';
 import { TOKENS } from '../../src/theme/tokens.ts';
-import { ContextTips, ctxFromMove } from '../../src/scenes/level/tutorial/contextTips.ts';
-import type { CtxTopic } from '../../src/scenes/level/tutorial/contextTips.ts';
-import { canProduce } from '../../src/scenes/level/tutorial/guarantee.ts';
 import {
-  blockerRects,
-  bubbleBoxWidths,
-  bubbleCandidates,
-  bubbleForbidden,
-  darkRects,
-  handStrips,
+  CTX_TOPICS,
+  ContextTips,
+  TEARDOWN_LINE_MS,
+  ctxFromMove,
+} from '../../src/scenes/level/tutorial/contextTips.ts';
+import type { CtxGate, CtxTopic } from '../../src/scenes/level/tutorial/contextTips.ts';
+import {
+  CORNER_RADIUS_PX,
+  fingerPoints,
+  glovePlays,
+  pathAt,
+  roundedPath,
+  trailDots,
+} from '../../src/scenes/level/tutorial/glove.ts';
+import {
+  bottomDockValid,
+  dockHardAreas,
+  dockRect,
   highlightAll,
   highlightRects,
-  insideAny,
   padRect,
   placeBubble,
-  spotlight,
-  spotlightHoles,
-  yardBlockRects,
 } from '../../src/scenes/level/tutorial/highlights.ts';
-import type { BubbleQuery, BubbleSize } from '../../src/scenes/level/tutorial/highlights.ts';
-import { rectsOverlap } from '../../src/theme/layout.ts';
-import type { Layout } from '../../src/theme/layout.ts';
-import { UI } from '../../src/ui/uiConstants.ts';
 import {
   TutorialController,
   TutorialResume,
+  createTutorial,
   highlightedPieces,
-  replayTutorialAction,
 } from '../../src/scenes/level/tutorial/TutorialController.ts';
-import type { SavedTutorialPosition } from '../../src/scenes/level/tutorial/TutorialController.ts';
-import { pauseHitRect } from '../../src/ui/PauseButton.ts';
+import type {
+  SavedTutorialPosition,
+  TutorialHost,
+} from '../../src/scenes/level/tutorial/TutorialController.ts';
+import {
+  PRESENCE_TIMINGS,
+  presenceLook,
+  presenceReport,
+  presenceStart,
+  presenceStep,
+} from '../../src/scenes/level/tutorial/TutorialPresence.ts';
+import type { PresenceInputKind, PresenceState } from '../../src/scenes/level/tutorial/TutorialPresence.ts';
 import { moveMatches } from '../../src/scenes/level/tutorial/tutorialEvents.ts';
-import { handMoves, levelFile } from '../core/moves.fixtures.ts';
+import { loadBoosterUnlock } from '../../tools/lib/levels.ts';
+import { loadFixture } from '../fixtures/builders.ts';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const ROOT = join(import.meta.dirname, '..', '..');
+const T = TOKENS.tutorial;
 
-function rawLevel(id: number): LevelData {
-  return JSON.parse(
-    readFileSync(join(ROOT, 'levels', `level_${String(id).padStart(3, '0')}.json`), 'utf8'),
-  ) as LevelData;
+// --- levels ----------------------------------------------------------------------------------------------------------
+
+const draftJson = (n: number): LevelInput =>
+  loadFixture('levels-2r', `level_${String(n).padStart(3, '0')}`) as LevelInput;
+
+function draft(n: number, tutorial?: unknown): CompiledLevel {
+  const json = tutorial === undefined ? draftJson(n) : { ...draftJson(n), tutorial };
+  const res = loadLevel(json);
+  if (!res.ok) throw new Error(`draft ${n}: ${JSON.stringify(res.issues)}`);
+  return res.level;
 }
+
+/** LEVELS §2 canonical solutions (`letter from→to`, block anchors; `k<p>_<i>` = a batch block). */
+const CANONICAL: Readonly<Record<number, readonly string[]>> = {
+  1: ['b 1,2→5,0', 'a 0,2→4,0', 'c 0,1→4,2', 'd 2,1→4,3', 'e 0,0→4,4'],
+  2: ['a 2,2→4,0', 'b 0,0→4,2', 'c 0,2→4,3'],
+  3: ['c 0,2→1,2', 'a 0,0→4,0', 'b 1,0→5,0', 'c 1,2→4,2', 'd 2,0→4,4'],
+  6: ['c 0,3→2,3', 'b 0,2→2,2', 'a 0,0→4,0', 'b 2,2→4,2', 'c 2,3→4,3', 'd 2,0→4,5', 'e 2,1→4,6'],
+  7: [
+    'b 1,3→2,2',
+    'd 0,2→2,4',
+    'a 0,0→4,0',
+    'b 2,2→4,2',
+    'c 3,2→5,2',
+    'd 2,4→4,4',
+    'k1_1 0,0→2,4',
+    'e 2,0→4,0',
+    'k1_0 2,2→5,2',
+    'k1_2 3,2→4,2',
+    'k1_1 2,4→4,4',
+  ],
+};
+
+/** The block of a canonical letter (`a` = `piece:0`, `k1_1` = `piece:k1_1`). */
+function pieceOf(lvl: CompiledLevel, letter: string): PieceId {
+  const ref = /^k\d_\d+$/.test(letter) ? `piece:${letter}` : `piece:${letter.charCodeAt(0) - 97}`;
+  const id = lvl.tutorialPieceIds.get(ref);
+  if (id === undefined) throw new Error(`no ${ref}`);
+  return id;
+}
+
+/** Anchor (min x, min y of its board cells) of a block. */
+function anchorOf(s: GameState, id: PieceId): [number, number] | null {
+  const cells = pieceBoardCells(s, id);
+  if (cells.length === 0) return null;
+  return [Math.min(...cells.map((c) => c.x)), Math.min(...cells.map((c) => c.y))];
+}
+
+/** The drag move that brings block `id` to anchor (tx, ty): a release node of R whose result rests there. */
+function moveTo(s: GameState, lvl: CompiledLevel, id: PieceId, tx: number, ty: number): Move {
+  const hooks = levelHooks(lvl);
+  const a = tryBeginDrag(s, id, hooks.drag ?? {});
+  if (!a.ok) throw new Error(`block ${id} cannot be held: ${a.reason}`);
+  const nodes = a.session
+    .reachableNodes()
+    .filter((n) => n.ix === tx)
+    .sort((p, q) => Number(q.iy === ty) - Number(p.iy === ty) || p.mode - q.mode || q.iy - p.iy);
+  for (const node of nodes) {
+    const move: Move = { kind: 'drag', pieceId: id, to: node };
+    const copy = cloneState(s);
+    const res = applyMove(copy, move, undefined, { hooks });
+    const at = anchorOf(copy, id);
+    if (res.status === 'applied' && at && at[0] === tx && at[1] === ty) return move;
+  }
+  throw new Error(`no release brings block ${id} to (${tx},${ty})`);
+}
+
+function canonical(lvl: CompiledLevel, game: GameSession, spec: string): Move {
+  const m = /^(\S+) (\d+),(\d+)→(\d+),(\d+)$/.exec(spec);
+  if (!m) throw new Error(spec);
+  return moveTo(game.state, lvl, pieceOf(lvl, m[1] as string), Number(m[4]), Number(m[5]));
+}
+
+// --- a run: session + controller driven like LevelScene ----------------------------------------------------------------
 
 interface Run {
   readonly lvl: CompiledLevel;
   readonly game: GameSession;
   readonly tut: TutorialController;
-  readonly ended: [number, boolean][];
-  readonly tips: string[];
-  /** Commits a move and reports it to the controller like LevelScene.planEnded does. */
-  play(move: Move, now?: number): GameEvent[];
+  readonly ended: number[];
+  readonly marked: string[];
+  now: number;
+  /** Lift + drag signals (from the move's result) + commit + move end after the cues. */
+  play(move: Move): GameEvent[];
+  step(): number | null;
 }
 
-function run(lvl: CompiledLevel, game: GameSession = GameSession.start(lvl)): Run {
-  const ended: [number, boolean][] = [];
-  const tips: string[] = [];
-  const hooks = levelHooks(lvl);
+function run(lvl: CompiledLevel, host: Partial<TutorialHost> = {}): Run {
+  const game = GameSession.start(lvl, {}, { hooks: levelHooks(lvl) });
+  const ended: number[] = [];
+  const marked: string[] = [];
   const tut = new TutorialController(lvl, {
     state: () => game.state,
-    dragRules: () => hooks.drag ?? {},
-    hooks: () => hooks,
-    markContextTip: (t) => tips.push(t),
-    stepEnded: (step, skipped) => ended.push([step, skipped]),
+    markContextTip: (t) => marked.push(t),
+    stepEnded: (step) => ended.push(step),
+    ...host,
   });
-  return {
+  const r: Run = {
     lvl,
     game,
     tut,
     ended,
-    tips,
-    play(move, now = 0) {
+    marked,
+    now: 0,
+    play(move) {
+      r.now += 100;
+      if (move.kind === 'drag') {
+        tut.dragStarted(move.pieceId);
+        if (move.to.mode !== 0) tut.dragSignal('gapPass', r.now);
+        else if (move.to.ix >= lvl.geo.siteX) tut.dragSignal('overWall', r.now);
+      }
       const sink = new ArraySink();
       const res = game.commit(move, sink);
       expect(res.status).toBe('applied');
-      tut.moveEnded(sink.events, now);
+      r.now += 1000;
+      tut.moveEnded(sink.events, r.now);
       return sink.events;
     },
+    step: () => tut.current?.data.step ?? null,
   };
+  tut.start(0);
+  return r;
 }
 
-const step = (r: Run): number | null => r.tut.current?.data.step ?? null;
+/** Plays canonical moves `from` … `to − 1` of level `n`. */
+function playCanonical(r: Run, n: number, from = 0, to = Infinity): void {
+  (CANONICAL[n] ?? []).slice(from, to).forEach((spec) => r.play(canonical(r.lvl, r.game, spec)));
+}
 
-// --- UX 13.1 bubble placement helpers (Faz 2 tur 2b) ----------------------------------------------------------------------
+const layoutFor = (lvl: CompiledLevel, width: number, height: number): Layout =>
+  createLayout(TOKENS, designHeight('expand', { width, height }, TOKENS), lvl.geo);
+const FIT = (lvl: CompiledLevel): Layout => createLayout(TOKENS, 1920, lvl.geo);
 
-const M = TOKENS.layout.marginPx;
-const PAUSE = (layout: Layout) => pauseHitRect(layout.top.pause);
-const rectRightOf = (r: { x: number; w: number }): number => r.x + r.w;
-/** Every level 1–5 line: 2 lines in a box ≥ 600 px (bust height), 3 in the narrow one. */
-const size = (maxW: number): BubbleSize => ({
-  w: UI.dedeBustPx + 16 + Math.min(maxW, 700),
-  h: maxW < 600 ? 229 : UI.dedeBustPx,
-  lines: maxW < 600 ? 3 : 2,
-});
-const query = (layout: Layout, over: Partial<BubbleQuery>): BubbleQuery => ({
-  layout,
-  lit: [],
-  handPath: [],
-  yardBlocks: [],
-  panoramaLit: false,
-  size,
-  ...over,
-});
+const DRAFTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-describe('GDD 14.1 TutorialController on the level 1–5 tutorials (UX 13.2)', () => {
-  it('GDD 14.1 level 1: lift (required, overWall) → drop → match along the hand solution', () => {
-    const r = run(levelFile(1));
-    r.tut.start(0);
-    expect(step(r)).toBe(1);
-    expect(r.tut.current?.required).toBe(true);
-    const a = r.lvl.tutorialPieceIds.get('piece:0');
-    expect(r.tut.current?.pieces).toEqual([a]);
-    // UX 13.1: the glove leaves at the first correct touch (the highlighted block is lifted)
-    r.tut.dragStarted(a ?? -1);
-    expect(r.tut.current?.handHidden).toBe(true);
-    // the overWall signal ends step 1 while the block is still in the air; step 2 starts at once
-    r.tut.dragSignal('overWall', 10);
-    expect(step(r)).toBe(2);
-    const [m1, m2] = handMoves(1);
-    if (!m1 || !m2) throw new Error('hand moves');
-    r.play(m1, 20);
-    expect(step(r)).toBe(3);
-    r.play(m2, 30);
-    expect(r.tut.finished).toBe(true);
-    expect(r.ended).toEqual([
-      [1, false],
-      [2, false],
-      [3, false],
-    ]);
+// --- controller ----------------------------------------------------------------------------------------------------------
+
+describe('K-53 TutorialController on the Faz 2R drafts (GDD 14.1)', () => {
+  it('K-53 step done ignores other piece: level 3 step 1 (`piece:2` = c) — d moved in the yard keeps it, c to (1,2) ends it', () => {
+    const lvl = draft(3);
+    const r = run(lvl);
+    expect(r.step()).toBe(1);
+    expect(r.tut.current?.data.done).toEqual({ event: 'yardMove', count: 1, piece: 'piece:2' });
+    // GDD K-53 example: d (D2_90 Y at (2,0)) slides to (2,1) — a yardMove, but the `piece` filter does not hold
+    const d = pieceOf(lvl, 'd');
+    const ev = r.play(moveTo(r.game.state, lvl, d, 2, 1));
+    expect(moveMatches({ event: 'yardMove' }, ev, r.game.state)).toBe(true);
+    expect(moveMatches({ event: 'yardMove', piece: 'piece:2' }, ev, r.game.state)).toBe(false);
+    expect([r.step(), r.ended]).toEqual([1, []]);
+    // c (O4_0 at (0,2)) to (1,2): the step ends, step 2 (`tut.m.free`) starts
+    r.play(moveTo(r.game.state, lvl, pieceOf(lvl, 'c'), 1, 2));
+    expect(r.ended).toEqual([1]);
+    expect(r.tut.current?.data.textKey).toBe('tut.m.free');
   });
 
-  it('tutorial overWall counts at first crossing even if drag is cancelled', () => {
-    const r = run(levelFile(1));
-    r.tut.start(0);
+  it('GDD 14.1 level 3 along the canonical solution: dig → free, each step ends on its event, none is left at the win', () => {
+    const r = run(draft(3));
+    const steps: (number | null)[] = [r.step()];
+    for (const spec of CANONICAL[3] ?? []) {
+      r.play(canonical(r.lvl, r.game, spec));
+      steps.push(r.step());
+    }
+    expect(r.game.outcome).toBe('won');
+    expect(steps).toEqual([1, 2, null, null, null, null]);
+    expect(r.ended).toEqual([1, 2]);
+    expect(r.tut.finished).toBe(true);
+  });
+
+  it('GDD 14.1/3 count only counts events after the step started: level 1 step 2 needs its own correct placement', () => {
+    const r = run(draft(1));
+    expect(r.step()).toBe(1);
+    playCanonical(r, 1, 0, 1); // b ✓: step 1 (placementCorrect ×1) ends, step 2 (placementCorrect ×1) starts at 0
+    expect([r.step(), r.tut.position()]).toEqual([2, { index: 1, shown: true, count: 0 }]);
+    playCanonical(r, 1, 1, 2);
+    expect(r.ended).toEqual([1, 2]);
+  });
+
+  it('GDD 14.1/3 done.at counts only at its anchor: level 6 step 1 (yardMove at (2,3)) — a park elsewhere keeps it', () => {
+    const lvl = draft(6);
+    const r = run(lvl);
+    const c = pieceOf(lvl, 'c');
+    const a = tryBeginDrag(r.game.state, c, levelHooks(lvl).drag ?? {});
+    expect(a.ok).toBe(true);
+    if (!a.ok) return;
+    const other = a.session
+      .reachableNodes()
+      .find((n) => a.session.classify(n).kind === 'yard' && !(n.ix === 2 && n.iy === 3));
+    expect(other).toBeDefined();
+    r.play({ kind: 'drag', pieceId: c, to: other as DragNode });
+    expect([r.step(), r.ended]).toEqual([1, []]);
+  });
+
+  it('GDD 14.1/5 startOn waits for its event: level 7 step 2 starts at the first segmentDone, then ends on a correct placement', () => {
+    const r = run(draft(7));
+    const trace: string[] = [];
+    const where = (): string =>
+      r.tut.finished ? 'finished' : r.tut.current ? `active:${r.step()}` : r.tut.waiting ? 'waiting' : 'idle';
+    trace.push(where());
+    for (const spec of CANONICAL[7] ?? []) {
+      const ev = r.play(canonical(r.lvl, r.game, spec));
+      trace.push(`${where()}${ev.some((e) => e.t === 'segmentCompleted') ? '+seg' : ''}`);
+    }
+    expect(r.game.outcome).toBe('won');
+    const firstWait = trace.indexOf('waiting');
+    const segAt = trace.findIndex((t) => t.endsWith('+seg'));
+    expect(firstWait).toBeGreaterThan(0); // step 1 ended on the first ✓
+    expect(trace.slice(firstWait, segAt).every((t) => t === 'waiting')).toBe(true);
+    expect(trace[segAt]).toBe('active:2+seg');
+    expect(r.ended).toEqual([1, 2]);
+  });
+
+  it('GDD 14.1/5 a startOn that never comes hides that step and every later one', () => {
+    const lvl = draft(1, [
+      { step: 1, highlight: ['goals'], textKey: 'tut.m.useall', done: { event: 'placementCorrect' } },
+      {
+        step: 2,
+        highlight: ['goals'],
+        textKey: 'tut.m.lift',
+        startOn: { event: 'segmentDone', count: 2 },
+        done: { event: 'placementCorrect' },
+      },
+    ]);
+    const r = run(lvl);
+    playCanonical(r, 1);
+    expect(r.game.outcome).toBe('won');
+    expect([r.ended, r.tut.waiting?.step ?? null]).toEqual([[1], 2]);
+    r.tut.stop();
+    expect(r.tut.finished).toBe(true);
+  });
+
+  it('GDD 14.1/3 overWall counts at the first crossing even when the drag is then cancelled (level 6 step 2)', () => {
+    const r = run(draft(6));
+    r.tut.restore({ index: 1, shown: true, count: 0 }, 0);
+    expect(r.step()).toBe(2);
     r.tut.dragStarted(0);
-    r.tut.dragSignal('overWall', 5);
-    r.tut.dragSignal('overWall', 6); // once per drag
-    expect(r.ended).toEqual([[1, false]]);
-    expect(step(r)).toBe(2);
-  });
-
-  it('GDD 14.1 required tutorial step never locks (the highlighted block can no longer cross the wall)', () => {
-    const lvl = levelFile(1);
-    const game = GameSession.start(lvl);
-    const [m1] = handMoves(1);
-    if (!m1) throw new Error('hand moves');
-    game.commit(m1); // piece:0 is placed and locked (K-14)
-    const r = run(lvl, game);
-    r.tut.start(0);
-    expect(r.ended[0]).toEqual([1, true]);
-    expect(step(r)).toBe(2);
-  });
-
-  it('GDD 14.1 required step (level 3) is checked again after every move; the rail line stays for the next move', () => {
-    const r = run(levelFile(3));
-    r.tut.start(0);
-    expect(step(r)).toBe(1);
-    const [m1, m2, m3] = handMoves(3);
-    if (!m1 || !m2 || !m3) throw new Error('hand moves');
-    r.play(m1);
-    expect(step(r)).toBe(2);
-    expect(r.tut.current?.required).toBe(true);
-    const f = r.lvl.tutorialPieceIds.get('piece:1');
-    const hooks = levelHooks(r.lvl);
-    const rules = { drag: hooks.drag ?? {}, hooks };
-    expect(canProduce(r.game.state, { event: 'gapPass' }, [f ?? -1], rules)).toBe(true);
-    expect(canProduce(r.game.state, { event: 'placementCorrect' }, [f ?? -1], rules)).toBe(true);
-    // LEVELS Bölüm 3: step 2 ends when f is on the rail (placementCorrect), not when it enters the gap
-    r.tut.dragSignal('gapPass', 1);
-    expect(step(r)).toBe(2);
-    r.play(m2);
-    expect(step(r)).toBe(3); // tut.l3.rail is on screen at the start of the b move
-    r.play(m3);
+    r.tut.dragSignal('overWall', 10); // the block crossed the wall line, then the drag was cancelled
+    expect(r.ended).toEqual([2]);
     expect(r.tut.finished).toBe(true);
-    expect(r.ended).toEqual([
-      [1, false],
-      [2, false],
-      [3, false],
-    ]);
   });
 
-  it('GDD 14.1 holdOverBuild needs minMs (synthetic level 2 tutorial; levels 1–50 do not use it, LEVELS §5)', () => {
-    // the pre-Faz 2 tur 3 level 2 step 2 shape: `holdOverBuild` stays in the GDD §14.1/3 vocabulary, only level data
-    // 1–50 do not use it (product-lead PL-F2T3-0)
-    const tutorial = [
+  it('GDD 14.1/3 holdOverBuild needs minMs held in one drag; a move-end event counts once per move', () => {
+    const lvl = draft(2, [
       {
         step: 1,
-        mode: 'soft' as const,
-        highlight: ['panorama', 'build'],
-        textKey: 'tut.l2.pattern',
-        done: { event: 'placementCorrect' as const, count: 1 },
+        highlight: ['build'],
+        textKey: 'tut.m.shadow',
+        done: { event: 'holdOverBuild', count: 1, minMs: 500 },
       },
       {
         step: 2,
-        mode: 'soft' as const,
-        highlight: ['piece:2', 'build'],
-        textKey: 'tut.l2.shadow',
-        done: { event: 'holdOverBuild' as const, count: 1, minMs: 500 },
+        highlight: ['build'],
+        textKey: 'tut.m.pattern',
+        done: { event: 'placementCorrect', count: 2 },
       },
-      {
-        step: 3,
-        mode: 'soft' as const,
-        highlight: ['piece:1'],
-        textKey: 'tut.l1.match',
-        done: { event: 'placementCorrect' as const, count: 1 },
-      },
-    ];
-    const r = run(compile({ ...rawLevel(2), tutorial }));
-    r.tut.start(0);
-    const [m1] = handMoves(2);
-    if (!m1) throw new Error('hand moves');
-    expect(r.tut.holdMinMs()).toBeNull(); // step 1 does not listen for it
-    r.play(m1);
-    expect(step(r)).toBe(2);
+    ]);
+    const r = run(lvl);
     expect(r.tut.holdMinMs()).toBe(500);
-    r.tut.dragStarted(2);
-    r.tut.dragSignal('holdOverBuild', 0, 499);
-    expect(step(r)).toBe(2);
-    r.tut.dragSignal('holdOverBuild', 0, 500);
-    expect(step(r)).toBe(3);
-    expect(r.tut.holdMinMs()).toBeNull();
+    r.tut.dragStarted(0);
+    r.tut.dragSignal('holdOverBuild', 10, 499);
+    expect(r.step()).toBe(1);
+    r.tut.dragSignal('holdOverBuild', 20, 500);
+    expect([r.step(), r.tut.holdMinMs()]).toEqual([2, null]);
+    // one move with a correct placement counts 1 of 2 (and hides the presence through `progressed`)
+    const progressed: number[] = [];
+    const r2 = run(lvl, { progressed: (st) => progressed.push(st) });
+    r2.tut.restore({ index: 1, shown: true, count: 0 }, 0);
+    playCanonical(r2, 2, 0, 1);
+    expect([r2.step(), r2.tut.position()?.count, progressed]).toEqual([2, 1, [2]]);
+    playCanonical(r2, 2, 1, 2);
+    expect(r2.ended).toEqual([2]);
   });
 
-  it('LEVELS 5 levels 1–5 data use no holdOverBuild (done / startOn), so no hold timer runs in them', () => {
-    for (const n of [1, 2, 3, 4, 5] as const) {
-      for (const st of levelFile(n).data.tutorial ?? []) {
-        expect('event' in st.done ? st.done.event : 'timeoutMs', `level ${n} step ${st.step}`).not.toBe(
-          'holdOverBuild',
-        );
-        expect(st.startOn?.event, `level ${n} step ${st.step}`).not.toBe('holdOverBuild');
-      }
+  it('GDD 14.1/2 a tut.ctx step marks seenContextTips the moment it starts', () => {
+    const lvl = draft(1, [
+      { step: 1, highlight: ['front'], textKey: 'tut.ctx.support', done: { event: 'placementCorrect' } },
+    ]);
+    const r = run(lvl);
+    expect(r.marked).toEqual(['support']);
+  });
+
+  it('UX 13.1 piece highlights resolve through CompiledLevel.tutorialPieceIds (batch blocks k<p>_<i> too)', () => {
+    const lvl = draft(5);
+    const step2 = lvl.data.tutorial?.[1];
+    expect(step2?.highlight[0]).toBe('piece:k1_0');
+    const ids = highlightedPieces(lvl, step2?.highlight ?? []);
+    expect(ids.length).toBe(5);
+    expect(new Set(ids).size).toBe(5);
+  });
+
+  it('K-53 tutorial never blocks input: no pick gate, no input blocker, a legacy "required" step plays as soft', () => {
+    // the controller has no gate and the drag host has no tutorial hook (K-53/2)
+    const r = run(draft(3));
+    expect('allowsPick' in r.tut).toBe(false);
+    const drag = readFileSync(join(ROOT, 'src/scenes/level/DragController.ts'), 'utf8');
+    expect(drag).not.toMatch(/mayPick|allowsPick|tutorial\//);
+    // the view takes no touch: no zone, nothing interactive (UX 13.1 "Hiçbiri dokunuş almaz")
+    const view = readFileSync(join(ROOT, 'src/scenes/level/TutorialView.ts'), 'utf8');
+    expect(view).not.toMatch(/\.setInteractive\(|\.zone\(/);
+    // the Faz 2 spotlight, blocker and guarantee modules are gone
+    for (const gone of ['TutorialOverlay.ts', 'spotPieces.ts', 'tutorial/guarantee.ts'])
+      expect(() => readFileSync(join(ROOT, 'src/scenes/level', gone)), gone).toThrow();
+    // old data with mode "required" (the validator calls it tut_blocking) is played as a soft step: any block moves
+    const legacy = draft(3, [
+      { ...draftJson(3).tutorial?.[0], mode: 'required' },
+      draftJson(3).tutorial?.[1],
+    ]);
+    const l = run(legacy);
+    l.play(moveTo(l.game.state, legacy, pieceOf(legacy, 'd'), 2, 1)); // a block the step does not highlight
+    expect(l.step()).toBe(1);
+  });
+
+  it('K-53 no tutorial on replay: a level the save marks won gets no controller (K-53/6), an unwon one does', () => {
+    const lvl = draft(1);
+    const host: TutorialHost = { state: () => null, markContextTip: () => {}, stepEnded: () => {} };
+    expect(createTutorial(lvl, host, { won: true })).toBeNull();
+    expect(createTutorial(lvl, host, { won: false })).toBeInstanceOf(TutorialController);
+    expect(createTutorial(draft(1, []), host, { won: false })).toBeNull();
+    // the scene reads the save's `progress.levels[id].won`
+    const scene = readFileSync(join(ROOT, 'src/scenes/level/LevelScene.ts'), 'utf8');
+    expect(scene).toMatch(/progress\.levels\[String\(lvl\.data\.id\)\]\?\.won === true/);
+  });
+
+  it('K-53 at most two steps: a third step is tut_too_many_steps, mode "required" is tut_blocking; every draft has ≤ 2 soft steps', () => {
+    const base = draftJson(1);
+    const steps = base.tutorial ?? [];
+    const codes = (json: unknown): string[] =>
+      validateLevelJson(json, { fileId: 1, boosterUnlock: loadBoosterUnlock() ?? undefined }).issues.map(
+        (i) => i.code,
+      );
+    expect(codes({ ...base, tutorial: [...steps, { ...steps[1], step: 3 }] })).toContain(
+      'tut_too_many_steps',
+    );
+    expect(codes({ ...base, tutorial: [{ ...steps[0], mode: 'required' }, steps[1]] })).toContain(
+      'tut_blocking',
+    );
+    for (const n of DRAFTS) {
+      const t = draftJson(n).tutorial ?? [];
+      expect(t.length, `level ${n}`).toBeLessThanOrEqual(T.maxStepsPerLevel);
+      for (const st of t) expect(st.mode ?? 'soft').toBe('soft');
     }
   });
+});
 
-  it('GDD 14.1 ctx step marks seenContextTips (level 4 step 2 opens at the first correct placement, no timer)', () => {
-    const r = run(levelFile(4));
-    r.tut.start(1000);
-    expect(step(r)).toBe(1);
-    r.tut.update(1000 + 60_000);
-    expect(step(r)).toBe(1);
-    expect(r.tips).toEqual([]);
-    const [m1] = handMoves(4);
-    if (!m1) throw new Error('hand moves');
-    r.play(m1, 2000);
-    expect(step(r)).toBe(2);
-    expect(r.tips).toEqual(['support']);
+// --- presence -----------------------------------------------------------------------------------------------------------
+
+/** Feeds inputs in order (each `[t, kind]`), returns every state. */
+function feed(s: PresenceState, inputs: readonly (readonly [number, PresenceInputKind])[]): PresenceState[] {
+  const out: PresenceState[] = [];
+  let cur = s;
+  for (const [t, kind] of inputs) {
+    cur = presenceStep(cur, { t, kind });
+    out.push(cur);
+  }
+  return out;
+}
+const last = (xs: readonly PresenceState[]): PresenceState => xs[xs.length - 1] as PresenceState;
+
+describe('K-53 TutorialPresence (UX 13.1 "Zamanlama", tokens.tutorial, fake clock)', () => {
+  it('K-53 presence hides after visibleMs and reshows after idleReshowMs', () => {
+    expect([T.startDelayMs, T.visibleMs, T.idleReshowMs]).toEqual([600, 4000, 4000]);
+    let p = presenceStart(0, T.startDelayMs);
+    expect(p.phase).toBe('wait');
+    p = last(feed(p, [[599, 'tick']]));
+    expect(p.phase).toBe('wait');
+    p = last(feed(p, [[600, 'tick']]));
+    expect([p.phase, p.shows, p.firstShownAt]).toEqual(['shown', 1, 600]);
+    expect(presenceLook(p)).toEqual({ highlight: true, bubble: true, faded: false, glove: true });
+    p = last(feed(p, [[600 + T.visibleMs - 1, 'tick']]));
+    expect(p.phase).toBe('shown');
+    p = last(feed(p, [[600 + T.visibleMs, 'tick']]));
+    expect(p.phase).toBe('hidden');
+    expect(presenceLook(p)).toEqual({ highlight: false, bubble: false, faded: false, glove: false });
+    const hiddenAt = 600 + T.visibleMs;
+    p = last(feed(p, [[hiddenAt + T.idleReshowMs - 1, 'tick']]));
+    expect(p.phase).toBe('hidden');
+    p = last(feed(p, [[hiddenAt + T.idleReshowMs, 'tick']]));
+    expect([p.phase, p.shows]).toEqual(['shown', 2]);
   });
 
-  it('GDD 14.1 timeoutMs ends a step by itself', () => {
-    const tutorial = [
-      {
-        step: 1,
-        mode: 'soft' as const,
-        highlight: ['cell:7,2'],
-        textKey: 'tut.l4.window',
-        done: { timeoutMs: 2500 },
+  it('UX 13.1 a touch drops the glove and fades the bubble; its lift hides the step; every touch restarts the idle count', () => {
+    let p = last(feed(presenceStart(0, 600), [[600, 'tick']]));
+    p = last(feed(p, [[1000, 'touchDown']]));
+    expect(presenceLook(p)).toEqual({ highlight: true, bubble: true, faded: true, glove: false });
+    p = last(feed(p, [[5000, 'tick']])); // visibleMs passed while held: it stays until the lift
+    expect(p.phase).toBe('shown');
+    p = last(feed(p, [[5200, 'touchUp']]));
+    expect(p.phase).toBe('hidden');
+    p = last(
+      feed(p, [
+        [8000, 'touchDown'],
+        [8100, 'touchUp'],
+        [8100 + T.idleReshowMs - 1, 'tick'],
+      ]),
+    );
+    expect(p.phase).toBe('hidden'); // the touch at 8000 restarted the count
+    p = last(feed(p, [[8100 + T.idleReshowMs, 'tick']]));
+    expect(p.phase).toBe('shown');
+    // a counted event of the step that does not end it (count > 1) hides it too (K-53/3 "doğru eylemden sonra")
+    expect(last(feed(p, [[20_000, 'correctAction']])).phase).toBe('hidden');
+  });
+
+  it('K-53 hidden tutorial step still completes on done event (and hiding never ends it)', () => {
+    const lvl = draft(3);
+    let p = last(
+      feed(presenceStart(0, 600), [
+        [600, 'tick'],
+        [600 + T.visibleMs, 'tick'],
+      ]),
+    );
+    const r = run(lvl, {
+      stepEnded: (step, now) => {
+        r.ended.push(step);
+        p = presenceStep(p, { t: now, kind: 'stepDone' });
       },
-      {
-        step: 2,
-        mode: 'soft' as const,
-        highlight: ['front'],
-        textKey: 'tut.ctx.support',
-        done: { event: 'placementCorrect' as const, count: 1 },
-      },
-    ];
-    const r = run(compile({ ...rawLevel(4), tutorial }));
-    r.tut.start(1000);
-    r.tut.update(1000 + 2499);
-    expect(step(r)).toBe(1);
-    r.tut.update(1000 + 2500);
-    expect(step(r)).toBe(2);
-    expect(r.tips).toEqual(['support']);
+    });
+    expect([p.phase, r.step()]).toEqual(['hidden', 1]);
+    // hidden for a long time: the step is still active (K-53/3: only `done` ends it)
+    p = last(feed(p, [[60_000, 'touchDown']]));
+    expect(r.step()).toBe(1);
+    r.play(moveTo(r.game.state, lvl, pieceOf(lvl, 'c'), 1, 2));
+    expect(r.ended).toEqual([1]);
+    expect(p.phase).toBe('done');
+    expect(presenceLook(p).bubble).toBe(false);
   });
 
-  it('tutorial move-end events count once per move or booster use (level 4: first and second correct placement)', () => {
-    const r = run(levelFile(4));
-    r.tut.start(0);
-    const [m1, m2] = handMoves(4);
-    if (!m1 || !m2) throw new Error('hand moves');
-    r.play(m1);
-    expect(step(r)).toBe(2);
-    r.play(m2);
-    expect(step(r)).toBe(3);
+  it('UX 13.1 after reshowsWithBubble re-shows the bubble stays away; the glove and the highlight still come back', () => {
+    expect(T.reshowsWithBubble).toBe(3);
+    let p = presenceStart(0, 0);
+    let t = 0;
+    const shows: boolean[] = [];
+    for (let k = 0; k < 6; k++) {
+      p = presenceStep(p, { t, kind: 'tick' });
+      expect(p.phase).toBe('shown');
+      shows.push(presenceLook(p).bubble);
+      expect(presenceLook(p).glove).toBe(true);
+      t += T.visibleMs;
+      p = presenceStep(p, { t, kind: 'tick' }); // hidden
+      t += T.idleReshowMs;
+    }
+    expect(shows).toEqual([true, true, true, true, false, false]);
+    expect(p.shows).toBe(6);
   });
 
-  it('GDD 14.1 level 5: segmentDone, then deliveryDone (truck)', () => {
-    const r = run(levelFile(5));
-    r.tut.start(0);
-    const moves = handMoves(5);
-    let i = 0;
-    while (step(r) === 1) r.play(moves[i++] as Move);
-    expect(step(r) ?? (r.tut.finished ? 'finished' : null)).not.toBe(1);
-    expect(r.ended.map((e) => e[0])).toContain(1);
-    while (!r.tut.finished && i < moves.length) r.play(moves[i++] as Move);
-    expect(r.tut.finished).toBe(true);
+  it('UX 13.1 a window stops the timers (nothing on screen) and the step goes on from where it was', () => {
+    let p = last(feed(presenceStart(0, 600), [[600, 'tick']]));
+    p = last(
+      feed(p, [
+        [1600, 'windowOpen'],
+        [50_000, 'tick'],
+      ]),
+    );
+    expect([p.phase, presenceLook(p).bubble]).toEqual(['shown', false]);
+    p = last(
+      feed(p, [
+        [51_000, 'windowClose'],
+        [51_000 + T.visibleMs - 1001, 'tick'],
+      ]),
+    );
+    expect(p.phase).toBe('shown'); // 1000 ms of its 4000 had run before the window
+    p = last(feed(p, [[51_000 + T.visibleMs - 1000, 'tick']]));
+    expect(p.phase).toBe('hidden');
+    // nested pauses (a window over a Söküm line): only the last close resumes
+    p = last(
+      feed(p, [
+        [60_000, 'windowOpen'],
+        [60_100, 'windowOpen'],
+        [60_200, 'windowClose'],
+        [99_000, 'tick'],
+      ]),
+    );
+    expect(p.phase).toBe('hidden');
+    p = last(feed(p, [[99_000, 'windowClose']]));
+    expect(p.pauses).toBe(0);
   });
 
-  it('GDD 14.1 startOn waits for the event, then starts step; never firing hides the rest', () => {
-    const data = rawLevel(5);
-    const tutorial = [
-      {
-        step: 1,
-        mode: 'soft' as const,
-        highlight: ['truck'],
-        textKey: 'tut.l5.truck',
-        startOn: { event: 'deliveryDone' as const },
-        done: { timeoutMs: 2500 },
-      },
-    ];
-    const lvl = compile({ ...data, tutorial });
-    const r = run(lvl);
-    r.tut.start(0);
-    expect(r.tut.current).toBeNull();
-    expect(r.tut.waiting?.step).toBe(1);
-    const moves = handMoves(5);
-    r.play(moves[0] as Move, 100);
-    r.play(moves[1] as Move, 200);
-    expect(r.tut.current).toBeNull();
-    r.play(moves[2] as Move, 300); // segment 0 done → truck delivers (step 9)
-    expect(r.tut.current?.data.step).toBe(1);
-    expect(r.tut.current?.since).toBe(300);
-
-    const never = run(lvl);
-    never.tut.start(0);
-    never.tut.stop();
-    expect(never.tut.finished).toBe(true);
-    expect(never.ended).toEqual([]);
-  });
-
-  it('tutorial done.at counts only at anchor', () => {
-    const lvl = levelFile(1);
-    const g = GameSession.start(lvl);
-    const [m1] = handMoves(1);
-    if (!m1) throw new Error('hand moves');
-    const sink = new ArraySink();
-    g.commit(m1, sink);
-    const at = (x: number, y: number): TutCondition => ({ event: 'placementCorrect', at: [x, y] });
-    expect(moveMatches(at(6, 0), sink.events, g.state)).toBe(true);
-    expect(moveMatches(at(6, 1), sink.events, g.state)).toBe(false);
-    expect(moveMatches({ event: 'turnEnd' }, sink.events, g.state)).toBe(true);
-    expect(moveMatches({ event: 'segmentDone' }, sink.events, g.state)).toBe(false);
-    expect(moveMatches({ event: 'overWall' }, sink.events, g.state)).toBe(false);
-  });
-
-  it('UX 13.1 piece highlights resolve through CompiledLevel.tutorialPieceIds', () => {
-    const lvl = levelFile(5);
-    expect(highlightedPieces(lvl, ['panorama', 'piece:1', 'piece:k1_0'])).toEqual([
-      lvl.tutorialPieceIds.get('piece:1'),
-      lvl.tutorialPieceIds.get('piece:k1_0'),
-    ]);
+  it('ANALYTICS tutorial_step: shows (≥ 1) and msToDone from the first show to done', () => {
+    let p = last(
+      feed(presenceStart(1000, 600), [
+        [1600, 'tick'],
+        [5600, 'tick'],
+        [9600, 'tick'],
+        [9800, 'stepDone'],
+      ]),
+    );
+    expect(presenceReport(p, 9800)).toEqual({ shows: 2, msToDone: 8200 });
+    // done before the first show: one show, 0 ms (the step ended while it waited)
+    p = last(feed(presenceStart(0, 600), [[300, 'stepDone']]));
+    expect(presenceReport(p, 300)).toEqual({ shows: 1, msToDone: 0 });
+    expect(PRESENCE_TIMINGS.visibleMs).toBe(T.visibleMs);
   });
 });
 
-describe('UX 13.2 contextual tips tut.ctx.* (GDD 14.1/2, K-34 hook 4)', () => {
+// --- contextual lines -------------------------------------------------------------------------------------------------
+
+const FREE_GATE: CtxGate = { stepActive: false, blocked: false };
+const STEP_GATE: CtxGate = { stepActive: true, blocked: false };
+
+function tipHost(seen0: readonly CtxTopic[] = []): { seen: Set<CtxTopic>; tips: ContextTips } {
+  const seen = new Set<CtxTopic>(seen0);
+  return { seen, tips: new ContextTips({ seen: (t) => seen.has(t), markSeen: (t) => void seen.add(t) }) };
+}
+
+describe('K-53/4 contextual lines tut.ctx.* (UX 13.1, 13.2; GDD 14.1/2, K-34 hook 4)', () => {
   const ev = (body: Record<string, unknown>, step = 3): GameEvent =>
     ({ seq: 0, step, ...body }) as unknown as GameEvent;
+
+  it('K-53 teardown line skips the queue: it shows at once during an active step, on every Söküm, for 1,2 s, never marked seen', () => {
+    const { seen, tips } = tipHost();
+    tips.trigger('support', 3);
+    tips.update(0, STEP_GATE, T.visibleMs);
+    expect([tips.showing, tips.queued]).toEqual([null, ['support']]); // a step is active: support waits
+    tips.teardown(100, ['pid:2']);
+    expect([tips.showing, tips.highlight]).toEqual(['teardown', ['pid:2']]);
+    tips.update(100 + TEARDOWN_LINE_MS - 1, STEP_GATE, T.visibleMs);
+    expect(tips.showing).toBe('teardown');
+    tips.update(100 + TEARDOWN_LINE_MS, STEP_GATE, T.visibleMs);
+    expect([tips.showing, tips.queued]).toEqual([null, ['support']]); // the waiting line still waits
+    expect(seen.has('teardown')).toBe(false);
+    tips.teardown(5000); // the next Söküm shows it again
+    expect(tips.showing).toBe('teardown');
+    tips.trigger('teardown'); // never queued through the normal path
+    expect(tips.queued).toEqual(['support']);
+    expect(TEARDOWN_LINE_MS).toBe(1200);
+    // the scene pauses the active step's presence while a line has the bubble (K-53/4 "Gizli'ye geçer, sonra sürer")
+    const scene = readFileSync(join(ROOT, 'src/scenes/level/LevelScene.ts'), 'utf8');
+    expect(scene).toMatch(
+      /const pause = step !== null && \(this\.windows\.open !== null \|\| this\.tips\.showing !== null\);/,
+    );
+    expect(scene).toMatch(/this\.tips\.teardown\(\s*this\.animNow,/);
+  });
+
+  it('K-53/4 a line during an active step waits and shows nextStepDelayMs after the step ends; at most one waits', () => {
+    const { seen, tips } = tipHost();
+    tips.trigger('support', 3);
+    tips.trigger('bounce.color', 3); // a second one replaces the waiting one (unmarked)
+    expect(tips.queued).toEqual(['bounce.color']);
+    tips.update(0, STEP_GATE, T.visibleMs);
+    expect(tips.showing).toBeNull();
+    tips.stepEnded(1000, T.nextStepDelayMs); // the step ended; the next step is active at once
+    tips.update(1000 + T.nextStepDelayMs - 1, STEP_GATE, T.visibleMs);
+    expect(tips.showing).toBeNull();
+    tips.update(1000 + T.nextStepDelayMs, STEP_GATE, T.visibleMs);
+    expect(tips.showing).toBe('bounce.color');
+    expect([seen.has('bounce.color'), seen.has('support')]).toEqual([true, false]);
+    // the next line waits again while the (next) step is active
+    tips.trigger('lastmoves', 5);
+    tips.update(1400 + T.visibleMs, STEP_GATE, T.visibleMs);
+    expect([tips.showing, tips.queued]).toEqual([null, ['lastmoves']]);
+    tips.update(1400 + T.visibleMs + 10, FREE_GATE, T.visibleMs);
+    expect(tips.showing).toBe('lastmoves');
+    // no new bubble over a window or mid-drag
+    const b = tipHost();
+    b.tips.trigger('queue', 1);
+    b.tips.update(0, { stepActive: false, blocked: true }, T.visibleMs);
+    expect(b.tips.showing).toBeNull();
+  });
+
+  it('K-53/4 one move with several lines: the first one in display priority waits (triggerFirst)', () => {
+    const { tips } = tipHost(['streak']);
+    tips.triggerFirst(['streak', 'goldtrowel', 'lastmoves'], 4, () => []);
+    expect(tips.queued).toEqual(['goldtrowel']);
+  });
 
   it('K-34 the first support bounce triggers tut.ctx.support; colour / window / off-plan bounces their own line', () => {
     expect(
@@ -397,7 +664,7 @@ describe('UX 13.2 contextual tips tut.ctx.* (GDD 14.1/2, K-34 hook 4)', () => {
     ).toEqual(['bounce.offplan']);
   });
 
-  it('UX 13.2 streak 3/4, golden trowel, last five moves and the truck queue', () => {
+  it('UX 13.2 streak 3/4, golden trowel, last moves, the truck queue; K-30 D1 truck help lines (R2-05: no material line)', () => {
     const topics = ctxFromMove(
       [
         ev({ t: 'comboChanged', combo: 3 }),
@@ -410,710 +677,391 @@ describe('UX 13.2 contextual tips tut.ctx.* (GDD 14.1/2, K-34 hook 4)', () => {
       5,
     );
     expect(topics).toEqual(['streak', 'goldtrowel', 'lastmoves', 'queue']);
-    expect(
-      ctxFromMove([ev({ t: 'movesChanged', movesLeft: 4, delta: -1, reason: 'move' }, 4)], 5, 3, 5),
-    ).toEqual([]);
+    expect(ctxFromMove([ev({ t: 'truckHelp', kind: 'unchain' }, 12)], 9, 3, 5)).toEqual(['truckhelp.free']);
+    expect(ctxFromMove([ev({ t: 'truckHelp', kind: 'reshuffle', moves: [] }, 12)], 9, 3, 5)).toEqual([
+      'reshuffle',
+    ]);
+    expect(CTX_TOPICS).not.toContain('truckhelp.material');
+    expect(CTX_TOPICS).toContain('teardown');
   });
 
-  it('GDD 14.1/2 a tip shows once per account, one at a time, never over a tutorial step', () => {
-    const seen = new Set<CtxTopic>(['queue']);
-    const tips = new ContextTips({ seen: (t) => seen.has(t), markSeen: (t) => void seen.add(t) });
+  it('GDD 14.1/2 a line shows once per account, one at a time, 4 s (tutorial.visibleMs)', () => {
+    const { seen, tips } = tipHost(['queue']);
     tips.trigger('queue');
     tips.trigger('support');
-    tips.trigger('lastmoves');
-    tips.update(0, false, 2500);
-    expect(tips.showing).toBeNull();
-    tips.update(10, true, 2500);
+    tips.update(10, FREE_GATE, T.visibleMs);
     expect(tips.showing).toBe('support');
     expect(seen.has('support')).toBe(true);
-    tips.trigger('support');
-    tips.update(2509, true, 2500);
+    tips.trigger('support'); // on screen: nothing more
+    tips.trigger('lastmoves');
+    tips.update(10 + T.visibleMs - 1, FREE_GATE, T.visibleMs);
     expect(tips.showing).toBe('support');
-    tips.update(2510, true, 2500);
+    tips.update(10 + T.visibleMs, FREE_GATE, T.visibleMs);
     expect(tips.showing).toBe('lastmoves');
   });
 
-  it('UX 13.2 opening the trowel pick closes and marks tut.ctx.goldtrowel', () => {
-    // ContextTips side of the rule (the scene calls `retire('goldtrowel')` when the pick opens, LevelScene.toggleTrowel;
-    // the e2e "UX 13.2 … level 5" drives it through the real trowel icon)
-    const seen = new Set<CtxTopic>();
-    const host = { seen: (t: CtxTopic) => seen.has(t), markSeen: (t: CtxTopic) => void seen.add(t) };
-    // (a) the line shows → the pick opens: it closes, stays seen, a later trowel never brings it back
-    const a = new ContextTips(host);
-    a.trigger('goldtrowel', 4, ['streak', 'front']);
-    a.update(0, true, 2500);
-    expect(a.showing).toBe('goldtrowel');
-    const v = a.version;
-    a.retire('goldtrowel');
-    expect(a.showing).toBeNull();
-    expect(a.highlight).toEqual([]); // the streak / front frames leave with it
-    expect(a.version).toBeGreaterThan(v);
-    expect(seen.has('goldtrowel')).toBe(true);
-    a.trigger('goldtrowel', 9);
-    a.update(10, true, 2500);
-    expect(a.showing).toBeNull();
-    // (b) the line waits behind a step (level 5 step 2) → the pick opens: it drops and counts as seen; others stay
-    seen.clear();
-    const b = new ContextTips(host);
-    b.trigger('goldtrowel', 4);
-    b.trigger('lastmoves', 4);
-    b.update(0, false, 2500);
-    b.retire('goldtrowel');
-    expect(b.queued).toEqual(['lastmoves']);
-    expect(seen.has('goldtrowel')).toBe(true);
-    b.update(10, true, 2500);
-    expect(b.showing).toBe('lastmoves');
-    // (c) never triggered: nothing to retire, nothing marked
-    seen.clear();
-    const c = new ContextTips(host);
-    c.retire('goldtrowel');
-    expect(seen.size).toBe(0);
-  });
-});
-
-describe('UX 13.1 spotlight geometry (no mask, JUICE 0 rule 11)', () => {
-  it('UX 13.1 overlapping holes merge; the dark rects cover the screen minus the holes', () => {
-    const screen = { x: 0, y: 0, w: 1080, h: 1920 };
-    const holes = spotlightHoles(
-      [
-        { x: 100, y: 100, w: 200, h: 200 },
-        { x: 250, y: 250, w: 100, h: 100 },
-        { x: 700, y: 1000, w: 120, h: 120 },
-      ],
-      12,
-    );
-    expect(holes).toHaveLength(2);
-    const dark = darkRects(screen, holes);
-    const area = (r: { w: number; h: number }): number => r.w * r.h;
-    const holeArea = holes.reduce((s, h) => s + area(h), 0);
-    expect(dark.reduce((s, r) => s + area(r), 0)).toBe(area(screen) - holeArea);
-    expect(insideAny(holes, 150, 150)).toBe(true);
-    expect(insideAny(holes, 600, 600)).toBe(false);
-  });
-
-  it('UX 13.1 the bubble never touches a lit hole nor the glove path (level 1 step 1: crane + piece 0, FIT H 1920 → the yard band)', () => {
-    const lvl = levelFile(1);
-    const g = GameSession.start(lvl);
-    const layout = createLayout(TOKENS, 1920);
-    const rects = highlightAll(['piece:0', 'crane'], {
-      layout,
-      state: g.state,
-      level: lvl,
-      hud: { truck: null, streak: null },
-    });
-    expect(rects).toHaveLength(2);
-    const q = query(layout, {
-      lit: rects.map((r) => padRect(r, UI.spotPadPx)),
-      handPath: [
-        [4, 7],
-        [4, 8],
-        [6, 8],
-      ],
-    });
-    const place = placeBubble(q, M, UI.dedeBustPx, UI.bubbleMaxW, PAUSE(layout));
-    expect(place.candidate).toBe(2);
-    expect(bubbleForbidden(q, PAUSE(layout)).some((f) => rectsOverlap(f, place.rect))).toBe(false);
-    expect(handStrips(layout, q.handPath).some((f) => rectsOverlap(f, place.rect))).toBe(false);
-    expect(place.rect.y + place.rect.h).toBeLessThanOrEqual(layout.H / 2);
-    expect(place.boxMaxW).toBe(
-      bubbleBoxWidths(layout, UI.dedeBustPx, UI.bubbleMaxW, M, PAUSE(layout)).narrow,
-    );
-  });
-});
-
-describe('UX 13.1 tutorial texts exist in both languages (STORY 6, D-017)', () => {
-  it('UX 13.2 every level 1–5 tutorial textKey and every tut.ctx topic is in tr and en', async () => {
-    const { CTX_TOPICS } = await import('../../src/scenes/level/tutorial/contextTips.ts');
-    const { DICTIONARIES, createTranslator } = await import('../../src/services/i18n.ts');
-    const keys = new Set<string>();
-    for (const id of [1, 2, 3, 4, 5]) for (const s of levelFile(id).data.tutorial ?? []) keys.add(s.textKey);
-    for (const topic of CTX_TOPICS) keys.add(`tut.ctx.${topic}`);
-    for (const locale of ['tr', 'en'] as const) {
-      const tr = createTranslator(locale, DICTIONARIES);
-      const missing = [...keys].filter((k) => !tr.has(k));
-      expect(missing, locale).toEqual([]);
-    }
-  });
-});
-
-describe('LEVELS §5 tutorials of levels 1–5 are order- and time-independent (Faz 2 tur 1; level 2 since Faz 2 tur 3)', () => {
-  /** Every winning order of ✓ placements plus at most `yardMoves` yard moves (rail moves send `gapPass`). */
-  function winningOrders(
-    lvl: CompiledLevel,
-    yardMoves: number,
-  ): { move: Move; rail: boolean; events: GameEvent[]; state: GameState }[][] {
-    const hooks = levelHooks(lvl);
-    const targets: { to: DragNode; rail: boolean; site: boolean }[] = [];
-    for (const ix of [6, 7]) targets.push({ to: { ix, iy: 8, mode: FREE }, rail: false, site: true });
-    lvl.gaps.forEach((_g, gi) => {
-      for (const ix of [6, 7])
-        for (let iy = 0; iy < 8; iy++)
-          targets.push({ to: { ix, iy, mode: railMode(gi) }, rail: true, site: true });
-    });
-    for (let ix = 0; ix < 6; ix++)
-      for (let iy = 0; iy < 10; iy++) targets.push({ to: { ix, iy, mode: FREE }, rail: false, site: false });
-    const out: { move: Move; rail: boolean; events: GameEvent[]; state: GameState }[][] = [];
-    const walk = (s: GameState, path: (typeof out)[number], yard: number): void => {
-      if (isLevelWon(s)) {
-        out.push(path);
-        return;
-      }
-      for (let pid = 0; pid < lvl.pieces.length; pid++) {
-        if (pieceZone(s, pid) !== Zone.yard) continue;
-        for (const t of targets) {
-          const c = cloneState(s);
-          const sink = new ArraySink();
-          const move: Move = { kind: 'drag', pieceId: pid, to: t.to };
-          if (applyMove(c, move, sink, { hooks }).status !== 'applied') continue;
-          const correct = sink.events.some((e) => e.t === 'placementCorrect');
-          const wrong = sink.events.some((e) => e.t === 'placementWrong' || e.t === 'pieceReturned');
-          if (t.site ? !correct : correct || wrong || yard >= yardMoves) continue;
-          walk(c, [...path, { move, rail: t.rail, events: sink.events, state: c }], yard + (correct ? 0 : 1));
-        }
-      }
-    };
-    walk(createInitialState(lvl), [], 0);
-    return out;
-  }
-
-  // ✓ placements only; levels 2, 3 and 4 (Faz 2 tur 1 #0, #1; level 2 since its step 2 ends on `placementCorrect`
-  // instead of a `holdOverBuild` this walk cannot model, product-lead PL-F2T3-0) also with 1 yard move anywhere
-  for (const [n, yardMoves] of [
-    [1, 0],
-    [2, 1],
-    [3, 1],
-    [4, 1],
-    [5, 0],
-  ] as const) {
-    // WP-M ile yeniden üretilecek: the Faz 2 level data keep decoys, so K-48 (3) never lets them win.
-    it.fails(
-      `GDD 14.1/4a level ${n}: in every winning order (✓ + ${yardMoves} yard move) and every timeout moment each step is shown, none is skipped, nothing is left on screen at the win`,
-      () => {
-        const lvl = levelFile(n);
-        const steps = lvl.data.tutorial ?? [];
-        const timed = steps.some((st) => 'timeoutMs' in st.done);
-        const orders = winningOrders(lvl, yardMoves);
-        expect(orders.length).toBeGreaterThan(0);
-        let played = 0;
-        let unplayable = 0;
-        for (const order of orders) {
-          for (const at of timed ? order.map((_m, i) => i).concat(order.length) : [-1]) {
-            let state = createInitialState(lvl);
-            const hooks = levelHooks(lvl);
-            const shown = new Set<number>();
-            const atMoveStart = new Set<number>();
-            const skipped: number[] = [];
-            const tut = new TutorialController(lvl, {
-              state: () => state,
-              dragRules: () => hooks.drag ?? {},
-              hooks: () => hooks,
-              markContextTip: () => {},
-              stepEnded: (st, sk) => (sk ? skipped.push(st) : undefined),
-            });
-            let now = 0;
-            const note = (): void => {
-              const c = tut.current;
-              if (c) shown.add(c.data.step);
-            };
-            const tick = (): void => {
-              now += 100_000;
-              tut.update(now);
-              note();
-            };
-            tut.start(now);
-            note();
-            if (at === 0) tick();
-            // review Faz 2 tur 1 #12: a required step lets only its highlighted blocks be picked — an order that moves
-            // another block meanwhile cannot be played
-            let playable = true;
-            order.forEach((m, i) => {
-              if (!playable) return;
-              if (m.move.kind === 'drag' && !tut.allowsPick(m.move.pieceId)) {
-                playable = false;
-                return;
-              }
-              const before = tut.current;
-              if (before) atMoveStart.add(before.data.step);
-              now += 1;
-              if (m.move.kind === 'drag') tut.dragStarted(m.move.pieceId);
-              if (m.rail) tut.dragSignal('gapPass', now);
-              else if (m.move.kind === 'drag' && m.move.to.ix >= 6) tut.dragSignal('overWall', now);
-              note();
-              state = m.state;
-              tut.moveEnded(m.events, now);
-              note();
-              if (at === i + 1) tick();
-            });
-            if (!playable) {
-              unplayable += 1;
-              continue;
-            }
-            played += 1;
-            const where = `level ${n}, timeout after move ${at}`;
-            expect([...shown].sort(), where).toEqual(steps.map((st) => st.step));
-            expect(skipped, where).toEqual([]);
-            expect(tut.finished, where).toBe(true);
-            // LEVELS §5: a step is on screen when a move starts, except a timed step (`timeoutMs`) and a step opened by
-            // the drag signal of the move it describes (level 1 step 2 "drop", opened by overWall while the block is held)
-            const dragOnly = n === 1 ? [2] : [];
-            const unseen = steps.filter(
-              (st) => !('timeoutMs' in st.done) && !dragOnly.includes(st.step) && !atMoveStart.has(st.step),
-            );
-            expect(
-              unseen.map((st) => st.step),
-              where,
-            ).toEqual([]);
-          }
-        }
-        expect(played).toBeGreaterThan(0);
-        expect(played + unplayable).toBeGreaterThan(0);
-      },
-    );
-  }
-});
-
-describe('review Faz 2 tur 1: tutorial input gate, holes, bubble and contextual tips', () => {
-  it('GDD 14.1 required step ignores non-highlighted block (level 1 piece 3, level 3 piece 9)', () => {
-    // level 1 step 1 (Z, piece:0 + crane): the merged hole also covers row 7 where piece 3 lies
-    const r1 = run(levelFile(1));
-    r1.tut.start(0);
-    const a = r1.lvl.tutorialPieceIds.get('piece:0') ?? -1;
-    expect(r1.tut.current?.required).toBe(true);
-    expect(r1.tut.allowsPick(3)).toBe(false);
-    expect(r1.tut.allowsPick(a)).toBe(true);
-    // a drag of piece 3 over the wall (it cannot be picked in the scene; the signal does not count either)
-    r1.tut.dragStarted(3);
-    r1.tut.dragSignal('overWall', 5);
-    expect(step(r1)).toBe(1);
-    expect(r1.tut.current?.handHidden).toBe(false);
-    r1.tut.dragStarted(a);
-    r1.tut.dragSignal('overWall', 6);
-    expect(step(r1)).toBe(2);
-    expect(r1.tut.allowsPick(3)).toBe(true); // soft step: every block is free again
-
-    // level 3 step 2 (Z, gap:0 + piece:1 = f): l (piece 9) cannot be picked, f can
-    const r3 = run(levelFile(3));
-    r3.tut.start(0);
-    const [m1] = handMoves(3);
-    if (!m1) throw new Error('hand moves');
-    r3.play(m1);
-    expect(step(r3)).toBe(2);
-    const f = r3.lvl.tutorialPieceIds.get('piece:1') ?? -1;
-    expect(r3.tut.allowsPick(9)).toBe(false);
-    expect(r3.tut.allowsPick(f)).toBe(true);
-  });
-
-  it('UX 13.1 a piece: hole sits on the dragged block (its drag node, rail included), else on its board cells', () => {
-    const lvl = levelFile(3);
-    const g = GameSession.start(lvl);
-    const layout = createLayout(TOKENS, 1920);
-    const f = lvl.tutorialPieceIds.get('piece:1') ?? -1;
-    const input = { layout, state: g.state, level: lvl, hud: { truck: null, streak: null } };
-    const [rest] = highlightAll(['piece:1'], input);
-    const [dragged] = highlightAll(['piece:1'], { ...input, dragging: { pieceId: f, ix: 6, iy: 2 } });
-    const [other] = highlightAll(['piece:1'], { ...input, dragging: { pieceId: f + 1, ix: 6, iy: 2 } });
-    expect(dragged).not.toEqual(rest);
-    expect(dragged?.x).toBe(layout.grid.pieceRect(6, 2, 1, 1).x);
-    expect(other).toEqual(rest);
-  });
-
-  it('UX 13.1 the Dede bubble goes under the HUD first and never over pause / goals / moves (EXPAND 390×844 and 360×800)', () => {
-    for (const H of [Math.round((1080 * 844) / 390), Math.round((1080 * 800) / 360)]) {
-      const layout = createLayout(TOKENS, H);
-      const q = query(layout, {});
-      const first = bubbleCandidates(q, M, UI.dedeBustPx, UI.bubbleMaxW, PAUSE(layout))[0];
-      expect(first?.candidate).toBe(1);
-      expect(first?.rect.y).toBe(layout.top.groupBottomY + 16);
-      expect((first?.rect.y ?? 0) + 200).toBeLessThanOrEqual(layout.board.crane.y);
-      const place = placeBubble(q, M, UI.dedeBustPx, UI.bubbleMaxW, PAUSE(layout));
-      expect(place.candidate).toBe(1);
-      for (const hud of [PAUSE(layout), layout.top.goals, layout.top.moves, layout.top.panorama])
-        expect(rectsOverlap(hud, place.rect)).toBe(false);
-    }
-  });
-
-  it('UX 13.1 Faz 2 tur 2b: no band under the HUD at FIT H 1920; with the crane band and the yard taken the band over the HUD moves beside the pause button (x = 168, box to the right margin); a forbidden area outweighs a penalty; a box needing > 3 lines is invalid', () => {
-    const fit = createLayout(TOKENS, 1920);
-    const pause = PAUSE(fit);
-    const widths = bubbleBoxWidths(fit, UI.dedeBustPx, UI.bubbleMaxW, M, pause);
-    expect(widths).toEqual({ wide: 760, narrow: 494, besidePause: 672 });
-    const crane = padRect(fit.board.crane, UI.spotPadPx);
-    const g = GameSession.start(levelFile(1));
-    const q = query(fit, { lit: [crane], yardBlocks: yardBlockRects(fit, g.state) });
-    const all = bubbleCandidates(q, M, UI.dedeBustPx, UI.bubbleMaxW, pause);
-    expect(all.map((c) => c.candidate)).not.toContain(1);
-    const c4 = all.find((c) => c.candidate === 4);
-    expect(c4?.rect.x).toBe(rectRightOf(pause) + 16);
-    expect(c4?.boxMaxW).toBe(672);
-    expect((c4?.rect.y ?? 0) + (c4?.rect.h ?? 0)).toBe(fit.board.crane.y - 16);
-    const place = placeBubble(q, M, UI.dedeBustPx, UI.bubbleMaxW, pause);
-    expect(place.candidate).toBe(4); // it covers goals / moves (penalties), the others touch the crane hole or the yard
-    expect(bubbleForbidden(q, pause).some((f) => rectsOverlap(f, place.rect))).toBe(false);
-    // the same, but the text needs 4 lines in every box but the narrow one → the narrow candidates only
-    const tall = placeBubble(
-      { ...q, size: (w) => ({ ...size(w), lines: w === widths.narrow ? 3 : 4 }) },
-      M,
-      UI.dedeBustPx,
-      UI.bubbleMaxW,
-      pause,
-    );
-    expect(tall.boxMaxW).toBe(widths.narrow);
-  });
-
-  it('UX 13.2 a queued contextual tip whose trigger no longer holds is dropped unmarked (queue emptied, a later move)', () => {
-    const seen = new Set<CtxTopic>();
-    const tips = new ContextTips({ seen: (t) => seen.has(t), markSeen: (t) => void seen.add(t) });
-    let queueNow = 1;
+  it('UX 13.2 a waiting line whose trigger no longer holds is dropped unmarked; the next occurrence brings it back', () => {
+    const { seen, tips } = tipHost();
     let serialNow = 3;
-    const valid = (t: CtxTopic, serial: number): boolean =>
-      t === 'queue' ? queueNow > 0 : serial === serialNow;
-    tips.trigger('queue', 3);
+    const valid = (_t: CtxTopic, serial: number): boolean => serial === serialNow;
     tips.trigger('support', 3);
-    tips.update(0, false, 2500, valid); // a tutorial step is on screen: they wait
-    expect(tips.showing).toBeNull();
-    queueNow = 0; // the truck delivered meanwhile
-    serialNow = 4; // and another move was committed after the bounce
-    tips.update(10, true, 2500, valid);
-    expect(tips.showing).toBeNull();
-    expect(tips.queued).toEqual([]);
-    expect(seen.size).toBe(0); // not marked: the next occurrence shows them in context
+    tips.update(0, STEP_GATE, T.visibleMs, valid);
+    serialNow = 4; // another move was committed after the bounce
+    tips.update(10, FREE_GATE, T.visibleMs, valid);
+    expect([tips.showing, tips.queued, seen.size]).toEqual([null, [], 0]);
     tips.trigger('support', 4);
-    tips.update(20, true, 2500, valid);
+    tips.update(20, FREE_GATE, T.visibleMs, valid);
     expect(tips.showing).toBe('support');
   });
+
+  it('UX 13.2 opening the trowel pick closes and marks tut.ctx.goldtrowel (on screen or waiting)', () => {
+    const a = tipHost();
+    a.tips.trigger('goldtrowel', 4, ['streak', 'front']);
+    a.tips.update(0, FREE_GATE, T.visibleMs);
+    expect(a.tips.showing).toBe('goldtrowel');
+    a.tips.retire('goldtrowel');
+    expect([a.tips.showing, a.tips.highlight, a.seen.has('goldtrowel')]).toEqual([null, [], true]);
+    const b = tipHost();
+    b.tips.trigger('goldtrowel', 4);
+    b.tips.retire('goldtrowel');
+    expect([b.tips.queued, b.seen.has('goldtrowel')]).toEqual([[], true]);
+  });
 });
 
-describe('review Faz 2 tur 2: merged holes, pause through the spotlight, K-43 tutorial resume', () => {
-  const H844 = Math.round((1080 * 844) / 390);
-  const lit = (sp: ReturnType<typeof spotlight>, x: number, y: number): boolean =>
-    insideAny(sp.holes, x, y) && !insideAny(sp.fills, x, y);
-  const centre = (r: { x: number; y: number; w: number; h: number }): [number, number] => [
-    r.x + r.w / 2,
-    r.y + r.h / 2,
-  ];
+// --- highlights, dock, glove --------------------------------------------------------------------------------------------
 
-  it('UX 13.1 merged hole: level 1 step 1 lights only the crane band and piece 0', () => {
-    const lvl = levelFile(1);
-    const g = GameSession.start(lvl);
-    for (const H of [H844, Math.round((1080 * 800) / 360), 1920]) {
-      const layout = createLayout(TOKENS, H);
-      const input = { layout, state: g.state, level: lvl, hud: { truck: null, streak: null } };
-      const rects = highlightAll(['piece:0', 'crane'], input);
-      const sp = spotlight(rects, 12);
-      expect(sp.holes).toHaveLength(1); // the 12 px pad merges the crane band and row 7
-      expect(sp.fills.length).toBeGreaterThan(0);
-      // the crane band and every cell of a are lit …
-      const a = highlightRects('piece:0', input)[0];
-      if (!a) throw new Error('piece 0');
-      expect(lit(sp, ...centre(a))).toBe(true);
-      expect(lit(sp, ...centre(layout.board.crane))).toBe(true);
-      expect(lit(sp, layout.board.crane.x + 10, layout.board.crane.y + 10)).toBe(true);
-      // … the other blocks of row 7 (Y (0,7), W (2,7), W (3,7)) are dark like the rest of the screen
-      for (const [x, y] of [
-        [0, 7],
-        [2, 7],
-        [3, 7],
-      ] as const)
-        expect(lit(sp, ...centre(layout.grid.cellRect(x, y))), `(${x},${y})`).toBe(false);
-      // the dark layer + the fills cover the screen minus the lit parts, without overlaps
-      const screen = { x: 0, y: 0, w: layout.W, h: layout.H };
-      const area = (r: { w: number; h: number }): number => r.w * r.h;
-      const dark = [...darkRects(screen, sp.holes), ...sp.fills];
-      const litArea = sp.holes.reduce((s, h) => s + area(h), 0) - sp.fills.reduce((s, f) => s + area(f), 0);
-      expect(dark.reduce((s, r) => s + area(r), 0)).toBeCloseTo(area(screen) - litArea, 6);
-    }
-  });
+/** UX §13.1: a 6-word line at 44 px is 2 lines = 150 px; portrait 128 + 12 + tail 24 + box ≤ 640. */
+const BUBBLE = { w: T.portraitPx + T.portraitGapPx + TOKENS.kit.bubble.tailPx + T.bubbleMaxW, h: 150 };
 
-  it('UX 13.1 required step keeps the pause button: the touch blockers leave its hit area open, the rest stays blocked', () => {
-    const lvl = levelFile(1);
-    const g = GameSession.start(lvl);
-    const layout = createLayout(TOKENS, H844);
-    const rects = highlightAll(['piece:0', 'crane'], {
-      layout,
-      state: g.state,
-      level: lvl,
-      hud: { truck: null, streak: null },
-    });
-    const sp = spotlight(rects, 12);
-    const screen = { x: 0, y: 0, w: layout.W, h: layout.H };
-    const pause = pauseHitRect(layout.top.pause);
-    expect(pause.w).toBeGreaterThanOrEqual(TOKENS.touch.minTargetPx);
-    const blockers = blockerRects(screen, sp, [pause]);
-    expect(insideAny(blockers, ...centre(pause))).toBe(false);
-    expect(insideAny(blockers, pause.x + 1, pause.y + 1)).toBe(false);
-    expect(insideAny(blockers, ...centre(layout.top.goals))).toBe(true);
-    expect(insideAny(blockers, ...centre(layout.top.moves))).toBe(true);
-    expect(insideAny(blockers, ...centre(layout.grid.cellRect(0, 7)))).toBe(true); // a fill swallows too
-    expect(insideAny(blockers, ...centre(layout.board.crane))).toBe(false); // the hole stays touchable
-  });
-
-  /** Replays `log` like LevelScene does on a K-43 resume and returns the rebuilt controller. */
-  function resumedTutorial(lvl: CompiledLevel, log: readonly SessionAction[]): TutorialController {
-    let at: GameSession | null = null;
-    const hooks = levelHooks(lvl);
-    const tut = new TutorialController(lvl, {
-      state: () => at?.state ?? null,
-      dragRules: () => hooks.drag ?? {},
-      hooks: () => hooks,
-      markContextTip: () => undefined,
-      stepEnded: () => undefined,
-    });
-    const sink = new ArraySink();
-    let mark = 0;
-    GameSession.replay(lvl, log, { hooks }, sink, (index, action, session) => {
-      at = session;
-      const events = sink.events.slice(mark);
-      mark = sink.events.length;
-      if (index === 0) tut.start(0);
-      else replayTutorialAction(tut, action, events, 0);
-    });
-    return tut;
-  }
-
-  it('K-43 resume keeps the tutorial step (level 3 step 2 gate after a; level 1–5 at every point of the hand solution)', () => {
-    // level 3: after a (m = 1) step 2 (Z, gapPass with f) is on screen and only f may be picked
-    const l3 = run(levelFile(3));
-    l3.tut.start(0);
-    const [a] = handMoves(3);
-    if (!a) throw new Error('level 3 hand');
-    l3.tut.dragStarted(a.kind === 'drag' ? a.pieceId : -1);
-    l3.play(a);
-    const back = resumedTutorial(l3.lvl, l3.game.log);
-    expect(back.current?.data.step).toBe(2);
-    expect(back.current?.required).toBe(true);
-    expect(back.allowsPick(9)).toBe(false);
-    expect(back.allowsPick(l3.lvl.tutorialPieceIds.get('piece:1') ?? -1)).toBe(true);
-
-    // every level 1–5: a kill after any move of the hand solution (played with its drag signals) resumes on the same step
-    for (const id of [1, 2, 3, 4, 5]) {
-      const lvl = levelFile(id);
-      const live = run(lvl);
-      live.tut.start(0);
-      for (const m of handMoves(id)) {
-        live.tut.endTimedStep(0); // the player read a timed line before moving (the replay assumes the same)
-        if (m.kind === 'drag') {
-          const at = tryBeginDrag(live.game.state, m.pieceId, levelHooks(lvl).drag ?? {});
-          if (!at.ok) throw new Error(at.reason);
-          live.tut.dragStarted(m.pieceId);
-          for (const node of at.session.pathTo(m.to) ?? []) {
-            const r = at.session.moveTo(node);
-            if (r.crossedWall) live.tut.dragSignal('overWall', 0);
-            if (r.enteredRail) live.tut.dragSignal('gapPass', 0);
-          }
-          const minMs = live.tut.holdMinMs();
-          if (minMs !== null && m.to.mode === FREE && m.to.ix >= 6)
-            live.tut.dragSignal('holdOverBuild', 0, minMs);
+describe('UX 13.1 highlights, the Usta Dede bubble dock and the glove (K-53, DL-2R-20)', () => {
+  it('UX 13.1 Kabul: on 1080×1920 and 390×844 every step bubble of the drafts 1–10 is clear (0 px) of the yard and site cells, the status strip and the HUD', () => {
+    const problems: string[] = [];
+    let checked = 0;
+    for (const n of DRAFTS) {
+      const lvl = draft(n);
+      const s = GameSession.start(lvl).state;
+      for (const layout of [FIT(lvl), layoutFor(lvl, 390, 844)]) {
+        for (const st of lvl.data.tutorial ?? []) {
+          const lit = highlightAll(st.highlight, {
+            layout,
+            state: s,
+            level: lvl,
+            hud: { truck: null, streak: null },
+          });
+          const place = placeBubble(
+            { layout, w: BUBBLE.w, h: BUBBLE.h, ids: st.highlight, lit, handBox: null },
+            TOKENS.layout.marginPx,
+            T.dockGapPx,
+          );
+          checked += 1;
+          for (const area of [layout.board.yard, layout.board.site, layout.board.status])
+            if (rectsOverlap(place.rect, area))
+              problems.push(`L${n} step ${st.step} H ${layout.H}: ${place.dock}`);
+          if (place.rect.y < layout.top.groupBottomY) problems.push(`L${n} step ${st.step}: over the HUD`);
         }
-        live.play(m);
-        const back2 = resumedTutorial(lvl, live.game.log);
-        expect([id, back2.current?.data.step ?? null, back2.finished]).toEqual([
-          id,
-          live.tut.current?.data.step ?? null,
-          live.tut.finished,
-        ]);
-        expect(back2.current?.required ?? null).toBe(live.tut.current?.required ?? null);
       }
+    }
+    expect(checked).toBe(38);
+    expect(problems).toEqual([]);
+  });
+
+  it('UX 13.1 docks: top = groupBottomY + 16 (280) at x 24; the bottom dock exists only when it ends 16 px over the bottom group (none at FIT)', () => {
+    const lvl = draft(1);
+    const fit = FIT(lvl);
+    expect(dockRect(fit, 'top', 100, 150, TOKENS.layout.marginPx, T.dockGapPx)).toEqual({
+      x: 24,
+      y: 280,
+      w: 100,
+      h: 150,
+    });
+    expect(bottomDockValid(fit, 150, T.dockGapPx)).toBe(false);
+    const phone = layoutFor(lvl, 390, 844);
+    expect(bottomDockValid(phone, 150, T.dockGapPx)).toBe(true);
+    const bottom = dockRect(phone, 'bottom', 100, 150, TOKENS.layout.marginPx, T.dockGapPx);
+    expect(bottom.y).toBe(phone.board.status.y + phone.board.status.h + 16);
+    // the top dock is taken when it is free; a highlight under it sends the bubble to the bottom dock (soft condition)
+    const q = { layout: phone, w: BUBBLE.w, h: BUBBLE.h, ids: ['crane'], handBox: null };
+    expect(placeBubble({ ...q, lit: [] }, 24, 16).dock).toBe('top');
+    const top = dockRect(phone, 'top', BUBBLE.w, BUBBLE.h, 24, 16);
+    expect(placeBubble({ ...q, lit: [top] }, 24, 16).dock).toBe('bottom');
+    // FIT has no bottom dock: the top one even then
+    expect(
+      placeBubble({ ...q, layout: fit, lit: [dockRect(fit, 'top', BUBBLE.w, BUBBLE.h, 24, 16)] }, 24, 16)
+        .dock,
+    ).toBe('top');
+    // hard areas: yard, site, status strip, HUD
+    expect(dockHardAreas(phone)).toHaveLength(4);
+  });
+
+  it('UX 13.1 a HUD highlight (panorama, goals, blocks, moves) takes the top dock and the tail points up', () => {
+    const lvl = draft(1);
+    const layout = layoutFor(lvl, 390, 844);
+    for (const id of ['panorama', 'goals', 'blocks', 'moves']) {
+      const p = placeBubble({ layout, w: BUBBLE.w, h: BUBBLE.h, ids: [id], lit: [], handBox: null }, 24, 16);
+      expect([p.dock, p.tailUp], id).toEqual(['top', true]);
+    }
+    expect(placeBubble({ layout, w: 10, h: 10, ids: ['crane'], lit: [], handBox: null }, 24, 16).tailUp).toBe(
+      false,
+    );
+  });
+
+  it('UX 13.1 highlight ids: `blocks` = the blocks-left chip, `booster:<id>` = its slot, `truck` skipped while the chip is hidden', () => {
+    const lvl = draft(8);
+    const s = GameSession.start(lvl).state;
+    const layout = FIT(lvl);
+    const chip = { x: 10, y: 20, w: 30, h: 40 };
+    const slot = { x: 100, y: 1700, w: 176, h: 176 };
+    const hud = {
+      truck: null,
+      streak: null,
+      blocks: chip,
+      booster: (id: string) => (id === 'hammer' ? slot : null),
+    };
+    expect(highlightRects('blocks', { layout, state: s, level: lvl, hud })).toEqual([chip]);
+    expect(highlightRects('booster:hammer', { layout, state: s, level: lvl, hud })).toEqual([slot]);
+    expect(highlightRects('booster:brush', { layout, state: s, level: lvl, hud })).toEqual([]);
+    expect(highlightRects('truck', { layout, state: s, level: lvl, hud })).toEqual([]);
+    expect(highlightRects('goals', { layout, state: s, level: lvl, hud })).toEqual([layout.top.goals]);
+    expect(padRect(chip, 4)).toEqual({ x: 6, y: 16, w: 38, h: 48 });
+  });
+
+  it('UX 13.1 DL-2R-20 the glove plays only when path[0] holds a highlighted block that can be held and the path stays in R without a cancel', () => {
+    const lvl = draft(3);
+    const hooks = levelHooks(lvl);
+    const r = run(lvl);
+    const step = r.tut.current;
+    if (!step) throw new Error('step 1');
+    expect(glovePlays(r.game.state, step.data, step.pieces, hooks.drag)).toBe(true);
+    // the player moved c elsewhere first: path[0] (0,3) no longer holds it → no glove (highlight and bubble stay)
+    const moved = cloneState(r.game.state);
+    applyMove(moved, moveTo(moved, lvl, pieceOf(lvl, 'c'), 2, 2), undefined, { hooks });
+    expect(glovePlays(moved, step.data, step.pieces, hooks.drag)).toBe(false);
+    // a path leaving R, or ending in a cancel, plays no glove
+    const outside = {
+      ...step.data,
+      hand: {
+        kind: 'drag' as const,
+        path: [
+          [0, 3],
+          [0, 0],
+        ] as [number, number][],
+      },
+    };
+    expect(glovePlays(r.game.state, outside, step.pieces, hooks.drag)).toBe(false);
+    const diagonal = {
+      ...step.data,
+      hand: {
+        kind: 'drag' as const,
+        path: [
+          [0, 3],
+          [1, 2],
+        ] as [number, number][],
+      },
+    };
+    expect(glovePlays(r.game.state, diagonal, step.pieces, hooks.drag)).toBe(false);
+    // no hand: no glove; a tap glove needs only its target
+    expect(glovePlays(r.game.state, { ...step.data, hand: undefined }, step.pieces)).toBe(false);
+    expect(glovePlays(r.game.state, { ...step.data, hand: { kind: 'tap' } }, [])).toBe(true);
+    // every drag / hold glove of the drafts plays where its step starts on the canonical solution (level 1, 2, 3, 6)
+    for (const n of [1, 2, 3, 6]) {
+      const lv = draft(n);
+      const rr = run(lv);
+      const seen = new Set<number>();
+      const check = (): void => {
+        const c = rr.tut.current;
+        if (!c || seen.has(c.index) || !c.data.hand || c.data.hand.kind === 'tap') return;
+        seen.add(c.index);
+        expect(
+          glovePlays(rr.game.state, c.data, c.pieces, levelHooks(lv).drag),
+          `L${n} step ${c.data.step}`,
+        ).toBe(true);
+      };
+      check();
+      for (const spec of CANONICAL[n] ?? []) {
+        rr.play(canonical(lv, rr.game, spec));
+        check();
+      }
+      expect(seen.size, `level ${n}`).toBeGreaterThan(0);
     }
   });
 
-  it('review Faz 2 tur 2 #10: repeated wrong drops never reset the step, its highlighted blocks or the required gate', () => {
-    // level 1 step 2 (soft, placementCorrect): b (W) dropped onto the Y row bounces, again and again
-    const r1 = run(levelFile(1));
-    r1.tut.start(0);
-    const aId = r1.lvl.tutorialPieceIds.get('piece:0') ?? -1;
-    r1.tut.dragStarted(aId);
-    r1.tut.dragSignal('overWall', 1);
-    expect(step(r1)).toBe(2);
-    const pieces = [...(r1.tut.current?.pieces ?? [])];
-    for (let i = 0; i < 3; i++) {
-      r1.tut.dragStarted(1);
-      const ev = r1.play({ kind: 'drag', pieceId: 1, to: { ix: 6, iy: 8, mode: FREE } });
-      expect(ev.some((e) => e.t === 'pieceBounced')).toBe(true);
-      expect(step(r1)).toBe(2);
-      expect(r1.tut.current?.pieces).toEqual(pieces);
+  it('UX 13.1 the fingertip path: path[0] at the touched cell centre, later points drag.fingerOffsetCells rows lower; 24 px rounded corners; 22 px trail dots', () => {
+    const lvl = draft(1);
+    const layout = FIT(lvl);
+    const path = (lvl.data.tutorial?.[0]?.hand?.path ?? []) as [number, number][];
+    expect(path).toEqual([
+      [0, 3],
+      [0, 5],
+      [4, 5],
+    ]);
+    const pts = fingerPoints(layout, path);
+    const c0 = layout.grid.cellRect(0, 3);
+    expect(pts[0]).toEqual({ x: c0.x + c0.w / 2, y: c0.y + c0.h / 2 });
+    const c1 = layout.grid.cellRect(0, 5);
+    expect(pts[1]?.y).toBeCloseTo(c1.y + c1.h / 2 + TOKENS.drag.fingerOffsetCells * layout.grid.cellPx, 6);
+    const round = roundedPath(pts);
+    expect(round[0]).toEqual(pts[0]);
+    expect(round[round.length - 1]).toEqual(pts[2]);
+    // the corner is cut: no rounded point is the sharp corner, every arc point is within the radius of it
+    const corner = pts[1] as { x: number; y: number };
+    const arc = round.slice(1, -1);
+    expect(arc.length).toBeGreaterThan(2);
+    for (const p of arc) {
+      expect(Math.hypot(p.x - corner.x, p.y - corner.y)).toBeLessThanOrEqual(
+        CORNER_RADIUS_PX * Math.SQRT2 + 1e-6,
+      );
+      expect(p.x === corner.x && p.y === corner.y).toBe(false);
     }
-    // level 3 step 2 (Z, gapPass with f): wrong drops of other blocks are refused by the gate; f's own wrong drops
-    // (released on the rail before a, K-34) keep the step and the gate until its gapPass
-    const r3 = run(levelFile(3));
-    r3.tut.start(0);
-    const [a] = handMoves(3);
-    if (!a) throw new Error('level 3 hand');
-    r3.play(a);
-    expect(step(r3)).toBe(2);
-    const f = r3.lvl.tutorialPieceIds.get('piece:1') ?? -1;
-    for (let i = 0; i < 2; i++) {
-      expect(r3.tut.allowsPick(9)).toBe(false);
-      expect(r3.tut.allowsPick(f)).toBe(true);
-      r3.tut.dragStarted(9);
-      r3.tut.dragSignal('gapPass', 2); // a drag of another block never counts
-      expect(step(r3)).toBe(2);
+    expect(pathAt(round, 0)).toEqual(pts[0]);
+    const dots = trailDots(round);
+    for (let i = 1; i < dots.length; i++) {
+      const a = dots[i - 1] as { x: number; y: number };
+      const b = dots[i] as { x: number; y: number };
+      expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeLessThanOrEqual(T.trailGapPx + 1e-6);
     }
   });
 });
 
-describe('review Faz 2 tur 3 #1: K-43 resume from the saved tutorial position (inLevel.tutorial)', () => {
-  /** Resumes like LevelScene: `GameSession.replay` + `TutorialResume` with the saved position (null: old save). */
-  function resumed(
+// --- K-43 resume -------------------------------------------------------------------------------------------------------
+
+/**
+ * LevelScene's tutorial bookkeeping on a fake save: the position is saved whenever it changes with the log entries
+ * whose move end it includes; a commit logs the action at once, its move end reaches the controller after the cues.
+ */
+class SceneTut {
+  readonly lvl: CompiledLevel;
+  readonly tut: TutorialController;
+  readonly sent: number[] = [];
+  saved: SavedTutorialPosition | null = null;
+  private readonly live: GameSession;
+  private replaying: GameSession | null = null;
+  private tail = false;
+  private tutActions = 0;
+  private pending = 0;
+  now = 0;
+
+  private constructor(
     lvl: CompiledLevel,
-    log: readonly SessionAction[],
+    log: readonly SessionAction[] | null,
     saved: SavedTutorialPosition | null,
-  ): { tut: TutorialController; usable: boolean; tips: string[] } {
-    let at: GameSession | null = null;
+  ) {
+    this.lvl = lvl;
     const hooks = levelHooks(lvl);
-    const tips: string[] = [];
-    const tut = new TutorialController(lvl, {
-      state: () => at?.state ?? null,
-      dragRules: () => hooks.drag ?? {},
-      hooks: () => hooks,
-      markContextTip: (t) => tips.push(t),
-      stepEnded: () => undefined,
+    this.tut = new TutorialController(lvl, {
+      state: () => (this.replaying ?? this.live).state,
+      markContextTip: () => {},
+      stepEnded: (step) => {
+        if (this.replaying === null || this.tail) this.sent.push(step);
+      },
     });
-    const resume = new TutorialResume(tut, saved, log.length);
+    if (log === null) {
+      this.live = GameSession.start(lvl, {}, { hooks });
+      this.tut.start(0);
+      this.tutActions = this.live.log.length;
+    } else {
+      this.saved = saved;
+      const resume = new TutorialResume(this.tut, saved, log.length);
+      const sink = new ArraySink();
+      let mark = 0;
+      this.live = GameSession.replay(lvl, log, { hooks }, sink, (index, action, at) => {
+        this.replaying = at;
+        this.tail = resume.isTail(index);
+        const events = sink.events.slice(mark);
+        mark = sink.events.length;
+        resume.action(index, action, events, this.now);
+      });
+      this.replaying = null;
+      this.tail = false;
+      this.tutActions = log.length;
+    }
+    this.save();
+  }
+
+  static fresh(lvl: CompiledLevel): SceneTut {
+    return new SceneTut(lvl, null, null);
+  }
+
+  resume(): SceneTut {
+    return new SceneTut(this.lvl, this.live.log, this.saved);
+  }
+
+  /** A resume from an old save without the tutorial position (the log replay rebuilds it). */
+  resumeFromLog(): SceneTut {
+    return new SceneTut(this.lvl, this.live.log, null);
+  }
+
+  get game(): GameSession {
+    return this.live;
+  }
+
+  private save(): void {
+    if (this.live.outcome !== 'playing') return;
+    const pos = this.tut.position();
+    if (pos) this.saved = { ...pos, actions: this.tutActions };
+  }
+
+  commit(move: Move): GameEvent[] {
+    if (move.kind === 'drag') this.tut.dragStarted(move.pieceId);
     const sink = new ArraySink();
-    let mark = 0;
-    GameSession.replay(lvl, log, { hooks }, sink, (index, action, session) => {
-      at = session;
-      const events = sink.events.slice(mark);
-      mark = sink.events.length;
-      resume.action(index, action, events, 0);
-    });
-    return { tut, usable: resume.usable, tips };
+    expect(this.live.commit(move, sink).status).toBe('applied');
+    this.pending = this.live.log.length;
+    return sink.events;
   }
 
-  /** The live drag of `m` with its drag signals (no hold: levels 1–5 use none). */
-  function liveDrag(r: Run, m: Move): void {
-    if (m.kind !== 'drag') return;
-    const at = tryBeginDrag(r.game.state, m.pieceId, levelHooks(r.lvl).drag ?? {});
-    if (!at.ok) throw new Error(at.reason);
-    r.tut.dragStarted(m.pieceId);
-    for (const node of at.session.pathTo(m.to) ?? []) {
-      const res = at.session.moveTo(node);
-      if (res.crossedWall) r.tut.dragSignal('overWall', 0);
-      if (res.enteredRail) r.tut.dragSignal('gapPass', 0);
-    }
+  planEnded(events: readonly GameEvent[]): void {
+    this.tut.moveEnded(events, (this.now += 1000));
+    this.tutActions = Math.max(this.tutActions, this.pending);
+    this.save();
   }
 
-  const savedOf = (r: Run, actions = r.game.log.length): SavedTutorialPosition => {
-    const pos = r.tut.position();
-    if (!pos) throw new Error('tutorial not started');
-    return { ...pos, actions };
-  };
+  play(move: Move): void {
+    this.planEnded(this.commit(move));
+  }
 
-  it('K-43 resume keeps the tutorial step: level 1 `a` released straddling the wall at (5,8) (K-07 row 4) is cancelled — step 2 comes back, not step 1 and its gate', () => {
-    const r = run(levelFile(1));
-    r.tut.start(0);
-    const a = r.lvl.tutorialPieceIds.get('piece:0') ?? -1;
-    const straddle: Move = { kind: 'drag', pieceId: a, to: { ix: 5, iy: 8, mode: FREE } };
-    liveDrag(r, straddle); // overWall on the way: step 1 (Z) ends in the air, step 2 opens
-    expect(step(r)).toBe(2);
-    expect(r.game.commit(straddle).status).not.toBe('applied'); // the release cancels: no action is logged
-    expect(r.game.log.length).toBe(1);
-    const saved = savedOf(r);
-    expect(saved).toEqual({ index: 1, shown: true, count: 0, actions: 1 });
-    const back = resumed(r.lvl, r.game.log, saved);
-    expect(back.usable).toBe(true);
-    expect(back.tut.current?.data.step).toBe(2);
-    expect(back.tut.current?.required).toBe(false);
-    expect(back.tut.allowsPick(3)).toBe(true); // no step 1 gate
-    // the log alone (an old save) cannot know the cancelled drag's signal: step 1 again (the finding)
-    expect(resumed(r.lvl, r.game.log, null).tut.current?.data.step).toBe(1);
-  });
+  view(): { at: string; pos: unknown } {
+    const c = this.tut.current;
+    const w = this.tut.waiting;
+    const at = this.tut.finished
+      ? 'finished'
+      : c
+        ? `active:${c.data.step}`
+        : w
+          ? `waiting:${w.step}`
+          : 'idle';
+    return { at, pos: this.tut.position() };
+  }
+}
 
-  it('K-43 resume keeps the tutorial step: level 2 `b` released fast (no hold) → step 3 after the reload, as live', () => {
-    const r = run(levelFile(2));
-    r.tut.start(0);
-    const [mA, mB] = handMoves(2);
-    if (!mA || !mB) throw new Error('hand moves');
-    liveDrag(r, mA);
-    r.play(mA);
-    expect(step(r)).toBe(2);
-    liveDrag(r, mB); // fast: no holdOverBuild (and level 2 listens for none, PL-F2T3-0)
-    r.play(mB);
-    expect(step(r)).toBe(3);
-    const back = resumed(r.lvl, r.game.log, savedOf(r));
-    expect(back.tut.current?.data.step).toBe(3);
-    expect(back.tut.current?.pieces).toEqual(r.tut.current?.pieces);
-    expect(resumed(r.lvl, r.game.log, null).tut.current?.data.step).toBe(3);
-  });
-
-  it("K-43 a kill while the last move's cues played: the saved position + the later move ends (level 2: saved after A, b logged)", () => {
-    const r = run(levelFile(2));
-    r.tut.start(0);
-    const [mA, mB] = handMoves(2);
-    if (!mA || !mB) throw new Error('hand moves');
-    r.play(mA);
-    const saved = savedOf(r); // planEnded of A wrote step 2 with 2 log entries
-    expect(saved).toEqual({ index: 1, shown: true, count: 0, actions: 2 });
-    expect(r.game.commit(mB).status).toBe('applied'); // b is logged; its cues still play when the app is killed
-    const back = resumed(r.lvl, r.game.log, saved);
-    expect(back.tut.current?.data.step).toBe(3); // b's move end is read on resume, as live after its cues
-  });
-
-  it('K-43 the resume never goes past the saved step: a timed step the player moved under stays (the log replay ran ahead)', () => {
-    const tutorial = [
-      {
-        step: 1,
-        mode: 'soft' as const,
-        highlight: ['cell:7,2'],
-        textKey: 'tut.l4.window',
-        done: { timeoutMs: 2500 },
-      },
-      {
-        step: 2,
-        mode: 'soft' as const,
-        highlight: ['front'],
-        textKey: 'tut.ctx.support',
-        done: { event: 'placementCorrect' as const, count: 1 },
-      },
-    ];
-    const r = run(compile({ ...rawLevel(4), tutorial }));
-    r.tut.start(0);
-    const [m1] = handMoves(4);
-    if (!m1) throw new Error('hand moves');
-    r.play(m1, 100); // within the 2,5 s: step 1 is still on screen
-    expect(step(r)).toBe(1);
-    const saved = savedOf(r);
-    const back = resumed(r.lvl, r.game.log, saved);
-    expect(back.tut.current?.data.step).toBe(1);
-    expect(back.tips).toEqual([]); // step 2's `tut.ctx.support` was never shown, so it is not marked
-    // the log replay ends the timed step before the move and counts the move for step 2: past the live step
-    const old = resumed(r.lvl, r.game.log, null);
-    expect(old.tut.current?.data.step ?? 'finished').not.toBe(1);
-  });
-
-  it('K-43 levels 1–5 at every point of the hand solution: the saved position resumes the live step', () => {
-    for (const id of [1, 2, 3, 4, 5]) {
-      const lvl = levelFile(id);
-      const live = run(lvl);
-      live.tut.start(0);
-      for (const m of handMoves(id)) {
-        liveDrag(live, m);
-        live.play(m);
-        const back = resumed(lvl, live.game.log, savedOf(live));
-        expect([id, back.tut.position()]).toEqual([id, live.tut.position()]);
-        expect(back.tut.current?.required ?? null).toBe(live.tut.current?.required ?? null);
-        expect(back.tut.current?.pieces ?? null).toEqual(live.tut.current?.pieces ?? null);
+describe('K-43 resume of the tutorial (K-53/5: inLevel.tutorial unchanged)', () => {
+  it('K-43 resume keeps the tutorial step: levels 1, 3 and 7 at every point of the canonical solution, from the saved position and from the log', () => {
+    for (const n of [1, 3, 7]) {
+      const lvl = draft(n);
+      const specs = CANONICAL[n] ?? [];
+      for (let k = 0; k < specs.length; k++) {
+        const s = SceneTut.fresh(lvl);
+        for (const spec of specs.slice(0, k)) s.play(canonical(lvl, s.game, spec));
+        const back = s.resume();
+        expect(back.view(), `L${n} after ${k} (saved position)`).toEqual(s.view());
+        expect(s.resumeFromLog().view(), `L${n} after ${k} (log only)`).toEqual(s.view());
       }
-      expect(live.tut.finished).toBe(true);
     }
   });
 
-  it('K-43 a foreign or damaged saved position is not used (the log replay rebuilds the tutorial)', () => {
-    const lvl = levelFile(1); // 3 steps, no startOn
-    const log = GameSession.start(lvl).log;
-    for (const bad of [
-      { index: 4, shown: false, count: 0, actions: 1 }, // past "finished"
-      { index: 3, shown: true, count: 0, actions: 1 }, // finished is never shown
-      { index: 0, shown: false, count: 0, actions: 1 }, // waits, but the step has no startOn
-      { index: 0, shown: true, count: 1, actions: 1 }, // count 1 of 1 would have ended the step
-      { index: 1, shown: true, count: 0, actions: 2 }, // more actions than the log has
-    ]) {
-      const back = resumed(lvl, log, bad);
-      expect(back.usable, JSON.stringify(bad)).toBe(false);
-      expect(back.tut.current?.data.step).toBe(1);
-    }
-    const done = resumed(lvl, log, { index: 3, shown: false, count: 0, actions: 1 });
-    expect(done.usable).toBe(true);
-    expect(done.tut.finished).toBe(true);
+  it('K-43 ANALYTICS tutorial_step: a step the killed run ended while its cues played is sent once on resume (level 3 c)', () => {
+    const lvl = draft(3);
+    const whole = SceneTut.fresh(lvl);
+    for (const spec of CANONICAL[3] ?? []) whole.play(canonical(lvl, whole.game, spec));
+    expect(whole.game.outcome).toBe('won');
+    expect(whole.sent).toEqual([1, 2]);
+
+    const [first, ...rest] = CANONICAL[3] ?? [];
+    const killed = SceneTut.fresh(lvl);
+    killed.commit(canonical(lvl, killed.game, first as string)); // c to (1,2) is logged; the app dies in its cues
+    expect(killed.saved).toEqual({ index: 0, shown: true, count: 0, actions: 1 });
+    const back = killed.resume();
+    expect(back.view().at).toBe('active:2'); // c's move end was read on resume …
+    for (const spec of rest) back.play(canonical(lvl, back.game, spec));
+    expect(back.game.outcome).toBe('won');
+    expect([...killed.sent, ...back.sent]).toEqual(whole.sent); // … and its tutorial_step 1 went out once
   });
 });

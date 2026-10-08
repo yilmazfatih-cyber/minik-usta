@@ -76,13 +76,14 @@ export type CheckId = (typeof CHECK_IDS)[number];
 /**
  * Checks the game runs when it loads a level (TECH §8.3, < 1 ms): what the engine needs to build a sane board. The
  * schema always runs. L-28 is new and first: `compile` cannot build a geometry outside the frame. L-05 (`plan_size`,
- * `plan_has_window`, `elevator_overflow`) is validate-only during the Faz 2R transition: the geometry clamps H and
- * reads plans of any size safely, and the Faz 2 levels/*.json (shorter plans on the default 2 × 8 site) must stay
- * playable for the other packages until WP-M replaces them; WP-M puts L-05 back here (TECH §2R.3 note).
+ * `plan_has_window`, `elevator_overflow`: every plan exactly Hs × Ws, no `.`, `Hs + b ≤ 8`) was validate-only during
+ * the Faz 2R transition while the Faz 2 levels/*.json (shorter plans on the default 2 × 8 site) had to stay playable;
+ * WP-M replaced them with the Faz 2R levels 1–10 and put L-05 back here (TECH §2R.3 note 2).
  */
 export const RUNTIME_CHECKS: readonly CheckId[] = [
   'L-02',
   'L-04',
+  'L-05',
   'L-08',
   'L-09',
   'L-24',
@@ -1241,8 +1242,7 @@ function checkTutorial(level: LevelData, geo: BoardGeo, ctx: LogicContext, push:
   steps.forEach((st, i) => {
     const path = `tutorial[${i}]`;
     const start = st.startOn;
-    // A legacy timed `done` only exists in level data built without the schema (LegacyTimedDone): nothing to check.
-    const done = 'event' in st.done ? st.done : undefined;
+    const done = st.done;
     const segmentsAtStart = segmentsBefore + countOf(start, 'segmentDone');
     segmentsBefore = segmentsAtStart + countOf(done, 'segmentDone');
     if (st.step !== i + 1)

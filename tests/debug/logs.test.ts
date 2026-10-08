@@ -27,7 +27,7 @@ describe('debug event log (TECH 12.3)', () => {
     log.action(1, move, 'applied');
     log.events(1, sink.events);
     const lines = log.entries().map(formatEntry);
-    expect(lines[0]).toBe('#1 · drag p0 → (6,8) FREE · applied');
+    expect(lines[0]).toBe('#1 · drag p1 → (5,0) FREE · applied'); // LEVELS §2 Bölüm 1 move 1: b → (5,0)
     const moves = sink.events.find((e) => e.t === 'movesChanged');
     if (!moves) throw new Error('no movesChanged');
     expect(lines).toContain(

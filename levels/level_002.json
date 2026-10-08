@@ -4,33 +4,25 @@
   "chapter": 1,
   "name": { "tr": "Platform", "en": "Platform" },
   "difficulty": "easy",
-  "moves": 11,
-  "seed": 2002,
+  "moves": 9,
   "goals": [{ "type": "build" }],
   "gravity": { "build": "normal", "yard": false },
-  "wall": { "height": 3, "gaps": [] },
+  "wall": { "height": 4, "gaps": [] },
+  "site": { "cols": 2, "rows": 5 },
   "build": {
     "mode": "segments",
     "segments": [{ "name": { "tr": "Platform", "en": "Platform" }, "rows": ["YY", "WY", "WW", "GG", "GG"] }]
   },
   "yard": {
+    "cols": 4,
+    "rows": 4,
     "batches": [
       {
         "forSegment": 0,
         "pieces": [
-          { "shape": "O4_0", "color": "G", "x": 0, "y": 6 },
-          { "shape": "C3_0", "color": "W", "x": 2, "y": 6 },
-          { "shape": "C3_180", "color": "Y", "x": 4, "y": 6 },
-          { "shape": "B1_0", "color": "G", "x": 4, "y": 6 },
-          { "shape": "O4_0", "color": "Y", "x": 0, "y": 4 },
-          { "shape": "O4_0", "color": "W", "x": 2, "y": 4 },
-          { "shape": "O4_0", "color": "G", "x": 4, "y": 4 },
-          { "shape": "O4_0", "color": "W", "x": 0, "y": 2 },
-          { "shape": "O4_0", "color": "Y", "x": 2, "y": 2 },
-          { "shape": "O4_0", "color": "G", "x": 4, "y": 2 },
-          { "shape": "O4_0", "color": "G", "x": 0, "y": 0 },
-          { "shape": "O4_0", "color": "W", "x": 2, "y": 0 },
-          { "shape": "O4_0", "color": "Y", "x": 4, "y": 0 }
+          { "shape": "O4_0", "color": "G", "x": 2, "y": 2 },
+          { "shape": "C3_0", "color": "W", "x": 0, "y": 0 },
+          { "shape": "C3_180", "color": "Y", "x": 0, "y": 2 }
         ]
       }
     ]
@@ -39,40 +31,24 @@
   "tutorial": [
     {
       "step": 1,
-      "mode": "soft",
-      "highlight": ["panorama", "build"],
-      "textKey": "tut.l2.pattern",
+      "highlight": ["front", "build"],
+      "textKey": "tut.m.pattern",
       "done": { "event": "placementCorrect", "count": 1 }
     },
     {
       "step": 2,
-      "mode": "soft",
-      "highlight": ["piece:2", "piece:1", "build"],
+      "highlight": ["piece:2", "build"],
       "hand": {
         "kind": "hold",
         "path": [
-          [4, 7],
-          [4, 8],
-          [6, 8]
+          [1, 3],
+          [1, 5],
+          [5, 5]
         ]
       },
-      "textKey": "tut.l2.shadow",
-      "done": { "event": "placementCorrect", "count": 1 }
-    },
-    {
-      "step": 3,
-      "mode": "soft",
-      "highlight": ["piece:2", "build"],
-      "hand": {
-        "kind": "drag",
-        "path": [
-          [4, 7],
-          [4, 8],
-          [6, 8]
-        ]
-      },
-      "textKey": "tut.l1.match",
+      "textKey": "tut.m.shadow",
       "done": { "event": "placementCorrect", "count": 1 }
     }
-  ]
+  ],
+  "targets": { "minShifts": [0, 0], "firstNeedDepth": [0, 0], "deadRate": [0, 0] }
 }

@@ -60,8 +60,10 @@ export class SceneBridge {
     return this.game.scene.isActive(BOOT_SCENE_KEY);
   }
 
-  /** The level screen's layout (the same computation as `LevelScene.computeLayout`). */
+  /** The level screen's layout (the scene's own: the level geometry, UX §5.8; else the default board). */
   layout(): Layout {
+    const lv = this.levelScene();
+    if (lv) return lv.layout;
     const s = this.game.scale;
     const parent = s.parentSize;
     const vp =

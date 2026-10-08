@@ -21,13 +21,12 @@ describe('K-08 / UX 5.3 the lifted block is followed every frame', () => {
       game: { events: { emit: () => true } },
     };
     const game = GameSession.start(levelFile(1));
-    const layout = createLayout(TOKENS, 1920);
+    const layout = createLayout(TOKENS, 1920, game.state.lvl.geo);
     const clock = { now: 0 };
     const moved: { t: number; py: number }[] = [];
     const view = { pose: { ax: 0, ay: 0, scale: 1, alpha: 1 }, render: () => undefined };
     const host: DragHost = {
       boardState: () => game.state,
-      mayPick: () => true,
       layout: () => layout,
       dragRules: () => ({}),
       view: () => view as unknown as PieceView,
@@ -44,8 +43,8 @@ describe('K-08 / UX 5.3 the lifted block is followed every frame', () => {
       signal: () => undefined,
     };
     const ctl = new DragController(scene as never, host);
-    // level 1 a = D2_90 Y at (4,7): free above
-    const r = layout.grid.cellRect(4, 7);
+    // level 1 a = D2_0 Y at (0,2): its top cell (0,3) is free above (LEVELS §2 Bölüm 1)
+    const r = layout.grid.cellRect(0, 3);
     const x = r.x + r.w / 2;
     const y = r.y + r.h / 2;
     handlers.get('pointerdown')?.({ id: 1, worldX: x, worldY: y, wasCanceled: false }, []);

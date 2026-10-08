@@ -105,8 +105,10 @@ export function installHarness(game: Phaser.Game): HarnessApi {
     return lv && (lv.eventPlayer as LevelScene['eventPlayer'] | undefined) ? lv : null;
   };
 
-  /** Same layout as the scenes build (`createLayout` over the EXPAND design height, D-015). */
+  /** Same layout as the scenes build (`createLayout` over the EXPAND design height, D-015; the level's geometry, K-49). */
   const layout = (): Layout => {
+    const lv = level();
+    if (lv) return lv.layout;
     const parent = game.scale.parentSize;
     const vp =
       parent.width > 0 && parent.height > 0
@@ -142,11 +144,16 @@ export function installHarness(game: Phaser.Game): HarnessApi {
   const tutorialInfo = (lv: LevelScene): TutorialInfo | null => {
     const step = lv.tutorialController?.current ?? null;
     if (!step) return null;
+    const phase = lv.tutorialPresence?.phase ?? 'wait';
+    const view = lv.tutorialView;
+    const bubble = view.bubbleRect;
     return {
       index: step.index,
-      required: step.required,
+      phase: phase === 'done' ? 'hidden' : phase,
       pieces: [...step.pieces],
       textKey: step.data.textKey,
+      bubble: bubble ? { x: bubble.x, y: bubble.y, w: bubble.w, h: bubble.h } : null,
+      dock: view.bubbleDock,
     };
   };
 
@@ -154,7 +161,7 @@ export function installHarness(game: Phaser.Game): HarnessApi {
     const step = lv.tutorialController?.current ?? null;
     const hand = step?.data.hand;
     if (!step || !hand) return null;
-    return { kind: hand.kind, hidden: step.handHidden };
+    return { kind: hand.kind, hidden: lv.tutorialView.gloveShown === null };
   };
 
   const rendererName = (): HarnessState['renderer'] => {
@@ -356,9 +363,8 @@ export function installHarness(game: Phaser.Game): HarnessApi {
       const lv = running();
       const s = lv.gameSession?.state;
       if (!s) return null;
-      const tut = tutorialInfo(lv);
-      const allowed = tut?.required ? new Set(tut.pieces) : null;
-      return findDragOn(s, levelHooks(s.lvl), kind, allowed);
+      // K-53/2: no tutorial step limits the blocks a drag may take
+      return findDragOn(s, levelHooks(s.lvl), kind, null);
     },
     planDrag,
     tapPoint,

@@ -4,6 +4,7 @@ import type Phaser from 'phaser';
 import { describe, expect, it } from 'vitest';
 import { loadLevel } from '../../src/core/level/compile.ts';
 import type { CompiledLevel } from '../../src/core/level/compile.ts';
+import { compiledLevel } from '../fixtures/builders.ts';
 import { shapeById } from '../../src/core/shapes.ts';
 import { COLOR_CODES } from '../../src/core/types.ts';
 import type { ShapeId } from '../../src/core/types.ts';
@@ -16,6 +17,7 @@ import {
   blockFrame,
   blockFrameName,
   bootAtlasFrames,
+  cargoFrameName,
   dotsFrameName,
   frameRef,
   ghostFrameName,
@@ -36,7 +38,9 @@ import type { Recorder } from './recordingContext.ts';
 const ROOT = join(import.meta.dirname, '..', '..');
 
 function level(n: number): CompiledLevel {
-  const json: unknown = JSON.parse(readFileSync(join(ROOT, 'levels', `level_00${n}.json`), 'utf8'));
+  const json: unknown = JSON.parse(
+    readFileSync(join(ROOT, 'levels', `level_${String(n).padStart(3, '0')}.json`), 'utf8'),
+  );
   const res = loadLevel(json);
   if (!res.ok) throw new Error(`level ${n} failed to load: ${JSON.stringify(res.issues)}`);
   return res.level;
@@ -186,7 +190,8 @@ describe('level bake (TECH 10.2 b, D-060)', () => {
     return out;
   };
 
-  for (const n of [1, 2, 3, 4, 5]) {
+  // the v1 bake has no Ağır Yük frame (ART §6: v2 only); the Y5 levels 8 and 10 are baked v2 below
+  for (const n of [1, 2, 3, 4, 5, 6, 7, 9]) {
     it(`TECH 10.2 level ${n}: one frame per (shape × colour × flags) incl. truck batches, + silhouettes, ghosts, grid, wall`, () => {
       const lv = level(n);
       const frames = levelFrames(lv, TOKENS);
@@ -211,20 +216,36 @@ describe('level bake (TECH 10.2 b, D-060)', () => {
     });
   }
 
-  it('S2 level 4 bakes the "." overlay of its plan; levels without "." do not', () => {
-    expect(levelFrames(level(4), TOKENS).map((f) => f.name)).toContain(dotsFrameName(0));
+  for (const n of [8, 10]) {
+    it(`Y5 level ${n} (v2 bake): the Ağır Yük is one colourless cargo_q9 frame, never a block frame (ART §6)`, () => {
+      const names = levelFrames(level(n), TOKENS, undefined, { variant: 'v2' }).map((f) => f.name);
+      expect(names).toContain(cargoFrameName('Q9'));
+      expect(names.filter((x) => x.startsWith('blk_Q9'))).toEqual([]);
+    });
+  }
+
+  it('S2 a plan with "." bakes its overlay; levels without "." (every Faz 2R level, CL-2R-12) do not', () => {
+    const window = compiledLevel({
+      wall: { height: 2 },
+      plan: ['WW', 'W.'],
+      pieces: [
+        ['C3_0', 'W', 0, 0],
+        ['B1_0', 'W', 2, 0],
+      ],
+    });
+    expect(levelFrames(window, TOKENS).map((f) => f.name)).toContain(dotsFrameName(0));
     expect(levelFrames(level(1), TOKENS).map((f) => f.name)).not.toContain(dotsFrameName(0));
   });
 
-  it('S1 level 5 has two plans of height 4 sharing one grid overlay frame', () => {
+  it('S1 level 5 has two plans of height 5 sharing one grid overlay frame', () => {
     const lv = level(5);
-    expect(lv.segments.map((s) => s.height)).toEqual([4, 4]);
+    expect(lv.segments.map((s) => s.height)).toEqual([5, 5]);
     expect(levelFrames(lv, TOKENS).filter((f) => f.name.startsWith('grid_'))).toHaveLength(1);
   });
 
-  it('W1 level 3 wall frame is anchored on the wall strip (cap above, 6 px overhang)', () => {
-    const wall = levelFrames(level(3), TOKENS).find((f) => f.name === FRAME.wall);
-    expect(wall).toMatchObject({ w: 72, h: 6 * 120 + 20, anchorX: 6, anchorY: 20 });
+  it('W1 level 4 wall frame is anchored on the wall strip (cap above, 6 px overhang)', () => {
+    const wall = levelFrames(level(4), TOKENS).find((f) => f.name === FRAME.wall);
+    expect(wall).toMatchObject({ w: 72, h: 4 * 120 + 20, anchorX: 6, anchorY: 20 });
   });
 
   it('TECH 10.2 silhouette frames are anchored on the block box; crane aliases lifted when the blurs match', () => {
@@ -308,10 +329,10 @@ describe('Phaser upload, isolated in uploadAtlas (TECH 10.2, R-05)', () => {
       expect(t.rec.ops).toEqual(record((ctx) => renderPage(ctx, page)));
       for (const f of page.frames) expect(t.added).toContainEqual([f.name, 0, f.x, f.y, f.w, f.h]);
     }
-    const home = pages.findIndex((p) => p.frames.some((f) => f.name === 'blk_O4_0_W'));
-    const ref = frameRef(atlas.index, 'blk_O4_0_W');
+    const home = pages.findIndex((p) => p.frames.some((f) => f.name === 'blk_O4_0_R'));
+    const ref = frameRef(atlas.index, 'blk_O4_0_R');
     expect(ref.key).toBe(atlas.keys[home]);
-    expect(ref).toMatchObject({ frame: 'blk_O4_0_W', w: 240, h: 240, anchorX: 0, anchorY: 0 });
+    expect(ref).toMatchObject({ frame: 'blk_O4_0_R', w: 240, h: 240, anchorX: 0, anchorY: 0 });
     expect(frameRef(atlas.index, silhouetteFrameName('O4_0', 'crane')).frame).toBe(
       silhouetteFrameName('O4_0', 'crane'),
     );

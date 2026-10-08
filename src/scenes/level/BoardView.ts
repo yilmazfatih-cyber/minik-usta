@@ -1,23 +1,27 @@
 /**
- * The board ground and the build site (docs/TECH_DESIGN.md §2.2 "Ekran eşlemesi", §10.2–§10.3; ART_DIRECTION §4–§5;
- * UX_FLOWS §5.1). Every measure comes from the layout (`layout.grid.*`, `layout.board.*`, EXPAND-shifted), every
- * look from baked frames (theme/textures.ts); nothing here decides a rule.
+ * The board ground and the build site (docs/TECH_DESIGN.md §2.2 "Ekran eşlemesi", §2R.1, §10.2–§10.3; ART_DIRECTION
+ * §2.4, §4–§5, §7.1; UX_FLOWS §5.1, §5.8). Every measure comes from the layout (`layout.grid`, `layout.board`: the
+ * LEVEL geometry `geo`, EXPAND-shifted, cell `c` and scale `k`), every look from baked frames (theme/textures.ts, the
+ * kit atlas); nothing here decides a rule.
  *
- * Static part (rebuilt on a level change or a resize): crane-area band and line, yard floor and frame, the wall —
- * a 60 px strip that draws the zero-width boundary (R-03, K-04) with its W1 openings —, the W1 rails (over the plan
- * cells, ART §5), blueprint floor, scaffold, "pafta" corner.
+ * Static part (rebuilt on a level change or a resize), UX §5.8 region table:
+ * - sky (`board.craneSky` α `alpha.craneSky`): the crane area (rows h, h+1) over the whole board, the yard air (rows
+ *   hy … h−1 over the yard columns) and the wall air (rows height … h−1 over the wall strip) — one "air" language;
+ *   the dashed crane line on the board top;
+ * - the yard ("malzeme sandığı"): pegboard cells (`board_yard_floor` v2) over wy × hy and the wooden `yard_frame`
+ *   9-slice only around them (`adaptive.yardFramePx`, kit atlas);
+ * - the site: blueprint floor up to the plan, `board_blueprint_deep` above it (site air), scaffold poles up to H and
+ *   40 px into the crane area, a ledger every 2 rows;
+ * - the wall (K-04): the baked strip of its height (the zero-width boundary, R-03) with its W1 openings and rails.
  * Site part (refreshed after every move): the plan of the segment shown (K-22) — colour cells (`plan_<c>`), unrevealed
- * `?` cells (`plan_hidden`), cells outside the plan (`board_blueprint_deep`, `y ≥ h + e`), the blueprint grid and `.`
- * overlays, the build front (core `buildFront`, K-34 hook 1: `plan_<c>_front` + `plan_front` contour over the plain
- * cell), Golden Trowel cells (K-33: a one-cell block of the plan colour, `blk_B1_<c>`) and the ceiling beam on the plan
- * top (S8; every level, ART §4).
+ * `?` cells (`plan_hidden`), cells outside the plan (`board_blueprint_deep`), the blueprint grid and `.` overlays, the
+ * build front (core `buildFront`, K-34 hook 1) and the ceiling beam on the plan top (S8; every level, ART §4).
  *
  * JUICE hooks (EventPlayer): the front images for the #83 crossfade, the site images for the #18 segment slide, the
- * scaffold for its #18 fade, the support hatch (#84), rail glow (#22), rail clamps (#23) and the board dim (#57). They
- * only expose display objects; timing lives in the EventPlayer.
+ * scaffold for its #18 fade, the support hatch (#84), rail glow (#22), rail clamps (#23), the board dim (#57) and the
+ * yard rect for #94. They only expose display objects; timing lives in the EventPlayer.
  */
 import type Phaser from 'phaser';
-import { GRID_ROWS, SITE_COLS, SITE_X } from '../../core/coords.ts';
 import { visibleSegment } from '../../core/grid.ts';
 import { PLAN_DOT, PLAN_OUTSIDE } from '../../core/level/compile.ts';
 import type { CompiledLevel } from '../../core/level/compile.ts';
@@ -30,17 +34,27 @@ import type { Layout, Rect } from '../../theme/layout.ts';
 import { ART } from '../../theme/draw/art.ts';
 import {
   FRAME,
+  KIT,
   dotsFrameName,
   gridFrameName,
   planFrameName,
   planFrontFrameName,
 } from '../../theme/textures.ts';
+import type { FrameRef } from '../../theme/textures.ts';
 import { TOKENS } from '../../theme/tokens.ts';
 import { BOOT_ATLAS_KEY, trowelCellFrameName } from '../atlas.ts';
 import type { Frames } from '../atlas.ts';
 import { DEPTH } from './depth.ts';
 import { hexColor, setFrameAt, setFrameCentred, setRect } from './frameImage.ts';
-import { VIEW } from './viewConstants.ts';
+
+/** Kit atlas lookup (ui/kit/atlas.ts `kitRef`, `kitSlice`); absent in tests without a game. */
+export interface BoardKit {
+  ref(name: string): FrameRef;
+  slice(name: string): { left: number; right: number; top: number; bottom: number } | null;
+}
+
+/** UX §5.8: the scaffold poles reach this far into the crane area. */
+export const SCAFFOLD_OVERHANG_PX = 40;
 
 /** ART §5 W1 rails: over the plan cells, the blueprint grid and the `.` overlay; under the build front (review Faz 2 tur 2 #2). */
 export const RAIL_DEPTH = DEPTH.planOverlay + 2;
@@ -78,9 +92,13 @@ export class BoardView {
   private rails: RailSet[] = [];
   private lvl: CompiledLevel | null = null;
   private frames: Frames | null = null;
+  private readonly kit: BoardKit | null;
+  private yardFrameObj: Phaser.GameObjects.NineSlice | null = null;
+  private yardRectNow: Rect = { x: 0, y: 0, w: 0, h: 0 };
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, kit: BoardKit | null = null) {
     this.scene = scene;
+    this.kit = kit;
   }
 
   /** Builds the board of `lvl` for `layout` and shows the site of `s`. */
@@ -102,6 +120,8 @@ export class BoardView {
   clear(): void {
     for (const img of this.staticImgs) img.destroy();
     this.staticImgs.length = 0;
+    this.yardFrameObj?.destroy();
+    this.yardFrameObj = null;
     this.scaffoldImgs.length = 0;
     this.releaseOutgoing();
     this.releaseSite();
@@ -121,11 +141,14 @@ export class BoardView {
     for (const img of this.staticImgs) img.destroy();
     this.staticImgs.length = 0;
     this.scaffoldImgs.length = 0;
+    this.yardFrameObj?.destroy();
+    this.yardFrameObj = null;
     const g = layout.grid;
+    const geo = g.geo;
     const c = g.cellPx;
-    const tg = TOKENS.layout.grid;
+    const k = g.k;
     const board = TOKENS.color.board;
-    const siteW = tg.buildCols * c;
+    const siteW = geo.ws * c;
     const px = f.ref(FRAME.whitePixel);
     const add = (depth: number): Phaser.GameObjects.Image => {
       const img = this.scene.add.image(0, 0, BOOT_ATLAS_KEY, FRAME.whitePixel).setDepth(depth);
@@ -137,58 +160,98 @@ export class BoardView {
       this.scaffoldImgs.push(img);
       return img;
     };
+    const sky = (r: Rect): void => {
+      if (r.w <= 0 || r.h <= 0) return;
+      setRect(
+        add(DEPTH.boardGround),
+        px,
+        r.x,
+        r.y,
+        r.w,
+        r.h,
+        hexColor(board.craneSky),
+        TOKENS.alpha.craneSky,
+      );
+    };
 
-    // crane area (K-05, ART §5): sky band + dashed bottom line on the board top
+    // UX §5.8: one "air" band — crane area over the whole board, yard air over the yard, wall air over the wall strip
     const crane = layout.board.crane;
-    setRect(
-      add(DEPTH.boardGround),
-      px,
-      crane.x,
-      crane.y,
-      crane.w,
-      crane.h,
-      hexColor(board.craneSky),
-      TOKENS.alpha.craneSky,
-    );
+    sky(crane);
+    sky(layout.board.yardAir);
+    const wallH = Math.min(lvl.wallHeight, geo.h);
+    sky({ x: g.wallX, y: g.boardTopY, w: g.wallW, h: (geo.h - wallH) * c });
+    // the dashed crane line on the board top (baked as wide as the default board; cropped to this one)
     const line = f.ref(FRAME.craneLine);
-    setFrameAt(add(DEPTH.boardGround + 2), line, g.yardX, g.boardTopY - line.h / 2);
+    const lineImg = add(DEPTH.boardGround + 2);
+    setFrameAt(lineImg, line, g.yardX, g.boardTopY - line.h / 2);
+    if (crane.w < line.w) lineImg.setCrop(0, 0, crane.w, line.h);
 
-    // yard floor (2 × 2 cell checker tiles) and its wooden frame (left, bottom)
+    // the yard: pegboard cells over wy × hy (ART §2.4) and the wooden frame around them only (UX §5.8)
     const tile = f.ref(FRAME.yardFloor);
-    for (let ty = g.boardTopY; ty < g.boardBottomY; ty += tile.h) {
-      for (let tx = g.yardX; tx < g.wallX; tx += tile.w) setFrameAt(add(DEPTH.boardGround), tile, tx, ty);
+    for (let y = 0; y < geo.hy; y++) {
+      for (let x = 0; x < geo.wy; x++) {
+        const r = g.cellRect(x, y);
+        const img = add(DEPTH.boardGround);
+        setFrameAt(img, tile, r.x, r.y);
+        img.setDisplaySize(c, c);
+      }
     }
-    const fr = VIEW.yardFramePx;
-    const frameColor = hexColor(board.yardFrame);
-    setRect(
-      add(DEPTH.boardGround),
-      px,
-      g.yardX - fr,
-      g.boardTopY,
-      fr,
-      g.boardBottomY - g.boardTopY + fr,
-      frameColor,
-    );
-    setRect(add(DEPTH.boardGround), px, g.yardX, g.boardBottomY, g.wallX - g.yardX, fr, frameColor);
+    const yard = layout.board.yard;
+    this.yardRectNow = yard;
+    const kit = this.kit;
+    const fr = TOKENS.layout.adaptive.yardFramePx;
+    if (kit) {
+      const ref = kit.ref(KIT.yardFrame);
+      const sl = kit.slice(KIT.yardFrame);
+      const ns = this.scene.add
+        .nineslice(
+          yard.x - fr,
+          yard.y - fr,
+          ref.key,
+          ref.frame,
+          yard.w + 2 * fr,
+          yard.h + 2 * fr,
+          sl?.left ?? 0,
+          sl?.right ?? 0,
+          sl?.top ?? 0,
+          sl?.bottom ?? 0,
+        )
+        .setOrigin(0, 0)
+        .setDepth(DEPTH.boardGround + 1);
+      this.yardFrameObj = ns;
+    }
 
-    // blueprint floor of the site (240 × 240 tiles) and the "pafta" corner
+    // the site: blueprint floor (240 × 240 tiles at k = 1) from the bottom up to the board top, cropped at the top
     const floor = f.ref(FRAME.blueprintFloor);
-    for (let ty = g.boardTopY; ty < g.boardBottomY; ty += floor.h)
-      setFrameAt(add(DEPTH.boardGround), floor, g.buildX, ty);
+    const tw = floor.w * k;
+    const th = floor.h * k;
+    for (let bottom = g.boardBottomY; bottom > g.boardTopY + 0.5; bottom -= th) {
+      const top = Math.max(g.boardTopY, bottom - th);
+      for (let x = g.buildX; x < g.siteRight - 0.5; x += tw) {
+        const w = Math.min(tw, g.siteRight - x);
+        const img = add(DEPTH.boardGround);
+        setFrameAt(img, floor, x, top);
+        img.setScale(k);
+        const cropTop = (th - (bottom - top)) / k;
+        if (cropTop > 0 || w < tw) img.setCrop(0, cropTop, w / k, floor.h - cropTop);
+        img.setY(top - cropTop * k);
+      }
+    }
     const corner = f.ref(FRAME.blueprintCorner);
     setFrameAt(add(DEPTH.boardGround + 1), corner, g.buildX, g.boardBottomY - corner.h);
 
-    // scaffold (ART §4): poles on both site edges, a ledger every 2 rows, clamps on the joints
+    // scaffold (ART §4): poles on both site edges up to H and 40 px into the crane area, a ledger every 2 rows, clamps
     const pole = f.ref(FRAME.scaffoldPole);
     const ledger = f.ref(FRAME.scaffoldLedger);
     const clamp = f.ref(FRAME.scaffoldClamp);
-    const poleXs = [g.buildX, g.buildX + siteW];
+    const poleXs = [g.buildX, g.siteRight];
+    const poleTop = g.boardTopY - SCAFFOLD_OVERHANG_PX;
     for (const x of poleXs) {
       const img = scaffold(DEPTH.boardGround + 1);
-      setFrameAt(img, pole, x - ART.scaffoldPolePx / 2, g.boardTopY);
-      img.setDisplaySize(ART.scaffoldPolePx, g.boardBottomY - g.boardTopY);
+      setFrameAt(img, pole, x - ART.scaffoldPolePx / 2, poleTop);
+      img.setDisplaySize(ART.scaffoldPolePx, g.boardBottomY - poleTop);
     }
-    for (let r = 2; r < tg.rows; r += 2) {
+    for (let r = 2; r < geo.h; r += 2) {
       const y = g.boardBottomY - r * c;
       const img = scaffold(DEPTH.boardGround + 1);
       setFrameAt(img, ledger, g.buildX, y - ART.scaffoldLedgerPx / 2);
@@ -198,8 +261,10 @@ export class BoardView {
 
     // wall (K-04): the baked strip with its openings; W1 rails on the top and bottom boundary of each static gap
     if (lvl.wallHeight > 0 && f.has(FRAME.wall)) {
-      const r = g.wallRect(lvl.wallHeight);
-      setFrameAt(add(DEPTH.boardGround + 3), f.ref(FRAME.wall), r.x, r.y);
+      const r = g.wallRect(wallH);
+      const img = add(DEPTH.boardGround + 3);
+      setFrameAt(img, f.ref(FRAME.wall), r.x, r.y);
+      if (k !== 1) img.setScale(k);
     }
     // ART §5 (Faz 2 tur 2): the rails lie over the plan cells and the blueprint grid, under the build front and the
     // blocks (`RAIL_DEPTH`), in dark steel — not on the ground layer under the plan, where they matched the scaffold
@@ -217,6 +282,16 @@ export class BoardView {
       }
       this.rails.push({ gap: i, rails: rects });
     });
+  }
+
+  /** The yard rect of the last build (JUICE #94 sweep, UX §5.9 item 5). */
+  get yardRect(): Rect {
+    return this.yardRectNow;
+  }
+
+  /** The yard frame (JUICE #94: it flashes once). */
+  get yardFrame(): Phaser.GameObjects.NineSlice | null {
+    return this.yardFrameObj;
   }
 
   // --- site --------------------------------------------------------------------------------------------------------------
@@ -282,23 +357,31 @@ export class BoardView {
     const plan = lvl.segments[seg];
     if (!plan) return;
     const g = layout.grid;
+    const geo = g.geo;
     const c = g.cellPx;
-    const siteW = TOKENS.layout.grid.buildCols * c;
+    const k = g.k;
+    const siteW = geo.ws * c;
     const elev = hdr(s, H.elev);
     const revealed = revealedMask(s, seg);
     const front = new Set(buildFront(s).map((a) => `${a.x},${a.y}`));
     const deep = f.ref(FRAME.blueprintDeep);
     const frontContour = f.ref(FRAME.front);
+    const place = (img: Phaser.GameObjects.Image, ref: FrameRef, r: Rect): void => {
+      setFrameAt(img, ref, r.x, r.y);
+      if (k !== 1) img.setDisplaySize(c, c);
+    };
 
-    for (let sy = 0; sy + elev < TOKENS.layout.grid.rows && sy < GRID_ROWS; sy++) {
-      const y = sy + elev;
-      for (let sx = 0; sx < SITE_COLS; sx++) {
-        const x = SITE_X + sx;
-        const local = sy * SITE_COLS + sx;
-        const v = plan.planColors[local] ?? PLAN_OUTSIDE;
+    // board rows of the site: plan row sy = y − e; rows outside the plan (above Hs + e: site air, K-16 `outside`) and
+    // cells the plan leaves out are `board_blueprint_deep` (UX §5.8)
+    for (let y = elev; y < geo.h; y++) {
+      const sy = y - elev;
+      for (let sx = 0; sx < geo.ws; sx++) {
+        const x = geo.siteX + sx;
+        const local = sy * geo.ws + sx;
+        const v = sy < geo.hs ? (plan.planColors[local] ?? PLAN_OUTSIDE) : PLAN_OUTSIDE;
         const cell = g.cellRect(x, y);
         if (v === PLAN_OUTSIDE) {
-          setFrameAt(this.takeImg(DEPTH.planCells), deep, cell.x, cell.y);
+          place(this.takeImg(DEPTH.planCells), deep, cell);
           continue;
         }
         if (v === PLAN_DOT) continue;
@@ -307,18 +390,18 @@ export class BoardView {
         const hidden = ((plan.hiddenMask >> local) & 1) === 1 && ((revealed >> local) & 1) === 0;
         const isFront = front.has(`${x},${y}`);
         const cellImg = this.takeImg(DEPTH.planCells);
-        setFrameAt(cellImg, f.ref(hidden ? FRAME.hidden : planFrameName(color)), cell.x, cell.y);
+        place(cellImg, f.ref(hidden ? FRAME.hidden : planFrameName(color)), cell);
         const imgs = [cellImg];
         if (isFront) {
           // K-34 hook 1: the front look over the plain cell (the #83 crossfade fades these two in)
           if (!hidden) {
             const fill = this.takeImg(DEPTH.planCells + 1);
-            setFrameAt(fill, f.ref(planFrontFrameName(color)), cell.x, cell.y);
+            place(fill, f.ref(planFrontFrameName(color)), cell);
             this.frontImgs.push(fill);
             imgs.push(fill);
           }
           const contour = this.takeImg(DEPTH.buildFront);
-          setFrameAt(contour, frontContour, cell.x, cell.y);
+          place(contour, frontContour, cell);
           this.frontImgs.push(contour);
           imgs.push(contour);
         }
@@ -335,13 +418,21 @@ export class BoardView {
     }
 
     // overlays over the plan cells, under the blocks (ART §4 layer order)
-    const planTop = g.rowTop(plan.height - 1 + elev);
+    const planRows = Math.min(plan.height, geo.h - elev);
+    const planTop = g.rowTop(planRows - 1 + elev);
     const grid = gridFrameName(plan.height);
-    if (f.has(grid)) setFrameAt(this.takeImg(DEPTH.planOverlay), f.ref(grid), g.buildX, planTop);
+    if (f.has(grid)) {
+      const img = this.takeImg(DEPTH.planOverlay);
+      setFrameAt(img, f.ref(grid), g.buildX, g.rowTop(plan.height - 1 + elev));
+      if (k !== 1) img.setScale(k);
+      if (planRows < plan.height)
+        img.setCrop(0, ((plan.height - planRows) * c) / k, img.frame.realWidth, 1e6);
+    }
     const dots = dotsFrameName(seg);
     if (f.has(dots)) {
       this.dotsImg = this.takeImg(DEPTH.planOverlay + 1);
-      setFrameAt(this.dotsImg, f.ref(dots), g.buildX, planTop);
+      setFrameAt(this.dotsImg, f.ref(dots), g.buildX, g.rowTop(plan.height - 1 + elev));
+      if (k !== 1) this.dotsImg.setScale(k);
     }
 
     // ceiling beam on the plan top (S8 balloon ceiling; drawn in every level, ART §4) with a clamp at each end

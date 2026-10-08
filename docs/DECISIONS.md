@@ -565,3 +565,9 @@ Durum: RET     Sahip: product-lead     Tarih: 2026-10-07
 Karar: Hamle bitmeden "kazanamazsın" penceresi açılmaz.
 Gerekçe: Kazanma hâlâ mümkünken yolu kesebilir ve +5 teklifini öne çekerek satış baskısı yaratır (R-15).
 Etkilenen: DL-2R-13
+
+### D-090 — Faz 2R solver turu: Söküm'süz çıkmaz kapısı ve teslimat adaleti
+Durum: ÖNERİ     Sahip: product-lead (kural) + code-lead (araç)     Tarih: 2026-10-07
+Karar: (1) D3b tablosu olmayan bölümde solver'ın bütün keşif uzayında D1/D2/D3a'nın yakalamadığı çıkmaz durum olamaz (GDD K-51 madde 2, error). (2) Çok dilimli bölümde en kısa çözüm gelecek kamyon partisini bilmeyi gerektiremez: önsezi kazancı ve şans farkı 0 (GDD K-51 madde 5, warn `delivery_foresight`). (3) Bölüm 4, 5, 7, 10 bu kurallar ve "Bölüm 4'ten itibaren en az 2 kazı" ile yeniden tasarlandı; Bölüm 10'un bilinçli kamyon kuyruğu kaldırıldı (LEVELS §2.11).
+Gerekçe: Eski Bölüm 10'da `trapCount` 0 iken 338 Söküm'süz çıkmaz vardı (WP-E); kamyon içeriği oyuncuya gösterilmediği için önsezi isteyen en kısa çözüm "bilgi gizlenmez" ilkesini bozar.
+Etkilenen: GDD K-51, K-50 madde 8, E-54; LEVELS §2.0 madde 9–11, §2.11; tools/solver (code-lead)

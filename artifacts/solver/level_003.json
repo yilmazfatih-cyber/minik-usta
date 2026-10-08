@@ -1,0 +1,276 @@
+{
+  "level": 3,
+  "file": "level_003.json",
+  "levelHash": "5bed0fd97a5cb367",
+  "rulesVersion": 2,
+  "solverVersion": 2,
+  "variant": null,
+  "status": "solved",
+  "geometry": "4x4|2x5 H5",
+  "difficulty": "easy",
+  "teaches": null,
+  "moves": 11,
+  "metrics": {
+    "N": 4,
+    "min": 5,
+    "minShifts": 1,
+    "minIsNPlusShifts": true,
+    "shiftsBySegment": [
+      1
+    ],
+    "firstNeedDepth": 1,
+    "F0": [
+      "piece:0",
+      "piece:1"
+    ],
+    "cover": {
+      "piece:0": 1,
+      "piece:1": 1,
+      "piece:2": 0,
+      "piece:3": 0
+    },
+    "firstNeedCover": 1,
+    "scope": {
+      "maxShifts": 2,
+      "states": 112,
+      "placementEdges": 115
+    },
+    "trapCount": 0,
+    "deadRate": 0,
+    "deadStates": 0,
+    "deadEntries": {
+      "edges": 0,
+      "shiftEdges": 0,
+      "states": 0,
+      "caught": 0
+    },
+    "delivery": [],
+    "liveStates": 1931,
+    "wonStates": 1,
+    "budget": 11,
+    "choices": [
+      6,
+      9,
+      10
+    ],
+    "bestChoices": [
+      3,
+      1,
+      1
+    ],
+    "yao": {
+      "overWall": 4,
+      "rail": 0,
+      "value": 1
+    }
+  },
+  "band": {
+    "row": "easy",
+    "T": 6,
+    "floor": 4,
+    "A": 1,
+    "nominal": 11,
+    "lo": 10,
+    "hi": 12
+  },
+  "canonical": [
+    {
+      "kind": "start",
+      "preBoosters": [],
+      "streakTier": 0
+    },
+    {
+      "kind": "drag",
+      "pieceId": 2,
+      "to": {
+        "ix": 1,
+        "iy": 2,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 0,
+      "to": {
+        "ix": 4,
+        "iy": 0,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 1,
+      "to": {
+        "ix": 5,
+        "iy": 0,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 2,
+      "to": {
+        "ix": 4,
+        "iy": 2,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 3,
+      "to": {
+        "ix": 4,
+        "iy": 4,
+        "mode": 0
+      }
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "kind": "shift",
+      "pieceId": 2,
+      "ref": "piece:2",
+      "shape": "O4_0",
+      "color": "G",
+      "from": [
+        0,
+        2
+      ],
+      "to": [
+        1,
+        2
+      ],
+      "node": {
+        "ix": 1,
+        "iy": 2,
+        "mode": 0
+      },
+      "cost": 1,
+      "segment": 0,
+      "queueAfter": 0
+    },
+    {
+      "n": 2,
+      "kind": "overWall",
+      "pieceId": 0,
+      "ref": "piece:0",
+      "shape": "D2_0",
+      "color": "Y",
+      "from": [
+        0,
+        0
+      ],
+      "to": [
+        4,
+        0
+      ],
+      "node": {
+        "ix": 4,
+        "iy": 0,
+        "mode": 0
+      },
+      "cost": 1,
+      "segment": 0,
+      "queueAfter": 0
+    },
+    {
+      "n": 3,
+      "kind": "overWall",
+      "pieceId": 1,
+      "ref": "piece:1",
+      "shape": "D2_0",
+      "color": "W",
+      "from": [
+        1,
+        0
+      ],
+      "to": [
+        5,
+        0
+      ],
+      "node": {
+        "ix": 5,
+        "iy": 0,
+        "mode": 0
+      },
+      "cost": 1,
+      "segment": 0,
+      "queueAfter": 0
+    },
+    {
+      "n": 4,
+      "kind": "overWall",
+      "pieceId": 2,
+      "ref": "piece:2",
+      "shape": "O4_0",
+      "color": "G",
+      "from": [
+        1,
+        2
+      ],
+      "to": [
+        4,
+        2
+      ],
+      "node": {
+        "ix": 4,
+        "iy": 2,
+        "mode": 0
+      },
+      "cost": 1,
+      "segment": 0,
+      "queueAfter": 0
+    },
+    {
+      "n": 5,
+      "kind": "overWall",
+      "pieceId": 3,
+      "ref": "piece:3",
+      "shape": "D2_90",
+      "color": "Y",
+      "from": [
+        2,
+        0
+      ],
+      "to": [
+        4,
+        4
+      ],
+      "node": {
+        "ix": 4,
+        "iy": 4,
+        "mode": 0
+      },
+      "cost": 1,
+      "segment": 0,
+      "queueAfter": 0
+    }
+  ],
+  "replay": {
+    "ok": true,
+    "message": null,
+    "eventLogHash": "1ae6549e9488b399",
+    "events": 27
+  },
+  "variants": [],
+  "issues": [],
+  "notes": [],
+  "stats": {
+    "states": 1931,
+    "expanded": 1931,
+    "edges": 18141,
+    "ms": 43,
+    "bytes": 321080,
+    "dragSessions": 1282,
+    "applyMoves": 2353,
+    "fastYardMoves": 15788,
+    "d3aRuns": 40,
+    "d3aMaxExpansions": 4,
+    "d3aUnknown": 0,
+    "complete": true,
+    "limit": null,
+    "totalMs": 51
+  },
+  "cacheKey": "936d1b4f:rules2:solver2:level:var:d3a"
+}

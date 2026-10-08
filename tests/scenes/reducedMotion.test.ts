@@ -9,13 +9,15 @@ import { describe, expect, it } from 'vitest';
 const src = (path: string): string => readFileSync(new URL(`../../src/${path}`, import.meta.url), 'utf8');
 
 describe('JUICE 0 rule 8 reduced motion stops the idle loops', () => {
-  it('JUICE 0 rule 8 home "BÖLÜM 2" pulse, spotlight edge, glove loop and trowel cells read reduced motion', () => {
+  it('JUICE 0 rule 8 home "BÖLÜM 2" pulse, tutorial highlight pulse, glove loop and trowel cells read reduced motion', () => {
     const home = src('scenes/HomeScene.ts');
     expect(home).toMatch(/reducedMotion\(\)/);
     expect(home).toMatch(/!this\.model\.pulse \|\| this\.reduced\) return;/);
-    const overlay = src('scenes/level/TutorialOverlay.ts');
-    expect(overlay).toMatch(/const k = this\.reduced\s*\?\s*1\s*:/);
-    expect(overlay).toMatch(/if \(this\.reduced && now - this\.handSince >= move\)/);
+    // UX 13.1 "Azaltılmış hareket": steady highlight, the glove rests at the start of its path, a 150 ms bubble fade
+    const view = src('scenes/level/TutorialView.ts');
+    expect(view).toMatch(/const pulse = this\.reduced\s*\?\s*1\s*:/);
+    expect(view).toMatch(/if \(this\.reduced\) \{\s*\/\/ JUICE §0 rule 8/);
+    expect(view).toMatch(/this\.reduced \? REDUCED_FADE_MS : TT\.appearMs/);
     const picker = src('scenes/level/TrowelPicker.ts');
     expect(picker).toMatch(/if \(this\.host\.reduced\(\)\)/);
   });

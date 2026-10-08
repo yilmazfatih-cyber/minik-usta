@@ -2,40 +2,30 @@
   "schemaVersion": 1,
   "id": 4,
   "chapter": 1,
-  "name": { "tr": "Pencere", "en": "The Window" },
+  "name": { "tr": "Pencere Pervazı", "en": "Window Sill" },
   "difficulty": "easy",
-  "moves": 12,
-  "teaches": "S2",
-  "seed": 4004,
+  "moves": 13,
+  "teaches": "W1",
   "goals": [{ "type": "build" }],
   "gravity": { "build": "normal", "yard": false },
-  "wall": { "height": 6, "gaps": [{ "type": "static", "y": 3, "size": 2 }] },
+  "wall": { "height": 4, "gaps": [{ "type": "static", "y": 0, "size": 2 }] },
+  "site": { "cols": 2, "rows": 6 },
   "build": {
     "mode": "segments",
-    "segments": [
-      { "name": { "tr": "Ön Cephe", "en": "Front Facade" }, "rows": ["RR", "WW", "W.", "WW", "YY"] }
-    ]
+    "segments": [{ "name": { "tr": "Pervaz", "en": "Sill" }, "rows": ["YY", "GG", "GG", "YY", "WW", "WW"] }]
   },
   "yard": {
+    "cols": 4,
+    "rows": 4,
     "batches": [
       {
         "forSegment": 0,
         "pieces": [
-          { "shape": "D2_90", "color": "Y", "x": 0, "y": 7 },
-          { "shape": "C3_0", "color": "W", "x": 2, "y": 6 },
-          { "shape": "D2_90", "color": "W", "x": 4, "y": 3 },
-          { "shape": "D2_90", "color": "R", "x": 4, "y": 7 },
-          { "shape": "D2_90", "color": "R", "x": 0, "y": 6 },
-          { "shape": "D2_90", "color": "Y", "x": 4, "y": 6 },
-          { "shape": "O4_0", "color": "W", "x": 0, "y": 4 },
-          { "shape": "O4_0", "color": "R", "x": 2, "y": 4 },
-          { "shape": "O4_0", "color": "Y", "x": 4, "y": 4 },
-          { "shape": "O4_0", "color": "Y", "x": 0, "y": 2 },
-          { "shape": "O4_0", "color": "W", "x": 2, "y": 2 },
-          { "shape": "D2_90", "color": "R", "x": 4, "y": 2 },
-          { "shape": "O4_0", "color": "R", "x": 0, "y": 0 },
-          { "shape": "O4_0", "color": "Y", "x": 2, "y": 0 },
-          { "shape": "O4_0", "color": "W", "x": 4, "y": 0 }
+          { "shape": "O4_0", "color": "W", "x": 0, "y": 0 },
+          { "shape": "D2_90", "color": "Y", "x": 0, "y": 2 },
+          { "shape": "D2_0", "color": "G", "x": 3, "y": 0 },
+          { "shape": "D2_0", "color": "G", "x": 3, "y": 2 },
+          { "shape": "D2_90", "color": "Y", "x": 1, "y": 3 }
         ]
       }
     ]
@@ -44,32 +34,31 @@
   "tutorial": [
     {
       "step": 1,
-      "mode": "soft",
-      "highlight": ["cell:7,2"],
-      "hand": { "kind": "tap", "path": [[7, 2]] },
-      "textKey": "tut.l4.window",
-      "done": { "event": "placementCorrect", "count": 1 }
-    },
-    {
-      "step": 2,
-      "mode": "soft",
-      "highlight": ["front"],
-      "textKey": "tut.ctx.support",
-      "done": { "event": "placementCorrect", "count": 1 }
-    },
-    {
-      "step": 3,
-      "mode": "required",
-      "highlight": ["gap:0", "piece:2", "cell:6,3", "cell:7,3"],
+      "highlight": ["piece:4", "piece:2"],
       "hand": {
         "kind": "drag",
         "path": [
-          [4, 3],
-          [6, 3]
+          [2, 3],
+          [1, 3]
         ]
       },
-      "textKey": "tut.l4.above",
+      "textKey": "tut.m.dig",
+      "done": { "event": "yardMove", "count": 1, "piece": "piece:4" }
+    },
+    {
+      "step": 2,
+      "highlight": ["piece:0", "gap:0"],
+      "hand": {
+        "kind": "drag",
+        "path": [
+          [1, 1],
+          [5, 1]
+        ]
+      },
+      "textKey": "tut.m.gap",
+      "startOn": { "event": "yardMove", "count": 1, "piece": "piece:2" },
       "done": { "event": "gapPass", "count": 1 }
     }
-  ]
+  ],
+  "targets": { "minShifts": [2, 3], "firstNeedDepth": [1, 2], "deadRate": [0, 0] }
 }

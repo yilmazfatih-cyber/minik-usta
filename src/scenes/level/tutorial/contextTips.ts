@@ -1,18 +1,23 @@
 /**
- * Contextual Usta Dede lines `tut.ctx.*` (UX_FLOWS §13.2 "Bağlamsal öğreticiler"; STORY §6; GDD §14.1/2, K-34 hook 4;
- * TECH_DESIGN §8.2 last paragraph). Each one appears ONCE per account, the first time its trigger happens (the save's
- * `seenContextTips`); a tutorial step that reuses the same text (Level 4 step 2 `tut.ctx.support`) marks it too.
+ * Contextual Usta Dede lines `tut.ctx.*` (UX_FLOWS §13.1 "Bağlamsal öğreticiler", §13.2; STORY §6; GDD K-53/4, §14.1/2,
+ * K-34 hook 4; TECH_DESIGN §2R.9). Each one appears ONCE per account, the first time its trigger happens (the save's
+ * `seenContextTips`); a tutorial step that reuses the same text marks it too. They use the tutorial bubble (no glove,
+ * a soft highlight), never block input and stay `TOKENS.tutorial.visibleMs` (4 s; faded while a block is held).
  *
- * Pure: triggers are read from a committed move's events (and a few scene signals); the queue shows one tip at a time
- * and never while a tutorial step is on screen (GDD K-34 hook 4, LEVELS §0: the line waits; a step showing the same
- * text marks it seen and it drops). Showing a tip marks it seen. A queued tip whose trigger no longer holds when it
- * could show (the truck queue emptied, the streak was reset, another move was made after a bounce — review Faz 2 tur 1
- * #13) is dropped WITHOUT marking: the next occurrence triggers it again, in context.
+ * Pure: triggers are read from a committed move's events (and a few scene signals). Queue rule (K-53/4, PL-2R-12):
+ * - one line on screen at a time; AT MOST ONE waits — a newer one replaces it (the dropped one is not marked seen);
+ * - while a tutorial step is active (shown or hidden) the line waits and shows `TOKENS.tutorial.nextStepDelayMs`
+ *   (400 ms) after the step's end (`stepEnded`), even when the next step is already active;
+ * - the Söküm line `tut.ctx.teardown` (K-30) never queues: it shows at once (it replaces a line on screen) for
+ *   `TEARDOWN_LINE_MS`, on EVERY Söküm (the exception to "once"; never marked seen). The active step's presence hides
+ *   for that time and then goes on (`TutorialPresence` windowOpen / windowClose).
+ * Showing a line marks it seen. A queued line whose trigger no longer holds when it could show (the truck queue
+ * emptied, the streak was reset, another move was made after a bounce) is dropped WITHOUT marking: the next
+ * occurrence triggers it again, in context.
  *
- * Highlights (UX §13.2 "Vurgu", review Faz 2 tur 2 #18): a tip lights its static ids (`CTX_HIGHLIGHT`) plus the ids of
- * its occurrence (`ctxMoveHighlight`, `trigger(…, highlight)`): the bounced block and its reason cells (the mismatching,
- * `.` or off-plan cells where it tried to land), the missing-support cells (+ `front`), the block that could not be
- * picked.
+ * Highlights (UX §13.2 "Vurgu"): a line lights its static ids (`CTX_HIGHLIGHT`) plus the ids of its occurrence
+ * (`ctxMoveHighlight`, `trigger(…, highlight)`): the bounced block and its reason cells, the missing-support cells
+ * (+ `front`), the block that could not be picked, the torn-down blocks.
  */
 import { blockCells } from '../../../core/movement.ts';
 import { reasonCells } from '../../../core/placement.ts';
@@ -33,8 +38,8 @@ export const CTX_TOPICS = [
   'lastmoves',
   'queue',
   'truckhelp.free',
-  'truckhelp.material',
   'reshuffle',
+  'teardown',
   'blocked',
   'resume',
 ] as const;
@@ -55,8 +60,8 @@ export const CTX_HIGHLIGHT: Readonly<Record<CtxTopic, readonly string[]>> = {
   lastmoves: ['moves'],
   queue: ['truck'],
   'truckhelp.free': [],
-  'truckhelp.material': [],
   reshuffle: [],
+  teardown: [],
   blocked: [],
   resume: [],
 };
@@ -149,13 +154,9 @@ export function ctxFromMove(
         if (e.to === 'queue') add('queue');
         break;
       case 'truckHelp':
-        add(
-          e.kind === 'unchain'
-            ? 'truckhelp.free'
-            : e.kind === 'deliverMissing'
-              ? 'truckhelp.material'
-              : 'reshuffle',
-        );
+        // K-30 D1 (Faz 2R): unchain → `truckhelp.free`, a reshuffle → `reshuffle`; the truck never brings blocks (R2-05)
+        if (e.kind === 'unchain') add('truckhelp.free');
+        else if (e.kind === 'reshuffle' || e.kind === 'reshape') add('reshuffle');
         break;
       default:
         break;
@@ -184,15 +185,35 @@ export const CTX_LASTING: ReadonlySet<CtxTopic> = new Set<CtxTopic>([
   'resume',
 ]);
 
-/** One tip on screen at a time; the rest wait (FIFO). */
+/** UX §13.1 / JUICE #107: the Söküm line stays 1,2 s (no token yet; design-lead `tutorial.teardownLineMs`). */
+export const TEARDOWN_LINE_MS = 1200;
+
+interface Showing {
+  readonly topic: CtxTopic;
+  readonly since: number;
+  readonly ms: number;
+  readonly highlight: readonly string[];
+}
+
+/** What may show a line now (the scene's frame state). */
+export interface CtxGate {
+  /** A tutorial step is active (shown or hidden, K-53/3). */
+  readonly stepActive: boolean;
+  /** A window is open or a block is being dragged (no new bubble opens then). */
+  readonly blocked: boolean;
+}
+
+/** One line on screen at a time; at most one waits (see the module comment). */
 export class ContextTips {
   readonly #host: CtxTipHost;
-  #queue: { readonly topic: CtxTopic; readonly serial: number; readonly highlight: readonly string[] }[] = [];
-  #showing: {
+  #queued: {
     readonly topic: CtxTopic;
-    readonly since: number;
+    readonly serial: number;
     readonly highlight: readonly string[];
   } | null = null;
+  #showing: Showing | null = null;
+  /** A step ended: the waiting line may show at this time even while the next step is active (null: none due). */
+  #flushAt: number | null = null;
   #version = 0;
 
   constructor(host: CtxTipHost) {
@@ -207,55 +228,85 @@ export class ContextTips {
     return this.#showing?.topic ?? null;
   }
 
-  /** Highlight ids of the tip on screen: `CTX_HIGHLIGHT` + its occurrence's ids (empty when none shows). */
+  /** Animation time the line on screen opened (null when none shows). */
+  get showingSince(): number | null {
+    return this.#showing?.since ?? null;
+  }
+
+  /** Highlight ids of the line on screen: `CTX_HIGHLIGHT` + its occurrence's ids (empty when none shows). */
   get highlight(): readonly string[] {
     const sh = this.#showing;
     return sh ? [...CTX_HIGHLIGHT[sh.topic], ...sh.highlight] : [];
   }
 
-  /** Topics waiting (tests, harness). */
+  /** Topics waiting (0 or 1; tests, harness). */
   get queued(): readonly CtxTopic[] {
-    return this.#queue.map((q) => q.topic);
+    return this.#queued ? [this.#queued.topic] : [];
   }
 
   /**
-   * A trigger happened (`serial`: see `CtxValidity`; `highlight`: the occurrence's ids): queued when never seen (and
-   * not already queued / showing).
+   * A trigger happened (`serial`: see `CtxValidity`; `highlight`: the occurrence's ids): it waits when never seen and
+   * not on screen; it replaces a waiting line (K-53/4: at most one waits; the dropped one stays unseen).
    */
   trigger(topic: CtxTopic, serial = 0, highlight: readonly string[] = []): void {
+    if (topic === 'teardown') return; // never queued: `teardown`
     if (this.#host.seen(topic)) return;
     if (this.#showing?.topic === topic) return;
-    const i = this.#queue.findIndex((q) => q.topic === topic);
-    if (i >= 0)
-      this.#queue[i] = { topic, serial, highlight }; // the newest occurrence is the context
-    else this.#queue.push({ topic, serial, highlight });
+    this.#queued = { topic, serial, highlight };
   }
 
   /**
-   * Per frame: hides the tip after `showMs`, shows the next one when `free` (no tutorial step / window on screen).
-   * Showing marks the tip seen; a tip `valid` rejects is dropped unmarked.
+   * Several triggers of one move, in display priority (`ctxFromMove`): only the first unseen one waits (the rest would
+   * replace it, K-53/4).
    */
-  update(now: number, free: boolean, showMs: number, valid: CtxValidity = () => true): void {
-    if (this.#showing && now - this.#showing.since >= showMs) {
+  triggerFirst(
+    topics: readonly CtxTopic[],
+    serial: number,
+    highlight: (t: CtxTopic) => readonly string[],
+  ): void {
+    const first = topics.find((t) => t !== 'teardown' && !this.#host.seen(t) && this.#showing?.topic !== t);
+    if (first !== undefined) this.trigger(first, serial, highlight(first));
+  }
+
+  /** K-30 Söküm (K-53/4): `tut.ctx.teardown` shows now, on every Söküm, for `TEARDOWN_LINE_MS`; never queued. */
+  teardown(now: number, highlight: readonly string[] = []): void {
+    this.#showing = { topic: 'teardown', since: now, ms: TEARDOWN_LINE_MS, highlight };
+    this.#version += 1;
+  }
+
+  /** The active tutorial step ended at `now`: a waiting line shows `nextStepDelayMs` later (K-53/4). */
+  stepEnded(now: number, delayMs: number): void {
+    this.#flushAt = now + delayMs;
+  }
+
+  /**
+   * Per frame: hides the line after its time (`showMs`; the Söküm line its own), shows the waiting one when the gate
+   * lets it (no step active — or a step just ended, `stepEnded` — no window, no drag). Showing marks the line seen; a
+   * line `valid` rejects is dropped unmarked.
+   */
+  update(now: number, gate: CtxGate, showMs: number, valid: CtxValidity = () => true): void {
+    const sh = this.#showing;
+    if (sh && now - sh.since >= sh.ms) {
       this.#showing = null;
       this.#version += 1;
     }
-    if (this.#showing || !free) return;
-    for (;;) {
-      const next = this.#queue.shift();
-      if (next === undefined) return;
-      if (this.#host.seen(next.topic)) continue; // a tutorial step showed the same text meanwhile
-      if (!valid(next.topic, next.serial)) continue; // out of context now: the next occurrence brings it back
-      this.#host.markSeen(next.topic);
-      this.#showing = { topic: next.topic, since: now, highlight: next.highlight };
-      this.#version += 1;
-      return;
-    }
+    if (this.#flushAt !== null && now < this.#flushAt) return; // a step just ended: 400 ms first
+    const flush = this.#flushAt !== null;
+    if (this.#showing || gate.blocked || (gate.stepActive && !flush)) return;
+    this.#flushAt = null;
+    const next = this.#queued;
+    this.#queued = null;
+    if (next === null) return;
+    if (this.#host.seen(next.topic)) return; // a tutorial step showed the same text meanwhile
+    if (!valid(next.topic, next.serial)) return; // out of context now: the next occurrence brings it back
+    this.#host.markSeen(next.topic);
+    this.#showing = { topic: next.topic, since: now, ms: showMs, highlight: next.highlight };
+    this.#version += 1;
   }
 
   /**
-   * The player did what the tip teaches through a screen that gives the same instruction itself (UX §13.2 "Altın Mala
-   * ilk kez kazanıldı", Faz 2 tur 3: the trowel pick's `booster.hint.trowel` strip): the tip leaves the screen if it
+   * The player did what the line teaches through a screen that gives the same instruction itself (UX §13.2 "Altın Mala
+   * ilk kez kazanıldı", Faz 2 tur 3: the trowel pick's `booster.hint.trowel` strip): the line leaves the screen if it
    * shows, drops if it waits, and counts as seen in both cases, so it never comes back. Not triggered yet: no-op.
    */
   retire(topic: CtxTopic): void {
@@ -265,24 +316,17 @@ export class ContextTips {
       this.#version += 1;
       hit = true;
     }
-    const i = this.#queue.findIndex((q) => q.topic === topic);
-    if (i >= 0) {
-      this.#queue.splice(i, 1);
+    if (this.#queued?.topic === topic) {
+      this.#queued = null;
       hit = true;
     }
     if (hit && !this.#host.seen(topic)) this.#host.markSeen(topic);
   }
 
-  /** The player started a drag: the tip leaves (it never covers the board while playing). */
-  dismiss(): void {
-    if (!this.#showing) return;
-    this.#showing = null;
-    this.#version += 1;
-  }
-
   /** Level change. */
   clear(): void {
-    this.#queue = [];
+    this.#queued = null;
+    this.#flushAt = null;
     if (this.#showing) this.#version += 1;
     this.#showing = null;
   }

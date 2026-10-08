@@ -6,12 +6,13 @@
  */
 import type Phaser from 'phaser';
 import { shapeByIndex } from '../../core/shapes.ts';
-import { pieceShape } from '../../core/state.ts';
+import { pieceShape, pieceZone } from '../../core/state.ts';
+import { Zone } from '../../core/types.ts';
 import type { GameState } from '../../core/state.ts';
 import type { PieceId } from '../../core/types.ts';
 import type { Layout } from '../../theme/layout.ts';
 import type { Frames } from '../atlas.ts';
-import { pieceFrameName, statePose } from './pieceState.ts';
+import { pieceFrameName, pieceGlossName, statePose } from './pieceState.ts';
 import { PieceView } from './PieceView.ts';
 import { Pool } from './Pool.ts';
 import { PIECE_POOL_PREWARM } from './viewConstants.ts';
@@ -20,6 +21,8 @@ export class PieceLayer {
   private readonly pool: Pool<PieceView>;
   private readonly byId = new Map<PieceId, PieceView>();
   private frames: Frames | null = null;
+  /** Last K-09 holdable set (`TurnSummary.holdable`); null = every block looks holdable. */
+  private holdable: ReadonlySet<PieceId> | null = null;
 
   /** `onRelease` runs before a view goes back to the pool (the EventPlayer finishes the view's animations). */
   constructor(scene: Phaser.Scene, onRelease: (v: PieceView) => void = () => undefined) {
@@ -49,6 +52,7 @@ export class PieceLayer {
   clear(): void {
     for (const v of this.byId.values()) this.pool.release(v);
     this.byId.clear();
+    this.holdable = null;
   }
 
   /**
@@ -73,16 +77,47 @@ export class PieceLayer {
       }
       if (!view) {
         view = this.pool.acquire();
-        view.bind(id, shapeByIndex(pieceShape(s, id)), pieceFrameName(s, id), frames);
+        view.bind(id, shapeByIndex(pieceShape(s, id)), pieceFrameName(s, id), frames, pieceGlossName(s, id));
+        view.setHoldable(
+          this.holdable === null || this.holdable.has(id),
+          0,
+          0,
+          pieceZone(s, id) === Zone.yard,
+        );
         view.pose = pose;
         this.byId.set(id, view);
         added.push(id);
         continue;
       }
-      view.setBlockFrame(pieceFrameName(s, id));
+      const shape = shapeByIndex(pieceShape(s, id));
+      if (view.shape !== shape && !view.track && !view.isDragged) {
+        // K-37: the crane turned the block — the view takes the new shape (box, silhouette, gloss)
+        view.bind(id, shape, pieceFrameName(s, id), frames, pieceGlossName(s, id));
+        view.setHoldable(
+          this.holdable === null || this.holdable.has(id),
+          0,
+          0,
+          pieceZone(s, id) === Zone.yard,
+        );
+      } else view.setBlockFrame(pieceFrameName(s, id));
       if (!view.track && !view.isDragged) view.pose = pose;
     }
     return added;
+  }
+
+  /**
+   * K-09 holdable look of every view (TECH §2R.15 item 1): after every action package, delivery and at level start.
+   * `ms` 0 switches at once.
+   */
+  setHoldable(ids: readonly PieceId[] | null, now: number, ms?: number, s?: GameState): void {
+    this.holdable = ids === null ? null : new Set(ids);
+    for (const [id, v] of this.byId)
+      v.setHoldable(
+        this.holdable === null || this.holdable.has(id),
+        now,
+        ms,
+        s ? pieceZone(s, id) === Zone.yard : true,
+      );
   }
 
   /** R-12: every running track jumps to its end (its final pose = the state pose). */

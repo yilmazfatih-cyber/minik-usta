@@ -1,73 +1,63 @@
 /**
- * `TutorialController` (docs/GDD.md §14.1; TECH_DESIGN §8.2 "TutorialController kuralları"; UX_FLOWS §13; LEVELS
- * `tutorial[]`). Pure state machine over a level's tutorial steps; the overlay (spotlight, glove, Usta Dede bubble) only
- * draws `current`. No Phaser, no clock of its own: the scene passes its animation time.
+ * `TutorialController` (docs/GDD.md K-53, §14.1; TECH_DESIGN §2R.9 part 1; UX_FLOWS §13.1; LEVELS `tutorial[]`). Pure
+ * state machine over a level's tutorial steps — which step is ACTIVE and when it ends. What is on screen (wait / shown /
+ * hidden, glove, bubble) is `TutorialPresence`'s; the view (`TutorialView`) draws it. No Phaser, no clock of its own:
+ * the scene passes its animation time.
  *
+ * Faz 2R light tutorial (K-53, R2-10):
+ * - Steps never lock input: there is no required step, no pick gate, no never-lock guarantee (the scene's
+ *   `DragController` does not know the tutorial). A `mode` other than `'soft'` is a validator error (`tut_blocking`);
+ *   old data that still carries one is played as soft.
  * - Steps run in order. A step with `startOn` WAITS (nothing shown, play is free) until its start event happens after
- *   the previous step ended; without `startOn` it starts when the previous one ends (the first one at level start).
- *   A `startOn` that never happens hides that step and every later one (GDD §14.1/5).
- * - `done`: the counter starts at 0 when the step is shown (earlier events never count); `count` defaults to 1; a
- *   move-end event counts at most once per move; drag signals count at most once per drag; `timeoutMs` ends the step
- *   by itself. Move-end events reach the controller when the EventPlayer has finished playing the move, so the step
- *   change is visible after the animation (TECH §8.2).
- * - A `tut.ctx.<topic>` text marks `seenContextTips.<topic>` the moment the step is shown (GDD §14.1/2).
- * - Required steps: the never-lock guarantee (guarantee.ts) runs when the step starts and after every move; when no
- *   highlighted block can produce the `done` event the step is skipped (it counts as done, same analytics record).
- * - The glove disappears after the player's first correct touch: a highlighted block is picked (UX §13.1).
- * - Required (Z) step with highlighted blocks (UX §13.1 "Zorunlu adımda delik dışındaki dokunuşlar yok sayılır"; GDD
- *   §14.1/4): only those blocks may be picked (`allowsPick`, the scene's input gate — merged spotlight holes may cover
- *   other blocks), and its drag signals count only in a drag of one of them.
- * - K-43 resume (review Faz 2 tur 2 #8, Faz 2 tur 3 #1): the scene saves the position on screen (`position()` +
- *   the actions it includes, `inLevel.tutorial`) whenever it changes; on resume the controller goes to that saved
- *   position (`restore`) after the actions it includes, then reads only the move ends of the later actions (a kill
- *   while the last move's cues played): the step on screen at the kill — its required gate, `tut.ctx.*` line and
- *   counter — opens again, never a later one, also after a cancelled drag whose `overWall` / `gapPass` the log does not
- *   hold. Without a saved position (old save) it is rebuilt from the log (`replayTutorialAction`): a replayed drag gives
- *   only the signals its result proves (`overWall`: yard → site FREE, `gapPass`: released on a rail); a hold has no
- *   duration in the log, so `holdOverBuild` is never assumed; a `timeoutMs` step ends before the next action.
+ *   the previous step ended; without `startOn` it starts when the previous one ends (the first one at level start). A
+ *   `startOn` that never happens hides that step and every later one (GDD §14.1/5).
+ * - A step ends ONLY on its `done` event (K-53/3; GDD §14.1/3 vocabulary with its filters, `piece` included): the
+ *   counter starts at 0 when the step starts (earlier events never count), `count` defaults to 1, a move-end event
+ *   counts at most once per move, a drag signal at most once per drag. Hiding the step (presence) never ends it.
+ *   Move-end events reach the controller when the EventPlayer has finished playing the move (TECH §8.2).
+ * - A `tut.ctx.<topic>` text marks `seenContextTips.<topic>` the moment the step starts (GDD §14.1/2).
+ * - K-53/6: a level the save marks `won` shows no step (`createTutorial`).
+ * - K-43 resume (K-53/5: `inLevel.tutorial` unchanged): the scene saves `position()` + the actions it includes whenever
+ *   it changes; on resume the controller goes to that saved position (`restore`) after the actions it includes, then
+ *   reads only the move ends of the later actions. Without a saved position (old save) it is rebuilt from the log
+ *   (`replayTutorialAction`): a replayed drag gives only the signals its result proves (`overWall`: yard → site FREE,
+ *   `gapPass`: released on a rail); a hold has no duration in the log, so `holdOverBuild` is never assumed.
  */
 import type { CompiledLevel } from '../../../core/level/compile.ts';
 import type { TutCondition, TutorialStepData } from '../../../core/level/schema.ts';
-import type { MoveHooks } from '../../../core/moves.ts';
-import type { DragRules } from '../../../core/movement.ts';
 import type { GameState } from '../../../core/state.ts';
 import type { GameEvent, PieceId, SessionAction } from '../../../core/types.ts';
-import { canProduce } from './guarantee.ts';
 import { moveMatches } from './tutorialEvents.ts';
 import type { DragSignalEvent } from './tutorialEvents.ts';
 
 export interface TutorialHost {
   /** Current game state (null while no attempt runs). */
   state(): GameState | null;
-  dragRules(): DragRules;
-  hooks(): MoveHooks;
   /** GDD §14.1/2: `seenContextTips.<topic>` (written at once). */
   markContextTip(topic: string): void;
-  /**
-   * A step ended (completed or skipped): ANALYTICS `tutorial_step`. `msToDone` = animation time from the step's show to
-   * its end (ANALYTICS §2 v6).
-   */
-  stepEnded(step: number, skipped: boolean, msToDone: number): void;
+  /** A step ended on its `done` event (ANALYTICS `tutorial_step`; `shows` / `msToDone` come from its presence). */
+  stepEnded(step: number, now: number): void;
+  /** A counted event of the active step that did not end it yet (`count` > 1): the presence hides (K-53/3). */
+  progressed?(step: number, now: number): void;
 }
 
-export interface ShownStep {
-  /** Index in `tutorial[]`. */
+/** The active step (started, not ended: shown or hidden on screen, K-53/3). */
+export interface ActiveStep {
+  /** Index in the sorted `tutorial[]`. */
   readonly index: number;
   readonly data: TutorialStepData;
-  readonly required: boolean;
   /** Highlighted blocks (`piece:` / `debris:` resolved through `CompiledLevel.tutorialPieceIds`). */
   readonly pieces: readonly PieceId[];
-  /** Animation time the step was shown. */
+  /** Animation time the step started. */
   readonly since: number;
-  /** The glove is gone (first correct touch). */
-  readonly handHidden: boolean;
 }
 
-type Phase = 'idle' | 'waiting' | 'shown' | 'finished';
+type Phase = 'idle' | 'waiting' | 'active' | 'finished';
 
 /**
  * Where the tutorial is (K-43 resume, `inLevel.tutorial` without its `actions`): step `index` of the sorted steps
- * (`steps.length` = finished), on screen (`shown`) or waiting for its `startOn`, `count` events toward its condition.
+ * (`steps.length` = finished), started (`shown`; the save field keeps its Faz 2 name, K-53/5) or waiting for its
+ * `startOn`, `count` events toward its condition.
  */
 export interface TutorialPosition {
   readonly index: number;
@@ -88,6 +78,20 @@ export function highlightedPieces(lvl: CompiledLevel, highlight: readonly string
   return out;
 }
 
+/**
+ * The tutorial of an attempt (K-53/6): null when the level has no steps or the player's save marks it won (replays of
+ * the 1–10 loop and Usta Modu show no step; contextual lines follow their own `seenContextTips` rule).
+ */
+export function createTutorial(
+  lvl: CompiledLevel,
+  host: TutorialHost,
+  progress: { readonly won: boolean },
+): TutorialController | null {
+  if (progress.won) return null;
+  if (!lvl.data.tutorial || lvl.data.tutorial.length === 0) return null;
+  return new TutorialController(lvl, host);
+}
+
 export class TutorialController {
   readonly lvl: CompiledLevel;
   readonly steps: readonly TutorialStepData[];
@@ -96,12 +100,9 @@ export class TutorialController {
   #index = -1;
   #count = 0;
   #since = 0;
-  #handHidden = false;
   #pieces: PieceId[] = [];
   /** Drag signals already counted in this drag. */
   #dragCounted = new Set<DragSignalEvent>();
-  /** The block of the current drag (null between drags). */
-  #dragPiece: PieceId | null = null;
   #version = 0;
   /** Bumped on every change of `position()` (visible changes and counter steps). */
   #positionVersion = 0;
@@ -112,7 +113,7 @@ export class TutorialController {
     this.#host = host;
   }
 
-  /** Bumped on every visible change (the overlay redraws only then). */
+  /** Bumped when the active step changes (a new presence starts then). */
   get version(): number {
     return this.#version;
   }
@@ -126,31 +127,24 @@ export class TutorialController {
     return this.#phase === 'finished';
   }
 
-  /** The step on screen, or null (waiting for `startOn`, idle or finished). */
-  get current(): ShownStep | null {
-    if (this.#phase !== 'shown') return null;
+  /** The active step (K-53/3: started and not ended), or null (waiting for `startOn`, idle or finished). */
+  get current(): ActiveStep | null {
+    if (this.#phase !== 'active') return null;
     const data = this.steps[this.#index];
     if (!data) return null;
-    return {
-      index: this.#index,
-      data,
-      required: data.mode === 'required',
-      pieces: this.#pieces,
-      since: this.#since,
-      handHidden: this.#handHidden,
-    };
+    return { index: this.#index, data, pieces: this.#pieces, since: this.#since };
   }
 
-  /** The step waiting for its `startOn` event (no overlay), if any. */
+  /** The step waiting for its `startOn` event (nothing on screen), if any. */
   get waiting(): TutorialStepData | null {
     return this.#phase === 'waiting' ? (this.steps[this.#index] ?? null) : null;
   }
 
-  /** The position on screen (K-43 save); null before `start`. */
+  /** The position (K-43 save); null before `start`. */
   position(): TutorialPosition | null {
     if (this.#phase === 'idle') return null;
     if (this.#phase === 'finished') return { index: this.steps.length, shown: false, count: 0 };
-    return { index: this.#index, shown: this.#phase === 'shown', count: this.#count };
+    return { index: this.#index, shown: this.#phase === 'active', count: this.#count };
   }
 
   /** Can `pos` be a position of this tutorial (a damaged or foreign save is not restored)? */
@@ -161,21 +155,17 @@ export class TutorialController {
     const step = this.steps[index];
     if (!step) return false;
     const cond = shown ? step.done : step.startOn;
-    if (!shown && !cond) return false; // a step without `startOn` never waits
-    if (!cond || 'timeoutMs' in cond) return count === 0;
+    if (!cond) return false; // a step without `startOn` never waits
     return count < (cond.count ?? 1);
   }
 
   /**
-   * K-43 resume (review Faz 2 tur 3 #1): goes to the saved position as it was on screen — the step with its required
-   * gate and `tut.ctx.*` mark, its counter, the glove back (its timer, like every animation, starts again). Neither
-   * `tutorial_step` nor a later step: the required-step guarantee runs on the state of now. False (nothing changed)
-   * when `accepts(pos)` is false.
+   * K-43 resume: goes to the saved position — the step with its `tut.ctx.*` mark and its counter (its presence starts
+   * again with the step). Neither `tutorial_step` nor a later step. False (nothing changed) when `accepts(pos)` is false.
    */
   restore(pos: TutorialPosition, now: number): boolean {
     if (!this.accepts(pos)) return false;
     this.#dragCounted.clear();
-    this.#dragPiece = null;
     this.#index = pos.index;
     if (pos.index >= this.steps.length) {
       this.#phase = 'finished';
@@ -184,11 +174,8 @@ export class TutorialController {
       return true;
     }
     if (pos.shown) {
-      this.#show(now); // phase, since, glove, highlighted blocks, `tut.ctx.*` mark, guarantee
-      if (this.#phase === 'shown' && this.#index === pos.index) {
-        this.#count = pos.count;
-        this.#positionVersion += 1;
-      }
+      this.#activate(now);
+      this.#count = pos.count;
     } else {
       this.#phase = 'waiting';
       this.#count = pos.count;
@@ -211,35 +198,24 @@ export class TutorialController {
     this.#bump();
   }
 
-  /**
-   * May block `pieceId` be picked now? False only on a required step that highlights other blocks (the gate of review
-   * Faz 2 tur 1 #12; a required step without block highlights leaves every block free).
-   */
-  allowsPick(pieceId: PieceId): boolean {
-    const step = this.current;
-    if (!step || !step.required || step.pieces.length === 0) return true;
-    return step.pieces.includes(pieceId);
+  /** The player lifted a block (K-07 threshold passed): a new drag for the drag-signal counting. */
+  dragStarted(_pieceId: PieceId): void {
+    this.#dragCounted.clear();
   }
 
-  /** The player lifted a block (K-07 threshold passed). */
-  dragStarted(pieceId: PieceId): void {
-    this.#dragCounted.clear();
-    this.#dragPiece = pieceId;
-    if (this.#phase === 'shown' && !this.#handHidden && this.#pieces.includes(pieceId)) {
-      this.#handHidden = true;
-      this.#bump();
-    }
+  /** Is `pieceId` one of the active step's highlighted blocks (presence `correctAction`, UX §13.1)? */
+  highlights(pieceId: PieceId): boolean {
+    return this.#phase === 'active' && this.#pieces.includes(pieceId);
   }
 
   /**
    * Drag signal (`overWall` = DragSession `crossedWall`, `gapPass` = `enteredRail`, `holdOverBuild` from the scene's
-   * hold timer); each counts at most once per drag, even when the drag is cancelled later.
+   * hold timer); each counts at most once per drag, even when the drag is cancelled later. Any block counts (no gate).
    */
   dragSignal(kind: DragSignalEvent, now: number, holdMs = 0): void {
     if (this.#dragCounted.has(kind)) return;
     const cond = this.#activeCond();
     if (!cond || cond.event !== kind) return;
-    if (this.#phase === 'shown' && this.#dragPiece !== null && !this.allowsPick(this.#dragPiece)) return;
     if (kind === 'holdOverBuild' && cond.event === 'holdOverBuild' && holdMs < cond.minMs) return;
     this.#dragCounted.add(kind);
     this.#hit(cond, now);
@@ -251,56 +227,49 @@ export class TutorialController {
     return cond?.event === 'holdOverBuild' ? cond.minMs : null;
   }
 
-  /** A tap (under the K-07 threshold) on block `pieceId`: counts for `tap` when the block is highlighted. */
-  tapped(pieceId: PieceId, now: number): void {
+  /**
+   * A tap (under the K-07 threshold) on block `target` (a PieceId) or on a highlighted HUD target (`booster:hammer` …):
+   * counts for `tap` when the target is highlighted by the step.
+   */
+  tapped(target: PieceId | string, now: number): void {
     const cond = this.#activeCond();
     if (!cond || cond.event !== 'tap') return;
     const step = this.steps[this.#index];
-    if (!step || !highlightedPieces(this.lvl, step.highlight).includes(pieceId)) return;
-    this.#hit(cond, now);
+    if (!step) return;
+    const hit =
+      typeof target === 'number'
+        ? highlightedPieces(this.lvl, step.highlight).includes(target)
+        : step.highlight.includes(target);
+    if (hit) this.#hit(cond, now);
   }
 
-  /**
-   * One committed move (drag or booster use) finished playing: move-end events count once, then the required-step
-   * guarantee runs on the new state.
-   */
+  /** One committed move (drag or booster use) finished playing: a move-end event counts once. */
   moveEnded(events: readonly GameEvent[], now: number): void {
     const cond = this.#activeCond();
     if (cond && moveMatches(cond, events, this.#host.state())) this.#hit(cond, now);
-    this.#guard(now);
-  }
-
-  /** K-43 replay: a `timeoutMs` step on screen ends now (the log has no clock; the player read it before acting). */
-  endTimedStep(now: number): void {
-    if (this.#phase !== 'shown') return;
-    const done = this.steps[this.#index]?.done;
-    if (done && 'timeoutMs' in done) this.#complete(now, false);
-  }
-
-  /** Per frame: `timeoutMs` steps. */
-  update(now: number): void {
-    if (this.#phase !== 'shown') return;
-    const done = this.steps[this.#index]?.done;
-    if (done && 'timeoutMs' in done && now - this.#since >= done.timeoutMs) this.#complete(now, false);
   }
 
   // --- internals ---------------------------------------------------------------------------------------------------------
 
-  /** The condition the controller listens for now: `startOn` while waiting, `done` while shown. */
+  /** The condition the controller listens for now: `startOn` while waiting, `done` while active. */
   #activeCond(): TutCondition | null {
     const step = this.steps[this.#index];
     if (!step) return null;
     if (this.#phase === 'waiting') return step.startOn ?? null;
-    if (this.#phase === 'shown' && !('timeoutMs' in step.done)) return step.done;
+    if (this.#phase === 'active') return step.done;
     return null;
   }
 
   #hit(cond: TutCondition, now: number): void {
     this.#count += 1;
     this.#positionVersion += 1;
-    if (this.#count < (cond.count ?? 1)) return;
-    if (this.#phase === 'waiting') this.#show(now);
-    else this.#complete(now, false);
+    if (this.#count < (cond.count ?? 1)) {
+      const step = this.steps[this.#index];
+      if (this.#phase === 'active' && step) this.#host.progressed?.(step.step, now);
+      return;
+    }
+    if (this.#phase === 'waiting') this.#activate(now);
+    else this.#complete(now);
   }
 
   #next(now: number): void {
@@ -318,39 +287,23 @@ export class TutorialController {
       this.#bump();
       return;
     }
-    this.#show(now);
+    this.#activate(now);
   }
 
-  #show(now: number): void {
+  #activate(now: number): void {
     const step = this.steps[this.#index];
     if (!step) return;
-    this.#phase = 'shown';
+    this.#phase = 'active';
     this.#count = 0;
     this.#since = now;
-    this.#handHidden = false;
     this.#pieces = highlightedPieces(this.lvl, step.highlight);
     if (step.textKey.startsWith(CTX_PREFIX)) this.#host.markContextTip(step.textKey.slice(CTX_PREFIX.length));
     this.#bump();
-    this.#guard(now);
   }
 
-  /** GDD §14.1/4b: a required step nobody can finish is skipped. */
-  #guard(now: number): void {
-    if (this.#phase !== 'shown') return;
+  #complete(now: number): void {
     const step = this.steps[this.#index];
-    if (!step || step.mode !== 'required' || 'timeoutMs' in step.done) return;
-    const s = this.#host.state();
-    if (!s) return;
-    const ok = canProduce(s, step.done, this.#pieces, {
-      drag: this.#host.dragRules(),
-      hooks: this.#host.hooks(),
-    });
-    if (!ok) this.#complete(now, true);
-  }
-
-  #complete(now: number, skipped: boolean): void {
-    const step = this.steps[this.#index];
-    if (step) this.#host.stepEnded(step.step, skipped, Math.max(0, Math.round(now - this.#since)));
+    if (step) this.#host.stepEnded(step.step, now);
     this.#next(now);
   }
 
@@ -361,12 +314,10 @@ export class TutorialController {
 }
 
 /**
- * K-43 resume without a saved position (old save; review Faz 2 tur 2 #8): feeds one replayed action to `tut` like the
- * live scene did — a timed step ends first; a drag starts, gives the drag signals its result proves (from the action's
- * `pieceMoved` event: `overWall` for a yard block released FREE over the site, `gapPass` for a block released on a
- * rail) and ends with the move's events. `holdOverBuild` is never assumed (the log has no hold duration; review Faz 2
- * tur 3 #1). Undo is skipped (the controller does not rewind). The host's `state()` must return the state right after
- * `action` (the guarantee sees the state of that time).
+ * K-43 resume without a saved position (old save): feeds one replayed action to `tut` like the live scene did — a drag
+ * starts, gives the drag signals its result proves (from the action's `pieceMoved` event: `overWall` for a yard block
+ * released FREE over the site, `gapPass` for a block released on a rail) and ends with the move's events.
+ * `holdOverBuild` is never assumed (the log has no hold duration). Undo is skipped (the controller does not rewind).
  */
 export function replayTutorialAction(
   tut: TutorialController,
@@ -375,7 +326,6 @@ export function replayTutorialAction(
   now: number,
 ): void {
   if (action.kind === 'start' || action.kind === 'undo') return;
-  tut.endTimedStep(now);
   if (action.kind === 'drag') {
     tut.dragStarted(action.pieceId);
     const moved = events.find((e) => e.t === 'pieceMoved' && e.pieceId === action.pieceId);
@@ -393,12 +343,11 @@ export interface SavedTutorialPosition extends TutorialPosition {
 }
 
 /**
- * K-43 resume of the tutorial (TECH §8.2; review Faz 2 tur 3 #1), driven by `GameSession.replay`'s per-action callback
- * (`index` 0 = `start`; the host's `state()` = the state right after `action`):
- * - with a usable saved position (`usable`): nothing until the last action it includes, then `restore` (the step on
- *   screen at that time, not one step further: the cancelled drags and holds the log does not hold are in it); every
- *   later action (its cues were still playing at the kill) gives only its move end — its drag signals came before the
- *   position was saved and are in it already;
+ * K-43 resume of the tutorial (TECH §8.2), driven by `GameSession.replay`'s per-action callback (`index` 0 = `start`;
+ * the host's `state()` = the state right after `action`):
+ * - with a usable saved position (`usable`): nothing until the last action it includes, then `restore` (the step of
+ *   that time, not one step further: the cancelled drags and holds the log does not hold are in it); every later
+ *   action (its cues were still playing at the kill) gives only its move end;
  * - without one: the whole log through `replayTutorialAction`.
  */
 export class TutorialResume {
@@ -415,6 +364,15 @@ export class TutorialResume {
   /** The saved position is the one restored (tests, debug). */
   get usable(): boolean {
     return this.#saved !== null;
+  }
+
+  /**
+   * Action `index` of the replay is after the saved position: the player made it live, but its move end never reached
+   * the tutorial (a kill while its cues played). A step it ends was never reported, so ANALYTICS `tutorial_step` is
+   * sent for it now (the scene mutes the rest of a replay).
+   */
+  isTail(index: number): boolean {
+    return this.#saved !== null && index >= this.#saved.actions;
   }
 
   action(index: number, action: SessionAction, events: readonly GameEvent[], now: number): void {

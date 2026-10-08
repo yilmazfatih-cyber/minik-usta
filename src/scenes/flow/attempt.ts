@@ -327,12 +327,11 @@ export class LevelAttempt {
   }
 
   /**
-   * ANALYTICS `tutorial_step` v6 (completed or skipped by the lock guarantee: the same record, TECH §8.2). `msToDone` =
-   * animation time from the step's first show to its end. `shows` = 1: the Faz 2 overlay stays on screen until the step
-   * ends; the Faz 2R `TutorialPresence` (TECH §2R.9, WP-H) counts the re-shows.
+   * ANALYTICS `tutorial_step` v6: once, when the step ends on its `done` event (K-53; hiding and showing again send
+   * nothing). `shows` (≥ 1) and `msToDone` (first show → done) come from the step's `TutorialPresence` (TECH §2R.9).
    */
-  tutorialStep(step: number, msToDone: number): void {
-    this.#deps.track({ name: 'tutorial_step', level: this.levelId, step, shows: 1, msToDone });
+  tutorialStep(step: number, msToDone: number, shows = 1): void {
+    this.#deps.track({ name: 'tutorial_step', level: this.levelId, step, shows, msToDone });
   }
 
   #levelEnd(session: GameSession, result: 'win' | 'lose' | 'quit', exitFree: boolean): void {

@@ -144,12 +144,12 @@ booster grant is kept and free trials add". Sunum (kilitli yuvada adet rozeti) d
 ### 4.1 Faz 2R güçlendirici değişiklikleri ve denge etkisi (R2-05; fiyatlar entrepreneur'ün, miktar product-lead'in)
 
 Tam örtü (GDD K-47) blok yaratan/yok eden her etkiyi kaldırdı. "Değer" = aynı işi hamleyle yapmanın maliyeti
-(karalama çözücüsü, Faz 2R Bölüm 1–10; Faz 3 bot ölçümüyle güncellenir). Referans: +5 teklifi 900 altın = 180 altın/hamle;
+(resmî solver `levels:solve`, Faz 2R Bölüm 1–10, 2026-10-07; Faz 3 bot ölçümüyle güncellenir). Referans: +5 teklifi 900 altın = 180 altın/hamle;
 Termos 450 = 150 altın/hamle.
 
 | Öğe | Faz 1 | Faz 2R (GDD) | Değer (hamle) | Denge etkisi ve miktar kararı |
 |---|---|---|---|---|
-| Çekiç | herhangi bir saha bloğunu yok eder; eksik malzemeyi Kamyon Yardımı `B1` olarak geri verirdi | yalnız Ağır Yük, kasa, torba, zincir; şantiyedeki moloz/harçlı bloğu sahaya indirir; malzeme kırılmaz (K-36) | Ağır Yüklü bölümde 2–3 (Bölüm 8: 8 → 5); hedefsiz bölümde **0** (yuva hedefsiz, "+" yok, GDD K-54) | Kullanım alanı daraldı: engelli bölümlere yoğunlaşır (8, 10; Faz 3'te kasa 11–12, moloz 17, torba 18, zincir 24, harç 35). **Tasarım kuralı (EN-2R-05):** 11–50'de Çekiç hedefli bölüm ≥ 20 (%50; LEVELS §3 Faz 2R notu madde 9). Faz 3 sonunda oran < %50 ise günlük ödül 2. gün (§8.1) ve Usta Sandığı (§8.5) Çekiç'i → Geri Al olur. Ücretsiz deneme 3 ve açılış 8 değişmez (Bölüm 8 dersi Çekiç'le kısalır). Fiyat **600 (değişmez)**. |
+| Çekiç | herhangi bir saha bloğunu yok eder; eksik malzemeyi Kamyon Yardımı `B1` olarak geri verirdi | yalnız Ağır Yük, kasa, torba, zincir; şantiyedeki moloz/harçlı bloğu sahaya indirir; malzeme kırılmaz (K-36) | Ağır Yüklü bölümde 3–4 (solver `hammer-start`: Bölüm 8: 8 → 5, Bölüm 10: 15 → 11); hedefsiz bölümde **0** (yuva hedefsiz, "+" yok, GDD K-54) | Kullanım alanı daraldı: engelli bölümlere yoğunlaşır (8, 10; Faz 3'te kasa 11–12, moloz 17, torba 18, zincir 24, harç 35). **Tasarım kuralı (EN-2R-05):** 11–50'de Çekiç hedefli bölüm ≥ 20 (%50; LEVELS §3 Faz 2R notu madde 9). Faz 3 sonunda oran < %50 ise günlük ödül 2. gün (§8.1) ve Usta Sandığı (§8.5) Çekiç'i → Geri Al olur. Ücretsiz deneme 3 ve açılış 8 değişmez (Bölüm 8 dersi Çekiç'le kısalır). Fiyat **600 (değişmez)**. |
 | Altın Mala | 1 plan hücresini blok olmadan doldurur | sahadaki (gömülü olabilir) bir malzeme bloğunu doğru konumuna koyar (K-33) | 1 yerleşim + o bloğun kazısı ≈ **2,5** (Faz 1: ≈ 0,5) | Kombo eşiği 4 değişmez (`correctPlacementsPerTrowel`; bölüm başına değişmez, GDD K-52). Değer 5 kat arttığı için galibiyet serisi mala miktarı azaltıldı (§5). Mala Başlangıcı (oyun öncesi) +1 mala, değer ≈ 2,5 hamle; fiyat **450** (180 altın/hamle). |
 | Boya Fırçası | bir bloğu istenen renge boyar | iki eşit hücreli bloğun rengini takas eder (K-38); takas döşeme çıkmazı üretecekse yapılmaz | 1–2 (kazı kısayolu ya da şekil düzeltme) | Faz 1'deki "eksik rengi tamamla" gücü yok; değeri düştü. Ücretsiz deneme 2 değişmez. Fiyat **450** (D-076). |
 | Vinç | değişmedi | saha hedefinde döndürmez; döşeme çıkmazı üreten hedef geçersiz (K-37) | 2–4 | Değer değişmez; fiyat 900 değişmez. |
@@ -461,7 +461,7 @@ Kumbara kaynak değildir (yalnızca satın alımla açılır): 10 galibiyet × �
 **Faz 2R notu (K-52 tamponu):** hamle tamponu artık bölüm uzunluğuyla orantılıdır; verimli oyuncunun kalan hamlesi
 Faz 1 tahmini 5 yerine ≈ 3,5 hamle olabilir → galibiyet satırı 10 × (35 + 10,5) ≈ 455 → **toplam (1–50) ≈ 985–1.085**;
 taban (≥ 900) korunur. Faz 3 ekonomi simülasyonu kesinleştirir. Fiyat kararı (entrepreneur, D-076, BUSINESS §5.4):
-Çekiç 600 (değişmez; Ağır Yüklü bölümde 2–3 hamle = 200–300 altın/hamle), Boya Fırçası 600 → 450 (1–2 hamle = 225–450
+Çekiç 600 (değişmez; Ağır Yüklü bölümde 3–4 hamle = 150–200 altın/hamle, solver turu: Bölüm 10'da 4), Boya Fırçası 600 → 450 (1–2 hamle = 225–450
 altın/hamle; Termos ile aynı **altın** fiyatı, hamle başı fiyatı Termos'unkinden (150) yüksektir), Mala Başlangıcı
 600 → 450 (≈ 2,5 hamle = 180 altın/hamle, E6). Tanıtım bölümlerinin (5, 6, 8, 9) tamponu Kolay satırından geldiği için
 (GDD K-52) 1–10'da kalan hamle ortalaması ≈ +1 artar; galibiyet satırı bunu ≈ +3 altın/bölüm olarak karşılar, taban

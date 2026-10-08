@@ -118,8 +118,7 @@ describe('K-43 kill / reload end to end (TECH 14.1 #13)', () => {
     expect(second.save.data.inLevel?.actions).toHaveLength(5); // start + 4 moves
   });
 
-  // WP-M ile yeniden üretilecek: the Faz 2 level data keep decoys, so K-48 (3) never lets them win.
-  it.fails(
+  it(
     'K-43 resumed attempt keeps level_end wrongPlacements and truckHelps of the moves before the kill (ANALYTICS 2)',
     () => {
       const store = new MemoryStore();
@@ -129,7 +128,7 @@ describe('K-43 kill / reload end to end (TECH 14.1 #13)', () => {
       const first = launch(store, clock, events);
       const a = LevelAttempt.begin(first.deps, lvl, { preBoosters: [], streakTier: 0 });
       const live = GameSession.start(lvl);
-      play(live, a, lvl, dragTo(1, 6, 8)); // W onto the Y row: K-17 bounce (one wrong placement)
+      play(live, a, lvl, dragTo(1, 4, 5)); // b (W) onto the Y column 4: K-17 bounce (one wrong placement)
 
       clock.advance(60_000);
       const second = launch(store, clock, events);
@@ -148,8 +147,7 @@ describe('K-43 kill / reload end to end (TECH 14.1 #13)', () => {
     },
   );
 
-  // WP-M ile yeniden üretilecek: the Faz 2 level data keep decoys, so K-48 (3) never lets them win.
-  it.fails(
+  it(
     'K-43 app killed during the win cues: the win was saved at the winning commit; relaunch goes home, paid once',
     () => {
       const store = new MemoryStore();

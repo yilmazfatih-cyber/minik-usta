@@ -30,42 +30,44 @@ const LINTEL: LevelSpec = {
 };
 
 describe('W1 Sabit Geçit — static gap (OBSTACLES W1, GDD K-04, K-12)', () => {
-  it('W1 applies to levels with a static gap (levels 3–4) and carries the obs.w1.desc card in TR and EN', () => {
-    expect(W1_staticGap.appliesTo(levelFile(3))).toBe(true);
+  it('W1 applies to levels with a static gap (levels 4 and 9) and carries the obs.w1.desc card in TR and EN', () => {
     expect(W1_staticGap.appliesTo(levelFile(4))).toBe(true);
-    expect(W1_staticGap.appliesTo(levelFile(5))).toBe(false); // wall without gaps
+    expect(W1_staticGap.appliesTo(levelFile(9))).toBe(true); // W3 = a static gap of size 1
+    expect(W1_staticGap.appliesTo(levelFile(3))).toBe(false); // wall without gaps
+    expect(W1_staticGap.appliesTo(levelFile(5))).toBe(false);
     expect(W1_staticGap.owns?.gapType).toBe('static');
-    expect(activeRuleIds(levelFile(3))).toEqual(['W1']);
-    expect(infoKeysFor(levelFile(3))).toEqual(['obs.w1.desc']);
+    expect(activeRuleIds(levelFile(4))).toEqual(['W1']);
+    expect(infoKeysFor(levelFile(4))).toEqual(['obs.w1.desc']);
     for (const locale of ['tr', 'en'] as const) expect(i18nText(locale, 'obs.w1.desc')).toMatch(/\S/);
   });
 
-  it('W1 K-04 the static gap is open from the level start and never closes (level 3 hand solution)', () => {
-    const s = createInitialState(levelFile(3));
-    const rows = (): string[] => [2, 3].map((y) => wallChar(s, y));
+  it('W1 K-04 the static gap is open from the level start and never closes (level 4 canonical solution)', () => {
+    const s = createInitialState(levelFile(4)); // wall 4, gap y 0 size 2
+    const rows = (): string[] => [0, 1].map((y) => wallChar(s, y));
     expect(gapField(s, 0, GF.open)).toBe(1);
     expect(rows()).toEqual(['=', '=']);
-    expect([0, 1, 4, 5].map((y) => wallChar(s, y))).toEqual(['#', '#', '#', '#']);
-    for (const m of HAND[3]) {
+    expect([2, 3].map((y) => wallChar(s, y))).toEqual(['#', '#']);
+    for (const m of HAND[4]) {
       expect(run(s, m).res.status).toBe('applied');
       expect(gapField(s, 0, GF.open)).toBe(1);
       expect(rows()).toEqual(['=', '=']);
     }
   });
 
-  it('W1 K-12 level 3 move 2: the block enters through the gap and stays at row 2 without falling', () => {
-    const s = createInitialState(levelFile(3));
-    run(s, HAND[3][0] ?? dragTo(0, 6, 8));
-    const r = run(s, dragTo(1, 6, 2, 0));
+  it('W1 K-12 level 4 move 3: the buried O4 slides through the gap onto the rail and is placed without falling', () => {
+    const s = createInitialState(levelFile(4));
+    run(s, HAND[4][0] ?? dragTo(0, 0, 0)); // e: shift
+    run(s, HAND[4][1] ?? dragTo(0, 0, 0)); // c: shift, the corridor opens
+    const r = run(s, dragTo(0, 4, 0, 0));
     expect(find(r.ev, 'pieceMoved')).toMatchObject({
-      pieceId: 1,
+      pieceId: 0,
       entry: 'gap',
       gap: 0,
-      to: { zone: 'site', x: 6, y: 2 },
+      to: { zone: 'site', x: 4, y: 0 },
     });
     expect(types(r.ev)).not.toContain('pieceFell');
-    expect(find(r.ev, 'placementCorrect')).toMatchObject({ pieceId: 1, overWall: false });
-    expect([pieceZone(s, 1), pieceX(s, 1), pieceY(s, 1)]).toEqual([Zone.site, 6, 2]);
+    expect(find(r.ev, 'placementCorrect')).toMatchObject({ pieceId: 0, overWall: false });
+    expect([pieceZone(s, 0), pieceX(s, 0), pieceY(s, 0)]).toEqual([Zone.site, 4, 0]);
   });
 
   it('W1 K-12 a rail block released over empty cells is held by the scaffold; over the wall it would fall (K-11)', () => {
@@ -132,10 +134,13 @@ describe('W1 Sabit Geçit — static gap (OBSTACLES W1, GDD K-04, K-12)', () => 
     expect([pieceX(s, 0), pieceY(s, 0)]).toEqual([4, 2]);
   });
 
-  it('W1 K-46 correct rail placements count as through the gap, not over the wall (level 3: YAO 2/3)', () => {
-    const s = createInitialState(levelFile(3));
-    for (const m of HAND[3]) run(s, m);
-    expect(measureYao(s)).toEqual({ overWall: 2, rail: 1, yao: 2 / 3 });
+  it('W1 K-46 correct rail placements count as through the gap, not over the wall (level 4: YAO 4/5, level 9: 3/4)', () => {
+    const four = createInitialState(levelFile(4));
+    for (const m of HAND[4]) run(four, m);
+    expect(measureYao(four)).toEqual({ overWall: 4, rail: 1, yao: 4 / 5 });
+    const nine = createInitialState(levelFile(9));
+    for (const m of HAND[9]) run(nine, m);
+    expect(measureYao(nine)).toEqual({ overWall: 3, rail: 1, yao: 3 / 4 });
   });
 
   it('W1 K-45 a gap must leave a closed wall row above it: y + size ≤ height − 1 (gap_touches_top)', () => {

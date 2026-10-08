@@ -53,7 +53,6 @@ const TWO_ROWS: LevelSpec = {
   ],
 };
 
-/** WP-M ile yeniden üretilecek: levels/level_001…005 are Faz 2 data (decoy blocks), so K-48 never lets them win. */
 /** A full-cover board (K-47): plan 2 × 2 W, two D2_0 W blocks. */
 const FULL: LevelSpec = {
   wall: { height: 2 },
@@ -64,58 +63,53 @@ const FULL: LevelSpec = {
   ],
 };
 
-describe('K-35 move pipeline on the hand solutions (LEVELS §2)', () => {
-  // WP-M ile yeniden üretilecek: the old level 5 keeps decoys in the yard → K-48 (3) holds back the win.
-  it.fails(
-    'K-35 level 5: segment shift, truck queue and win with 5 moves left (K-22, K-25, K-26, K-28)',
-    () => {
-      const s = createInitialState(levelFile(5));
-      const moves = HAND[5];
-      const ran = moves.slice(0, 3).map((m) => run(s, m));
-      for (const r of ran) expect(r.res.status).toBe('applied');
-      expectConsistent(s);
-      const third = ran[2]?.ev ?? [];
-      expect(types(third)).toEqual([
-        'pieceMoved',
-        'pieceFell',
-        'placementCorrect',
-        'comboChanged',
-        'movesChanged',
-        'segmentCompleted',
-        'goalProgress',
-        'siteShifted',
-        'deliveryArrived',
-        'pieceFell',
-        'pieceFell',
-        'pieceFell',
-        'deliveryQueued',
-      ]);
-      expect(find(third, 'segmentCompleted').seg).toBe(0);
-      expect(find(third, 'siteShifted').toSeg).toBe(1);
-      expect(find(third, 'goalProgress')).toMatchObject({ goal: 0, value: 1, target: 2, step: 8 });
-      expect(find(third, 'deliveryArrived').pieces).toEqual([13, 14, 15]);
-      expect(find(third, 'deliveryQueued').queued).toBe(1);
-      // LEVELS §2: k1_0 (2,6), k1_1 (4,7), k1_2 (0,6); k1_3 waits ("Kamyonda: 1")
-      expect([13, 14, 15].map((id) => [pieceX(s, id), pieceY(s, id)])).toEqual([
-        [2, 6],
-        [4, 7],
-        [0, 6],
-      ]);
-      expect(pieceZone(s, 16)).toBe(Zone.queue);
+describe('K-35 move pipeline on the canonical solutions (LEVELS §2)', () => {
+  it('K-35 level 5: segment shift, truck delivery and win with 6 moves left (K-22, K-25, K-28; LEVELS §2 Bölüm 5)', () => {
+    const s = createInitialState(levelFile(5));
+    const moves = HAND[5];
+    const ran = moves.slice(0, 5).map((m) => run(s, m));
+    for (const r of ran) expect(r.res.status).toBe('applied');
+    expectConsistent(s);
+    const fifth = ran[4]?.ev ?? [];
+    // d completes Sol Oda: the 4th correct in a row earns a trowel (K-33), then steps 8 (shift) and 9 (delivery)
+    expect(types(fifth)).toEqual([
+      'pieceMoved',
+      'pieceFell',
+      'placementCorrect',
+      'comboChanged',
+      'trowelEarned',
+      'comboChanged',
+      'movesChanged',
+      'segmentCompleted',
+      'goalProgress',
+      'siteShifted',
+      'deliveryArrived',
+      'pieceFell',
+      'pieceFell',
+      'pieceFell',
+      'pieceFell',
+    ]);
+    expect(find(fifth, 'segmentCompleted').seg).toBe(0);
+    expect(find(fifth, 'siteShifted').toSeg).toBe(1);
+    expect(find(fifth, 'goalProgress')).toMatchObject({ goal: 0, value: 1, target: 2, step: 8 });
+    expect(find(fifth, 'deliveryArrived')).toMatchObject({ step: 9, seg: 1, pieces: [4, 5, 6, 7] });
+    // LEVELS §2 Bölüm 5 "Kamyon partisi 1": k1_0 (0,0), k1_1 (0,2), k1_2 (1,2), k1_3 (2,0) — no queue
+    expect([4, 5, 6, 7].map((id) => [pieceX(s, id), pieceY(s, id), pieceZone(s, id)])).toEqual([
+      [0, 0, Zone.yard],
+      [0, 2, Zone.yard],
+      [1, 2, Zone.yard],
+      [2, 0, Zone.yard],
+    ]);
+    expect(hdr(s, H.queueLen)).toBe(0);
 
-      const fourth = run(s, moves[3] ?? dragTo(0, 0, 0)).ev;
-      expect(find(fourth, 'deliveryArrived').pieces).toEqual([16]);
-      expect([pieceX(s, 16), pieceY(s, 16), pieceZone(s, 16)]).toEqual([0, 6, Zone.yard]);
-      expect(find(fourth, 'deliveryQueued').queued).toBe(0);
-      run(s, moves[4] ?? dragTo(0, 0, 0));
-      const last = run(s, moves[5] ?? dragTo(0, 0, 0));
-      expect(last.res).toEqual({ status: 'applied', reason: null, won: true, outOfMoves: false });
-      expect(find(last.ev, 'levelWon').movesLeft).toBe(5);
-      expect(hdr(s, H.turn)).toBe(6);
-      expect(measureYao(s)).toEqual({ overWall: 6, rail: 0, yao: 1 });
-      expectConsistent(s);
-    },
-  );
+    const rest = moves.slice(5).map((m) => run(s, m));
+    const last = rest[rest.length - 1];
+    expect(last?.res).toEqual({ status: 'applied', reason: null, won: true, outOfMoves: false });
+    expect(find(last?.ev ?? [], 'levelWon')).toMatchObject({ step: 11, movesLeft: 6 });
+    expect(hdr(s, H.turn)).toBe(11);
+    expect(measureYao(s)).toEqual({ overWall: 8, rail: 0, yao: 1 });
+    expectConsistent(s);
+  });
 
   it('K-35 step numbers never go down inside a move and seq counts 0, 1, 2 …', () => {
     const s = createInitialState(levelFile(5));
@@ -128,25 +122,23 @@ describe('K-35 move pipeline on the hand solutions (LEVELS §2)', () => {
     }
   });
 
-  // WP-M ile yeniden üretilecek: the old level 3 keeps decoys in the yard → K-48 (3) holds back the win.
-  it.fails(
-    'K-46 level 3: two over-wall placements and one rail placement → YAO 2/3 (K-12 rail entry)',
-    () => {
-      const s = createInitialState(levelFile(3));
-      run(s, HAND[3][0] ?? dragTo(0, 0, 0));
-      const rail = run(s, HAND[3][1] ?? dragTo(0, 0, 0)).ev;
-      expect(types(rail)).toEqual(['pieceMoved', 'placementCorrect', 'comboChanged', 'movesChanged']);
-      expect(find(rail, 'pieceMoved')).toMatchObject({
-        entry: 'gap',
-        gap: 0,
-        to: { zone: 'site', x: 6, y: 2 },
-      });
-      expect(find(rail, 'placementCorrect').overWall).toBe(false);
-      const last = run(s, HAND[3][2] ?? dragTo(0, 0, 0));
-      expect(last.res.won).toBe(true);
-      expect(measureYao(s)).toEqual({ overWall: 2, rail: 1, yao: 2 / 3 });
-    },
-  );
+  it('K-46 level 4: four over-wall placements and one rail placement → YAO 4/5 (K-12 rail entry, LEVELS §2 Bölüm 4)', () => {
+    const s = createInitialState(levelFile(4));
+    run(s, HAND[4][0] ?? dragTo(0, 0, 0)); // e: shift
+    run(s, HAND[4][1] ?? dragTo(0, 0, 0)); // c: shift (the corridor opens)
+    const rail = run(s, HAND[4][2] ?? dragTo(0, 0, 0)).ev; // a through the gap
+    expect(types(rail)).toEqual(['pieceMoved', 'placementCorrect', 'comboChanged', 'movesChanged']);
+    expect(find(rail, 'pieceMoved')).toMatchObject({
+      entry: 'gap',
+      gap: 0,
+      to: { zone: 'site', x: 4, y: 0 },
+    });
+    expect(find(rail, 'placementCorrect').overWall).toBe(false);
+    let last = run(s, HAND[4][3] ?? dragTo(0, 0, 0));
+    for (const m of HAND[4].slice(4)) last = run(s, m);
+    expect(last.res.won).toBe(true);
+    expect(measureYao(s)).toEqual({ overWall: 4, rail: 1, yao: 4 / 5 });
+  });
 
   it('K-35 the event log is a pure function of state and move (eventLogHash)', () => {
     const play = (): GameEvent[] => {
@@ -178,39 +170,39 @@ describe('K-07 release table and move cost (K-35 steps 0 and 4)', () => {
   it('K-07 row 1: release on the start cells cancels and changes nothing', () => {
     const s = createInitialState(levelFile(5));
     const before = s.buf.slice();
-    const r = run(s, dragTo(2, 2, 6));
+    const r = run(s, dragTo(1, 2, 0)); // b (D2_0 W) released where it lies
     expect(r.res).toEqual({ status: 'cancelled', reason: 'sameSpot', won: false, outOfMoves: false });
-    expect(r.ev).toEqual([{ seq: 0, step: 0, t: 'moveCancelled', pieceId: 2, reason: 'sameSpot' }]);
+    expect(r.ev).toEqual([{ seq: 0, step: 0, t: 'moveCancelled', pieceId: 1, reason: 'sameSpot' }]);
     expect(s.buf).toEqual(before);
   });
 
   it('K-07 row 3: release over the yard with a cell in the crane area cancels at no cost (K-05)', () => {
     const s = createInitialState(levelFile(5));
     const before = s.buf.slice();
-    const r = run(s, dragTo(2, 2, 8));
+    const r = run(s, dragTo(1, 2, 5)); // H = 5: rows 5–6 are the crane area
     expect(r.res.reason).toBe('craneOverYard');
     expect(s.buf).toEqual(before);
   });
 
   it('K-07 row 2: a yard move costs 1 move, m += 1, the block stays where released (K-10)', () => {
     const s = createInitialState(levelFile(5));
-    const r = run(s, dragTo(2, 2, 7));
+    const r = run(s, dragTo(1, 2, 2)); // b up one block: hangs at (2,2) (gravity.yard false)
     expect(r.res.status).toBe('applied');
     expect(types(r.ev)).toEqual(['pieceMoved', 'movesChanged']);
     expect(find(r.ev, 'pieceMoved')).toMatchObject({
       step: 1,
       entry: 'yard',
-      from: { zone: 'yard', x: 2, y: 6 },
-      to: { zone: 'yard', x: 2, y: 7 },
+      from: { zone: 'yard', x: 2, y: 0 },
+      to: { zone: 'yard', x: 2, y: 2 },
     });
     expect(find(r.ev, 'movesChanged')).toMatchObject({
       step: 4,
-      movesLeft: 10,
+      movesLeft: 16,
       delta: -1,
       reason: 'move',
       cost: { base: 1, glass: 0 },
     });
-    expect([pieceX(s, 2), pieceY(s, 2), hdr(s, H.turn)]).toEqual([2, 7, 1]);
+    expect([pieceX(s, 1), pieceY(s, 1), hdr(s, H.turn)]).toEqual([2, 2, 1]);
     expectConsistent(s);
   });
 
@@ -229,9 +221,9 @@ describe('K-07 release table and move cost (K-35 steps 0 and 4)', () => {
   it('K-07 an invalid record (unpickable piece, unreachable node) is cancelled as invalid; strict throws', () => {
     const s = createInitialState(levelFile(5));
     const before = s.buf.slice();
-    const buried = run(s, dragTo(4, 0, 6), { strict: false });
-    expect(buried.ev).toEqual([{ seq: 0, step: 0, t: 'moveCancelled', pieceId: 4, reason: 'invalid' }]);
-    expect(run(s, dragTo(2, 0, 0), { strict: false }).res.reason).toBe('invalid');
+    const buried = run(s, dragTo(0, 4, 5), { strict: false }); // a (O4 R) lies under d (K-09)
+    expect(buried.ev).toEqual([{ seq: 0, step: 0, t: 'moveCancelled', pieceId: 0, reason: 'invalid' }]);
+    expect(run(s, dragTo(2, 0, 0), { strict: false }).res.reason).toBe('invalid'); // c onto a's cells
     expect(s.buf).toEqual(before);
     expect(() => run(s, dragTo(2, 0, 0))).toThrow(/not reachable/);
   });
@@ -244,34 +236,40 @@ describe('K-07 release table and move cost (K-35 steps 0 and 4)', () => {
   });
 
   it('K-35 step 1: `via` must name a paint gate whose rail the drag can reach', () => {
-    const s = createInitialState(levelFile(3));
-    expect(() => run(s, { kind: 'drag', pieceId: 1, to: { ix: 6, iy: 2, mode: 1 }, via: 0 })).toThrow(/via/);
+    const s = createInitialState(levelFile(4));
+    run(s, HAND[4][0] ?? dragTo(0, 0, 0));
+    run(s, HAND[4][1] ?? dragTo(0, 0, 0));
+    // a reaches the rail of gap 0, but W1 is a static gap, not a W6 paint gate
+    expect(() => run(s, { kind: 'drag', pieceId: 0, to: { ix: 4, iy: 0, mode: 1 }, via: 0 })).toThrow(/via/);
+    expect(run(s, HAND[4][2] ?? dragTo(0, 0, 0)).res.status).toBe('applied');
   });
 });
 
 describe('K-35 steps 2–3: fall, validation, bounce', () => {
   it('K-11 an over-wall release falls onto the silhouette: pieceFell{release} rows = d', () => {
     const s = createInitialState(levelFile(5));
-    const { ev } = run(s, HAND[5][0] ?? dragTo(0, 0, 0));
+    run(s, HAND[5][0] ?? dragTo(0, 0, 0)); // d shifts away, a is free
+    const { ev } = run(s, dragTo(0, 4, 5)); // a released in the crane area above column 4 (H = 5)
     expect(find(ev, 'pieceMoved')).toMatchObject({
       entry: 'overWall',
-      to: { zone: 'site', x: 6, y: 8, seg: 0 },
+      to: { zone: 'site', x: 4, y: 5, seg: 0 },
     });
     expect(find(ev, 'pieceFell')).toMatchObject({
       step: 2,
       cause: 'release',
-      from: { zone: 'site', x: 6, y: 8 },
-      to: { zone: 'site', x: 6, y: 0, seg: 0 },
-      rows: 8,
+      from: { zone: 'site', x: 4, y: 5 },
+      to: { zone: 'site', x: 4, y: 0, seg: 0 },
+      rows: 5,
     });
     expect(find(ev, 'placementCorrect')).toMatchObject({ step: 3, overWall: true });
   });
 
   it('K-17 a wrong placement bounces back to the start, burns 1 move and resets the streak', () => {
     const s = createInitialState(levelFile(5));
-    run(s, HAND[5][0] ?? dragTo(0, 0, 0)); // b → (6,0), streak 1
+    run(s, HAND[5][0] ?? dragTo(0, 0, 0)); // d (D2_90 W) → (2,2)
+    run(s, HAND[5][1] ?? dragTo(0, 0, 0)); // a (O4 R) → (4,0), streak 1
     expect(hdr(s, H.combo)).toBe(1);
-    const r = run(s, dragTo(3, 6, 8)); // d (D2_90 R) lands on (6,1) = W
+    const r = run(s, dragTo(1, 5, 5)); // b (D2_0 W) falls onto (5,2)–(5,3), plan Y Y
     expect(types(r.ev)).toEqual([
       'pieceMoved',
       'pieceFell',
@@ -282,14 +280,14 @@ describe('K-35 steps 2–3: fall, validation, bounce', () => {
     ]);
     expect(find(r.ev, 'placementWrong')).toMatchObject({ reasons: ['color'], missingSupport: [] });
     expect(find(r.ev, 'pieceBounced')).toMatchObject({
-      from: { zone: 'site', x: 6, y: 1 },
-      to: { zone: 'yard', x: 4, y: 6 },
+      from: { zone: 'site', x: 5, y: 2 },
+      to: { zone: 'yard', x: 2, y: 0 },
       viaDrop: false,
       reason: 'color',
     });
     expect(find(r.ev, 'comboChanged').combo).toBe(0);
-    expect([pieceX(s, 3), pieceY(s, 3), pieceZone(s, 3)]).toEqual([4, 6, Zone.yard]);
-    expect([hdr(s, H.movesLeft), hdr(s, H.combo), hdr(s, H.wrongCount)]).toEqual([9, 0, 1]);
+    expect([pieceX(s, 1), pieceY(s, 1), pieceZone(s, 1)]).toEqual([2, 0, Zone.yard]);
+    expect([hdr(s, H.movesLeft), hdr(s, H.combo), hdr(s, H.wrongCount)]).toEqual([14, 0, 1]);
     expectConsistent(s);
   });
 

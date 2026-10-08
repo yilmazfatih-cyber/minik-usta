@@ -18,7 +18,13 @@ import {
 import type { GameState } from '../../core/state.ts';
 import { COLOR_CODES, Zone } from '../../core/types.ts';
 import type { PieceId } from '../../core/types.ts';
-import { bakedFlagsOf, blockFrameName } from '../../theme/textures.ts';
+import {
+  bakedFlagsOf,
+  blockFrameName,
+  cargoFrameName,
+  cargoKindOf,
+  glossFrameName,
+} from '../../theme/textures.ts';
 import type { Pose } from './motion.ts';
 
 /** Where piece `id` rests in the state (board anchor), or null when it is not visible on the board. */
@@ -30,11 +36,20 @@ export function statePose(s: GameState, id: PieceId): Pose | null {
   return null;
 }
 
-/** Block frame of piece `id` as it is now (shape, colour, baked flags). */
+/** Block frame of piece `id` as it is now (shape, colour, baked flags); an Ağır Yük has its own frame (K-44, ART §6). */
 export function pieceFrameName(s: GameState, id: PieceId): string {
+  const shape = shapeByIndex(pieceShape(s, id)).id;
+  const cargo = pieceColor(s, id) < 0 ? cargoKindOf(shape) : null;
+  if (cargo) return cargoFrameName(cargo);
   const color = COLOR_CODES[pieceColor(s, id)];
   if (color === undefined) throw new RangeError(`piece ${id}: bad colour ${pieceColor(s, id)}`);
-  return blockFrameName(shapeByIndex(pieceShape(s, id)).id, color, bakedFlagsOf(pieceFlags(s, id)));
+  return blockFrameName(shape, color, bakedFlagsOf(pieceFlags(s, id)));
+}
+
+/** v2 holdable gloss frame of piece `id` (DL-2R-17); null for an Ağır Yük (no studs, no gloss). */
+export function pieceGlossName(s: GameState, id: PieceId): string | null {
+  if (pieceColor(s, id) < 0) return null;
+  return glossFrameName(shapeByIndex(pieceShape(s, id)).id);
 }
 
 /**

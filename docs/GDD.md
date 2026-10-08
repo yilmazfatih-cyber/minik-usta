@@ -1,6 +1,8 @@
 # GDD — Oyun kuralları
 
-Sahip: product-lead · Sürüm: Faz 2R (2026-10-07; orkestratör kararları R2-01…R2-06, R2-10, R2-11 — `docs/review_inbox/_orchestrator_rulings_2R.md`; çapraz inceleme kapanışı `docs/review_inbox/product-lead-2R-closure.md`) · Önceki: Faz 1 revizyonu (2026-10-04; R-01…R-24; tutarlılık denetimi tur 1–2, 2026-10-05; Faz 2 ifade düzeltmesi K-08/K-26, 2026-10-06) · Kaynak: `docs/BRIEF.md` §4–§8, §10
+Sahip: product-lead · Sürüm: Faz 2R solver turu (2026-10-07; code-lead WP-E soruları: K-29/K-30 D1 yeniden dizme ve +5
+sonrası, K-50 madde 8 `deadRate` paydası, K-51 madde 2 bütün uzay çıkmaz kapısı ve madde 5 teslimat adaleti, §14 eldiven
+çalışma anı gizlemesi, E-54; örnekler yeni Bölüm 5, 10 verisine göre) · Önceki: Faz 2R (2026-10-07; orkestratör kararları R2-01…R2-06, R2-10, R2-11 — `docs/review_inbox/_orchestrator_rulings_2R.md`; çapraz inceleme kapanışı `docs/review_inbox/product-lead-2R-closure.md`) · Önceki: Faz 1 revizyonu (2026-10-04; R-01…R-24; tutarlılık denetimi tur 1–2, 2026-10-05; Faz 2 ifade düzeltmesi K-08/K-26, 2026-10-06) · Kaynak: `docs/BRIEF.md` §4–§8, §10
 
 Bu belge oyunun **bütün** kurallarını kimlikle (K-xx) verir. Brifteki K-01…K-33 kimlikleri ve anlamları korunmuştur;
 yalnızca belirsizlikleri sayıyla kapatan açıklamalar eklenmiştir. Yeni kurallar K-34'ten başlar. Engel ayrıntıları
@@ -529,7 +531,7 @@ doğru yerleşir. Bir partinin blokları yalnız kendi dilimi için değildir: s
 partide gelebilir ("taşınan malzeme", LEVELS §2.0). Doğrulayıcı K-47'nin eşitlik ve birikimli koşullarını denetler;
 solver en az bir çözümün varlığını ve çözümde kullanılmayan blok kalmadığını (`unused_block`) kanıtlar. Ağır Yük (Y5)
 malzeme değildir; partide bulunabilir, sayılmaz.
-**Örnek:** Bölüm 5, dilim 2'de 4 R, 2 W, 4 Y hücresi var; parti 1: `D2_0` R, `D2_0` W, `D2_90` Y ×2, `D2_90` R → R 4,
+**Örnek:** Bölüm 5, dilim 2'de 4 R, 2 W, 4 Y hücresi var; parti 1: `O4` Y, `D2_0` R ×2, `D2_90` W → R 4,
 W 2, Y 4 → geçerli. Partiye bir `C3` W (3) eklenirse W arzı 5 > 2 → `cover_mismatch` (eski kuraldaki "şaşırtma" artık
 geçersizdir).
 
@@ -567,8 +569,15 @@ penceredeki kalan blok bilgisi Söküm sonrası durumu gösterir (BUSINESS E5, E
 before the offer window".
 Kabul edilirse sayaç 5 olur ve oyun aynı durumdan sürer (zamanlayıcılar, `m`, `movesSpent` ve Usta Serisi değişmez);
 ardından **yalnız K-30 D1 denetimi bir kez çalışır** (sayaç 0 iken D1 çalışmaz, K-30): hiçbir blok K-09 (a)–(d)'ye göre
-tutulamıyorsa D1 yardımı uygulanır, ardından D3 denetlenir. Gerekçe: son hamle D1 durumu üretip sayacı 0 yaptıysa
-teklif sonrası denetim olmadan oyuncu +5'i ödeyip hiçbir bloğa dokunamazdı (E-42). Reddedilirse bölüm kaybedilir:
+tutulamıyorsa D1 yardımı uygulanır; **D3 bu noktada denetlenmez** (Faz 2R solver turu, code-lead WP-E sorusu 2: KABUL).
+Gerekçe: son hamle D1 durumu üretip sayacı 0 yaptıysa teklif sonrası denetim olmadan oyuncu +5'i ödeyip hiçbir bloğa
+dokunamazdı (E-42). D3'ün atlanmasının gerekçesi: (1) pencere, sayaç 0'daki adım 12'nin D2 ve D3 denetiminden (ve
+gerekiyorsa Söküm'den) sonra açılır, yani teklif anındaki durum zaten D3 temizdir; (2) yeniden dizme yalnız saha
+konumlarını değiştirir, D3a erişimi yok saydığı için aynı sonucu verir; (3) D3b tablosu sürükleme hamleleriyle üretilen
+durumları tutar, yeniden dizilmiş tahta tabloda bulunmaz; (4) teklif bir eylem değildir, Söküm'ün döneceği "son eylem
+öncesi" durumu yoktur. Örnek: sayaç 0, saha yerleşimi D1 (hiçbir blok kımıldamıyor), adım 12 D2/D3 temiz → pencere →
+oyuncu +5'i kabul eder → D1 yardımı sahayı yeniden dizer → oyun sayaç 5 ile sürer; D3 çağrılmaz (test "K-29 after +5 only
+D1 runs once"). Reddedilirse bölüm kaybedilir:
 1 can gider, galibiyet serisi sıfırlanır, Sallanan Köprü'deyse oyuncu elenir.
 **Örnek:** Kalan 0, plan %90 dolu; teklif 1'de oyuncu reklam izler → kalan 5. Yine biter → teklif 2: altın 1.350, reklam
 seçeneği yok (reklam yalnız 1. teklifte). Reddeder → kayıp.
@@ -587,7 +596,17 @@ bittikten sonra açılır). Çekirdek şu denetimleri bu sırayla yapar:
 - **D1 Hamle yok** (yalnız sayaç > 0 iken; sayaç 0 iken çalışmaz, +5 kabulünden sonra bir kez çalışır, K-29): hiçbir
   blok K-09 (a)–(d)'ye göre tutulamıyor (sayaç koşulu (e) bu denetimde yok sayılır). Yardım: bütün zincirler ve ıslaklık
   kalkar; hâlâ D1 ise saha yeniden dizilir — blokların şekli, rengi ve sayısı korunur, yalnız saha konumları değişir
-  (yöntem TECH §2R.4, §9.7). Ardından D3 denetimi yapılır.
+  (yöntem TECH §2R.4, §9.7). **Yeniden dizme kabul sırası (Faz 2R solver turu, code-lead WP-E sorusu 1: KABUL):** en çok
+  8 belirlenimci deneme (TECH §2R.4 madde 3); kabul edilen dizilim, şu sırayla ilk tutan denemedir: (1) 1 sürüklemede
+  doğru yerleşim veren; (2) yoksa en az bir bloğu K-09 (a)–(d)'ye göre tutulabilir bırakan; (3) hiçbiri yoksa tahta
+  değişmez ve olay üretilmez. Faz 2R içeriğinde (2) her zaman bulunur: saha alttan doldurulduğu için en üst dolu
+  satırdaki malzeme bloğunun üstü boş bir saha hücresi, saha üstü hava ya da Vinç Alanı'dır (Vinç Alanı her zaman açıktır,
+  K-05) ve yukarı öteleme geçerlidir (K-09 örneği). (3) yalnız Faz 3 engelleri (kasa Y1, torba Y2 yerinde kalır) bütün
+  kaçışları kapatırsa olabilir; o bölümlerde solver D1 durumunun erişilemediğini kanıtlar, kanıtlanamazsa bölüm yeniden
+  tasarlanır. **Ardından** (yalnız sayaç > 0 iken çalışan normal adım 12'de) D3 denetimi yapılır; +5 kabulünden sonraki
+  tek D1 çalışmasında D3 yapılmaz (K-29). Örnek (varsayımsal; Bölüm 1–10'da D1 durumu yoktur): her bloğu kapalı bir
+  sahada yeniden dizme 1. denemede ilk gereken bloğu duvara en yakın en yüksek boş yere koyar; o konumdan 1 sürüklemede
+  doğru yerleşim varsa dizilim (1) ile kabul edilir.
 - **D2 Renk dengesi:** bir renk c için kalan arz(c) ≠ kalan talep(c) (kalan arz = sahada, kuyrukta, teslim edilmemiş
   partilerde ve şantiyede kilitsiz duran — moloz, yapışmış harç — malzeme blokları). Faz 2R kurallarıyla oluşamaz
   (renk değiştiren kurallar renk başına arzı korur: Boya Fırçası takası K-38); güvenlik ağıdır. **Boya Kapısı (W6) olan
@@ -760,8 +779,8 @@ Ağır Yük (I5, Q9) döndürülmez ve şantiyeye konamaz. **Ön denetim:** hede
 denetlenir; "çıkmaz" ise hedef geçersizdir. Vinçle şantiyeye konan blok düşmez, rüzgâr ve cam kuralları uygulanmaz;
 doğru yerleşim olarak kilitlenir ama Usta Serisi'ne ve YAO'ya sayılmaz. Geçersiz hedef = işlem yapılmaz, güçlendirici
 harcanmaz. Vinç bloğu taşır, yok etmez; tam örtüyle uyumludur.
-**Örnek:** Bölüm 10 dilim 2'de y0–y2 doğru dolu iken sahadaki `O4_0` G (gömülü olsa bile) Vinçle seçilir → (6,3) doğru
-konumuna konur. Ws = 2 iken `C3_0` W Vinçle seçilir; şantiye hedefi için 90° döndürülür → `C3_90` olarak doğru konuma
+**Örnek:** Bölüm 10 dilim 2'de y0–y2 doğru dolu iken sahadaki `D2_0` G (gömülü olsa bile, ör. (5,0)'daki `k1_2`) Vinçle
+seçilir → (6,3) doğru konumuna konur. Ws = 2 iken `C3_0` W Vinçle seçilir; şantiye hedefi için 90° döndürülür → `C3_90` olarak doğru konuma
 konur. Aynı blok sahada boş bir konuma taşınırken döndürme düğmesi kapalıdır (`C3_0` kalır).
 
 ### K-38 Boya Fırçası — Renk Takası (Faz 2R)
@@ -928,9 +947,11 @@ Faz 2R'de eklendi, **değişti** = anlamı Faz 2R'de değişti.
    LEVEL_REPORT'ta kırmızı listelenir ve LEVELS'taki bölüm kaydına product-lead "tarama eksik — kabul" notu (gerekçe +
    elle denetlenen tuzak kaynakları, LEVELS §2.0 madde 4) yazılana kadar yayına girmez (K-51 madde 2).
    `metric_out_of_band` (K-50 ölçütlerinden biri LEVELS hedef aralığının dışında; warn), `batch_queued` (kanonik
-   çözümde bir kamyon bloğu kuyrukta bekliyor; warn). **Bilinçli uyarılar:** bölüm verisine alan açılmaz; gerekçe
-   LEVELS'taki bölüm kaydına yazılır ve uyarı code-lead'in `tools/levels-allow.json` dosyasında bölüm bölüm susturulur
-   (ör. `{ "10": ["batch_queued"] }`; Bölüm 10 dilim 2'nin bilinçli kuyruğu, E-54).
+   çözümde bir kamyon bloğu kuyrukta bekliyor; warn); **istenen (Faz 2R solver turu):** bütün uzay çıkmaz kapısı (K-51
+   madde 2; error) ve `delivery_foresight` (K-51 madde 5; warn). **Bilinçli uyarılar:** bölüm verisine alan açılmaz;
+   gerekçe LEVELS'taki bölüm kaydına yazılır ve uyarı code-lead'in `tools/levels-allow.json` dosyasında bölüm bölüm
+   susturulur (ör. `{ "12": ["batch_queued"] }`; Faz 2R Bölüm 1–10'da susturulan uyarı yoktur — Bölüm 10'un eski
+   bilinçli kuyruğu solver turunda kaldırıldı, E-54).
 10. Öğretim: bir bölümün mekanik kümesi veriden türetilir (OBSTACLES "Veri imzası" tablosu; yalnızca imzası tanımlı
    mekanikler). Bölümde, önceki bölümlerin kümelerinde olmayan **en çok 1** mekanik vardır (`too_many_new_mechanics`).
    `teaches` isteğe bağlıdır; verilmişse türetilen yeni mekaniğe eşit olmalıdır (`teaches_mismatch`). Engel olmayan
@@ -1035,7 +1056,12 @@ bölüm başına LEVELS §2'dedir; zorunlu alt sınırlar K-51'dedir.
    çıkmaz olmayan bir durumdan bir doğru yerleşim hamlesiyle (ya da boya kapısından geçen hamleyle) girilen çıkmaz durum.
 8. **Tarama kapsamı `K`:** başlangıçtan doğru yerleşimler + en çok `minShifts + 1` kaydırma hamlesiyle ulaşılan bütün
    durumlar. **`trapCount`** = K içindeki ✓-tuzağı geçişlerinin sayısı. **`deadRate`** = K içinde çıkmaza giden doğru
-   yerleşim geçişleri / K içindeki bütün doğru yerleşim geçişleri (0–1).
+   yerleşim geçişleri / K içindeki bütün doğru yerleşim geçişleri (0–1). **Payda (Faz 2R solver turu, code-lead WP-E
+   okuması KABUL):** pay ve payda yalnız K içindeki **çıkmaz olmayan** durumlardan çıkan doğru yerleşim (ve boya kapılı)
+   geçişlerini sayar; çıkmaz bir durumdan çıkan geçiş ikisine de girmez. Kaydırma geçişleri (o hamlenin 9. adımındaki
+   teslimat dahil) `trapCount`'a ve `deadRate`'e girmez; onları K-51 madde 2'nin bütün uzay kapısı denetler. Örnek: K'de
+   40 canlı durumdan 200 doğru yerleşim geçişi çıkıyor, 4'ü çıkmaza giriyor → `deadRate` = 0,02; çıkmaz durumlardan çıkan
+   15 geçiş sayılmaz.
 9. **Seçenek sayısı:** kanonik çözümün k'inci durumunda (k = 0, 1, 2): **`choices@k`** = tek bir sürükleme hamlesiyle
    ulaşılan, tahtası değişmeyen hatalı yerleşim ve iptal hariç, hamle bütçesinin kalanıyla hâlâ kazanılabilir
    durumların sayısı; **`bestChoices@k`** = bunlardan en kısa çözümde kalan (kazanmaya uzaklığı 1 azalan) durumların
@@ -1060,10 +1086,29 @@ altında → `firstNeedDepth` = 1, `firstNeedCover` = 1; `trapCount` = 0, `deadR
    9) bölüm yalnız LEVELS kaydında product-lead'in "tarama eksik — kabul" notuyla yayına girer. **Söküm bedeli (Faz 3
    bot ölçümü, EN-2R-07):** Zor ve Çok Zor bölümde orta botun deneme başına Söküm sayısının medyanı ≤ 1,0 olmalıdır
    (LEVEL_REPORT sütunu "Söküm / deneme"); aşılırsa önce T 1 artırılır (K-52 tablosunun dışına çıkılmaz, `a` ile), yine
-   aşılırsa tuzak kaynağı kaldırılır.
+   aşılırsa tuzak kaynağı kaldırılır. **Bütün uzay kapısı (Faz 2R solver turu; D3b tablosu olmayan bölüm, TECH §2R.4
+   kesme 1):** solver'ın keşfettiği bütün durum uzayında (kapsam K ile sınırlı değil), çıkmaz olmayan bir durumdan
+   herhangi bir sürükleme hamlesiyle (yerleşim, ray ya da kaydırma; o hamlenin 9. adımındaki teslimat dahil) girilen ve
+   D1/D2/D3a'nın yakalamadığı (K-30) **hiçbir çıkmaz durum olmamalıdır**; bütün zorluklarda error (araç kapısı; kod adı
+   code-lead'in, `dead_table_missing` genişletilebilir). Gerekçe: böyle bir durumda Söküm gelmez ve oyuncu bütçe bitene
+   kadar sıkışır; `trapCount = 0` bunu yakalamaz çünkü ✓-tuzağı yalnız yerleşim geçişini sayar. Örnek: Bölüm 10'un
+   kuyruklu taslağında canlı durumlardan çıkan 1 618 kaydırma, kuyruktaki `O4` G'yi `O4` W'nin üstüne düşürüp 338 çıkmaz
+   duruma götürüyordu (`trapCount` 0, `deadRate` 0) → taslak yeniden kuruldu (LEVELS §2.11). Bölüm D3b tablosu taşıdığında
+   (Faz 3) bu kapı o bölüm için kalkar: tablodaki her durum Söküm'le kurtarılır.
 3. K-50'nin her ölçütü LEVELS §2 (Faz 3'te §3) hedef aralığında olmalıdır; dışındaysa `metric_out_of_band` (warn) ve
    bölüm product-lead'e geri döner.
 4. YAO ≥ 0,60 (K-46).
+5. **Teslimat adaleti (Faz 2R solver turu).** Kamyon partisinin içeriği ve düşeceği sütunlar oyuncuya gösterilmez (UX
+   §5.9: yalnız "+n" rozeti; kuyruktaki bloğun önizlemesi yalnız kuyrukta görünür), bu yüzden en kısa çözüm gelecek
+   partiyi bilmeyi gerektirmemelidir. Her parti k ≥ 1 için: `D(k)` = başlangıçtan, parti k'nin teslim edildiği (dilim
+   k−1'in tamamlandığı) bir duruma en az hamle; `T(k)` = bu en az hamleyle varılan teslim sonrası durumlar; **önsezi
+   kazancı** `g(k) = D(k) + min_{s∈T(k)} dist(s) − min`; **şans farkı** `f(k) = max_{s∈T(k)} dist(s) − min_{s∈T(k)}
+   dist(s)` (`dist` = kazanmaya en az hamle, K-50). Kural: bütün k için `g(k) = 0` ve `f(k) = 0`; bozulursa
+   `delivery_foresight` (warn; solver denetimi code-lead'den istendi, o gelene kadar product-lead karalama aracıyla ölçer
+   ve LEVELS kaydına yazar). `carousel` kipinde parti k, k'inci tamamlanan dilimle gelir; tanım aynıdır. **Örnek:** Bölüm
+   10'un bir ara taslağında `D(1) = 8` ve `T(1)`'deki iki durumdan kazanmaya 8 ve 9 hamle kalıyordu; dilim 1'in son
+   bloğundan önce yük sağ alta indirilirse (9 hamle) kamyon dilim 2'yi yükün üstüne döküyor, 6 hamle kalıyordu → `min`
+   15, `g = 8 + 8 − 15 = 1`, `f = 1` → parti sırası değiştirildi; son taslakta `g = 0`, `f = 0` (LEVELS §2.11).
 **Örnek:** Bölüm 3'te `O4` G sahanın sağ altına, `D2_0` Y ile `D2_0` W üstte açık konursa `firstNeedDepth` = 0 →
 `puzzle_first_reachable`. Bölüm 3 taslağının ilk sürümünde `O4` W planı ile `D2_0` W aynı renkteydi → `trapCount` = 20 →
 `trap_in_easy` (LEVELS §2.0 "tuzak kaynağı").
@@ -1091,8 +1136,8 @@ en az 1 artırılır ya da Altın Mala'nın atlattığı kazı derinliği azalt�
 değiştirilmez. Gerekçe: oyuncunun israfı (gereksiz kaydırma, hatalı
 bırakma) bölüm uzunluğuyla büyür; eski sabit tampon (Çok Zor +2) 36 hamlelik bölümde %5,5'lik pay bırakıyordu. Taban
 kısa bölümleri affedici tutar.
-**Örnek:** Bölüm 3: min 5, Kolay → T = max(6, 3) = 6 → 11 (a = 0). Bölüm 10: min 13, Zor → T = max(3, ⌈2,6⌉) = 3 → 16;
-bot oranı %60 çıkarsa a = −1 → 15 (|a| ≤ max(1, 1) = 1; 15 − 13 = 2 ≥ taban 2); oran a = −1 ile de bandın üstündeyse
+**Örnek:** Bölüm 3: min 5, Kolay → T = max(6, 3) = 6 → 11 (a = 0). Bölüm 10: min 15, Zor → T = max(3, ⌈3⌉) = 3 → 18;
+bot oranı %60 çıkarsa a = −1 → 17 (|a| ≤ max(1, ⌊1,5⌋) = 1; 17 − 15 = 2 ≥ taban 2); oran a = −1 ile de bandın üstündeyse
 bölüm yeniden tasarlanır. Bölüm 5 (Normal, `teaches: "S1"`): min 11 → Kolay satırı T = max(6, ⌈5,5⌉) = 6 → 17; taban 4.
 
 ### K-53 Öğretici: hafif ve kilitlemez — YENİ (Faz 2R, R2-10)
@@ -1138,7 +1183,7 @@ satır küçükten büyüğe, aynı satırda x küçükten büyüğe (y, x sıra
 | 9 | Teslimat: kuyruktaki bütün bloklar FIFO sırasıyla birer kez denenir. | K-25, K-26 |
 | 10 | Zamanlayıcılar, bu sırayla: Kepenk (W4) → Kayar Kapı (W5) → Döner Platform sayacı (S5; bu hamlenin 8. adımında ön dilim tamamlandıysa artmaz, K-23) → Asansör (S6) → Islak Beton (Y4; bu hamlenin 9. adımında teslim edilen bloklar hariç) → Açık Kepenk süresi (K-40). | W4, W5, S5, S6, Y4 |
 | 11 | Kazanma (K-28) → değilse hamle bitti mi (K-29); bittiyse pencere adım 12'den **sonra** açılır. | K-28, K-29 |
-| 12 | Bölüm kazanılmadıysa (Faz 2R: sayaç 0 iken de) kilitlenme denetimi ve Kamyon Yardımı (K-30): sayaç > 0 iken D1 → D2 → D3; sayaç 0 iken D2 → D3; D1 yeniden dizme, D2/D3 → Söküm; blok teslimatı yok. Sonra, sayaç 0 ise K-29 penceresi açılır. +5 teklifi kabul edildiğinde hamle olmadan yalnız D1 (ve D1 yardım yaptıysa D3) bir kez çalışır (K-29). | K-29, K-30 |
+| 12 | Bölüm kazanılmadıysa (Faz 2R: sayaç 0 iken de) kilitlenme denetimi ve Kamyon Yardımı (K-30): sayaç > 0 iken D1 → D2 → D3; sayaç 0 iken D2 → D3; D1 yeniden dizme, D2/D3 → Söküm; blok teslimatı yok. Sonra, sayaç 0 ise K-29 penceresi açılır. +5 teklifi kabul edildiğinde hamle olmadan yalnız D1 bir kez çalışır; D3 çalışmaz (K-29, Faz 2R solver turu). | K-29, K-30 |
 
 **Sıranın gerekçesi**
 1. **Komşu etkileri (5) yerçekiminden (6) önce:** yırtılan torba ve kırılan kasa aynı hamlede boşluk açar, yerçekimi
@@ -1210,7 +1255,7 @@ Her satır bir test senaryosudur (test adı "E-xx …" ve ilgili K kimliği).
 | E-39 | Sürükleme sırasında blok önce R boya kapısına, sonra Y boya kapısına girip sahaya bırakılır | Blok Y olur (son girilen); `via` = Y kapısının indeksi; 1 hamle | W6, K-35 |
 | E-40 | G-L: blok düşerken oyuncu başka bir bloğu tutar | Yönlendirme penceresi kapanır, düşen blok yönlendirmesiz (ya da daha önce yönlendirildiyse o haliyle) iner; yeni blok tutulur | K-19, R-12 |
 | E-41 | `movesSpent = 0` (Faz 2R; eski `m = 0`), galibiyet serisi kademe 2 bonusu (Faz 2R: +1 hamle, +1 mala) verilmiş; oyuncu çıkar | Ceza yok; can, oyun öncesi güçlendiriciler iade; bonus tüketilmez, sonraki girişte yine verilir | K-40, K-43 |
-| E-42 | (Faz 2R) Son hamle hiçbir bloğun tutulamadığı bir durum (D1) üretir ve sayacı 0 yapar | Adım 12'de D2 ve D3 çalışır (D1 sayaç 0 iken çalışmaz); çıkmaz yoksa kayıp penceresi açılır. Oyuncu +5'i kabul eder → D1 bir kez çalışır: zincirler/ıslaklık kalkar, hâlâ D1 ise saha yeniden dizilir, ardından D3 denetlenir; oyuncu 5 hamleyle oynayabilir. `m`, `movesSpent`, zamanlayıcılar ve seri değişmez | K-29, K-30 |
+| E-42 | (Faz 2R) Son hamle hiçbir bloğun tutulamadığı bir durum (D1) üretir ve sayacı 0 yapar | Adım 12'de D2 ve D3 çalışır (D1 sayaç 0 iken çalışmaz); çıkmaz yoksa kayıp penceresi açılır. Oyuncu +5'i kabul eder → D1 bir kez çalışır: zincirler/ıslaklık kalkar, hâlâ D1 ise saha yeniden dizilir (K-30 kabul sırası); D3 denetlenmez (K-29, Faz 2R solver turu); oyuncu 5 hamleyle oynayabilir. `m`, `movesSpent`, zamanlayıcılar ve seri değişmez | K-29, K-30 |
 | E-43 | Harçlı blok (7,1) `.` hücresine yapıştı (E-24; Faz 2R: S2 MVP dışı, yalnız S2 geri gelirse geçerlidir); (7,0) doğru dolu, (7,2) W boş. Oyuncu sütun 7'ye W blok bırakır | Blok (7,2)'ye iner ve **hatalıdır** (`support`; `missingSupport` = [(7,1)]); harç orada durdukça sütun 7'de `buildFront` yoktur. Harç sürüklenip çıkarılınca (7,1) yeniden boş `.` olur ve (7,2) cephe hücresi olur | K-34, Y8 |
 | E-44 | (Faz 2R) Sahada 2 hücrelik R moloz (şantiyeden taşınmış) var; planda 2 R hücre kaldı | Moloz malzemedir (OBSTACLES S4): arz sayılır, kilitlenme yok; moloz sıradan blok gibi doğru yerleşebilir. Çekiç onu kıramaz (K-36) | K-27, K-36, K-47, S4 |
 | E-45 | Oyuncu 2. teklifi 1.350 altınla almış (1. teklif reklamla); uygulama kapanır, güncellenir, bölüm verisi değişmiştir; Sallanan Köprü'de, tur harcaması 2.250 | Deneme cezasız kapanır: can ve güçlendiriciler iade, 1.350 altın iade, tur harcaması 2.250 → 900; elenme ve tahta yok; reklam sayacı geri verilmez; oyuncu ana ekranda | K-43 |
@@ -1222,7 +1267,7 @@ Her satır bir test senaryosudur (test adı "E-xx …" ve ilgili K kimliği).
 | E-51 | (Faz 2R) Çekiç sahadaki bir malzeme bloğuna dokunur | İşlem yapılmaz, Çekiç harcanmaz (tam örtü: malzeme yok edilmez) | K-36, K-47 |
 | E-52 | (Faz 2R) Boya Fırçası `D2_0` W ile `O4` Y'ye dokunur | Hücre sayıları farklı → işlem yok, fırça harcanmaz. `O4` W ile `O4` Y → renkler takas edilir | K-38 |
 | E-53 | (Faz 2R) Zincirli bloğun 4-komşularında hamle sonunda hiç blok ya da Ağır Yük kalmadı | Zincir adım 5'te kendiliğinden kalkar ve `clear/chain` sayılır (OBSTACLES Y3; aksi halde blok hiç çözülemez ve tam örtü bozulurdu) | Y3, K-41, K-47 |
-| E-54 | (Faz 2R) Kamyon partisi Ağır Yük'ün altında kalan sütunlara düşemiyor (K-25 hiçbir adayda yer yok) | Blok kuyrukta bekler (K-26); oyuncu Ağır Yük'ü kaydırınca o hamlenin 9. adımında düşer (LEVELS Bölüm 10 dilim 2'de bilinçli kullanılır) | K-25, K-26, Y5 |
+| E-54 | (Faz 2R) Kamyon partisi Ağır Yük'ün altında kalan sütunlara düşemiyor (K-25 hiçbir adayda yer yok) | Blok kuyrukta bekler (K-26); oyuncu Ağır Yük'ü kaydırınca o hamlenin 9. adımında düşer. Bölüm verisinde bilinçli kuyruk yalnız K-51 madde 2'nin bütün uzay kapısından geçerse kullanılır (Bölüm 10'un eski kuyruklu taslağı geçemedi: kuyruktaki blok başka bir gereken bloğun üstüne düşüp Söküm'süz çıkmaz üretiyordu; Faz 2R 1–10'un kanonik çözümlerinde kuyruk yok; Bölüm 10'da yük başka yerde bırakılırsa oluşur ve çıkmaz üretmez, LEVELS §2.11) | K-25, K-26, K-51, Y5 |
 | E-55 | (Faz 2R: geçersiz — çok adımlı Söküm ve çalışma anı D3b araması kaldırıldı; Söküm tek adımdır, D3b solver tablosudur, K-30. Kimlik yeniden kullanılmaz.) | — | K-30 |
 | E-56 | (Faz 2R) Bölüm 1 boyutu (Wy 4, Hy 4, H 5): `a` (`D2_0` Y, (0,2)) tutulur, çapa (0,4)'te (hücreler (0,4), (0,5): saha üstü hava ve Vinç Alanı) bırakılır | K-07 satır 3 → iptal, hamle harcanmaz; blok (0,2)'ye döner. Çapa (0,3)'te bırakılırsa da (hücre (0,4) y ≥ Hy) iptal | K-05, K-07, K-49 |
 | E-57 | (Faz 2R) Bölüm 5 boyutu (Hy 4, H 5): kamyon bloğu `D2_0` x = 0'a düşer, sütun 0'da y 0–2 dolu | Blok y = (H + 2) − 2 = 5'ten düşer, (0,3)'e oturur; (0,4) y ≥ Hy olduğundan aday reddedilir; K-25 sırasıyla sonraki aday denenir; hiçbiri olmazsa kuyruk (K-26). Test "K-49 yard air truck candidate rejected" | K-25, K-49 |
@@ -1262,7 +1307,11 @@ aradaki her tamsayı nokta da dahil olmak üzere bütün çapalar, adımın baş
 (satır 1, 3, 4, 5) veremez. (4) `drag`'in son konumu, adımın başladığı durumdan bir en kısa çözümün ilk hamlesidir
 (kazanmaya uzaklık 1 azalır; K-50 `bestChoices`). `hold`'un son konumu şantiye sütunlarının üstündedir (gölge görünür,
 K-18); bırakılması doğru olmak zorunda değildir. (5) Çalışma anında `path[0]` hücresi vurgulu blok tarafından
-doldurulmuyorsa (blok yer değiştirdiyse) eldiven gösterilmez; balon ve vurgu sürer. (6) Blok o an tutulamıyorsa (K-09)
+doldurulmuyorsa (blok yer değiştirdiyse) eldiven gösterilmez; **ayrıca** (Faz 2R solver turu) yolun çapalarından biri o
+anki durumda bloğun `R` kümesinde değilse ya da son konum iptal veriyorsa da eldiven gösterilmez (ör. Bölüm 4 adım 2
+başladığında tıkaç sola çekilip koridorda kaldıysa `O4` W geçide ulaşamaz). Denetim adım başlarken ve her hamle sonunda
+yeniden yapılır; balon ve vurgu her durumda sürer. Böylece eldiven yalnız o anda gerçekten yapılabilen hamleyi gösterir
+(çalışma anı denetimi code-lead'den istendi). (6) Blok o an tutulamıyorsa (K-09)
 `hand` yazılmaz. Doğrulayıcı kodu `tut_hand_invalid` (K-45 madde 10); test "K-53 tutorial hand path reachable and not
 cancel". **Örnek:** Bölüm 4 adım 2 `drag [[1,1],[5,1]]`: `a` (`O4_0` W, çapa (0,0)) sağ üst hücresi (1,1)'den tutulur
 (ofset (1,1)); son çapa (4,0) → hücreler (4,0)…(5,1) geçidin rayında, K-07 satır 7, doğru. Eski yol `[[1,1],[4,1]]`
@@ -1394,3 +1443,14 @@ adımları bu kurala uyar.
 | S-26 | **Değişti (R-10):** düşüş/yükseliş sürerken tahtanın herhangi bir yerine dokunma; dokunulan taraf (bloğun orta çizgisine göre) = yön; 1 sütun; düşüş başına 1; aynı hamle; kayıt `steer { dir, atRow }` (K-19). |
 | S-27 | Evet; erişilebilirlik ayarıyla 1400 ms (K-19). |
 | S-28 | Hayır (§10 genel). |
+
+**WP-E (solver) soruları ve notları — Faz 2R solver turu (2026-10-07):**
+
+| Soru / not | Yanıt (bağlayıcı kural) |
+|---|---|
+| D1 yeniden dizme 8 denemede güvence bulamazsa tutulabilir blok bırakan ilk dizilim, o da yoksa tahta değişmez | **KABUL** (K-30 D1 "Yeniden dizme kabul sırası"); (2) Faz 2R içeriğinde her zaman bulunur, (3) yalnız Faz 3 kasa/torba engelleriyle olası ve solver kanıtı ister. |
+| +5 kabulünden sonra D1 bir kez çalışır, D3 denetlenmez | **KABUL** (K-29; dört gerekçe orada). K-30 D1 maddesindeki "ardından D3" yalnız sayaç > 0 iken çalışan normal adım 12 içindir. |
+| `deadRate` paydası = canlı K durumlarından çıkan yerleşim kenarları | **KABUL** (K-50 madde 8 "Payda"). |
+| Bölüm 10 dilim 2 teslimat çıkmazları (trapCount 0 ama 338 Söküm'süz çıkmaz) | Seçenek (a) uygulandı: dilim 2 kuyruksuz yeniden kuruldu, bütün uzayda çıkmaz 0 (LEVELS §2.11). Kapı sıkılaştırıldı: K-51 madde 2 "Bütün uzay kapısı" (araç kuralı, error). (b) ✓-tuzağı tanımı değişmedi; (c) D3b tablosu Faz 3'te kalır. |
+| Bölüm 7 kanonik sırası (W < R) | Solver esastır; LEVELS el çözümleri solver çıktısından yazılır (Bölüm 7 yeniden tasarlandı, yeni sıra solver'ınki). |
+| Bölüm 10 Çekiç'le min | LEVELS'a yazıldı (yeni veride 11; 15 − 11 = 4 ≥ 2). |

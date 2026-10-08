@@ -13,7 +13,7 @@
  * - K-43 + GDD §14.1: a reload mid-level reopens the tutorial step that was on screen (level 3 step 2, its gate), also
  *   after a cancelled drag whose `overWall` ended a step (level 1) and after a fast release (level 2) — review Faz 2
  *   tur 3 #1, `inLevel.tutorial`;
- * - UX §13.1: the pause button opens the Pause window during a required step (level 1 step 1);
+ * - UX §13.1: the pause button opens the Pause window during a tutorial step (level 1 step 1; K-53: nothing is gated);
  * - UX §13.2 (Faz 2 tur 3): opening the Golden Trowel pick closes / drops `tut.ctx.goldtrowel` and marks it seen.
  * No console error and no uncaught page error in any of them.
  */
@@ -32,6 +32,10 @@ import {
   waitReady,
   waitWindow,
 } from '../../tools/lib/harnessClient.ts';
+
+/** The tutorial step a resume must give back (K-53/5); its presence (phase, bubble) starts again by design. */
+const stepOf = (t: { index: number; pieces: readonly number[]; textKey: string } | null) =>
+  t && { index: t.index, pieces: t.pieces, textKey: t.textKey };
 
 test.describe('scene smoke (TECH 12.4)', () => {
   test('load: the first launch boots into the intro without errors', async ({ page, context }) => {
@@ -187,10 +191,7 @@ test.describe('scene smoke (TECH 12.4)', () => {
     expect(gp.errors).toEqual([]);
   });
 
-  test('K-43 resume keeps the tutorial step (level 3 step 2: the required gap step and its gate)', async ({
-    page,
-    context,
-  }) => {
+  test('K-43 resume keeps the tutorial step (level 3 step 2: the gap step)', async ({ page, context }) => {
     const gp = await attachGame(page, context);
     await page.goto('/?harness=1&reducedMotion=1');
     await waitReady(page);
@@ -199,7 +200,7 @@ test.describe('scene smoke (TECH 12.4)', () => {
     await playMoves(gp, moves.slice(0, 1)); // a: step 1 done, step 2 (Z, gapPass with f) opens
     await waitInteractive(page);
     const before = await state(page);
-    expect(before.tutorial).toMatchObject({ index: 1, required: true, textKey: 'tut.l3.gap' });
+    expect(before.tutorial).toMatchObject({ index: 1, textKey: 'tut.l3.gap' });
 
     await page.reload();
     await waitReady(page);
@@ -208,7 +209,7 @@ test.describe('scene smoke (TECH 12.4)', () => {
     await waitInteractive(page);
     const after = await state(page);
     expect(after.log).toEqual(before.log);
-    expect(after.tutorial).toEqual(before.tutorial);
+    expect(stepOf(after.tutorial)).toEqual(stepOf(before.tutorial));
     // the gate is back: the rest of the golden (f through the gap first) still wins
     await playMoves(gp, moves.slice(1));
     await waitWindow(page, 'win', 120_000);
@@ -228,7 +229,9 @@ test.describe('scene smoke (TECH 12.4)', () => {
     await waitInteractive(page);
     const shown = await state(page);
     expect(shown.tutorial).toMatchObject({ index: 2, pieces: [1, 2], textKey: 'tut.l3.rail' });
-    expect(shown.tutorialHand).toEqual({ kind: 'drag', hidden: false });
+    // K-53 presence: the step shows after nextStepDelayMs + startDelayMs (UX 13.1 "Bekleme"), then the glove plays
+    await page.evaluate(() => window.__harness!.waitGameMs(1400));
+    expect((await state(page)).tutorialHand).toEqual({ kind: 'drag', hidden: false });
     const b = moves[2];
     if (!b || b.pieceId !== 2) throw new Error('golden move 3 of level 3 is not b');
     // the finger stays down at the end of b's drag: the lift already hid the glove
@@ -249,14 +252,14 @@ test.describe('scene smoke (TECH 12.4)', () => {
     await waitReady(page);
     await loadLevel(page, 1);
     await waitInteractive(page, 1);
-    expect((await state(page)).tutorial).toMatchObject({ index: 0, required: true });
-    // K-07 row 4: a crosses the wall (overWall ends the required step 1 in the air) and is released straddling it
+    expect((await state(page)).tutorial).toMatchObject({ index: 0 });
+    // K-07 row 4: a crosses the wall (overWall ends step 1 in the air) and is released straddling it
     const plan = await planDrag(page, { pieceId: 0, to: { ix: 5, iy: 8, mode: 0 } });
     await gp.touch.gesture(plan, true);
     await waitInteractive(page);
     const before = await state(page);
     expect(before.logLength).toBe(1); // cancelled: nothing logged
-    expect(before.tutorial).toMatchObject({ index: 1, required: false, textKey: 'tut.l1.drop' });
+    expect(before.tutorial).toMatchObject({ index: 1, textKey: 'tut.l1.drop' });
     expect(before.savedAttempt?.tutorial).toEqual({ index: 1, shown: true, count: 0, actions: 1 });
 
     await page.reload();
@@ -266,7 +269,7 @@ test.describe('scene smoke (TECH 12.4)', () => {
     await waitInteractive(page);
     const after = await state(page);
     expect(after.log).toEqual(before.log);
-    expect(after.tutorial).toEqual(before.tutorial);
+    expect(stepOf(after.tutorial)).toEqual(stepOf(before.tutorial));
     await playMoves(gp, await golden(page, 1));
     await waitWindow(page, 'win', 120_000);
     expect(gp.errors).toEqual([]);
@@ -299,7 +302,7 @@ test.describe('scene smoke (TECH 12.4)', () => {
     await waitInteractive(page);
     const after = await state(page);
     expect(after.log).toEqual(before.log);
-    expect(after.tutorial).toEqual(before.tutorial);
+    expect(stepOf(after.tutorial)).toEqual(stepOf(before.tutorial));
     await playMoves(gp, moves.slice(2));
     await waitWindow(page, 'win', 120_000);
     expect(gp.errors).toEqual([]);
@@ -345,7 +348,7 @@ test.describe('scene smoke (TECH 12.4)', () => {
     expect(gp.errors).toEqual([]);
   });
 
-  test('UX 13.1 required step keeps the pause button (level 1 step 1): the Pause window opens, "Devam" goes back', async ({
+  test('UX 13.1 K-53 a tutorial step keeps the pause button (level 1 step 1): the Pause window opens, "Devam" goes back', async ({
     page,
     context,
   }) => {
@@ -354,14 +357,14 @@ test.describe('scene smoke (TECH 12.4)', () => {
     await waitReady(page);
     await loadLevel(page, 1);
     await waitInteractive(page);
-    expect((await state(page)).tutorial).toMatchObject({ index: 0, required: true });
+    expect((await state(page)).tutorial).toMatchObject({ index: 0 });
     await tap(gp, { kind: 'pause' });
     await waitWindow(page, 'pause', 30_000);
     await tap(gp, { kind: 'text', key: 'common.continue' });
     await waitInteractive(page);
     const s = await state(page);
     expect(s.window).toBeNull();
-    expect(s.tutorial).toMatchObject({ index: 0, required: true });
+    expect(s.tutorial).toMatchObject({ index: 0 });
     expect(gp.errors).toEqual([]);
   });
 });

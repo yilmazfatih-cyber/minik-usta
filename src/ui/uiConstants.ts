@@ -54,24 +54,14 @@ export const UI = Object.freeze({
   pauseBarW: 20,
   pauseBarH: 56,
   pauseBarGap: 20,
-  /** UX §13.1 tutorial: glove 140 × 160 px; Dede bust 200 px; bubble at most 760 × 280; hole pad 12 px, edge 6 px. */
-  gloveW: 140,
-  gloveH: 160,
+  /**
+   * Speech bubble with the Dede bust (ui/SpeechBubble.ts, the intro): bust 200 px, bubble at most 760 × 280. The Faz 2R
+   * tutorial (TutorialView) reads `tokens.tutorial` instead (K-53).
+   */
   dedeBustPx: 200,
   bubbleMaxW: 760,
-  /** Review Faz 2 tur 1 #3: gap between the HUD group bottom (`top.groupBottomY`) and the Usta Dede bubble. */
-  bubbleHudGapPx: 16,
   bubbleMaxH: 280,
   bubblePadPx: 32,
-  spotPadPx: 12,
-  spotEdgePx: 6,
-  /** UX §13.1 `tap`: the glove presses to 0.9× and back. */
-  glovePressScale: 0.9,
-  /** UX §13.1 `drag`: dotted trail of the glove path, white at 60 %. */
-  gloveTrailAlpha: 0.6,
-  gloveTrailDots: 10,
-  /** UX §13.1 `hold`: pressed for 0.6 s. */
-  gloveHoldMs: 600,
   /** UX §2.1 intro: panel → board transition 0.4 s. */
   introToBoardMs: 400,
   /** UX §1 / §6 minimal home: the game name at 0.6× of `font.size.display`. */

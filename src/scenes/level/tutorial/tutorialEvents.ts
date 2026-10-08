@@ -6,7 +6,10 @@
  * - drag signals `overWall`, `gapPass`, `holdOverBuild` come from the scene during the drag (never from move events);
  * - move-end events are read from the move's events and count AT MOST ONCE per move (a drag or a booster use): several
  *   matching core events in one move (two crates, three falling blocks) are one count;
- * - `tap`, `boosterUsed` (+ `timeoutMs`, which is not an event).
+ * - `tap`, `boosterUsed`. Faz 2R (K-53/3): a step ends on its event only; `timeoutMs` is gone (schema_invalid).
+ *
+ * The `piece` filter (DL-2R-02) of `yardMove` / `placementCorrect` names a block by its highlight id (`piece:<i>`,
+ * `piece:k<p>_<i>`), resolved through the compiled level of the state (`CompiledLevel.tutorialPieceIds`).
  */
 import { FLAG_BIT, pieceFlags } from '../../../core/state.ts';
 import type { GameState } from '../../../core/state.ts';
@@ -45,9 +48,16 @@ function anchorOf(cells: readonly { readonly x: number; readonly y: number }[]):
 const atMatches = (at: readonly [number, number] | undefined, x: number, y: number): boolean =>
   at === undefined || (at[0] === x && at[1] === y);
 
+/** GDD §14.1/3 `piece` filter (DL-2R-02): no filter, or the block `pieceId` is the one the highlight id names. */
+function pieceMatches(piece: string | undefined, pieceId: PieceId, s: GameState | null): boolean {
+  if (piece === undefined) return true;
+  const id = s?.lvl.tutorialPieceIds.get(piece);
+  return id !== undefined && id === pieceId;
+}
+
 /**
  * True when one committed move matches a move-end condition (filters included). `s` is the state after the move (piece
- * flags for `flag`). Drag signals, `tap` never match here.
+ * flags for `flag`, the level's highlight ids for `piece`). Drag signals, `tap` never match here.
  */
 export function moveMatches(cond: TutCondition, events: readonly GameEvent[], s: GameState | null): boolean {
   switch (cond.event) {
@@ -56,6 +66,7 @@ export function moveMatches(cond: TutCondition, events: readonly GameEvent[], s:
     case 'placementCorrect': {
       const hit = events.find((e) => e.t === 'placementCorrect' && e.step === 3);
       if (!hit || hit.t !== 'placementCorrect') return false;
+      if (!pieceMatches(cond.piece, hit.pieceId, s)) return false;
       const a = anchorOf(hit.cells);
       if (cond.at !== undefined && (!a || !atMatches(cond.at, a[0], a[1]))) return false;
       if (cond.hidden === true)
@@ -65,6 +76,7 @@ export function moveMatches(cond: TutCondition, events: readonly GameEvent[], s:
     case 'yardMove': {
       const hit = events.find((e) => e.t === 'pieceMoved' && e.step === 1 && e.to.zone === 'yard');
       if (!hit || hit.t !== 'pieceMoved') return false;
+      if (!pieceMatches(cond.piece, hit.pieceId, s)) return false;
       if (!atMatches(cond.at, hit.to.x, hit.to.y)) return false;
       if (cond.painted === true) return events.some((e) => e.t === 'piecePainted' && e.step === 1);
       return true;

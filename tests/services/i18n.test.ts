@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -19,6 +19,7 @@ import {
   upper,
 } from '../../src/services/i18n.ts';
 import type { Dictionary, I18nKey } from '../../src/services/i18n.ts';
+import { CTX_TOPICS } from '../../src/scenes/level/tutorial/contextTips.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const read = (rel: string): string => readFileSync(join(ROOT, rel), 'utf8');
@@ -179,15 +180,7 @@ describe('i18n files (TECH 11.5)', () => {
     }
   });
 
-  /**
-   * Faz 2R transition (TECH §2R.10, §2R.12 WP-L): STORY already describes Faz 2R behavior for these keys, while the
-   * Faz 2 code still runs the old mechanic (Golden Trowel picks a front cell; truck help D2 delivers B1 material).
-   * Their texts change together with the behavior (WP-C Golden Trowel, WP-D Söküm), then the list is emptied and the
-   * strict test's `it.fails` mark is dropped.
-   */
-  const PENDING_FAZ_2R = ['booster.hint.trowel', 'tut.ctx.goldtrowel', 'tut.ctx.truckhelp.material'];
-
-  it.fails('D-017 every text is verbatim from STORY 4.0 / 6 / 7 and the OBSTACLES info cards', () => {
+  it('D-017 every text is verbatim from STORY 4.0 / 6 / 6A / 7 and the OBSTACLES info cards', () => {
     const source = new Map([...storyTableTexts(), ...prologueTexts(), ...obstacleCards()]);
     for (const key of trKeys) {
       const doc = source.get(key);
@@ -196,34 +189,97 @@ describe('i18n files (TECH 11.5)', () => {
     }
   });
 
-  it('D-017 every text is verbatim from STORY 4.0 / 6 / 7 and the OBSTACLES info cards, except the Faz 2R pending keys', () => {
-    const source = new Map([...storyTableTexts(), ...prologueTexts(), ...obstacleCards()]);
-    const differing: string[] = [];
-    for (const key of trKeys) {
-      const doc = source.get(key);
-      expect(doc, `${key} has no TR/EN source line in STORY or OBSTACLES`).toBeDefined();
-      const ours = [lookupText(tr, key), lookupText(en, key)];
-      if (PENDING_FAZ_2R.includes(key)) {
-        if (JSON.stringify(ours) !== JSON.stringify(doc)) differing.push(key);
-        continue;
-      }
-      expect(ours, key).toEqual(doc);
-    }
-    // Every pending key still differs; a key that already matches must leave the list.
-    expect(differing).toEqual(PENDING_FAZ_2R);
+  /**
+   * TECH §2R.12 WP-L: every STORY §6 context / meta line, §6A, §7 table row (the §7.4 apprentice names are a grid, not
+   * rows; they arrive with the Köprü / Lig bots of Faz 4) and every OBSTACLES info card is in the dictionaries; the
+   * removed Faz 2R rows (struck through in STORY, or replaced: `lose.left` → `lose.blocksLeft`, PL-2R-06) are not.
+   */
+  it('TECH 2R.12 WP-L every STORY 6 / 6A / 7 row and every OBSTACLES card is in tr and en; removed Faz 2R rows are not', () => {
+    const story = storyTableTexts();
+    const wanted = [...story.keys()].filter(
+      (k) => k.includes('.') && !/^tut\.l\d/.test(k) && !(story.get(k)?.[0] ?? '').includes('~~'),
+    );
+    const missing = [...wanted, ...obstacleCards().keys()].filter(
+      (k) => k !== 'lose.left' && !trKeys.includes(k),
+    );
+    expect(missing).toEqual([]);
+    for (const gone of ['lose.left', 'tut.ctx.truckhelp.material']) expect(trKeys).not.toContain(gone);
+    expect(trKeys.filter((k) => k.startsWith('tut.m.')).length).toBe(20);
   });
 
-  it('TECH 14.1 Phase 2 keys: level 1-5 tutorial textKeys and teaches cards resolve in both languages', () => {
+  /**
+   * STORY §6: the Faz 1 level lines `tut.l1.*` … `tut.l10.*` leave i18n once the level files use the §6A `tut.m.*`
+   * keys. WP-M wrote the Faz 2R `levels/*.json` (tut.m.* only) and removed `tut.l1…l5`; each slice line stays exactly
+   * while a level file uses it (Bölüm 11–50 lines, e.g. `tut.l23.*`, are converted in Faz 3).
+   */
+  it('STORY 6 tut.l1…tut.l10 lines stay only while a levels/*.json step uses them', () => {
+    const used = new Set<string>();
+    for (const f of readdirSync(join(ROOT, 'levels')).filter((n) => /^level_\d{3}\.json$/.test(n))) {
+      const level = JSON.parse(read(`levels/${f}`)) as { tutorial?: { textKey: string }[] };
+      for (const step of level.tutorial ?? []) used.add(step.textKey);
+    }
+    const sliceLines = trKeys.filter((k) => /^tut\.l([1-9]|10)\./.test(k));
+    expect(sliceLines.filter((k) => !used.has(k))).toEqual([]);
+  });
+
+  /**
+   * WP-L: every key the game code names is in the dictionaries (single-quoted literals of a dictionary namespace, a
+   * node prefix such as `story.prologue` included) and the template families resolve (`nav.<tab>`, `tut.ctx.<topic>`,
+   * `booster.hint.<kind>`, `town.ch<n>.title`). `src/core` names level JSON paths, never texts. A key STORY does not
+   * have yet is listed in `NOT_IN_STORY` (the code shows nothing for it, `optText`), and the list is checked against
+   * STORY so it empties itself.
+   */
+  const NOT_IN_STORY = ['booster.crane.noTarget'];
+
+  it('TECH 2R.12 WP-L every i18n key named in src (outside core) exists in tr and en', () => {
+    const namespaces = new Set(Object.keys(tr));
+    const isNode = (k: string): boolean => trKeys.some((other) => other.startsWith(`${k}.`));
+    const files = (dir: string): string[] =>
+      readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap((e) =>
+        e.isDirectory()
+          ? e.name === 'core'
+            ? []
+            : files(`${dir}/${e.name}`)
+          : e.name.endsWith('.ts')
+            ? [`${dir}/${e.name}`]
+            : [],
+      );
+    const missing = new Set<string>();
+    for (const f of files('src')) {
+      for (const m of read(f).matchAll(/'([a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9_]+)+)'/g)) {
+        const key = m[1] as string;
+        if (!namespaces.has(key.split('.')[0] as string)) continue;
+        if (!trKeys.includes(key) && !isNode(key)) missing.add(key);
+      }
+    }
+    expect([...missing].sort()).toEqual(NOT_IN_STORY);
+    const story = storyTableTexts();
+    for (const k of NOT_IN_STORY) expect(story.has(k), `${k} is in STORY now: add it to i18n`).toBe(false);
+    const families = [
+      ...['shop', 'league', 'home', 'team', 'album'].map((id) => `nav.${id}`),
+      ...CTX_TOPICS.map((topic) => `tut.ctx.${topic}`),
+      ...['trowel', 'hammer', 'crane', 'brush'].map((k) => `booster.hint.${k}`),
+      ...[1, 2, 3, 4, 5].map((n) => `town.ch${n}.title`),
+    ];
+    for (const key of families) expect(trKeys, key).toContain(key);
+  });
+
+  it('TECH 14.1 Phase 2R keys: levels 1-10 and the LEVELS 2 drafts 1-10 tutorial textKeys and teaches cards resolve in both languages', () => {
     const needed = new Set<string>();
-    for (let id = 1; id <= 5; id++) {
-      const level = JSON.parse(read(`levels/level_00${id}.json`)) as {
+    const files = Array.from({ length: 10 }, (_, i) => String(i + 1).padStart(3, '0')).flatMap((nnn) => [
+      `levels/level_${nnn}.json`,
+      `tests/level/fixtures/levels-2r/level_${nnn}.json`,
+    ]);
+    for (const file of files) {
+      const level = JSON.parse(read(file)) as {
         tutorial?: { textKey: string }[];
         teaches?: string;
       };
       for (const step of level.tutorial ?? []) needed.add(step.textKey);
       if (level.teaches !== undefined) needed.add(`obs.${level.teaches.toLowerCase().replace('-', '')}.desc`);
     }
-    expect(needed.size).toBeGreaterThanOrEqual(13);
+    // 17 tut.m.* lines (STORY §6A) + 5 signature cards (W1, S1, W2, Y5, W3)
+    expect(needed.size).toBeGreaterThanOrEqual(17 + 5);
     for (const key of needed) {
       expect(lookupText(tr, key), `tr ${key}`).toBeDefined();
       expect(lookupText(en, key), `en ${key}`).toBeDefined();
@@ -266,7 +322,7 @@ describe('t() (TECH 11.5)', () => {
     expect(createTranslator('en').t('town.name')).toBe('Hue Hill');
     // The caller cannot pass a global placeholder.
     // @ts-expect-error town is global (STORY 0-10)
-    expect(() => createTranslator('tr').t('lose.left', { town: 'X' })).toThrow(/global/);
+    expect(() => createTranslator('tr').t('lose.blocksLeft', { town: 'X' })).toThrow(/global/);
   });
 
   it('TECH 11.5 numbers are formatted per locale and icon placeholders stay for the renderer', () => {
@@ -274,7 +330,7 @@ describe('t() (TECH 11.5)', () => {
     expect(createTranslator('en').t('lose.buygold', { n: 1350 })).toBe('Get coins · {coin}1,350 short');
     expect(createTranslator('tr').t('lose.offer.count', { n: 2, max: 3 })).toBe('Teklif 2/3');
     expect(createTranslator('en').t('common.unlockAt', { n: 8 })).toBe('Unlocks at level 8');
-    expect(createTranslator('tr').t('tut.l2.shadow')).toBe('Gölgede {ok} varsa yer doğru.');
+    expect(createTranslator('tr').t('tut.m.shadow')).toBe('Gölgede {ok} varsa yer doğru.');
   });
 
   it('TECH 11.5 plural nodes pick one/other with Intl.PluralRules', () => {
@@ -300,7 +356,7 @@ describe('t() (TECH 11.5)', () => {
     setLocale('en');
     expect(getLocale()).toBe('en');
     expect(t('exit.stay')).toBe('Stay');
-    expect(tDynamic('tut.l1.lift')).toBe('Grab a block and lift it over the wall!');
+    expect(tDynamic('tut.m.lift')).toBe('Lift the block over the wall!');
     expect(tDynamic('tut.l99.none')).toBe('tut.l99.none');
     expect(hasKey('tut.ctx.support')).toBe(true);
     expect(hasKey('tut.ctx')).toBe(false);

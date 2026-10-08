@@ -12,8 +12,8 @@ import type { LevelSpec, PieceSpec } from '../fixtures/builders.ts';
 import { HAND, dragTo, expectConsistent, find, levelFile, run, types } from '../core/moves.fixtures.ts';
 import { i18nText } from './obstacles.fixtures.ts';
 
-/** Level 5 truck batch (`k1_0` … `k1_3`). */
-const TRUCK: readonly PieceId[] = [13, 14, 15, 16];
+/** Level 5 truck batch (`k1_0` … `k1_3`, LEVELS §2 Bölüm 5 "Kamyon partisi 1"). */
+const TRUCK: readonly PieceId[] = [4, 5, 6, 7];
 
 /**
  * Two one-row segments `WW` → `RR`; the yard is full except for the W block on top (piece 0). The truck brings two
@@ -39,11 +39,11 @@ function fullYard(): LevelSpec {
 }
 
 describe('S1 Kayan Şantiye — sliding site (OBSTACLES S1, GDD K-22, K-25, K-26)', () => {
-  it('S1 applies to segments mode with 2–5 segments only (level 5), with the obs.s1.desc card in TR and EN', () => {
-    expect(S1_slidingSite.appliesTo(levelFile(5))).toBe(true);
+  it('S1 applies to segments mode with 2–5 segments only (levels 5, 7, 10), with the obs.s1.desc card in TR and EN', () => {
+    for (const id of [5, 7, 10]) expect(S1_slidingSite.appliesTo(levelFile(id)), `level ${id}`).toBe(true);
     expect(activeRuleIds(levelFile(5))).toEqual(['S1']);
     expect(infoKeysFor(levelFile(5))).toEqual(['obs.s1.desc']);
-    for (const id of [1, 2, 3, 4]) expect(S1_slidingSite.appliesTo(levelFile(id)), `level ${id}`).toBe(false);
+    for (const id of [1, 2, 3, 4, 6, 8, 9]) expect(S1_slidingSite.appliesTo(levelFile(id)), `level ${id}`).toBe(false);
     const carousel = compiledLevel({
       plan: [['WW'], ['WW']],
       mode: 'carousel',
@@ -67,65 +67,58 @@ describe('S1 Kayan Şantiye — sliding site (OBSTACLES S1, GDD K-22, K-25, K-26
     const s = createInitialState(levelFile(5));
     for (const id of TRUCK) expect(pieceZone(s, id), `piece ${id}`).toBe(Zone.pending);
     expect(queueIds(s)).toEqual([]);
-    run(s, HAND[5][0] ?? dragTo(2, 6, 8));
-    run(s, HAND[5][1] ?? dragTo(1, 6, 8));
+    for (const m of HAND[5].slice(0, 4)) run(s, m); // Sol Oda one block short
     for (const id of TRUCK) expect(pieceZone(s, id), `piece ${id}`).toBe(Zone.pending);
     expect(hdr(s, H.activeSeg)).toBe(0);
   });
 
-  it('S1 K-22 completing the active segment shifts the site in step 8; the truck delivers in step 9 (level 5 move 3)', () => {
+  it('S1 K-22 completing the active segment shifts the site in step 8; the truck delivers in step 9 (level 5 move 5)', () => {
     const s = createInitialState(levelFile(5));
-    run(s, HAND[5][0] ?? dragTo(2, 6, 8));
-    run(s, HAND[5][1] ?? dragTo(1, 6, 8));
-    const { ev } = run(s, HAND[5][2] ?? dragTo(0, 6, 8));
+    for (const m of HAND[5].slice(0, 4)) run(s, m);
+    const { ev } = run(s, HAND[5][4] ?? dragTo(0, 0, 0));
     expect(find(ev, 'segmentCompleted')).toMatchObject({ seg: 0, step: 8 });
     expect(find(ev, 'siteShifted')).toMatchObject({ toSeg: 1, step: 8 });
-    // FIFO: k1_0 … k1_2 land, k1_3 finds no room yet and waits ("Kamyonda: 1", K-26)
-    expect(find(ev, 'deliveryArrived')).toMatchObject({ step: 9, seg: 1, pieces: [13, 14, 15] });
-    expect(find(ev, 'deliveryQueued')).toMatchObject({ step: 9, queued: 1 });
-    expect(queueIds(s)).toEqual([16]);
+    // FIFO (K-25): k1_0 … k1_3 land in the yard the move left empty; nothing waits (LEVELS §2 Bölüm 5)
+    expect(find(ev, 'deliveryArrived')).toMatchObject({ step: 9, seg: 1, pieces: [...TRUCK] });
+    expect(types(ev)).not.toContain('deliveryQueued');
+    expect(queueIds(s)).toEqual([]);
     expect(types(ev).indexOf('siteShifted')).toBeLessThan(types(ev).indexOf('deliveryArrived'));
     expect(hdr(s, H.activeSeg)).toBe(1);
     // the new segment comes empty; the finished one keeps its locked blocks (panorama, K-06)
-    for (let sy = 0; sy < 8; sy++) for (const sx of [0, 1]) expect(siteOcc(s, 1, sx, sy)).toBe(0);
-    for (const id of [0, 1, 2]) {
+    const { ws, hs } = s.lvl.geo;
+    for (let sy = 0; sy < hs; sy++) for (let sx = 0; sx < ws; sx++) expect(siteOcc(s, 1, sx, sy)).toBe(0);
+    for (const id of [0, 1, 2, 3]) {
       expect(pieceZone(s, id)).toBe(Zone.site);
       expect(pieceSeg(s, id)).toBe(0);
     }
     expectConsistent(s);
   });
 
-  it('S1 K-22 the next move plays on segment 2 (GDD example: the move after the shift builds Sağ Oda)', () => {
+  it('S1 K-22 the next placement plays on segment 2 (GDD example: after the shift the player builds Sağ Oda)', () => {
     const s = createInitialState(levelFile(5));
-    for (const m of HAND[5].slice(0, 3)) run(s, m);
-    const { ev } = run(s, HAND[5][3] ?? dragTo(15, 6, 8));
+    for (const m of HAND[5].slice(0, 7)) run(s, m); // … then the two R roof blocks are parked (moves 6–7)
+    const { ev } = run(s, HAND[5][7] ?? dragTo(0, 0, 0)); // k1_0 (O4 Y) → (4,0)
     const placed = find(ev, 'placementCorrect');
+    expect(placed.pieceId).toBe(4);
     expect(placed.cells.every((c) => c.seg === 1)).toBe(true);
     expect(pieceSeg(s, placed.pieceId)).toBe(1);
     expect(types(ev)).not.toContain('siteShifted');
-    // the waiting k1_3 comes in this move's step 9, where the moved block left room
-    expect(find(ev, 'deliveryArrived')).toMatchObject({ step: 9, pieces: [16] });
-    expect(queueIds(s)).toEqual([]);
   });
 
-  // WP-M ile yeniden üretilecek: the old level 5 keeps decoys in the yard → K-48 (3) holds back the win.
-  it.fails(
-    'S1 K-22 after the last segment there is no shift: step 11 wins (level 5 hand solution, 5 moves left)',
-    () => {
-      const session = GameSession.start(levelFile(5));
-      const moves = HAND[5];
-      for (const m of moves.slice(0, -1)) expect(session.commit(m).status).toBe('applied');
-      const sink = new ArraySink();
-      const last = session.commit(moves[moves.length - 1] ?? dragTo(14, 6, 8), sink);
-      expect(last.won).toBe(true);
-      expect(session.outcome).toBe('won');
-      expect(session.movesLeft).toBe(5);
-      expect(find(sink.events, 'segmentCompleted')).toMatchObject({ seg: 1, step: 8 });
-      expect(types(sink.events)).not.toContain('siteShifted');
-      expect(find(sink.events, 'levelWon')).toMatchObject({ step: 11, movesLeft: 5 });
-      expect(session.yao()).toEqual({ overWall: 6, rail: 0, yao: 1 });
-    },
-  );
+  it('S1 K-22 after the last segment there is no shift: step 11 wins (level 5 canonical solution, 6 moves left)', () => {
+    const session = GameSession.start(levelFile(5));
+    const moves = HAND[5];
+    for (const m of moves.slice(0, -1)) expect(session.commit(m).status).toBe('applied');
+    const sink = new ArraySink();
+    const last = session.commit(moves[moves.length - 1] ?? dragTo(0, 0, 0), sink);
+    expect(last.won).toBe(true);
+    expect(session.outcome).toBe('won');
+    expect(session.movesLeft).toBe(6);
+    expect(find(sink.events, 'segmentCompleted')).toMatchObject({ seg: 1, step: 8 });
+    expect(types(sink.events)).not.toContain('siteShifted');
+    expect(find(sink.events, 'levelWon')).toMatchObject({ step: 11, movesLeft: 6 });
+    expect(session.yao()).toEqual({ overWall: 8, rail: 0, yao: 1 });
+  });
 
   it('S1 K-26 a truck block without room waits in the queue ("Kamyonda: 1") and comes in a later step 9', () => {
     const s = initialState(fullYard());

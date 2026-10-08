@@ -69,12 +69,27 @@ import { GhostTrails } from './Trail.ts';
 import { TRUCK_H, TRUCK_W, Truck } from './Truck.ts';
 import { JUICE_VIEW, VIEW } from './viewConstants.ts';
 import { addBakedGraphics } from '../../ui/BakedGraphics.ts';
+import { optText } from '../../ui/GoalsPanel.ts';
+import { lowMovesWarning } from '../../ui/remaining.ts';
+import { blocksLeft } from '../../core/goals.ts';
 
 const D = TOKENS.duration;
 const V = JUICE_VIEW;
 const WHITE = 0xffffff;
 const RIBBON_PX = 44;
 const CHIP_POOL = 5;
+/** JUICE #61: 18 parts + 8 dust (Ağır Yük); #107: 4 dust per block. */
+const SMASH_PARTS = 18;
+const SMASH_DUST = 8;
+const TEARDOWN_DUST = 4;
+/** Cues after which the blocks-left chip follows the state (UX §5.9 item 1). */
+const BLOCK_CUES: ReadonlySet<MoveCue['kind']> = new Set<MoveCue['kind']>([
+  12,
+  17,
+  'lift',
+  'teardown',
+  'yardClear',
+]);
 const COIN_POOL = 6;
 
 export interface EventPlayerHost {
@@ -92,6 +107,11 @@ export interface EventPlayerHost {
   levelNumber(): number;
   /** The move's last cue ran: the board shows the state again (level end decisions). */
   planEnded(): void;
+  /**
+   * UX §5.9 item 1: the blocks-left chip reads the state now — at the landing of a correct placement (#12, #17, the
+   * crane), as the Söküm flies the blocks back (#107) and at #94. Optional (tests).
+   */
+  blocksSync?(): void;
 }
 
 export interface PlayerServices {
@@ -148,6 +168,9 @@ export class EventPlayer implements JuiceStage {
   private readonly host: EventPlayerHost;
   private readonly services: PlayerServices;
   private readonly later = new Timeline();
+  /** JUICE #94 gold band and `win.clear` line (made on first use). */
+  private clearBand: Phaser.GameObjects.Image | null = null;
+  private clearText: Phaser.GameObjects.Text | null = null;
   private readonly particles: ParticleLayer;
   private readonly trailFx: GhostTrails;
   private readonly truckView: Truck;
@@ -458,6 +481,10 @@ export class EventPlayer implements JuiceStage {
     } finally {
       this.fx.instantBoard = false;
     }
+    if (this.host.blocksSync && BLOCK_CUES.has(cue.kind)) {
+      const sync = this.host.blocksSync.bind(this.host);
+      this.at(cue.kind === 12 || cue.kind === 'yardClear' ? time : time + cue.ms, sync);
+    }
     if (instant) this.finishBoardMotion();
   }
 
@@ -524,6 +551,55 @@ export class EventPlayer implements JuiceStage {
       case 'streakReset':
         this.host.strip.setStreak(0);
         return;
+      case 'lift': {
+        // K-37 crane (Faz 2R): the block flies on a 1,5-cell arc to its target (rotation shows at the re-sync)
+        if (!e || e.t !== 'pieceLifted' || cue.piece === null) return;
+        this.pieceTrack(
+          cue.piece,
+          time,
+          [
+            {
+              ax: e.to.x,
+              ay: e.to.y,
+              ms: cue.ms,
+              ease: easeOf(TOKENS.easing.move),
+              arc: this.reduced ? 0 : V.trowelArcCells,
+              scale: 1,
+            },
+          ],
+          { flying: true },
+        );
+        this.sound('sfx_whoosh', { at: time });
+        this.sound('sfx_place_ok', { at: time + cue.ms });
+        this.haptic('light', time + cue.ms);
+        return;
+      }
+      case 'smash': {
+        // JUICE #61 (Faz 2R): the hammer hits the Ağır Yük — one white frame, it breaks into dust and fades
+        if (!e || e.t !== 'cargoSmashed' || cue.piece === null) return;
+        const box = this.pieceBox(cue.piece);
+        this.pieceFlash(cue.piece, time, WHITE, 1, Math.min(cue.ms, D.blockedShake), false);
+        this.pieceTrack(
+          cue.piece,
+          time,
+          [{ ax: e.at.x, ay: e.at.y, ms: cue.ms, ease: linear, scale: V.smashScale, alpha: 0 }],
+          { hideAtEnd: true },
+        );
+        if (box && !this.reduced) {
+          const c = { x: box.x + box.w / 2, y: box.y + box.h / 2 };
+          this.burst('grayDust', SMASH_PARTS, c, { w: box.w, h: box.h, at: time });
+          this.burst('dust', SMASH_DUST, { x: c.x, y: box.y + box.h }, { w: box.w, at: time });
+        }
+        this.sound('sfx_bump', { at: time });
+        this.haptic('heavy', time);
+        return;
+      }
+      case 'yardClear':
+        this.yardClear(time, cue.ms);
+        return;
+      case 'teardown':
+        if (e && e.t === 'teardown') this.teardownCue(e, time);
+        return;
       case 'resync':
         this.resync(false);
         return;
@@ -549,7 +625,8 @@ export class EventPlayer implements JuiceStage {
     const left = hdr(s, H.movesLeft);
     if (moves) {
       this.host.moves.set(left);
-      this.host.moves.setDanger(left <= V.lastMovesAt, !this.reduced, this.now);
+      // UX §5.1 Faz 2R (DL-2R-19): moves − blocks left ≤ 1, or ≤ 2 moves
+      this.host.moves.setDanger(left > 0 && lowMovesWarning(left, blocksLeft(s)), !this.reduced, this.now);
     }
     this.host.strip.setStreak(comboOf(s));
     this.trowelsSet(trowelsOf(s));
@@ -1353,6 +1430,137 @@ export class EventPlayer implements JuiceStage {
         else banner.setAlpha(u);
       },
     });
+  }
+
+  /**
+   * JUICE #94 "Bütün bloklar yerinde" (UX §5.9 item 5; K-48 reached): a gold band sweeps the yard floor left → right
+   * (`ui.gold` α 0 → 0,5 → 0, flat rect clipped to the yard; it passes over the Ağır Yük, crates and bags), the yard
+   * frame flashes once, 20 gold sparks, and the `win.clear` line shows for 600 ms. Reduced: a 150 ms fade.
+   */
+  private yardClear(time: number, ms: number): void {
+    const yard = this.host.board.yardRect;
+    if (yard.w <= 0) return;
+    const band = (this.clearBand ??= this.scene.add
+      .image(0, 0, BOOT_ATLAS_KEY, FRAME.whitePixel)
+      .setOrigin(0, 0)
+      .setTint(hexColor(TOKENS.color.ui.gold))
+      .setDepth(DEPTH.placedBlocks + 2)
+      .setVisible(false));
+    const bw = yard.w * V.yardClearBandRatio;
+    const sweep = this.reduced ? ms : Math.min(ms, D.yardClear);
+    this.at(time, () => band.setVisible(true));
+    this.fx.add({
+      start: time,
+      ms: sweep,
+      ease: easeOf('Sine.easeInOut'),
+      cls: 'free',
+      apply: (k, u) => {
+        const x0 = this.reduced ? yard.x : yard.x - bw + (yard.w + bw) * k;
+        const left = Math.max(yard.x, x0);
+        const right = Math.min(yard.x + yard.w, this.reduced ? yard.x + yard.w : x0 + bw);
+        band.setPosition(left, yard.y).setDisplaySize(Math.max(1, right - left), yard.h);
+        band.setAlpha(V.yardClearAlpha * pulse01(u)).setVisible(right > left);
+      },
+      end: () => band.setVisible(false),
+    });
+    const frame = this.host.board.yardFrame;
+    if (frame) {
+      this.fx.add({
+        start: time,
+        ms: sweep,
+        cls: 'free',
+        apply: (_k, u) => frame.setAlpha(1 - 0.4 * pulse01(u)),
+        end: () => frame.setAlpha(1),
+      });
+    }
+    const n = this.reduced ? 0 : TOKENS.particles.yardClear;
+    this.burst(
+      'gold',
+      n,
+      { x: yard.x + yard.w / 2, y: yard.y + yard.h / 2 },
+      {
+        w: yard.w,
+        h: yard.h,
+        at: time + sweep / 2,
+      },
+    );
+    const text = optText('win.clear');
+    if (text) {
+      const label = (this.clearText ??= this.scene.add
+        .text(
+          0,
+          0,
+          '',
+          textStyle('h1', TOKENS.color.ui.inkOnDark, { color: TOKENS.color.ui.goldDark, px: 12 }),
+        )
+        .setOrigin(0.5)
+        .setDepth(DEPTH.hud + 10)
+        .setVisible(false));
+      label.setText(text).setPosition(yard.x + yard.w / 2, yard.y + yard.h / 2);
+      this.at(time, () => label.setVisible(true).setAlpha(1));
+      this.at(time + ms, () => label.setVisible(false));
+    }
+    this.sound('sfx_goal_done', { at: time });
+    this.haptic('success', time);
+  }
+
+  /**
+   * JUICE #107 Söküm (K-30, Faz 2R): after a 120 ms settle the moved blocks lift and fly on a 1,5-cell arc back to
+   * where the action found them (the state is already the restored one: `statePose`), the last placed first, 80 ms
+   * apart; dust on landing; one `sfx_teardown` pop per block; one light haptic. Blocks whose place is off the board
+   * (queue, pending batch) fade out. The moves counter does not animate (no refund, no penalty). Reduced: 150 ms fade.
+   */
+  private teardownCue(e: Extract<GameEvent, { t: 'teardown' }>, time: number): void {
+    const s = this.host.state();
+    if (!s) return;
+    const order = [...e.pieces].reverse();
+    const start0 = time + (this.reduced ? 0 : D.teardownSettle);
+    const fly = this.reduced ? D.reducedFade : D.teardown;
+    order.forEach((m, i) => {
+      const id = m.pieceId;
+      const at = start0 + (this.reduced ? 0 : i * D.teardownStagger);
+      const pose = statePose(s, id);
+      if (!this.host.pieces.view(id)) return;
+      if (pose) {
+        this.pieceTrack(
+          id,
+          at,
+          [
+            {
+              ax: pose.ax,
+              ay: pose.ay,
+              ms: fly,
+              ease: easeOf('Cubic.easeInOut'),
+              arc: this.reduced ? 0 : V.trowelArcCells,
+              scale: 1,
+              alpha: 1,
+            },
+          ],
+          { flying: true },
+        );
+        const box = this.boxAt(id, { zone: 'yard', x: pose.ax, y: pose.ay });
+        if (box && !this.reduced)
+          this.burst(
+            'dust',
+            TEARDOWN_DUST,
+            { x: box.x + box.w / 2, y: box.y + box.h },
+            { w: box.w, at: at + fly },
+          );
+      } else {
+        const v = this.host.pieces.view(id);
+        this.pieceTrack(
+          id,
+          at,
+          [{ ax: v?.pose.ax ?? 0, ay: v?.pose.ay ?? 0, ms: fly, ease: linear, alpha: 0 }],
+          {
+            hideAtEnd: true,
+          },
+        );
+      }
+      // `sfx_teardown` waits for ASSET_LIST §13 (tokens.ts PENDING_TOKEN_KEYS); the bounce pop stands in
+      this.sound('sfx_bounce', { at });
+    });
+    this.haptic('light', start0);
   }
 
   siteGlow(time: number, ms: number): void {

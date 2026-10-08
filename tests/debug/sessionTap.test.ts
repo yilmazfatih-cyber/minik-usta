@@ -63,7 +63,7 @@ describe('debug rule switches (TECH 12.3)', () => {
   });
 
   it('TECH 7.1 Phase 2 rules (W1, S1, S2) are core models without hooks: their switches are not switchable', () => {
-    expect(ruleSwitches(levelFile(3)).map((r) => r.id)).toContain('W1');
+    expect(ruleSwitches(levelFile(4)).map((r) => r.id)).toContain('W1');
     expect(ruleSwitches(levelFile(5)).every((r) => !r.switchable)).toBe(true);
     expect(ruleHasHooks({ id: 'W4', zone: 'wall', order: 140, infoKeys: [], appliesTo: () => true })).toBe(
       false,
@@ -82,8 +82,7 @@ describe('debug rule switches (TECH 12.3)', () => {
 });
 
 describe('debug session tap (TECH 12.3)', () => {
-  // WP-M ile yeniden üretilecek: the Faz 2 level data keep decoys, so K-48 (3) never lets them win.
-  it.fails(
+  it(
     'TECH 12.3 unlimited moves: movesLeft never drops, movesChanged is still emitted, the golden still wins',
     () => {
       install(() => unlimited);

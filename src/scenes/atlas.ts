@@ -5,10 +5,16 @@
  *
  * WebGL context restore: the pages are `CanvasTexture`s that keep their source canvas, so a defensive `refresh()` of
  * every live page re-uploads them (TECH §10.2 "WebGL bağlam kaybı").
+ *
+ * Faz 2R (TECH §2R.7, WP-G): the game bakes the v2 look — pegboard yard floor + yard drop preview in the boot atlas,
+ * candy blocks with studs, holdable gloss, lift glow and the Ağır Yük in the level bake at the level's cell scale
+ * `k = c / 120` (TECH §2R.1). A level whose pieces carry Phase 3 flag layers (the v2 drawer has none yet) falls back to
+ * the v1 bake.
  */
 import Phaser from 'phaser';
 import {
   BOOT_PAGE,
+  bakedFlagsOf,
   LEVEL_PAGE,
   blockFrame,
   blockFrameName,
@@ -19,7 +25,7 @@ import {
   packFrames,
   uploadAtlas,
 } from '../theme/textures.ts';
-import type { FrameRef, FrameSpec, UploadedAtlas } from '../theme/textures.ts';
+import type { BakeOptions, FrameRef, FrameSpec, UploadedAtlas } from '../theme/textures.ts';
 import { PLAN_DOT, PLAN_OUTSIDE } from '../core/level/compile.ts';
 import type { CompiledLevel } from '../core/level/compile.ts';
 import { COLOR_CODES } from '../core/types.ts';
@@ -55,7 +61,7 @@ export class Frames {
 
 interface AtlasState {
   boot: UploadedAtlas | null;
-  level: { id: number; atlas: UploadedAtlas } | null;
+  level: { id: number; k: number; atlas: UploadedAtlas } | null;
   restoreHooked: boolean;
 }
 
@@ -89,7 +95,11 @@ export function ensureBootAtlas(game: Phaser.Game): UploadedAtlas {
   const st = stateOf(game);
   if (st.boot && game.textures.exists(BOOT_ATLAS_KEY)) return st.boot;
   const limits = limitPage(BOOT_PAGE, maxTextureSize(game));
-  st.boot = uploadAtlas(game.textures, BOOT_ATLAS_KEY, packFrames(bootAtlasFrames(TOKENS), limits));
+  st.boot = uploadAtlas(
+    game.textures,
+    BOOT_ATLAS_KEY,
+    packFrames(bootAtlasFrames(TOKENS, undefined, 'v2'), limits),
+  );
   hookRestore(game, st);
   return st.boot;
 }
@@ -101,7 +111,11 @@ export const trowelCellFrameName = (color: ColorCode): string => blockFrameName(
  * One-cell block frames (`blk_B1_<c>`) for every plan colour of the level that the level bake does not already hold:
  * a trowel-filled cell shows "the correct colour" as a block (K-33; TECH §6.4 "hücre doğru renkle dolar").
  */
-export function trowelCellFrames(lvl: CompiledLevel, baked: readonly FrameSpec[]): FrameSpec[] {
+export function trowelCellFrames(
+  lvl: CompiledLevel,
+  baked: readonly FrameSpec[],
+  opts: BakeOptions = {},
+): FrameSpec[] {
   const have = new Set(baked.map((f) => f.name));
   const out: FrameSpec[] = [];
   for (const seg of lvl.segments) {
@@ -110,7 +124,7 @@ export function trowelCellFrames(lvl: CompiledLevel, baked: readonly FrameSpec[]
       const color = COLOR_CODES[v];
       if (color === undefined || have.has(trowelCellFrameName(color))) continue;
       have.add(trowelCellFrameName(color));
-      out.push(blockFrame({ shape: 'B1_0', color }, TOKENS));
+      out.push(blockFrame({ shape: 'B1_0', color }, TOKENS, opts));
     }
   }
   return out;
@@ -120,22 +134,35 @@ export function trowelCellFrames(lvl: CompiledLevel, baked: readonly FrameSpec[]
  * TECH §10.2 (b): bakes level `lvl` (pieces, silhouettes, ghosts, grid and `.` overlays, wall) and removes the previous
  * level's pages. Images using the old pages must be released before (LevelScene.reset).
  */
-export function bakeLevelAtlas(game: Phaser.Game, lvl: CompiledLevel): Frames {
+export function bakeLevelAtlas(game: Phaser.Game, lvl: CompiledLevel, k = 1): Frames {
   const st = stateOf(game);
   const boot = ensureBootAtlas(game);
-  if (st.level && st.level.id === lvl.id && st.level.atlas.keys.every((k) => game.textures.exists(k)))
+  if (
+    st.level &&
+    st.level.id === lvl.id &&
+    st.level.k === k &&
+    st.level.atlas.keys.every((key) => game.textures.exists(key))
+  )
     return new Frames(boot, st.level.atlas);
-  if (st.level) for (const k of st.level.atlas.keys) if (game.textures.exists(k)) game.textures.remove(k);
+  if (st.level)
+    for (const key of st.level.atlas.keys) if (game.textures.exists(key)) game.textures.remove(key);
   const limits = limitPage(LEVEL_PAGE, maxTextureSize(game));
-  const frames = levelFrames(lvl, TOKENS);
-  const atlas = uploadAtlas(
-    game.textures,
-    levelAtlasKey(lvl.id),
-    packFrames([...frames, ...trowelCellFrames(lvl, frames)], limits),
-  );
-  st.level = { id: lvl.id, atlas };
+  const specs = levelBakeSpecs(lvl, k);
+  const atlas = uploadAtlas(game.textures, levelAtlasKey(lvl.id), packFrames(specs, limits));
+  st.level = { id: lvl.id, k, atlas };
   hookRestore(game, st);
   return new Frames(boot, atlas);
+}
+
+/**
+ * The level bake's frame specs: v2 at cell scale `k` (TECH §2R.7). Drawing happens at upload, so a v2 drawer that
+ * cannot draw a piece (Phase 3 flag layers) is detected by a dry draw-free check of the piece flags here.
+ */
+export function levelBakeSpecs(lvl: CompiledLevel, k = 1): FrameSpec[] {
+  const v2 = lvl.pieces.every((p) => p.origin === 'help' || bakedFlagsOf(p.flags).length === 0);
+  const opts: BakeOptions = v2 ? { variant: 'v2', k } : {};
+  const frames = levelFrames(lvl, TOKENS, undefined, opts);
+  return [...frames, ...trowelCellFrames(lvl, frames, opts)];
 }
 
 /** Frames of the boot atlas only (before a level is baked). */

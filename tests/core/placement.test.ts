@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_GEO } from '../../src/core/geometry.ts';
 import {
@@ -32,7 +29,6 @@ import {
   H,
   PF,
   SITE_TROWEL,
-  createInitialState,
   enqueuePiece,
   filledMask,
   hasFlag,
@@ -47,8 +43,6 @@ import {
 } from '../../src/core/state.ts';
 import type { GameState } from '../../src/core/state.ts';
 import { occupyPiece, refreshSiteMasks, stateInvariantErrors, vacatePiece } from '../../src/core/grid.ts';
-import { loadLevel } from '../../src/core/level/compile.ts';
-import type { CompiledLevel } from '../../src/core/level/compile.ts';
 import { shapeById } from '../../src/core/shapes.ts';
 import { Zone } from '../../src/core/types.ts';
 import type { At, DragNode, PieceId, ShapeId } from '../../src/core/types.ts';
@@ -91,15 +85,6 @@ function expectConsistent(s: GameState): void {
   expect(stateInvariantErrors(s)).toEqual([]);
 }
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-function levelFile(id: number): CompiledLevel {
-  const json: unknown = JSON.parse(
-    readFileSync(join(ROOT, 'levels', `level_${String(id).padStart(3, '0')}.json`), 'utf8'),
-  );
-  const loaded = loadLevel(json);
-  if (!loaded.ok) throw new Error(`level ${id} does not load: ${JSON.stringify(loaded.issues)}`);
-  return loaded.level;
-}
 
 /** S3-like landing hook for tests (the real one is the obstacle plugin): glass breaks when d > threshold. */
 const GLASS_RULES: FallRules = {
@@ -247,9 +232,17 @@ describe('K-34 bottom-up support', () => {
     expect(fall.verdict.ok).toBe(true);
   });
 
-  it('K-34 rail over an empty coloured cell is wrong (level 3: Y lintel through the gap before the base)', () => {
-    const s = createInitialState(levelFile(3));
-    const d = drag(s, 1); // D2_90 Y at (4,2), level 3 tutorial step 2
+  it('K-34 rail over an empty coloured cell is wrong (a Y lintel through a gap at rows 2–3 before the W base)', () => {
+    // the Faz 2R levels 1–10 have their gaps at row 0 (rail = floor); a builder board keeps the Faz 2 case
+    const s = initialState({
+      wall: { height: 8, gaps: [{ type: 'static', y: 2, size: 2 }] },
+      plan: ['YY', 'WW', 'WW'],
+      pieces: [
+        ['O4_0', 'W', 0, 0],
+        ['D2_90', 'Y', 4, 2],
+      ],
+    });
+    const d = drag(s, 1);
     expect(d.classify(R(0, 6, 2)).kind).toBe('siteRail');
     const fall = computeFall(s, 1, R(0, 6, 2));
     expect(fall.verdict).toEqual({

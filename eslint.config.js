@@ -52,18 +52,9 @@ const LEGACY_BOARD = [
 ];
 /**
  * Transition (TECH §2R.12): files that still read the default-board constants until their package moves them to the
- * level geometry. WP-G removes the scene/UI entries; WP-B moved the validator (core list empty). Do not add files.
+ * level geometry. WP-G moved the scene/UI files and WP-B the validator: both lists are empty. Do not add files.
  */
-const LEGACY_BOARD_SCENES = [
-  'src/ui/remaining.ts',
-  'src/scenes/level/BoardView.ts',
-  'src/scenes/level/TrowelPicker.ts',
-  'src/scenes/level/pieceState.ts',
-  'src/scenes/level/tutorial/highlights.ts',
-  'src/scenes/level/LevelScene.ts',
-  'src/scenes/level/hitTest.ts',
-  'src/scenes/level/EventPlayer.ts',
-];
+const LEGACY_BOARD_SCENES = [];
 const LEGACY_BOARD_CORE = [];
 const BROWSER_PATTERNS = [DEBUG_HARNESS, { regex: '^node:', message: 'browser code: no Node APIs' }];
 const CORE_PATHS = [
@@ -201,11 +192,15 @@ export default tseslint.config(
       ],
     },
   },
-  {
-    // Transition (see LEGACY_BOARD_SCENES): the scene/UI layer rules without the board-constant ban.
-    files: LEGACY_BOARD_SCENES,
-    rules: { 'no-restricted-imports': ['error', { patterns: BROWSER_PATTERNS }] },
-  },
+  // Transition (see LEGACY_BOARD_SCENES): the scene/UI layer rules without the board-constant ban.
+  ...(LEGACY_BOARD_SCENES.length > 0
+    ? [
+        {
+          files: LEGACY_BOARD_SCENES,
+          rules: { 'no-restricted-imports': ['error', { patterns: BROWSER_PATTERNS }] },
+        },
+      ]
+    : []),
   // Transition (see LEGACY_BOARD_CORE): the core layer rules without the board-constant ban.
   ...(LEGACY_BOARD_CORE.length > 0
     ? [

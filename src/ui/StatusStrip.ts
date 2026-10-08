@@ -4,6 +4,9 @@
  * chip (K-26; hidden at 0, "Kamyonda: 0" is never written). A dumb view: the EventPlayer drives JUICE #15 (bead pop),
  * #16 (trowel glow), #20 / #88 (chip bump) through the setters. Graphics are redrawn only when a value changes.
  *
+ * Faz 2R (UX §5.10, ART §14.5): the strip is a dark counter capsule (`kit.capsule.fill` α 0,78, inner white line)
+ * with white text; the beads are gold / white α 0,25.
+ *
  * Touch: the trowel icon is a 128 px target (`touch.minTargetPx`, UX §0.3 "görsel + pay"); being interactive, it
  * keeps the board's drag controller out (DragController ignores presses over HUD objects).
  */
@@ -15,6 +18,9 @@ import { hex, textStyle } from './text.ts';
 import { addBakedGraphics } from './BakedGraphics.ts';
 
 const C = TOKENS.color.ui;
+const CP = TOKENS.kit.capsule;
+/** UX §5.10: an empty bead is white α 0,25. */
+const BEAD_EMPTY_ALPHA = 0.25;
 /** UX §5.1: 4 beads (K-33 `COMBO_FOR_TROWEL`). */
 export const STREAK_BEADS = 4;
 const PAD = 24;
@@ -51,7 +57,7 @@ export class StatusStrip {
   constructor(scene: Phaser.Scene, depth: number) {
     this.panel = addBakedGraphics(scene).setDepth(depth);
     this.label = scene.add
-      .text(0, 0, t('hud.streak'), textStyle('small', C.ink))
+      .text(0, 0, t('hud.streak'), textStyle('small', C.inkOnDark))
       .setOrigin(0, 0.5)
       .setDepth(depth + 1);
     for (let i = 0; i < STREAK_BEADS; i++) this.beads.push(addBakedGraphics(scene).setDepth(depth + 1));
@@ -60,11 +66,11 @@ export class StatusStrip {
       .setAlpha(0);
     this.trowel = addBakedGraphics(scene).setDepth(depth + 2);
     this.trowelCount = scene.add
-      .text(0, 0, '', textStyle('small', C.ink))
+      .text(0, 0, '', textStyle('small', C.inkOnDark))
       .setOrigin(0, 0.5)
       .setDepth(depth + 2);
     this.countText = scene.add
-      .text(0, 0, '', textStyle('small', C.ink))
+      .text(0, 0, '', textStyle('small', C.inkOnDark))
       .setOrigin(0, 0.5)
       .setDepth(depth + 2)
       .setVisible(false);
@@ -110,7 +116,10 @@ export class StatusStrip {
     const zoneH = Math.max(TOKENS.touch.minTargetPx, rect.h);
     this.trowelZone.setPosition(x0 + leftW / 2, y).setSize(leftW, zoneH, true);
     const g = this.panel.clear();
-    g.fillStyle(hex(C.panel), 0.92).fillRoundedRect(x0, rect.y, leftW, rect.h, TOKENS.radius.chip);
+    const r = rect.h / 2;
+    g.fillStyle(hex(CP.fill), CP.fillAlpha).fillRoundedRect(x0, rect.y, leftW, rect.h, r);
+    g.lineStyle(CP.innerStrokePx, hex(CP.innerStroke), CP.innerStrokeAlpha);
+    g.strokeRoundedRect(x0 + 3, rect.y + 3, leftW - 6, rect.h - 6, r - 3);
     this.chipX = rect.x + rect.w;
     this.drawChip();
     const s = this.streak;
@@ -157,7 +166,10 @@ export class StatusStrip {
     this.beads.forEach((b, i) => {
       b.clear();
       if (i < n) b.fillStyle(hex(C.gold), 1).fillCircle(0, 0, BEAD_R).lineStyle(3, hex(C.goldDark), 1);
-      else b.fillStyle(hex(C.inkOnDark), 0.5).fillCircle(0, 0, BEAD_R).lineStyle(3, hex(C.inkSoft), 1);
+      else
+        b.fillStyle(hex(C.inkOnDark), BEAD_EMPTY_ALPHA)
+          .fillCircle(0, 0, BEAD_R)
+          .lineStyle(3, hex(C.inkOnDark), BEAD_EMPTY_ALPHA * 2);
       b.strokeCircle(0, 0, BEAD_R).setScale(1);
     });
   }

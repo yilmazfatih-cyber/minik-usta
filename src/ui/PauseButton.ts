@@ -1,6 +1,8 @@
 /**
  * Pause button (UX_FLOWS §5.1 "Duraklat": 128 × 128 at `layout.top.pause`, top-left — deliberately in the hard-to-reach
  * zone, §0.2). A cream square with two bars; a tap opens the Pause window. It is a `ButtonTarget` for JUICE #69.
+ * Faz 2R (ART §14.1 "hacimli düğme", R2-12): the cream kit colours — 6 px `stroke` contour, `lip` thickness, `base`
+ * face with the white gloss band — so it reads as the same chunky button as the booster slots on the indigo scene.
  */
 import type Phaser from 'phaser';
 import type { Rect } from '../theme/layout.ts';
@@ -10,7 +12,8 @@ import { hex } from './text.ts';
 import { UI } from './uiConstants.ts';
 import { addBakedGraphics } from './BakedGraphics.ts';
 
-const C = TOKENS.color.ui;
+const KC = TOKENS.kit.buttonColor.cream;
+const KB = TOKENS.kit.button;
 
 /** The button's touch area for `rect`: a centred square of at least `touch.minTargetPx` (UX §0.3). */
 export function pauseHitRect(rect: Rect): Rect {
@@ -56,15 +59,28 @@ export class PauseButton {
 
   layout(rect: Rect): void {
     const { w, h } = rect;
-    const r = TOKENS.radius.chip;
+    const r = Math.min(KB.radiusMaxPx, KB.radiusHeightRatio * h);
+    const sp = KB.strokePx;
     this.lip
       .clear()
-      .fillStyle(hex(C.neutralLip), 1)
-      .fillRoundedRect(-w / 2, -h / 2 + this.lipPx, w, h - this.lipPx, r);
+      .fillStyle(0x000000, KB.dropShadowAlpha)
+      .fillRoundedRect(-w / 2, -h / 2 + this.lipPx + KB.dropShadowYPx, w, h - this.lipPx, r)
+      .fillStyle(hex(KC.stroke), 1)
+      .fillRoundedRect(-w / 2, -h / 2, w, h, r)
+      .fillStyle(hex(KC.lip), 1)
+      .fillRoundedRect(-w / 2 + sp, -h / 2 + sp, w - 2 * sp, h - 2 * sp, r - sp);
     this.bg
       .clear()
-      .fillStyle(hex(C.neutral), 1)
-      .fillRoundedRect(-w / 2, -h / 2, w, h - this.lipPx, r);
+      .fillStyle(hex(KC.base), 1)
+      .fillRoundedRect(-w / 2 + sp, -h / 2 + sp, w - 2 * sp, h - 2 * sp - this.lipPx, r - sp)
+      .fillStyle(0xffffff, KB.glossAlphaTop)
+      .fillRoundedRect(
+        -w / 2 + sp + KB.glossInsetXPx,
+        -h / 2 + sp + KB.glossInsetYPx,
+        w - 2 * (sp + KB.glossInsetXPx),
+        (h - 2 * sp - this.lipPx) * KB.glossHeightRatio,
+        Math.max(4, r - sp - KB.glossInsetXPx),
+      );
     this.root.setPosition(rect.x + w / 2, rect.y + h / 2);
     const hit = pauseHitRect(rect);
     this.root.setSize(hit.w, hit.h);

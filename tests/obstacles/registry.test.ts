@@ -19,7 +19,7 @@ import { createInitialState, hasFlag, hiddenCollected, setHiddenCollected } from
 import type { PieceId } from '../../src/core/types.ts';
 import { compiledLevel, initialState } from '../fixtures/builders.ts';
 import type { LevelSpec } from '../fixtures/builders.ts';
-import { N, dragTo, find, levelFile, run } from '../core/moves.fixtures.ts';
+import { LEVELS_1_10, N, dragTo, find, levelFile, run } from '../core/moves.fixtures.ts';
 import { ctxOf, fakeRule } from './obstacles.fixtures.ts';
 
 const noop = (): void => undefined;
@@ -40,15 +40,20 @@ describe('obstacle registry table (TECH 7.1, 7.3)', () => {
     expect(RULE_ORDER_BASE.site).toBeLessThan(RULE_ORDER_BASE.gravity);
   });
 
-  it('K-45 rule activation equals the OBSTACLES data signature of levels 1–5 (W1 from 3, S1 in 5; Faz 2R: S2 never)', () => {
+  it('K-45 rule activation equals the OBSTACLES data signature of levels 1–10 (W1 in 4 and 9, S1 in 5, 7, 10; Faz 2R: S2 never)', () => {
     const expected: Readonly<Record<number, readonly RuleId[]>> = {
       1: [],
       2: [],
-      3: ['W1'],
+      3: [],
       4: ['W1'],
       5: ['S1'],
+      6: [],
+      7: ['S1'],
+      8: [],
+      9: ['W1'],
+      10: ['S1'],
     };
-    for (const id of [1, 2, 3, 4, 5]) {
+    for (const id of LEVELS_1_10) {
       const lvl = levelFile(id);
       expect(activeRuleIds(lvl), `level ${id}`).toEqual(expected[id]);
       const ruleIds = new Set<string>(ALL_RULES.map((r) => r.id));
@@ -56,8 +61,8 @@ describe('obstacle registry table (TECH 7.1, 7.3)', () => {
     }
   });
 
-  it('TECH 7.1 Phase 2 levels 1–5 get empty hooks: W1 and S1 are core models', () => {
-    for (const id of [1, 2, 3, 4, 5]) expect(levelHooks(levelFile(id)), `level ${id}`).toEqual({});
+  it('TECH 7.1 Faz 2R levels 1–10 get empty hooks: W1, W2, W3, Y5 and S1 are core models', () => {
+    for (const id of LEVELS_1_10) expect(levelHooks(levelFile(id)), `level ${id}`).toEqual({});
   });
 
   it('TECH 7.1 hooks are composed once per compiled level; the debug panel switch composes fresh ones', () => {
@@ -74,7 +79,7 @@ describe('obstacle registry table (TECH 7.1, 7.3)', () => {
 
   it('TECH 7.1 info card keys follow the level mechanics (obs.{id}.desc, OBSTACLES R-08)', () => {
     expect(infoKeysFor(levelFile(1))).toEqual([]);
-    expect(infoKeysFor(levelFile(3))).toEqual(['obs.w1.desc']);
+    expect(infoKeysFor(levelFile(3))).toEqual([]);
     expect(infoKeysFor(levelFile(4))).toEqual(['obs.w1.desc']);
     expect(infoKeysFor(levelFile(5))).toEqual(['obs.s1.desc']);
     // S7 covers two mechanics: only the card of the one the level uses is shown

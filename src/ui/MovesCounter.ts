@@ -6,15 +6,23 @@
  *
  * The panel is drawn once per layout (no per-frame Graphics, TECH §10.6); the last-moves pulse only scales the
  * container.
+ *
+ * Faz 2R (UX §5.9 item 7, ART §14.2): the plate is the kit panel (`ui_panel`, 9-sliced; wooden frame, cream body),
+ * the digit 120 px `ui.ink`, "HAMLE" 38 px `ui.inkSoft` under it; the low-moves warning paints the digit
+ * `kit.buttonColor.red.base` and pulses (#51). Without the kit (tests) the v1 Graphics panel stays.
  */
 import type Phaser from 'phaser';
-import { t } from '../services/i18n.ts';
+import { t, upper } from '../services/i18n.ts';
 import type { Rect } from '../theme/layout.ts';
 import { TOKENS } from '../theme/tokens.ts';
 import { hex, textStyle } from './text.ts';
 import { addBakedGraphics } from './BakedGraphics.ts';
+import { KIT } from '../theme/textures.ts';
+import type { GoalsKit } from './GoalsPanel.ts';
 
 const C = TOKENS.color.ui;
+/** UX §5.9 item 7: the warning digit colour. */
+const DANGER = TOKENS.kit.buttonColor.red.base;
 
 export class MovesCounter {
   private readonly root: Phaser.GameObjects.Container;
@@ -30,13 +38,20 @@ export class MovesCounter {
   private pulseOn = false;
   private pulseStart = 0;
   private bump = 1;
+  private readonly scene: Phaser.Scene;
+  private readonly kit: Pick<GoalsKit, 'ref' | 'slice'> | null;
+  private plate: Phaser.GameObjects.NineSlice | null = null;
 
-  constructor(scene: Phaser.Scene, depth: number) {
+  constructor(scene: Phaser.Scene, depth: number, kit: Pick<GoalsKit, 'ref' | 'slice'> | null = null) {
+    this.scene = scene;
+    this.kit = kit;
     this.panel = addBakedGraphics(scene);
     this.danger = addBakedGraphics(scene).setVisible(false);
     this.cur = scene.add.text(0, 0, '', textStyle('display', C.ink)).setOrigin(0.5, 0.5);
     this.next = scene.add.text(0, 0, '', textStyle('display', C.ink)).setOrigin(0.5, 0.5).setVisible(false);
-    this.label = scene.add.text(0, 0, t('hud.moves'), textStyle('small', C.inkSoft)).setOrigin(0.5, 0.5);
+    this.label = scene.add
+      .text(0, 0, upper(t('hud.moves')), textStyle('small', C.inkSoft))
+      .setOrigin(0.5, 0.5);
     this.root = scene.add
       .container(0, 0, [this.panel, this.danger, this.cur, this.next, this.label])
       .setDepth(depth);
@@ -50,20 +65,38 @@ export class MovesCounter {
     const lip = TOKENS.shadow.panelLipPx;
     this.root.setPosition(rect.x + w / 2, rect.y + h / 2);
     const g = this.panel.clear();
-    g.fillStyle(hex(C.panelShadow), 1).fillRoundedRect(-w / 2, -h / 2 + lip, w, h - lip, r);
-    g.fillStyle(hex(C.panel), 1).fillRoundedRect(-w / 2, -h / 2, w, h - lip, r);
-    g.lineStyle(TOKENS.stroke.iconPx, hex(C.panelEdge), 1).strokeRoundedRect(-w / 2, -h / 2, w, h - lip, r);
-    const d = this.danger.clear();
-    d.lineStyle(TOKENS.stroke.iconPx, hex(C.danger), 1).strokeRoundedRect(-w / 2, -h / 2, w, h - lip, r);
-    this.valueY = -h / 2 + (h - lip) * 0.42;
+    const kit = this.kit;
+    if (kit) {
+      this.plate?.destroy();
+      const ref = kit.ref(KIT.panel);
+      const sl = kit.slice(KIT.panel);
+      this.plate = this.scene.add
+        .nineslice(0, 0, ref.key, ref.frame, w, h, sl?.left, sl?.right, sl?.top, sl?.bottom)
+        .setOrigin(0.5, 0.5);
+      this.root.addAt(this.plate, 0);
+    } else {
+      g.fillStyle(hex(C.panelShadow), 1).fillRoundedRect(-w / 2, -h / 2 + lip, w, h - lip, r);
+      g.fillStyle(hex(C.panel), 1).fillRoundedRect(-w / 2, -h / 2, w, h - lip, r);
+      g.lineStyle(TOKENS.stroke.iconPx, hex(C.panelEdge), 1).strokeRoundedRect(-w / 2, -h / 2, w, h - lip, r);
+    }
+    this.danger.clear();
+    if (!kit)
+      this.danger
+        .lineStyle(TOKENS.stroke.iconPx, hex(C.danger), 1)
+        .strokeRoundedRect(-w / 2, -h / 2, w, h - lip, r);
+    // the kit plate's frame (outline + wood + inner line) is the border; v1: the lip
+    const P = TOKENS.kit.panel;
+    const border = kit ? P.outlinePx + P.framePx + P.innerLinePx : 0;
+    const body = (kit ? h - 2 * border : h - lip) - 0;
+    this.valueY = -h / 2 + border + body * (kit ? 0.4 : 0.42);
     this.cur.setPosition(0, this.valueY);
     this.next.setPosition(0, this.valueY);
-    this.label.setPosition(0, -h / 2 + (h - lip) * 0.82);
+    this.label.setPosition(0, -h / 2 + border + body * (kit ? 0.8 : 0.82));
   }
 
   /** New language: the `hud.moves` label. */
   relabel(): void {
-    this.label.setText(t('hud.moves'));
+    this.label.setText(upper(t('hud.moves')));
   }
 
   /** Shows `n` at once (level start, reduced motion, re-sync). */
@@ -92,7 +125,7 @@ export class MovesCounter {
   setDanger(on: boolean, pulse: boolean, now: number): void {
     if (on !== this.dangerOn) {
       this.dangerOn = on;
-      const color = on ? C.danger : C.ink;
+      const color = on ? DANGER : C.ink;
       this.cur.setColor(color);
       this.next.setColor(color);
       this.danger.setVisible(on);

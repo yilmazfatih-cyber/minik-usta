@@ -5,35 +5,25 @@
   "name": { "tr": "Ön Duvar", "en": "Front Wall" },
   "difficulty": "easy",
   "moves": 11,
-  "teaches": "W1",
-  "seed": 3003,
   "goals": [{ "type": "build" }],
   "gravity": { "build": "normal", "yard": false },
-  "wall": { "height": 6, "gaps": [{ "type": "static", "y": 2, "size": 2 }] },
+  "wall": { "height": 4, "gaps": [] },
+  "site": { "cols": 2, "rows": 5 },
   "build": {
     "mode": "segments",
-    "segments": [{ "name": { "tr": "Ön Duvar", "en": "Front Wall" }, "rows": ["GG", "YY", "WW", "WW"] }]
+    "segments": [{ "name": { "tr": "Ön Duvar", "en": "Front Wall" }, "rows": ["YY", "GG", "GG", "YW", "YW"] }]
   },
   "yard": {
+    "cols": 4,
+    "rows": 4,
     "batches": [
       {
         "forSegment": 0,
         "pieces": [
-          { "shape": "O4_0", "color": "W", "x": 0, "y": 6 },
-          { "shape": "D2_90", "color": "Y", "x": 4, "y": 2 },
-          { "shape": "D2_90", "color": "G", "x": 2, "y": 7 },
-          { "shape": "D2_90", "color": "G", "x": 2, "y": 6 },
-          { "shape": "D2_0", "color": "Y", "x": 4, "y": 6 },
-          { "shape": "D2_0", "color": "G", "x": 5, "y": 6 },
-          { "shape": "O4_0", "color": "G", "x": 0, "y": 4 },
-          { "shape": "O4_0", "color": "W", "x": 2, "y": 4 },
-          { "shape": "O4_0", "color": "G", "x": 4, "y": 4 },
-          { "shape": "D2_90", "color": "G", "x": 4, "y": 3 },
-          { "shape": "O4_0", "color": "Y", "x": 0, "y": 2 },
-          { "shape": "O4_0", "color": "W", "x": 2, "y": 2 },
-          { "shape": "O4_0", "color": "W", "x": 0, "y": 0 },
-          { "shape": "O4_0", "color": "G", "x": 2, "y": 0 },
-          { "shape": "O4_0", "color": "Y", "x": 4, "y": 0 }
+          { "shape": "D2_0", "color": "Y", "x": 0, "y": 0 },
+          { "shape": "D2_0", "color": "W", "x": 1, "y": 0 },
+          { "shape": "O4_0", "color": "G", "x": 0, "y": 2 },
+          { "shape": "D2_90", "color": "Y", "x": 2, "y": 0 }
         ]
       }
     ]
@@ -42,47 +32,23 @@
   "tutorial": [
     {
       "step": 1,
-      "mode": "soft",
-      "highlight": ["piece:0", "cell:6,0", "cell:7,1"],
+      "highlight": ["piece:2"],
       "hand": {
         "kind": "drag",
         "path": [
-          [0, 6],
-          [0, 8],
-          [6, 8]
+          [0, 3],
+          [1, 3]
         ]
       },
-      "textKey": "tut.l1.match",
-      "done": { "event": "placementCorrect", "count": 1 }
+      "textKey": "tut.m.dig",
+      "done": { "event": "yardMove", "count": 1, "piece": "piece:2" }
     },
     {
       "step": 2,
-      "mode": "required",
-      "highlight": ["gap:0", "piece:1"],
-      "hand": {
-        "kind": "drag",
-        "path": [
-          [4, 2],
-          [6, 2]
-        ]
-      },
-      "textKey": "tut.l3.gap",
-      "done": { "event": "placementCorrect", "count": 1 }
-    },
-    {
-      "step": 3,
-      "mode": "soft",
-      "highlight": ["piece:1", "piece:2"],
-      "hand": {
-        "kind": "drag",
-        "path": [
-          [2, 7],
-          [2, 8],
-          [6, 8]
-        ]
-      },
-      "textKey": "tut.l3.rail",
+      "highlight": ["piece:0", "piece:1"],
+      "textKey": "tut.m.free",
       "done": { "event": "placementCorrect", "count": 1 }
     }
-  ]
+  ],
+  "targets": { "minShifts": [1, 1], "firstNeedDepth": [1, 1], "deadRate": [0, 0] }
 }

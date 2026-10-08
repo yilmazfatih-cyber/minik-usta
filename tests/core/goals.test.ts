@@ -44,7 +44,7 @@ describe('K-41 goals', () => {
 
   it('K-41 the build goal shows completed segments (level 5 after its first segment: 1/2)', () => {
     const s = createInitialState(levelFile(5));
-    for (const m of HAND[5].slice(0, 3)) run(s, m);
+    for (const m of HAND[5].slice(0, 5)) run(s, m);
     expect(goalViews(s)).toEqual([{ index: 0, kind: 'build', value: 1, target: 2, done: false }]);
   });
 

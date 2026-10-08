@@ -1,7 +1,7 @@
 /**
  * Panorama strip (GDD K-06; UX_FLOWS §5.1; TECH_DESIGN §1.2, §10.3): a small preview of every segment of the plan in
  * `layout.top.panorama`. It only draws the data of core `panoramaView(state)` (a pure read; it never changes the game):
- * segments side by side as 2-column strips, bottom-aligned on a common base, the block vertically centred in the strip;
+ * segments side by side as Ws-column strips (UX §5.8 rule 6, K-49: the level's site width), bottom-aligned on a common base, the block vertically centred in the strip;
  * completed segments in full block colour, the active one framed in white with its plan colours, future ones with plan
  * colours at `alpha.panoramaFuture`; unrevealed `?` cells keep the `?` tag (K-32), `.` cells and cells outside the plan
  * stay empty. Cell size (UX §5.1 Faz 2 tur 2, review #7): from the level's tallest segment, `min(24, ⌊(110 − 2·pad) /
@@ -43,12 +43,13 @@ export function panoramaGeometry(
 ): { cell: number; x0: number; bottom: number; colW: number; step: number } {
   const n = Math.max(1, segments.length);
   const rows = Math.max(1, ...segments.map((s) => s.rows.length));
+  const cols = Math.max(1, ...segments.map((s) => s.rows[0]?.length ?? 0));
   const innerW = rect.w - 2 * style.padPx;
   const innerH = rect.h - 2 * style.padPx;
   const byH = Math.floor(innerH / rows);
-  const byW = Math.floor(innerW / (2 * n + style.gapCells * (n - 1)));
+  const byW = Math.floor(innerW / (cols * n + style.gapCells * (n - 1)));
   const cell = Math.max(1, Math.min(byW, Math.max(style.minCellPx, Math.min(style.maxCellPx, byH))));
-  const colW = 2 * cell;
+  const colW = cols * cell;
   const step = colW + style.gapCells * cell;
   const total = n * colW + (n - 1) * style.gapCells * cell;
   // the tallest segment is vertically centred; the others stand on the same base

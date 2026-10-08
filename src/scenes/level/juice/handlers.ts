@@ -318,22 +318,41 @@ const H: { readonly [K in JuiceId]: JuiceHandler } = {
   // #17 trowel use: the trowel flies (arc) to the build-front cell and plasters it left → right (200 ms setCrop);
   // 12 gold + colour sparks; `sfx_trowel` + `sfx_place_ok`. Reduced: the cell fades in.
   17: (c, st) => {
+    // K-33 Faz 2R (JUICE #17): the chosen yard block lifts (1,0 → 1,08), flies on a 1,5-cell arc to its `P` spot and
+    // lands with the #12 fill sound and the #92 white flash; gold sparks at the landing. Reduced: a 150 ms fade there.
     const e = evOf(c, 'boosterApplied');
     if (!e) return;
-    const d = e.detail as { readonly cell: At; readonly color: string; readonly trowels: number };
-    const sweep = c.reduced ? c.ms : V.trowelSweepMs;
-    const fly = c.reduced ? 0 : Math.max(0, c.ms - sweep);
-    st.trowelsSet(d.trowels);
-    st.trowelFill(d.cell, c.time, fly, sweep, c.reduced);
-    const hit = c.time + fly;
-    const r = st.cellRect(d.cell.x, d.cell.y);
-    st.burst('gold', count(c), centre(r), {
-      w: r.w,
-      colors: [st.colorOf(T.color.ui.gold), st.colorOf(d.color)],
-      at: hit,
-    });
-    st.sound('sfx_trowel', { at: hit });
-    st.sound('sfx_place_ok', { at: hit + sweep });
+    const d = e.detail as { readonly pieceId?: number; readonly to?: At; readonly trowels?: number };
+    if (d.pieceId === undefined || !d.to) return;
+    if (d.trowels !== undefined) st.trowelsSet(d.trowels);
+    const id = d.pieceId;
+    const to = d.to;
+    st.pieceTrack(
+      id,
+      c.time,
+      [
+        {
+          ax: to.x,
+          ay: to.y,
+          ms: c.ms,
+          ease: easeOf(st, 17),
+          arc: c.reduced ? 0 : V.trowelArcCells,
+          scale: 1,
+        },
+      ],
+      { flying: true },
+    );
+    const hit = c.time + c.ms;
+    const box = st.boxAt(id, to);
+    if (box)
+      st.burst('gold', count(c), centre(box), {
+        w: box.w,
+        colors: [st.colorOf(T.color.ui.gold), st.pieceColor(id)],
+        at: hit,
+      });
+    st.pieceFlash(id, hit, WHITE, V.flashPeak, D.placeSheen, false);
+    st.sound('sfx_trowel', { at: c.time });
+    st.sound('sfx_place_ok', { at: hit });
     st.haptic('light', hit);
   },
 

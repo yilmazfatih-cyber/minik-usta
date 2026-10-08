@@ -19,6 +19,7 @@ import { FRAME } from '../../src/theme/textures.ts';
 import type { FrameRef } from '../../src/theme/textures.ts';
 import { TOKENS } from '../../src/theme/tokens.ts';
 import { N, RAIL, levelFile } from '../core/moves.fixtures.ts';
+import { compiledLevel } from '../fixtures/builders.ts';
 
 class FakeImage {
   x = 0;
@@ -94,24 +95,41 @@ function fakeView(): { view: ShadowView; images: FakeImage[] } {
 
 const layout = createLayout(TOKENS, 1920);
 
-/** Level 4 (easy): the W D2_90 parked on the gap rail at (6, 3) — right colour, nothing under it (K-34 support). */
-function level4Rail(): {
+/**
+ * A W D2_90 parked on the gap rail at (6, 3) — right colour, nothing under it (K-34 support). Builder board on the
+ * default 6×8 | 2×8 geometry (the Faz 2R levels 1–10 have their gaps at row 0, where the rail is the floor).
+ */
+function railSupport(): {
   fall: ReturnType<typeof computeFall>;
   pieceId: number;
   state: GameSession['state'];
 } {
-  const lvl = levelFile(4);
+  const lvl = compiledLevel({
+    wall: { height: 6, gaps: [{ type: 'static', y: 3, size: 2 }] },
+    plan: ['WW', 'RR', 'RR', 'RR'],
+    pieces: [
+      ['D2_90', 'W', 4, 3],
+      ['O4_0', 'R', 0, 0],
+      ['D2_90', 'R', 2, 0],
+    ],
+  });
   const { state } = GameSession.start(lvl);
   const w = COLOR_CODES.indexOf('W');
   const piece = lvl.pieces.find((p) => shapeByIndex(p.shapeIndex).id === 'D2_90' && p.colorIndex === w);
-  if (!piece) throw new Error('level 4 has no W D2_90 piece');
+  if (!piece) throw new Error('no W D2_90 piece');
   return { fall: computeFall(state, piece.id, RAIL(0, 6, 3)), pieceId: piece.id, state };
+}
+
+/** Level 1 (4×4 | 2×5, H 5) and its own layout: `b` (D2_0 W, piece 1) released above column 4 (plan Y Y). */
+function level1(): { state: GameSession['state']; L: ReturnType<typeof createLayout> } {
+  const { state } = GameSession.start(levelFile(1));
+  return { state, L: createLayout(TOKENS, 1920, state.lvl.geo) };
 }
 
 describe('fall shadow view (UX 5.4, D-014)', () => {
   it('K-12 / K-18 rail look draws outline and badge above the dragged block and follows its lift scale', () => {
     const { view, images } = fakeView();
-    const { fall, pieceId, state } = level4Rail();
+    const { fall, pieceId, state } = railSupport();
     const shape = shapeByIndex(state.lvl.pieces[pieceId]?.shapeIndex ?? 0);
     const look = shadowLook(fall, 'easy', { state, pieceId });
     expect(look.body).toBe(false);
@@ -136,30 +154,30 @@ describe('fall shadow view (UX 5.4, D-014)', () => {
 
   it('K-18 a free fall keeps the shadow under the dragged block and draws one fall path per column (UX 5.4 Düşüş yolu)', () => {
     const { view, images } = fakeView();
-    const { state } = GameSession.start(levelFile(1));
-    const fall = computeFall(state, 1, N(6, 8));
+    const { state, L } = level1();
+    const fall = computeFall(state, 1, N(4, 5));
     const shape = shapeByIndex(state.lvl.pieces[1]?.shapeIndex ?? 0);
     const look = shadowLook(fall, 'easy', { state, pieceId: 1 });
-    view.showFall(layout, 0, look, shape, fall.landing, 'blk', 'W');
-    const block = layout.grid.pieceRect(6, 8, shape.w, shape.h);
+    view.showFall(L, 0, look, shape, fall.landing, 'blk', 'W');
+    const block = L.grid.pieceRect(4, 5, shape.w, shape.h);
     view.follow({ cx: block.x + block.w / 2, cy: block.y + block.h / 2, scale: 1.08 });
     expect(view.depths.outline).toBeLessThan(DEPTH.draggedBlock);
     expect(view.pathCount).toBe(shape.w);
     const paths = images.filter((i) => i.frame === FRAME.fallPath && i.visible);
     for (const p of paths) expect(p.depth).toBe(DEPTH.fallShadow);
-    view.showCancel(layout, shape, 6, 8);
+    view.showCancel(L, shape, 4, 5);
     expect(view.pathCount).toBe(0); // hidden in the cancel preview
   });
 
   it('UX 5.4 wrong colour: the 45° hatch (ghost_hatch45) covers the mismatched landing cells and pulses with the outline', () => {
     const { view, images } = fakeView();
-    const { state } = GameSession.start(levelFile(1));
-    const fall = computeFall(state, 1, N(6, 8)); // W block onto the Y row
+    const { state, L } = level1();
+    const fall = computeFall(state, 1, N(4, 5)); // W block onto the Y rows
     expect(fall.verdict.reasons[0]).toBe('color');
     const shape = shapeByIndex(state.lvl.pieces[1]?.shapeIndex ?? 0);
     const look = shadowLook(fall, 'easy', { state, pieceId: 1 });
     expect(look.mismatchCells.length).toBeGreaterThan(0);
-    view.showFall(layout, 0, look, shape, fall.landing, 'blk', 'W');
+    view.showFall(L, 0, look, shape, fall.landing, 'blk', 'W');
     const hatches = images.filter((i) => i.frame === FRAME.wrongHatch && i.visible);
     expect(hatches).toHaveLength(look.mismatchCells.length);
     for (const h of hatches) expect(h.depth).toBe(DEPTH.fallShadow + 1);
@@ -172,15 +190,15 @@ describe('UX 13.1 drag above the tutorial spotlight (review Faz 2 tur 2 #1)', ()
   it('UX 13.1 the dragged block and its shadow look draw above the spotlight during a drag', () => {
     // the shadow: every part (body, outline, badge, hatches, fall path, cancel badge) above the bubble, under the windows
     const { view, images } = fakeView();
-    const { state } = GameSession.start(levelFile(1));
-    const fall = computeFall(state, 1, N(6, 8)); // wrong colour: body, outline, badge, 45° hatch, fall path
+    const { state, L } = level1();
+    const fall = computeFall(state, 1, N(4, 5)); // wrong colour: body, outline, badge, 45° hatch, fall path
     const shape = shapeByIndex(state.lvl.pieces[1]?.shapeIndex ?? 0);
     const look = shadowLook(fall, 'easy', { state, pieceId: 1 });
     view.setRaised(true);
-    view.showFall(layout, 0, look, shape, fall.landing, 'blk', 'W');
-    const block = layout.grid.pieceRect(6, 8, shape.w, shape.h);
+    view.showFall(L, 0, look, shape, fall.landing, 'blk', 'W');
+    const block = L.grid.pieceRect(4, 5, shape.w, shape.h);
     view.follow({ cx: block.x + block.w / 2, cy: block.y + block.h / 2, scale: 1.08 });
-    view.showCancel(layout, shape, 6, 8);
+    view.showCancel(L, shape, 4, 5);
     const raised = view.allDepths;
     expect(raised.length).toBeGreaterThan(4);
     for (const d of raised) {

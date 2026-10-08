@@ -39,7 +39,7 @@
     "adOfferCountsTowardCap": true,
     "firstEverOfferFree": true,
     "rewardedAdOffer": { "extraMoves": 5, "perAttempt": 1, "perDay": 3, "offerIndex": 1 },
-    "_doc": "Price index = offer number n (1..3) in the attempt, whichever option was taken before (GDD K-29, R-15). Rewarded ad alternative only in offer n = 1 (offerIndex; BUSINESS §4.3, P-4), so at most 1 per attempt; not shown in the lifetime-first free offer. Faz 2R: pipeline step 12 runs D2/D3 (and teardown) at zero moves BEFORE the window opens, so the offer is never shown on a detected dead end (GDD K-29, K-30, E-58; BUSINESS E13); accepting an offer runs only D1 once (then D3 if D1 helped; E-42)."
+    "_doc": "Price index = offer number n (1..3) in the attempt, whichever option was taken before (GDD K-29, R-15). Rewarded ad alternative only in offer n = 1 (offerIndex; BUSINESS §4.3, P-4), so at most 1 per attempt; not shown in the lifetime-first free offer. Faz 2R: pipeline step 12 runs D2/D3 (and teardown) at zero moves BEFORE the window opens, so the offer is never shown on a detected dead end (GDD K-29, K-30, E-58; BUSINESS E13); accepting an offer runs only D1 once and never D3 afterwards (GDD K-29, Faz 2R solver round; E-42)."
   },
   "ads": {
     "dailyCapTotal": 6,

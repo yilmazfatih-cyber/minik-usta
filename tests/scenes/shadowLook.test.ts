@@ -15,20 +15,35 @@ import {
   showsShadow,
 } from '../../src/scenes/level/shadowLook.ts';
 import { N, RAIL, levelFile } from '../core/moves.fixtures.ts';
+import { compiledLevel } from '../fixtures/builders.ts';
 
-/** Level 1 (easy): `a` = D2_90 Y (piece 0), `b` = D2_0 W (piece 1); plan YY / WW / WW from the bottom. */
+/**
+ * Level 1 (easy, 4×4 | 2×5, H 5): `a` = D2_0 Y (piece 0), `b` = D2_0 W (piece 1); column 4 of the plan is Y Y at
+ * rows 0–1 (LEVELS §2 Bölüm 1). Released in the crane area above column 4: `a` lands right, `b` on the wrong colour.
+ */
 function level1Falls(): { ok: FallResult; color: FallResult } {
   const { state: s } = GameSession.start(levelFile(1));
-  return { ok: computeFall(s, 0, N(6, 8)), color: computeFall(s, 1, N(6, 8)) };
+  return { ok: computeFall(s, 0, N(4, 5)), color: computeFall(s, 1, N(4, 5)) };
 }
 
-/** Level 4 (easy, W1 gap rows 3–4): a W D2_90 parked on the rail at (6, 3) — right colour, nothing under it (K-34). */
-function level4SupportFall(): FallResult {
-  const lvl = levelFile(4);
+/**
+ * A W D2_90 parked on the rail at (6, 3) — right colour, nothing under it (K-34). Builder board: the Faz 2R levels 1–10
+ * have their gaps at row 0, where the rail is the floor.
+ */
+function railSupportFall(): FallResult {
+  const lvl = compiledLevel({
+    wall: { height: 6, gaps: [{ type: 'static', y: 3, size: 2 }] },
+    plan: ['WW', 'RR', 'RR', 'RR'],
+    pieces: [
+      ['D2_90', 'W', 4, 3],
+      ['O4_0', 'R', 0, 0],
+      ['D2_90', 'R', 2, 0],
+    ],
+  });
   const { state: s } = GameSession.start(lvl);
   const w = COLOR_CODES.indexOf('W');
   const piece = lvl.pieces.find((p) => shapeByIndex(p.shapeIndex).id === 'D2_90' && p.colorIndex === w);
-  if (!piece) throw new Error('level 4 has no W D2_90 piece');
+  if (!piece) throw new Error('no W D2_90 piece');
   return computeFall(s, piece.id, RAIL(0, 6, 3));
 }
 
@@ -45,7 +60,7 @@ describe('fall shadow look (K-18, K-34 hook 2, UX 5.4, D-014)', () => {
   });
 
   it('K-34 hook 2 support is the primary reason: ↓ badge and the missing-support cells hatched; rail = no body', () => {
-    const fall = level4SupportFall();
+    const fall = railSupportFall();
     expect(fall.mode).toBe('rail');
     expect(fall.verdict.reasons).toEqual(['support']);
     const look = shadowLook(fall, 'easy');
@@ -56,7 +71,7 @@ describe('fall shadow look (K-18, K-34 hook 2, UX 5.4, D-014)', () => {
 
   it('K-18 hard / superhard: neutral outline only — no badge, no pulse, no support hatch (UX 5.4)', () => {
     for (const d of ['hard', 'superhard'] as const) {
-      expect(shadowLook(level4SupportFall(), d)).toMatchObject({
+      expect(shadowLook(railSupportFall(), d)).toMatchObject({
         outline: 'neutral',
         badge: null,
         pulse: false,

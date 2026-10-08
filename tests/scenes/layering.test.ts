@@ -56,12 +56,10 @@ const WRITERS = new Set([
 ]);
 
 /**
- * The only exemption: the tutorial never-lock guarantee simulates a release through the K-35 pipeline on a BUFFER COPY
- * (TECH §8.2 "tampon kopyasında `applyMove(kopya, …)`; sonuç atılır") — never on the live state.
+ * No exemption: the Faz 2 tutorial never-lock guarantee (the only scene code that simulated a release on a buffer copy)
+ * is gone with the required step (K-53, WP-H); the glove check (tutorial/glove.ts) only reads the drag BFS.
  */
-const SIMULATION_ONLY: Readonly<Record<string, readonly string[]>> = {
-  'src/scenes/level/tutorial/guarantee.ts': ['applyMove'],
-};
+const SIMULATION_ONLY: Readonly<Record<string, readonly string[]>> = {};
 
 describe('scene layering (TECH 1.1–1.4)', () => {
   const files = [...tsFiles(join(ROOT, 'src/scenes')), ...tsFiles(join(ROOT, 'src/ui'))];
@@ -80,18 +78,26 @@ describe('scene layering (TECH 1.1–1.4)', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('TECH 8.2 the tutorial guarantee simulates only on a cloneState copy (the live state is never passed)', () => {
-    const code = readFileSync(join(ROOT, 'src/scenes/level/tutorial/guarantee.ts'), 'utf8');
-    const calls = [...code.matchAll(/applyMove\(\s*(\w+)/g)].map((m) => m[1]);
-    expect(calls).toEqual(['copy']);
-    expect(code).toMatch(/const copy = cloneState\(s\);/);
+  it('K-53 tutorial never blocks input: no scene file simulates a move, the tutorial modules import no core writer', () => {
+    expect(Object.keys(SIMULATION_ONLY)).toEqual([]);
+    for (const f of [
+      'TutorialController.ts',
+      'TutorialPresence.ts',
+      'glove.ts',
+      'highlights.ts',
+      'contextTips.ts',
+    ]) {
+      const code = readFileSync(join(ROOT, 'src/scenes/level/tutorial', f), 'utf8');
+      expect(code, f).not.toMatch(/applyMove|cloneState/);
+    }
   });
 
-  it('TECH 1.4 the level scene commits drags through GameSession.commit and asks the core for the shadow', () => {
+  it('TECH 1.4 / 2R.15 the level scene commits drags through GameSession.apply (one package) and asks the core for the shadow', () => {
     const scene = readFileSync(join(ROOT, 'src/scenes/level/LevelScene.ts'), 'utf8');
     expect(scene).toMatch(
-      /const move = \{ kind: 'drag', pieceId: id, to: node \} as const;\s+const res = game\.commit\(move, sink\);/,
+      /const move = \{ kind: 'drag', pieceId: id, to: node \} as const;\s+const res = this\.applyAction\(move/,
     );
+    expect(scene).toMatch(/const res = game\.apply\(action\);/);
     expect(scene).toMatch(/computeFall\(s, session\.pieceId, node, \{ rules: this\.hooks\.fall \}\)/);
     const drag = readFileSync(join(ROOT, 'src/scenes/level/DragController.ts'), 'utf8');
     expect(drag).toMatch(/tryBeginDrag\(s, id, host\.dragRules\(\)\)/);
