@@ -617,7 +617,8 @@ describe('EventPlayer schedule (JUICE 0 rule 10, TECH 6.3)', () => {
     expect(k.indexOf('55')).toBe(k.indexOf('yardClear') + 1);
     expect(k.indexOf('56')).toBe(k.indexOf('55') + 1);
     for (const c of last)
-      if (c.kind === 18 || c.kind === 'yardClear' || c.kind === 55 || c.kind === 56) expect(c.lock).toBe(true);
+      if (c.kind === 18 || c.kind === 'yardClear' || c.kind === 55 || c.kind === 56)
+        expect(c.lock).toBe(true);
     expect(startOf(last, 'yardClear')).toBe(startOf(last, 18) + TOKENS.duration.segment);
     const clear = last.find((c) => c.kind === 'yardClear');
     expect(startOf(last, 55)).toBe(startOf(last, 'yardClear') + (clear?.ms ?? Number.NaN));

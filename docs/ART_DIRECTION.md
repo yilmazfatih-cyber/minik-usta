@@ -1,6 +1,6 @@
 # Sanat yönü — Minik Usta
 
-Sahip: design-lead · Sürüm: **Faz 2R (2026-10-07) — görsel dil v2** (R2-07 görsel çıta, R2-08 ücretsiz üretim yolu,
+Sahip: design-lead · Sürüm: **Faz 2R (2026-10-07) — görsel dil v2; ekran incelemesi 1 ekleri 2026-10-08 (§7 EXPAND kenar germe, §7.1 tahta tepsisi, §7.2 opak tabanlı hayalet, §11.1 D-087 oran tablosu, §2.4 v2 saha çerçevesi tokenları)** (R2-07 görsel çıta, R2-08 ücretsiz üretim yolu,
 R2-02 değişken boyut); **Faz 2R çapraz inceleme kapanışı** (aynı gün: R2-08 güncellemesi — görseller elle yazılmış SVG,
 yapay zekâ yok; R2-12 sahip referansları — studlu oyuncak tuğla, çivit arayüz zemini; Ağır Yük ve moloz yeniden tarif;
 `docs/review_inbox/design-lead-2R-closure.md`); önceki: Faz 1 revizyonu (2026-10-04; R-01, R-04, R-05, R-24), Faz 2 boşluğu 2 (2026-10-06) ·
@@ -182,7 +182,8 @@ yeşil üstünde ham kontrastı düşüktür (2,7:1); kontur ve gölge okunurlu�
 | `board.yardFloor` | #E9C891 | saha zemini (kum/ahşap) |
 | `board.yardFloorAlt` | #E2BD80 | dama deseni için ikinci ton (%50 hücre) |
 | `board.yardGrid` | #D4AE6E | saha ızgara çizgisi (3 px) |
-| `board.yardFrame` | #B98A4E | saha çerçevesi (20 px tahta kenar) |
+| `board.yardFrame` | #B98A4E | saha çerçevesi (v1 düz; v2 iç gölge yayı) |
+| `board.yardFrameTop` / `yardFrameBottom` | #E2A653 / #B97A35 | **v2 saha çerçevesi** (20 px ahşap, dikey gradyan; kontur `kit.panel.outline` #5A3A1E; UX §5.8; 2026-10-08, WP-F `YARD_FRAME` sabitinin yerine) |
 | `board.blueprint` | #1F4F8F | şantiye ozalit zemini |
 | `board.blueprintDeep` | #173D70 | plan dışı hücreler |
 | `board.planUnderlay` | #BCCADD | plan hücresi açık altlığı (üstüne renk %80; bileşik renk formülle üretilir) |
@@ -602,9 +603,11 @@ design-lead'in elle yazdığı **SVG** dosyalarıdır (`public/art/bg/*.svg`, AS
 
 - **Boyut, raster ve bellek (CL-2R-23):** SVG `viewBox="0 0 1080 1920"`; oyun **0,5 ölçekte** raster eder (540×960
   RGBA = 2,0 MB GPU) ve ×2 çizer. Arka plan sakin ve düşük ayrıntılı olduğu için yumuşama kabul edilir (derinlik
-  hissi verir); bunu taşımak için arka plan SVG'lerinde kontur **en az 8 px**, en küçük şekil 24 px'tir. 1920'nin
-  üstündeki fazla yükseklik (EXPAND, en çok 480 px) görselin üst kenar rengine eşlenmiş **prosedürel gök gradyanıdır**
-  (doku değil). Raster yolu (çalışma anında `load.svg` boyutla ya da derlemede PNG/WebP) code-lead'in kararıdır;
+  hissi verir); bunu taşımak için arka plan SVG'lerinde kontur **en az 8 px**, en küçük şekil 24 px'tir. EXPAND'de (en
+  çok 480 px fazla) görsel orta grupla `(H − 1920) × 0,5` kayar; fazla yükseklik üstte ve altta görselin **ilk / son
+  piksel satırı gerilerek** dolar (doku değil, dikişsiz; WP-I kararı 2026-10-08'de kabul edildi — alta çapalı görselde
+  390×844'te yapı tabanı çimen çizgisinin ≈ 85 px üstünde kalıyordu). Kural: SVG'lerin ilk ve son 8 px'lik satırında
+  yatay ayrıntı az olur (gök gradyanı, sade zemin); gerilen satırdaki her çizgi dikey şerit olarak uzar. Raster yolu (çalışma anında `load.svg` boyutla ya da derlemede PNG/WebP) code-lead'in kararıdır;
   bütçe ikisinde de aynıdır: **v2 görsellerinin toplam indirmesi ≤ 900 KB, toplam doku belleği ≤ 64 MB** (TECH §2R.7
   ölçüm kapısı; ayrıntılı tablo ASSET §16.1).
 - **Sakin orta:** oyun ekranında tahta grubunun dikdörtgeni (8 sütunluk tahtada x 10–1070, y = vinç alanı tepesi –
@@ -631,6 +634,10 @@ açılışında `Graphics` + bir kez pişirilen desen):
 - **Tahta:** saha ahşap çerçeveli "malzeme sandığı" (UX §5.8; delikli pano zemini §2.4), şantiye iskeleli ozalit
   (§4), duvar beton (§5). Saha üstü hava ve vinç alanı `board.craneSky` (beyaz α 0,10) bandıdır: çivit üstünde açık
   bir "hava" şeridi olarak okunur.
+- **Tahta tepsisi** (WP-G eklemesi, 2026-10-08'de tarife girdi): tahta grubunun (vinç alanı tepesi – durum şeridi
+  altı) arkasında `color.scene.gameBottom` α 0,55 dolgulu, 4 px `#5546A8` (`kit.nav` kenar rengi) konturlu, köşe 48
+  yuvarlak panel; "çerçeveli tahta" referans ilkesi (R2-12). Payı `min(24, yardX − 32)`; 8 px'in altına düşerse yan
+  kenarlar çizilmez (UX §5.8 madde 9).
 - **Alt bant:** UX §5.10 (`ui.ink` α 0 → 0,35).
 - Block Blast benzerliğinden ayrışma (§11.8): tahta koyu ızgara değildir — sıcak kum/ahşap saha + mavi ozalit +
   beton duvar; neon ışıma yok; bloklar çıkıntılı ve sembollü.
@@ -641,9 +648,12 @@ Tepe yamacına kurulu sabah kasabası: kiremit, nane, tereyağı sarısı ve ley
 yuvarlak ağaçlar, bacasından kıvrık duman çıkan fırın, sağda kıyıda uzak fener, uzakta festival tepesi. **Ortada boş çimen
 arsa ve büyük çınar**: aktif hikaye yapısı (`town_ch1_treehouse`, ayrı şeffaf görsel) buraya oturur. Üst %15 sakin gök
 (üst çubuk), alt %22 sakin çimen (Bölüm düğmesi + alt gezinme). İnşa ilerlemesi yapının üstüne prosedürel çizilir:
-yapılmamış katmanlar **ozalit hayaleti** (yapı siluetinin `board.blueprint` %35 dolgusu + 4 px beyaz %90 kesik kontur,
-16/12) ve iki yanda iskele; yapılan kısım tam renk, alttan üste `setCrop` ile açılır (JUICE #102). Hayaletin plan
-dilini oyun ekranındaki ozalitten alması bilinçlidir: "planı çiz, sonra inşa et".
+yapılmamış katmanlar **ozalit hayaleti** (yapı siluetinin **opak `board.planUnderlay` #BCCADD tabanı** + üstünde
+`board.blueprint` %35 dolgusu + 4 px beyaz %90 kesik kontur, 16/12; görünen ton ≈ #859FC2) ve iki yanda iskele; yapılan kısım tam renk, alttan üste `setCrop` ile açılır (JUICE #102). Hayaletin plan
+dilini oyun ekranındaki ozalitten alması bilinçlidir: "planı çiz, sonra inşa et". **Opak taban (2026-10-08, DS-03 /
+DS-30):** eski yarı saydam hayalet (%35) çınarın yaprakları üstünde çamurlu yeşil-mavi, kazanma kartının krem
+zemininde gri okunuyordu; opak taban hayaleti her zeminde aynı ozalit mavisinde tutar (yapı nasılsa ağacın önünde
+duracak, arkasını örtmesi doğrudur). Üretim: `tools/assets.ts` hayalet işi önce silueti `planUnderlay` ile opak boyar.
 
 **SVG ve kırpma durakları (R2-08, PL-2R-15 c):** `bg_home_town` ve `town_ch1_treehouse` elle yazılmış SVG'dir (ASSET
 §16). **Çınar ayrı taban katmanıdır** (`town_ch1_tree`, 2026-10-07): yapıyla aynı 760×820 kutuda, yapının altında, her
@@ -845,8 +855,23 @@ kontur, düz renk + tek gölge tonu, burun küçük yuvarlak. Ten tonları gerç
 
 ### 11.1 Tuna — "Minik Usta"
 
-> Yaş yalnız iç bilgidir (brif: 8); oyun içi metinde ve mağaza materyalinde geçmez (STORY §0-8). **Açık soru (proje
-> sahibi):** görsel yaşın 10–12 görünüme çekilmesi (çocuk ürünü sinyalini azaltır; BUSINESS S15).
+> Yaş yalnız iç bilgidir; oyun içi metinde ve mağaza materyalinde geçmez (D-044, STORY §0-8). **Görsel yaş 10–12
+> (D-087 KABUL, 2026-10-07; proje sahibi itiraz ederse değişir).**
+
+**D-087 oran kuralları (2026-10-08, ekran incelemesi DS-40; `chr_tuna_bust`, `chr_tuna_cheer` bu kurallara çekildi):**
+
+| Ölçü | 6–8 yaş görünümü (eski) | 10–12 yaş görünümü (şimdi) |
+| ---- | ----------------------- | -------------------------- |
+| Göz yüksekliği / görünen yüz (kask kenarı → çene) | %38 (ry 19) | **≤ %30** (ry 15), iris göz akının %60'ı, 2 parlama (büyük r 3,6, küçük r 1,6) |
+| Kaş | yüksek kemer (şaşkın) | **düz, hafif açılı** (özgüven), göze yakın |
+| Burun | yuvarlak leke | **kısa burun çizgisi** (yan ışıklı kanca, `#9E7A5E` 4 px) |
+| Ağız | kocaman açık gülüş (48×26) | **küçük, hafif yan gülüş** (36×17, sağ köşe 2 px yukarı) |
+| Yanak | pembe α 0,45 | α 0,22, daha küçük (bebek yanağı yok) |
+| Çene | yuvarlak | **hafif sivri**, yüz alt yarısı daralır |
+| Tam boy oran (kafatası ölçüsüyle, kask hariç) | ≈ 2,9 baş | **≥ 3,6 baş** (baş ölçeği 0,8 → 0,66; gövde 124, bacak 100 birim) |
+
+Çil, dağınık saç, kocaman eldiven ve kask imza olarak kalır (siluet testi §11.8 değişmez). Yeni pozlar (ör.
+`chr_tuna_stand`, ASSET §16.3) bu tablodan başlar.
 
 - **Cinsiyet nötr tasarım önerisi:** Çene hizasında, kaskın iki yanından taşan dağınık kestane saç (perçem değil,
   "kask altından fışkıran tutam"); kirpik vurgusu yok; çil; iri amber gözler; düz, yuvarlak yüz. Kıyafet cinsiyetsiz

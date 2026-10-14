@@ -1,19 +1,25 @@
 /**
- * `npm run perf` (= `vite build --mode harness && node tools/perf.ts`): the Phase 2 performance gates of
- * docs/TECH_DESIGN.md §10.7 and §14.1 ("perf 4× ≥ 50 FPS (CPU tarafı) ve FTUE ≤ 10 s"), CLAUDE.md "Bitti tanımı".
+ * `npm run perf` (= `vite build --mode harness && node tools/perf.ts`): the performance gates of docs/TECH_DESIGN.md
+ * §10.7, §2R.11 and §2R.13 ("4× CPU ≥ 50 FPS (CPU tarafı)", "FTUE ≤ 10 s ve ≤ 3 dokunuş"), CLAUDE.md "Bitti tanımı".
  *
  * 1. Gameplay: the harness build on `vite preview --mode harness`, Chromium at /opt/pw-browsers/chromium, 390 × 844,
  *    DPR 3, `isMobile`, `hasTouch`, full animations. For each CPU rate (CDP `Emulation.setCPUThrottlingRate`, default
- *    4 then 1) levels 1–5 are played by their hand goldens as real 60 Hz CDP touch gestures (touchStart → touchMove …
- *    → touchEnd); the in-page sampler (src/harness/perf.ts) records every drag into `drag` and every level end (release
- *    of the winning move → win window open + 1.5 s) into `win`.
+ *    4 then 1) the Faz 2R levels (default 1 and 10: the first board and the largest one, 6×5 | 2×6) are played by their
+ *    hand goldens as real 60 Hz CDP touch gestures (touchStart → touchMove … → touchEnd); the in-page sampler
+ *    (src/harness/perf.ts) records every drag into `drag` and every level end (release of the winning move → win v2
+ *    layer open + 1.5 s) into `win`; then the home screen v2 idles 4 s into `home`.
  * 2. FTUE: a cold context (empty cache and storage) at 4× CPU + DevTools "Fast 4G", navigation start →
- *    `window.__levelInteractive` (Level 1 takes input after the untouched 3-panel intro, UX §2.1).
+ *    `window.__levelInteractive` (Level 1 takes input after the untouched 3-panel intro, UX §2.1): 0 taps on that path
+ *    (≤ 3 allowed; the intro's "Geç" or 3 panel taps only shorten it).
+ * 3. Timings (services/timings.ts through the harness, 4×): the level-start block bake, the kit atlas bake (in the cold
+ *    FTUE run, before the first screen), one core action package (`GameSession.apply`, K-35 steps 1–12 with the D1 /
+ *    D2 / D3a checks — an upper bound of step 12), and the texture memory of the game.
  *
- * Gates (TECH §10.7 item 6, on the CPU side at 4×; exit 1 when one fails or a gated value is missing — a broken sampler
- * or a run without frames never passes): mean CPU-side FPS ≥ 50 for `drag` and `win` (`cpuFps`: touch handlers + Phaser
- * step per frame, GPU waits excluded), CPU-side p95 ≤ 25 ms for both, no CPU-side frame > 50 ms while dragging, FTUE
- * ≤ 10 000 ms. Input latency (touch move that wrote the block's pose → the frame that draws it) is reported in frames
+ * Gates (TECH §10.7 item 6, §2R.13; on the CPU side at 4×; exit 1 when one fails or a gated value is missing — a
+ * broken sampler or a run without frames never passes): mean CPU-side FPS ≥ 50 for `drag`, `win` and `home`
+ * (`cpuFps`: touch handlers + Phaser step per frame, GPU waits excluded), CPU-side p95 ≤ 25 ms for `drag` and `win`, no
+ * CPU-side frame > 50 ms while dragging, FTUE ≤ 10 000 ms and ≤ 3 taps, level bake ≤ 150 ms, kit bake ≤ 200 ms, action
+ * package p99 ≤ 2 ms and worst ≤ 8 ms, textures ≤ 64 MB. Input latency (touch move that wrote the block's pose → the frame that draws it) is reported in frames
  * (≤ 1 expected, TECH §4.6) as an indicator: on SwiftShader the frame pace is the software GPU's. The rAF frame rate
  * carries the GPU share too (TECH §10.7 item 7: "CPU güvenilir, GPU gösterge"). `--isolate-gpu` pins the GPU process to CPU 0 and the page's renderer to the other CPUs
  * (`taskset`) so the software GPU cannot steal the measured main thread's CPU; on the 4-core sandbox it changed the
@@ -56,6 +62,14 @@ const GATE_CPU_FPS = 50;
 const GATE_CPU_P95_MS = 25;
 const GATE_DRAG_LONG_FRAMES = 0;
 const GATE_FTUE_MS = 10_000;
+const GATE_FTUE_TAPS = 3;
+const GATE_LEVEL_BAKE_MS = 150;
+const GATE_KIT_BAKE_MS = 200;
+const GATE_APPLY_P99_MS = 2;
+const GATE_APPLY_MAX_MS = 8;
+const GATE_TEXTURE_MB = 64;
+/** Home screen idle sample (UX §3 v2: art, nav, the button's pulse). */
+const HOME_SAMPLE_MS = 4000;
 const INPUT_FRAMES = 1;
 /** After the win window opened: its JUICE #70 entry and the #55–#57 banners keep animating. */
 const WIN_TAIL_MS = 1500;
@@ -130,7 +144,14 @@ interface RateResult {
   /** Level and move whose drag window holds the drag bucket's longest CPU frame (diagnostics). */
   readonly dragWorstAt: string | null;
   readonly win: PerfStats | null;
+  readonly home: PerfStats | null;
   readonly levels: { readonly id: number; readonly moves: number; readonly won: boolean }[];
+  /** TECH §2R.13 timings of the run (ms) and the texture memory after it (MB). */
+  readonly levelBakeMaxMs: number | null;
+  readonly applyP99Ms: number | null;
+  readonly applyMaxMs: number | null;
+  readonly applySamples: number;
+  readonly textureMB: number | null;
   readonly heapMB: number | null;
   readonly consoleErrors: readonly string[];
 }
@@ -147,7 +168,18 @@ interface FtueResult {
   readonly domContentLoadedMs: number | null;
   readonly loadMs: number | null;
   readonly transferKB: number | null;
+  /** Taps on the measured path (the untouched intro: 0). */
+  readonly taps: number;
+  /** Kit atlas bake of the cold start (ms, at the run's CPU rate). */
+  readonly kitBakeMs: number | null;
   readonly consoleErrors: readonly string[];
+}
+
+/** p-quantile (0…1) of `xs` (nearest rank), null when empty. */
+function quantile(xs: readonly number[], p: number): number | null {
+  if (xs.length === 0) return null;
+  const sorted = [...xs].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(p * sorted.length) - 1))] ?? null;
 }
 
 async function userDataDirOf(browser: Browser): Promise<string> {
@@ -219,13 +251,24 @@ async function gameplayRun(
     dragWorst.cpuMs = 0;
     dragWorst.at = null;
     await gp.cdp.send('Emulation.setCPUThrottlingRate', { rate });
+    await gp.page.evaluate(() => window.__harness!.clearTimings());
     const played: { id: number; moves: number; won: boolean }[] = [];
     for (const id of levels) {
       const r = await playLevelMeasured(gp, id);
       played.push({ id, ...r });
       process.stdout.write(`  ${rate}× level ${id}: ${r.moves} moves, ${r.won ? 'won' : 'NOT WON'}\n`);
     }
+    // UX §3 home screen v2 (art, nav, the button pulse), idle
+    await gp.page.evaluate(() => window.__harness!.goHome());
+    await sleep(1000);
+    await perfStart(gp.page, 'home');
+    await sleep(HOME_SAMPLE_MS);
+    await perfStop(gp.page);
+    const timings = await gp.page.evaluate(() => window.__harness!.timings());
+    const textureMB = await gp.page.evaluate(() => window.__harness!.textureMB());
     await gp.cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+    const apply = timings.apply ?? [];
+    const bakes = timings.levelBake ?? [];
     const heap = (await gp.cdp.send('Runtime.getHeapUsage')) as { usedSize: number };
     return {
       rate,
@@ -234,7 +277,13 @@ async function gameplayRun(
       drag: await perfStats(gp.page, 'drag'),
       dragWorstAt: dragWorst.at,
       win: await perfStats(gp.page, 'win'),
+      home: await perfStats(gp.page, 'home'),
       levels: played,
+      levelBakeMaxMs: bakes.length > 0 ? Math.max(...bakes) : null,
+      applyP99Ms: quantile(apply, 0.99),
+      applyMaxMs: apply.length > 0 ? Math.max(...apply) : null,
+      applySamples: apply.length,
+      textureMB,
       heapMB: Math.round((heap.usedSize / 1024 / 1024) * 10) / 10,
       consoleErrors: gp.errors,
     };
@@ -284,6 +333,7 @@ async function ftueRun(browser: Browser, url: string, rate: number, network: boo
         dcl: nav ? nav.domContentLoadedEventEnd : null,
         load: nav ? nav.loadEventEnd : null,
         transfer,
+        kitBake: window.__harness!.timings().kitBake?.[0] ?? null,
       };
     });
     return {
@@ -296,6 +346,8 @@ async function ftueRun(browser: Browser, url: string, rate: number, network: boo
       domContentLoadedMs: r.dcl === null ? null : Math.round(r.dcl),
       loadMs: r.load === null ? null : Math.round(r.load),
       transferKB: Math.round(r.transfer / 1024),
+      taps: 0,
+      kitBakeMs: r.kitBake,
       consoleErrors: gp.errors,
     };
   } finally {
@@ -327,7 +379,7 @@ function row(label: string, s: PerfStats | null): string {
 
 async function main(): Promise<number> {
   const rates = flag('--ftue-only') ? [] : (arg('--rates') ?? '4,1').split(',').map(Number);
-  const levels = (arg('--levels') ?? '1,2,3,4,5').split(',').map(Number);
+  const levels = (arg('--levels') ?? '1,10').split(',').map(Number);
   const renderer = arg('--renderer') ?? 'webgl';
   const isolate = flag('--isolate-gpu') && hasTaskset();
   const server = await startHarnessServer();
@@ -380,7 +432,14 @@ async function main(): Promise<number> {
     dragCpuP95: { value: gated?.drag?.cpuP95 ?? null, max: GATE_CPU_P95_MS },
     winCpuP95: { value: gated?.win?.cpuP95 ?? null, max: GATE_CPU_P95_MS },
     dragLongFrames: { value: gated?.drag?.cpuOver50 ?? null, max: GATE_DRAG_LONG_FRAMES },
+    homeCpuFps: { value: gated?.home?.cpuFps ?? null, min: GATE_CPU_FPS },
     ftueMs: { value: ftueGated?.levelInteractiveMs ?? null, max: GATE_FTUE_MS },
+    ftueTaps: { value: ftueGated?.taps ?? null, max: GATE_FTUE_TAPS },
+    levelBakeMs: { value: gated?.levelBakeMaxMs ?? null, max: GATE_LEVEL_BAKE_MS },
+    kitBakeMs: { value: ftueGated?.kitBakeMs ?? null, max: GATE_KIT_BAKE_MS },
+    applyP99Ms: { value: gated?.applyP99Ms ?? null, max: GATE_APPLY_P99_MS },
+    applyMaxMs: { value: gated?.applyMaxMs ?? null, max: GATE_APPLY_MAX_MS },
+    textureMB: { value: gated?.textureMB ?? null, max: GATE_TEXTURE_MB },
   };
   const pass = {
     dragCpuFps: gate(gameplayGated, gates.dragCpuFps.value, (v) => v >= GATE_CPU_FPS),
@@ -388,7 +447,14 @@ async function main(): Promise<number> {
     dragCpuP95: gate(gameplayGated, gates.dragCpuP95.value, (v) => v <= GATE_CPU_P95_MS),
     winCpuP95: gate(gameplayGated, gates.winCpuP95.value, (v) => v <= GATE_CPU_P95_MS),
     dragLongFrames: gate(gameplayGated, gates.dragLongFrames.value, (v) => v <= GATE_DRAG_LONG_FRAMES),
+    homeCpuFps: gate(gameplayGated, gates.homeCpuFps.value, (v) => v >= GATE_CPU_FPS),
     ftueMs: gate(ftueRan, gates.ftueMs.value, (v) => v <= GATE_FTUE_MS),
+    ftueTaps: gate(ftueRan, gates.ftueTaps.value, (v) => v <= GATE_FTUE_TAPS),
+    levelBakeMs: gate(gameplayGated, gates.levelBakeMs.value, (v) => v <= GATE_LEVEL_BAKE_MS),
+    kitBakeMs: gate(ftueRan, gates.kitBakeMs.value, (v) => v <= GATE_KIT_BAKE_MS),
+    applyP99Ms: gate(gameplayGated, gates.applyP99Ms.value, (v) => v <= GATE_APPLY_P99_MS),
+    applyMaxMs: gate(gameplayGated, gates.applyMaxMs.value, (v) => v <= GATE_APPLY_MAX_MS),
+    textureMB: gate(gameplayGated, gates.textureMB.value, (v) => v <= GATE_TEXTURE_MB),
   };
   /** Indicator (SwiftShader frame pace): frames from the touch move to the drawn pose, p95 and max. */
   const inputFrames = {
@@ -414,14 +480,20 @@ async function main(): Promise<number> {
 
   for (const r of runs) {
     process.stdout.write(`\n${r.rate}× CPU, ${r.renderer}, isolation: ${r.isolation}, heap ${r.heapMB} MB\n`);
-    process.stdout.write(`${row('drag', r.drag)}\n${worstRow(r.drag, r.dragWorstAt)}${row('win', r.win)}\n`);
+    process.stdout.write(
+      `${row('drag', r.drag)}\n${worstRow(r.drag, r.dragWorstAt)}${row('win', r.win)}\n${row('home', r.home)}\n`,
+    );
+    process.stdout.write(
+      `  timings: level bake max ${r.levelBakeMaxMs} ms, action package p99 ${r.applyP99Ms} / max ${r.applyMaxMs} ms ` +
+        `(${r.applySamples}), textures ${r.textureMB} MB\n`,
+    );
     for (const c of r.consoleErrors) process.stdout.write(`  console error: ${c}\n`);
   }
   for (const f of ftue) {
     process.stdout.write(
       `\nFTUE ${f.rate}× CPU, network ${f.network}: level 1 interactive at ${f.levelInteractiveMs} ms ` +
         `(intro at ${f.introShownMs} ms, level screen at ${f.levelShownMs} ms, DOMContentLoaded ${f.domContentLoadedMs} ms, load ${f.loadMs} ms, ` +
-        `${f.transferKB} KB; page ${f.fps} fps after)\n`,
+        `${f.transferKB} KB; page ${f.fps} fps after; ${f.taps} taps; kit bake ${f.kitBakeMs} ms)\n`,
     );
     for (const c of f.consoleErrors) process.stdout.write(`  console error: ${c}\n`);
   }
@@ -433,7 +505,14 @@ async function main(): Promise<number> {
       `  ${mark(pass.dragCpuP95)} drag p95 ${gates.dragCpuP95.value} ms ≤ ${GATE_CPU_P95_MS}\n` +
       `  ${mark(pass.winCpuP95)} win p95 ${gates.winCpuP95.value} ms ≤ ${GATE_CPU_P95_MS}\n` +
       `  ${mark(pass.dragLongFrames)} drag frames > 50 ms: ${gates.dragLongFrames.value} ≤ ${GATE_DRAG_LONG_FRAMES}\n` +
+      `  ${mark(pass.homeCpuFps)} home mean ${gates.homeCpuFps.value} fps ≥ ${GATE_CPU_FPS}\n` +
       `  ${mark(pass.ftueMs)} FTUE ${gates.ftueMs.value} ms ≤ ${GATE_FTUE_MS}\n` +
+      `  ${mark(pass.ftueTaps)} FTUE taps ${gates.ftueTaps.value} ≤ ${GATE_FTUE_TAPS}\n` +
+      `  ${mark(pass.levelBakeMs)} level bake ${gates.levelBakeMs.value} ms ≤ ${GATE_LEVEL_BAKE_MS}\n` +
+      `  ${mark(pass.kitBakeMs)} kit bake ${gates.kitBakeMs.value} ms ≤ ${GATE_KIT_BAKE_MS}\n` +
+      `  ${mark(pass.applyP99Ms)} action package p99 ${gates.applyP99Ms.value} ms ≤ ${GATE_APPLY_P99_MS}\n` +
+      `  ${mark(pass.applyMaxMs)} action package max ${gates.applyMaxMs.value} ms ≤ ${GATE_APPLY_MAX_MS}\n` +
+      `  ${mark(pass.textureMB)} textures ${gates.textureMB.value} MB ≤ ${GATE_TEXTURE_MB}\n` +
       `  info input latency: p95 ${inputFrames.p95} / max ${inputFrames.max} frame(s) (${inputFrames.samples} samples; ` +
       `${INPUT_FRAMES} expected, SwiftShader frame pace)\n` +
       `report: ${join(OUT, 'report.json')}\n`,

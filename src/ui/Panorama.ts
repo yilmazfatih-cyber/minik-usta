@@ -35,6 +35,58 @@ export interface PanoramaStyle {
   readonly framePx: number;
 }
 
+/**
+ * Where the tutorial's panorama arrow points (UX §13.2; pure, exported for tests):
+ * - `right` (Bölüm 5 adım 1): from the active segment's strip to the next one;
+ * - `up` (Bölüm 2 adım 1, single-segment plan): inside the active strip, from its bottom row to its top row ("alttan
+ *   üste").
+ * `from` / `to` are the two end rects; null when there is no active segment, or a multi-segment plan has no next one.
+ */
+export interface PanoramaArrowPair {
+  readonly from: Rect;
+  readonly to: Rect;
+  readonly dir: 'right' | 'up';
+}
+
+export function panoramaArrowPair(
+  rect: Rect,
+  segments: readonly PanoramaSegment[],
+  style: Pick<PanoramaStyle, 'padPx' | 'gapCells' | 'maxCellPx' | 'minCellPx'>,
+): PanoramaArrowPair | null {
+  const active = segments.findIndex((v) => v.status === 'active');
+  const here = active < 0 ? null : panoramaSlot(rect, segments, active, style);
+  if (!here) return null;
+  if (segments.length === 1) {
+    const row = here.h / Math.max(1, segments[active]?.rows.length ?? 1);
+    return {
+      from: { x: here.x, y: here.y + here.h - row, w: here.w, h: row },
+      to: { x: here.x, y: here.y, w: here.w, h: row },
+      dir: 'up',
+    };
+  }
+  const next = panoramaSlot(rect, segments, active + 1, style);
+  return next ? { from: here, to: next, dir: 'right' } : null;
+}
+
+/**
+ * Pose of the 64 × 40 arrow (drawn pointing right) at `slide` px of its loop (0 … `VIEW.panoramaArrowSlidePx`): centred
+ * between the two end rects; `right` slides right, `up` is turned −90° and slides up (UX §13.2: 16 px every 1,2 s).
+ */
+export function panoramaArrowPose(
+  pair: PanoramaArrowPair,
+  slide: number,
+  slidePx: number,
+): { readonly x: number; readonly y: number; readonly rotation: number } {
+  if (pair.dir === 'up') {
+    const x = pair.from.x + pair.from.w / 2;
+    const y = (pair.from.y + pair.from.h / 2 + pair.to.y + pair.to.h / 2) / 2 + slidePx / 2;
+    return { x, y: y - slide, rotation: -Math.PI / 2 };
+  }
+  const y = (pair.from.y + pair.from.h / 2 + pair.to.y + pair.to.h / 2) / 2;
+  const x = (pair.from.x + pair.from.w + pair.to.x) / 2 - slidePx / 2;
+  return { x: x + slide, y, rotation: 0 };
+}
+
 /** Cell size and origin of the strip for `segments` in `rect` (pure; exported for tests). */
 export function panoramaGeometry(
   rect: Rect,
@@ -55,6 +107,36 @@ export function panoramaGeometry(
   // the tallest segment is vertically centred; the others stand on the same base
   const bottom = rect.y + (rect.h + rows * cell) / 2;
   return { cell, x0: rect.x + (rect.w - total) / 2, bottom, colW, step };
+}
+
+/** UX §5.9 item 8 (DS-12): inner pad of the well around the level label and the panorama. */
+export const WELL_LABEL_PAD_PX = 24;
+
+/**
+ * UX §5.9 item 8 (2026-10-08, DS-12): the "BÖLÜM {n}" label sits at the left of the panorama well (pad 24, `labelW`
+ * wide, vertically centred) and the panorama is centred in the rest (`label right + 24 … well right − 24`) at its own
+ * cell size (§5.8 rule 6). When the panorama would have to shrink to fit there (Faz 3 plans with 4+ segments), there is
+ * no label and the panorama uses the whole well. Pure.
+ */
+export function panoramaWellSplit(
+  well: Rect,
+  segments: readonly PanoramaSegment[],
+  style: Pick<PanoramaStyle, 'padPx' | 'gapCells' | 'maxCellPx' | 'minCellPx'>,
+  labelW: number,
+  padPx: number = WELL_LABEL_PAD_PX,
+): { readonly label: Rect | null; readonly strip: Rect } {
+  const label = { x: well.x + padPx, y: well.y, w: labelW, h: well.h };
+  const x = label.x + labelW + padPx;
+  const strip = { x, y: well.y, w: well.x + well.w - padPx - x, h: well.h };
+  if (labelW <= 0 || strip.w <= 2 * style.padPx || segments.length === 0) return { label: null, strip: well };
+  const rows = Math.max(1, ...segments.map((sg) => sg.rows.length));
+  const natural = Math.max(
+    style.minCellPx,
+    Math.min(style.maxCellPx, Math.floor((well.h - 2 * style.padPx) / rows)),
+  );
+  return panoramaGeometry(strip, segments, style).cell < natural
+    ? { label: null, strip: well }
+    : { label, strip };
 }
 
 /** Column of segment `index` in the strip (JUICE #18: the completed segment flies here). */
@@ -127,6 +209,11 @@ export class Panorama {
   /** Column of segment `index` for `segments` in `rect` (JUICE #18). */
   slot(rect: Rect, segments: readonly PanoramaSegment[], index: number): Rect | null {
     return panoramaSlot(rect, segments, index, this.style);
+  }
+
+  /** The tutorial arrow ends for this strip's style (`panoramaArrowPair`). */
+  arrow(rect: Rect, segments: readonly PanoramaSegment[]): PanoramaArrowPair | null {
+    return panoramaArrowPair(rect, segments, this.style);
   }
 
   destroy(): void {

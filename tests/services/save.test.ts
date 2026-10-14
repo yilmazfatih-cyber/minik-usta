@@ -230,7 +230,10 @@ describe('save migration and corrupt recovery (TECH 11.1, ANALYTICS save_corrupt
     const good = encodeSave(createDefaultSave({ analyticsId: 'a', installId: 'i', now: 0, wallet: WALLET }));
     expect(decodeSave(good).ok).toBe(true);
     expect(decodeSave('{"v":1,"data":')).toMatchObject({ ok: false, stage: 'parse' });
-    expect(decodeSave(good.replace('"v":1', '"v":99'))).toMatchObject({ ok: false, stage: 'migrate' });
+    expect(decodeSave(good.replace(`"v":${SAVE_VERSION}`, '"v":99'))).toMatchObject({
+      ok: false,
+      stage: 'migrate',
+    });
     expect(decodeSave(good.replace('"coins":500', '"coins":"500"'))).toMatchObject({
       ok: false,
       stage: 'validate',
@@ -275,11 +278,122 @@ describe('save migration and corrupt recovery (TECH 11.1, ANALYTICS save_corrupt
   it('TECH 11.1 a newer-than-build save is a migrate failure and recovers from the backup', () => {
     const h = harness();
     h.open().commit((d) => void (d.coins = 600));
-    h.store.set(SAVE_KEY, (h.store.get(SAVE_KEY) ?? '').replace('"v":1', '"v":2'));
+    h.store.set(
+      SAVE_KEY,
+      (h.store.get(SAVE_KEY) ?? '').replace(`"v":${SAVE_VERSION}`, `"v":${SAVE_VERSION + 1}`),
+    );
     const s = h.open();
     expect(s.loadReport.failedStage).toBe('migrate');
     expect(s.data.coins).toBe(600);
     expect(h.events).toEqual([{ name: 'save_corrupt', stage: 'migrate', recovered: 'backup' }]);
+  });
+
+  /** A Faz 2 (v1) save: levels 1–2 won, level 3 tried twice and running (rules version 1), a seen tip. */
+  const v1Save = (inLevel: unknown): string => {
+    const d = createDefaultSave({
+      analyticsId: 'a',
+      installId: 'i',
+      now: 0,
+      wallet: WALLET,
+    }) as unknown as Record<string, unknown>;
+    d['progress'] = {
+      highestLevel: 2,
+      levels: {
+        '1': { won: true, attempts: 1 },
+        '2': { won: true, attempts: 3 },
+        '3': { won: false, attempts: 2 },
+      },
+    };
+    d['stars'] = 2;
+    d['coins'] = 420;
+    d['seenContextTips'] = { resume: true, queue: true };
+    d['lives'] = { stored: 4, regenAnchor: 0, unlimitedUntil: 0, reserved: 1 };
+    d['inLevel'] = inLevel;
+    return JSON.stringify({ v: 1, data: d });
+  };
+  const faz2Attempt = {
+    levelId: 3,
+    seed: 3003,
+    mode: 'story',
+    preBoosters: [],
+    streakTier: 0,
+    actions: [{ kind: 'start', preBoosters: [], streakTier: 0 }, drag(0, 5, 0)],
+    movesMade: 1,
+    offersUsed: 1,
+    adOfferUsed: false,
+    offerSpendCoins: 900,
+    outcomeWindow: 'none',
+    levelHash: 'faz2-level-3',
+    rulesVersion: 1,
+    attemptId: 'x',
+    startedAt: 0,
+    bridgeEventId: null,
+  };
+
+  it('K-43 save version bump keeps progress (v1 → v2, TECH 2R.10): the Faz 2 attempt is voided penalty-free at launch', () => {
+    expect(SAVE_VERSION).toBe(2);
+    const r = decodeSave(v1Save(faz2Attempt));
+    if (!r.ok) throw new Error(r.error);
+    expect(r.migratedFrom).toBe(1);
+    // ids are the same, the content is new: won / attempts, stars, wallet and the seen tips stay
+    expect(r.data.progress).toEqual({
+      highestLevel: 2,
+      levels: {
+        '1': { won: true, attempts: 1 },
+        '2': { won: true, attempts: 3 },
+        '3': { won: false, attempts: 2 },
+      },
+    });
+    expect([r.data.stars, r.data.coins]).toEqual([2, 420]);
+    expect(r.data.seenContextTips).toEqual({ resume: true, queue: true });
+    expect(r.data.inLevel).toMatchObject({ levelId: 3, rulesVersion: 1, tutorial: null });
+
+    const h = harness();
+    h.store.set(SAVE_KEY, v1Save(faz2Attempt));
+    const s = h.open();
+    expect(s.loadReport).toEqual({ source: 'main', failedStage: null, migratedFrom: 1 });
+    expect(JSON.parse(h.store.get(SAVE_KEY) ?? '{}').v).toBe(2); // written back as v2 at once
+    // K-43 item 4: rules version 1 ≠ 2 (and a new level hash) → the attempt never happened
+    const d = s.resumeOnLaunch(() => ({ levelHash: 'faz2r-level-3', rulesVersion: 2 }));
+    expect(d).toMatchObject({
+      kind: 'void',
+      cause: 'both',
+      notice: { level: 3, refunds: { life: 1, coins: 900 } },
+    });
+    expect(s.data.inLevel).toBeNull();
+    expect(s.data.lives).toMatchObject({ stored: 4, reserved: 0 }); // the reserved life back, nothing charged
+    expect(s.data.coins).toBe(420 + 900);
+    expect(s.data.progress.levels['3']).toEqual({ won: false, attempts: 2 });
+    expect(h.events.map((e) => e.name)).toEqual(['level_resume_invalid', 'coin_source']);
+  });
+
+  it('K-43 save version bump: a Faz 2 attempt this build cannot read is voided by the migration, the save survives', () => {
+    // an action kind and a field the v2 schema does not know: without the migration the whole save would fail
+    const unreadable = {
+      ...faz2Attempt,
+      preBoosters: ['thermos'],
+      actions: [
+        ...faz2Attempt.actions,
+        { kind: 'fillCell', x: 1 },
+        { kind: 'hammer', target: { pieceId: 2 } },
+      ],
+    };
+    const h = harness();
+    h.store.set(SAVE_KEY, v1Save(unreadable));
+    const s = h.open();
+    expect(s.loadReport).toEqual({ source: 'main', failedStage: null, migratedFrom: 1 });
+    expect(s.data.inLevel).toBeNull();
+    expect(s.data.voidNotice).toEqual({
+      level: 3,
+      refunds: { life: 1, boosters: { thermos: 1, hammer: 1 }, coins: 900 },
+      bridge: false,
+    });
+    expect(s.data.lives).toMatchObject({ stored: 4, reserved: 0 });
+    expect(s.data.coins).toBe(1320);
+    expect(s.data.boosters.inventory).toMatchObject({ thermos: 1, hammer: 1 });
+    expect(s.data.progress.highestLevel).toBe(2);
+    expect(s.resumeOnLaunch(() => null)).toEqual({ kind: 'none' });
+    expect(h.events).toEqual([]);
   });
 
   it('TECH 11.1 a missing main save with a good backup restores silently', () => {

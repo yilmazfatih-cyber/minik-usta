@@ -665,8 +665,9 @@ describe('i18n Phase 2 keys and texts (TECH 11.5, 14.1)', () => {
   });
 
   it('TECH 11.5 keys added by the last consistency rounds exist in TR and EN (TECH 14.1 #13 "i18n anahtar değişiklikleri")', () => {
+    // `tut.l23.light` left i18n in WP-M (STORY §6: Faz 1 level lines go once the level files use `tut.m.*`; Bölüm 23's
+    // lines are converted in Faz 3) — tests/services/i18n.test.ts "STORY 6 a tut.l<n> line …" pins the removal.
     const exact = [
-      'tut.l23.light',
       'build.done',
       'replay.button',
       'bridge.rule_card.extra',
@@ -882,9 +883,10 @@ describe('layout invariants (UX 0.1–0.3, TECH 2.2, 10.1)', () => {
     expect(120 + 2 * TOKENS.touch.hitSlopPx).toBe(180);
   });
 
-  it('TECH 10.1 H = 2400: board group +240 (statusY 1504 → 1744), top group fixed, bottom group follows the bottom edge', () => {
+  // UX §5.8 rule 10 (2026-10-08, DS-11): the status strip is 1520 / 80 (it overlapped the yard frame by 4 px at 1504 / 96)
+  it('TECH 10.1 H = 2400: board group +240 (statusY 1520 → 1760), top group fixed, bottom group follows the bottom edge', () => {
     const l = createLayout(TOKENS, 2400);
-    expect(l.board.status.y).toBe(1744);
+    expect(l.board.status.y).toBe(1760);
     expect(l.grid.boardBottomY).toBe(1728);
     expect(l.grid.craneTopY).toBe(528);
     expect(l.top.pause).toEqual(FIT.top.pause);
@@ -1753,7 +1755,7 @@ describe('round 2: layout on 390×844 and 360×800 (UX 0.1, 5.1; TECH 2.2)', () 
     }
   });
 
-  it('UX 5.1 wireframe (FIT): pause 128 at (24,40), panorama 592×110 (168,40), moves 280×224 (776,40), goals 592×104 (168,160), crane rows 288 / 408 / 528, row 0 ends 1488, status 1504 h 96, Tuna 280×296 (16,1600), boosters 172 x 314–1056 y 1660–1832, board 1020 px = 94 %', () => {
+  it('UX 5.1 wireframe (FIT): pause 128 at (24,40), panorama 592×110 (168,40), moves 280×224 (776,40), goals 592×104 (168,160), crane rows 288 / 408 / 528, row 0 ends 1488, status 1520 h 80, Tuna 280×296 (16,1600), boosters 172 x 314–1056 y 1660–1832, board 1020 px = 94 %', () => {
     const l = FIT;
     expect(l.top.pause).toEqual({ x: 24, y: 40, w: 128, h: 128 });
     expect(l.top.panorama).toEqual({ x: 168, y: 40, w: 592, h: 110 });
@@ -1766,7 +1768,9 @@ describe('round 2: layout on 390×844 and 360×800 (UX 0.1, 5.1; TECH 2.2)', () 
     expect([l.board.yard.x, l.board.yard.x + l.board.yard.w]).toEqual([30, 750]);
     expect([l.grid.wallX, l.grid.wallX + l.grid.wallW]).toEqual([750, 810]);
     expect([l.board.site.x, l.board.site.x + l.board.site.w]).toEqual([810, 1050]);
-    expect([l.board.status.y, l.board.status.h]).toEqual([1504, 96]);
+    expect([l.board.status.y, l.board.status.h]).toEqual([1520, 80]);
+    // UX §5.8 rule 10: 12 px under the yard frame (boardBottomY + yardFramePx = 1508)
+    expect(l.board.status.y - (l.grid.boardBottomY + TOKENS.layout.adaptive.yardFramePx)).toBe(12);
     expect(l.bottom.character).toEqual({ x: 16, y: 1600, w: 280, h: 296 });
     const slots = l.bottom.boosters;
     expect(slots).toHaveLength(4);
@@ -2420,7 +2424,7 @@ describe('round 3: scaling and layout numbers (TECH 10.1, UX 0.1, 5.1, D-015)', 
     }
   });
 
-  it('UX 5.1 "Yapı tamam!" ribbon 306 × 96 at x 750–1056, y 960–1056, −6°, 24 px V notch, moving with the board (+208,5 / +240); the Usta Serisi strip is 96 px + 16 px pads = 128 px and stays between the board and the booster bar', () => {
+  it('UX 5.1 "Yapı tamam!" ribbon 306 × 96 at x 750–1056, y 960–1056, −6°, 24 px V notch, moving with the board (+208,5 / +240); the Usta Serisi strip is 80 px + 24 px pads = 128 px and stays between the board and the booster bar', () => {
     expect(FIT.board.siteRibbon).toEqual({ x: 750, y: 960, w: 306, h: 96, tiltDeg: -6, notchPx: 24 });
     for (const p of PHONES) {
       const H = designHeight('expand', p.viewport, TOKENS);
@@ -2430,9 +2434,9 @@ describe('round 3: scaling and layout numbers (TECH 10.1, UX 0.1, 5.1, D-015)', 
     for (const H of [1920, 2337, 2400]) {
       const l = createLayout(TOKENS, H);
       const strip = l.board.status;
-      expect(strip.h).toBe(96);
+      expect(strip.h).toBe(80);
       const hit = hitArea(strip, TOKENS.touch.minTargetPx);
-      expect([hit.y, hit.h]).toEqual([strip.y - 16, 128]);
+      expect([hit.y, hit.h]).toEqual([strip.y - 24, 128]);
       expect(hit.y, `H=${H}`).toBeGreaterThanOrEqual(l.grid.boardBottomY);
       expect(hit.y + hit.h, `H=${H}`).toBeLessThanOrEqual(Math.min(...l.bottom.boosters.map((b) => b.y)));
     }

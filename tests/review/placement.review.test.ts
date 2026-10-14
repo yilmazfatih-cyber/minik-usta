@@ -1588,7 +1588,9 @@ describe('review round 3: S4 debris through the pipeline (K-15, K-16 (2), K-17, 
     expect(fall.landing).toEqual({ ix: 6, iy: 0 });
     expect(fall.verdict).toEqual({ ok: true, reasons: [], missingSupport: [] });
     const sink = drag(s, debris, N(6, 8));
-    expect(eventsOf(sink.events, 'placementCorrect')).toMatchObject([{ pieceId: debris, cells: [site(6, 0)] }]);
+    expect(eventsOf(sink.events, 'placementCorrect')).toMatchObject([
+      { pieceId: debris, cells: [site(6, 0)] },
+    ]);
     expect(eventsOf(sink.events, 'pieceBounced')).toEqual([]);
     expect(piecePlace(s, debris)).toEqual({ zone: 'site', x: 6, y: 0, seg: 0 });
     expect([filledMask(s, 0, 0), wrongOccMask(s, 0, 0)]).toEqual([0b1, 0]);
@@ -1675,63 +1677,60 @@ describe('review round 3: S4 debris through the pipeline (K-15, K-16 (2), K-17, 
     expect(stateInvariantErrors(s)).toEqual([]);
   });
 
-  it(
-    'E-43 S2 debris in a `.` cell: a bridge over it is wrong (support); once the debris is in the yard the same bridge is correct and the `.` stays empty; Faz 2R K-48 (3): the yard debris block holds back the win',
-    () => {
-      // S4: "Bir `.` hücresindeki moloz o hücreyi K-34'te 'dolu' yapmaz"; S2: "`.` üstündeki hücre … iki sütuna köprü kuran
-      // 2 geniş blok (duvar üstü)" ile dolar; plan (top → bottom) WW / W. / WW
-      const s = initialState({
-        moves: 10,
-        plan: ['WW', 'W.', 'WW'],
-        pieces: [
-          ['B1_0', 'W', 0, 0],
-          ['B1_0', 'W', 1, 0],
-          ['B1_0', 'W', 2, 0],
-          ['D2_90', 'W', 3, 0],
-        ],
-        debris: [['B1_0', 'R', 7, 1]],
-      });
-      toSite(s, 0, 6, 0);
-      toSite(s, 1, 7, 0);
-      toSite(s, 2, 6, 1);
-      const debris = 4;
-      expect(wrongOccMask(s, 0, 1)).toBe(0b10);
-      expect(buildFront(s)).toEqual([site(6, 2)]);
-      const bridge = computeFall(s, 3, N(6, 8));
-      expect(bridge.landing).toEqual({ ix: 6, iy: 2 });
-      expect(bridge.verdict).toEqual({ ok: false, reasons: ['support'], missingSupport: [site(7, 1)] });
-      const wrong = drag(s, 3, N(6, 8));
-      expect(eventsOf(wrong.events, 'pieceBounced')).toMatchObject([
-        {
-          pieceId: 3,
-          from: site(6, 2),
-          to: { zone: 'yard', x: 3, y: 0 },
-          reason: 'support',
-          missingSupport: [site(7, 1)],
-        },
-      ]);
-      expect(isSegmentComplete(s, 0)).toBe(false);
-      drag(s, debris, N(5, 2)); // (7,1) → (7,2) → (6,2) → (5,2): out to the yard
-      expect(wrongOccMask(s, 0, 1)).toBe(0);
-      expect(buildFront(s)).toEqual([site(6, 2), site(7, 2)]);
-      const sink = new ArraySink();
-      const res = applyMove(s, { kind: 'drag', pieceId: 3, to: N(6, 8) }, sink, {
-        strict: true,
-        noTruckHelp: true,
-      });
-      expect(eventsOf(sink.events, 'pieceFell')).toMatchObject([{ pieceId: 3, to: site(6, 2), rows: 6 }]);
-      expect(eventsOf(sink.events, 'placementCorrect')).toMatchObject([
-        { pieceId: 3, cells: [site(6, 2), site(7, 2)], overWall: true },
-      ]);
-      // GDD E-44 (Faz 2R): the debris is an ordinary material block now, still in the yard (K-48 (3)): no win yet
-      expect(isSegmentComplete(s, 0)).toBe(true);
-      expect(res.won).toBe(false);
-      expect(siteOcc(s, 0, 1, 1)).toBe(0);
-      expect([filledMask(s, 0, 0), filledMask(s, 0, 1)]).toEqual([0b111, 0b101]);
-      expect(hdr(s, H.movesLeft)).toBe(7);
-      expect(stateInvariantErrors(s)).toEqual([]);
-    },
-  );
+  it('E-43 S2 debris in a `.` cell: a bridge over it is wrong (support); once the debris is in the yard the same bridge is correct and the `.` stays empty; Faz 2R K-48 (3): the yard debris block holds back the win', () => {
+    // S4: "Bir `.` hücresindeki moloz o hücreyi K-34'te 'dolu' yapmaz"; S2: "`.` üstündeki hücre … iki sütuna köprü kuran
+    // 2 geniş blok (duvar üstü)" ile dolar; plan (top → bottom) WW / W. / WW
+    const s = initialState({
+      moves: 10,
+      plan: ['WW', 'W.', 'WW'],
+      pieces: [
+        ['B1_0', 'W', 0, 0],
+        ['B1_0', 'W', 1, 0],
+        ['B1_0', 'W', 2, 0],
+        ['D2_90', 'W', 3, 0],
+      ],
+      debris: [['B1_0', 'R', 7, 1]],
+    });
+    toSite(s, 0, 6, 0);
+    toSite(s, 1, 7, 0);
+    toSite(s, 2, 6, 1);
+    const debris = 4;
+    expect(wrongOccMask(s, 0, 1)).toBe(0b10);
+    expect(buildFront(s)).toEqual([site(6, 2)]);
+    const bridge = computeFall(s, 3, N(6, 8));
+    expect(bridge.landing).toEqual({ ix: 6, iy: 2 });
+    expect(bridge.verdict).toEqual({ ok: false, reasons: ['support'], missingSupport: [site(7, 1)] });
+    const wrong = drag(s, 3, N(6, 8));
+    expect(eventsOf(wrong.events, 'pieceBounced')).toMatchObject([
+      {
+        pieceId: 3,
+        from: site(6, 2),
+        to: { zone: 'yard', x: 3, y: 0 },
+        reason: 'support',
+        missingSupport: [site(7, 1)],
+      },
+    ]);
+    expect(isSegmentComplete(s, 0)).toBe(false);
+    drag(s, debris, N(5, 2)); // (7,1) → (7,2) → (6,2) → (5,2): out to the yard
+    expect(wrongOccMask(s, 0, 1)).toBe(0);
+    expect(buildFront(s)).toEqual([site(6, 2), site(7, 2)]);
+    const sink = new ArraySink();
+    const res = applyMove(s, { kind: 'drag', pieceId: 3, to: N(6, 8) }, sink, {
+      strict: true,
+      noTruckHelp: true,
+    });
+    expect(eventsOf(sink.events, 'pieceFell')).toMatchObject([{ pieceId: 3, to: site(6, 2), rows: 6 }]);
+    expect(eventsOf(sink.events, 'placementCorrect')).toMatchObject([
+      { pieceId: 3, cells: [site(6, 2), site(7, 2)], overWall: true },
+    ]);
+    // GDD E-44 (Faz 2R): the debris is an ordinary material block now, still in the yard (K-48 (3)): no win yet
+    expect(isSegmentComplete(s, 0)).toBe(true);
+    expect(res.won).toBe(false);
+    expect(siteOcc(s, 0, 1, 1)).toBe(0);
+    expect([filledMask(s, 0, 0), filledMask(s, 0, 1)]).toEqual([0b111, 0b101]);
+    expect(hdr(s, H.movesLeft)).toBe(7);
+    expect(stateInvariantErrors(s)).toEqual([]);
+  });
 });
 
 describe('review round 3: landing edges (K-11, K-17, K-34, Y8)', () => {

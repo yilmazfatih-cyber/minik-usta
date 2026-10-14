@@ -3,8 +3,8 @@
  * (which step is active, when it ends), `TutorialPresence` (what it shows, fake clock), the contextual lines and their
  * queue rule, the bubble dock, the glove's play condition (DL-2R-20) and the K-43 resume of the tutorial position.
  *
- * Levels: the LEVELS §2 drafts of Bölüm 1–10 in the Faz 2R format (tests/level/fixtures/levels-2r; product-lead writes
- * the real levels/*.json in WP-M). Their canonical solutions (LEVELS §2 "Kanonik çözüm", `letter from→to` anchors) are
+ * Levels: Bölüm 1–10 in the Faz 2R format (levels/*.json, product-lead's solver round; WP-M dropped the draft copy in
+ * tests/level/fixtures/levels-2r). Their canonical solutions (LEVELS §2 "Kanonik çözüm", `letter from→to` anchors) are
  * copied below for the levels these tests walk.
  */
 import { readFileSync } from 'node:fs';
@@ -69,15 +69,15 @@ import {
 import type { PresenceInputKind, PresenceState } from '../../src/scenes/level/tutorial/TutorialPresence.ts';
 import { moveMatches } from '../../src/scenes/level/tutorial/tutorialEvents.ts';
 import { loadBoosterUnlock } from '../../tools/lib/levels.ts';
-import { loadFixture } from '../fixtures/builders.ts';
+import { loadLevelJson } from '../fixtures/builders.ts';
+import { LEVELS_1_10, handSteps } from '../core/moves.fixtures.ts';
 
 const ROOT = join(import.meta.dirname, '..', '..');
 const T = TOKENS.tutorial;
 
 // --- levels ----------------------------------------------------------------------------------------------------------
 
-const draftJson = (n: number): LevelInput =>
-  loadFixture('levels-2r', `level_${String(n).padStart(3, '0')}`) as LevelInput;
+const draftJson = (n: number): LevelInput => loadLevelJson(n) as LevelInput;
 
 function draft(n: number, tutorial?: unknown): CompiledLevel {
   const json = tutorial === undefined ? draftJson(n) : { ...draftJson(n), tutorial };
@@ -86,26 +86,16 @@ function draft(n: number, tutorial?: unknown): CompiledLevel {
   return res.level;
 }
 
-/** LEVELS §2 canonical solutions (`letter from→to`, block anchors; `k<p>_<i>` = a batch block). */
-const CANONICAL: Readonly<Record<number, readonly string[]>> = {
-  1: ['b 1,2→5,0', 'a 0,2→4,0', 'c 0,1→4,2', 'd 2,1→4,3', 'e 0,0→4,4'],
-  2: ['a 2,2→4,0', 'b 0,0→4,2', 'c 0,2→4,3'],
-  3: ['c 0,2→1,2', 'a 0,0→4,0', 'b 1,0→5,0', 'c 1,2→4,2', 'd 2,0→4,4'],
-  6: ['c 0,3→2,3', 'b 0,2→2,2', 'a 0,0→4,0', 'b 2,2→4,2', 'c 2,3→4,3', 'd 2,0→4,5', 'e 2,1→4,6'],
-  7: [
-    'b 1,3→2,2',
-    'd 0,2→2,4',
-    'a 0,0→4,0',
-    'b 2,2→4,2',
-    'c 3,2→5,2',
-    'd 2,4→4,4',
-    'k1_1 0,0→2,4',
-    'e 2,0→4,0',
-    'k1_0 2,2→5,2',
-    'k1_2 3,2→4,2',
-    'k1_1 2,4→4,4',
-  ],
-};
+/**
+ * LEVELS §2 canonical solutions (`letter from→to`, block anchors; `k<p>_<i>` = a batch block), read from the solver
+ * goldens (tests/golden/level_NNN.hand.json, written by `levels:solve --update-golden`; WP-M) instead of a copy.
+ */
+const CANONICAL: Readonly<Record<number, readonly string[]>> = Object.fromEntries(
+  LEVELS_1_10.map((n) => [
+    n,
+    handSteps(n).map((st) => `${st.piece} ${st.from.join(',')}→${st.to.join(',')}`),
+  ]),
+);
 
 /** The block of a canonical letter (`a` = `piece:0`, `k1_1` = `piece:k1_1`). */
 function pieceOf(lvl: CompiledLevel, letter: string): PieceId {
@@ -357,10 +347,13 @@ describe('K-53 TutorialController on the Faz 2R drafts (GDD 14.1)', () => {
   it('UX 13.1 piece highlights resolve through CompiledLevel.tutorialPieceIds (batch blocks k<p>_<i> too)', () => {
     const lvl = draft(5);
     const step2 = lvl.data.tutorial?.[1];
-    expect(step2?.highlight[0]).toBe('piece:k1_0');
+    expect(step2?.highlight).toEqual(['piece:k1_0', 'piece:k1_1', 'piece:k1_2', 'piece:k1_3']);
     const ids = highlightedPieces(lvl, step2?.highlight ?? []);
-    expect(ids.length).toBe(5);
-    expect(new Set(ids).size).toBe(5);
+    expect(ids.length).toBe(4);
+    expect(new Set(ids).size).toBe(4);
+    expect(ids).toEqual(
+      ['piece:k1_0', 'piece:k1_1', 'piece:k1_2', 'piece:k1_3'].map((r) => lvl.tutorialPieceIds.get(r)),
+    );
   });
 
   it('K-53 tutorial never blocks input: no pick gate, no input blocker, a legacy "required" step plays as soft', () => {
@@ -580,7 +573,7 @@ describe('K-53/4 contextual lines tut.ctx.* (UX 13.1, 13.2; GDD 14.1/2, K-34 hoo
   const ev = (body: Record<string, unknown>, step = 3): GameEvent =>
     ({ seq: 0, step, ...body }) as unknown as GameEvent;
 
-  it('K-53 teardown line skips the queue: it shows at once during an active step, on every Söküm, for 1,2 s, never marked seen', () => {
+  it('K-53 teardown line skips the queue: it shows at once during an active step, on every Söküm, for duration.teardownLine (2,4 s), never marked seen', () => {
     const { seen, tips } = tipHost();
     tips.trigger('support', 3);
     tips.update(0, STEP_GATE, T.visibleMs);
@@ -596,7 +589,8 @@ describe('K-53/4 contextual lines tut.ctx.* (UX 13.1, 13.2; GDD 14.1/2, K-34 hoo
     expect(tips.showing).toBe('teardown');
     tips.trigger('teardown'); // never queued through the normal path
     expect(tips.queued).toEqual(['support']);
-    expect(TEARDOWN_LINE_MS).toBe(1200);
+    expect(TEARDOWN_LINE_MS).toBe(TOKENS.duration.teardownLine);
+    expect(TEARDOWN_LINE_MS).toBe(2400); // UX §13.1 "kilitli dizi satırları", DS-14
     // the scene pauses the active step's presence while a line has the bubble (K-53/4 "Gizli'ye geçer, sonra sürer")
     const scene = readFileSync(join(ROOT, 'src/scenes/level/LevelScene.ts'), 'utf8');
     expect(scene).toMatch(

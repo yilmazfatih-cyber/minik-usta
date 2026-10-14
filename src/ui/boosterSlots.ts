@@ -4,9 +4,10 @@
  * K-54 state of each (core `slotState`: locked > noTarget > empty > ready).
  *
  * - `boosterSlotModels` is pure: META unlock level (`config/economy.json` `boosters.<id>.unlockLevel`), the count the
- *   player holds for this attempt and the core's target predicate (`TurnSummary.boosterTargets`) → the slot models.
- *   The count = stored inventory + the unlock's `freeTrials` not granted yet (META §4) − the boosters this attempt
- *   already applied (its action log; `services/save` `attemptBoosters` counts the same way for a void refund).
+ *   player holds and the core's target predicate (`TurnSummary.boosterTargets`) → the slot models. The count = stored
+ *   inventory + the unlock's `freeTrials` not granted yet (META §4). The inventory itself already moved: the free trials
+ *   are granted when the attempt begins (`LevelAttempt.begin`) and an applied booster leaves it in the same write as its
+ *   log entry (`SaveService.recordAction`; `attemptBoosters` gives exactly those back on a void).
  * - `BoosterBar` only draws the models: green kit button (ready / empty), grey (locked, no target), the 112 px icon, the
  *   red square count badge (`ui_badge`, R2-12) or the green "+" of an empty slot, the lock + "Bölüm N" caption of a
  *   locked slot (`home.play`, `font.size.caption`). A tap reports the slot; the scene decides (K-54: a locked slot shows
@@ -14,7 +15,8 @@
  *   mini purchase window — Faz 4, no `offer_shown` here).
  */
 import Phaser from 'phaser';
-import economy from '../../config/economy.json' with { type: 'json' };
+import { IN_LEVEL_BOOSTERS, boosterUnlock, pendingFreeTrials } from '../meta/boosters.ts';
+import type { InLevelBooster } from '../meta/boosters.ts';
 import { slotState } from '../core/summary.ts';
 import type { SlotState, TurnSummary } from '../core/summary.ts';
 import type { SessionAction } from '../core/types.ts';
@@ -25,11 +27,13 @@ import { TOKENS } from '../theme/tokens.ts';
 import { KIT } from '../theme/textures.ts';
 import type { FrameRef } from '../theme/textures.ts';
 import type { ButtonState, KitButtonColor, Slices } from '../theme/draw/kit.ts';
+import { addBakedGraphics } from './BakedGraphics.ts';
+import { drawCancelX } from './icons.ts';
 import { kitTextStyle } from './kit/text.ts';
 
-/** UX §5.1 slot order, left → right. */
-export const BOOSTER_SLOT_IDS = ['hammer', 'crane', 'paintBrush', 'undo'] as const;
-export type BoosterSlotId = (typeof BOOSTER_SLOT_IDS)[number];
+/** UX §5.1 slot order, left → right (META §4 in-level boosters). */
+export const BOOSTER_SLOT_IDS = IN_LEVEL_BOOSTERS;
+export type BoosterSlotId = InLevelBooster;
 
 /** Icon of each slot (ART §9 icon set, `icon_<name>`). */
 export const SLOT_ICON: Readonly<Record<BoosterSlotId, string>> = {
@@ -78,10 +82,7 @@ export interface SlotInventory {
 }
 
 /** META §4 rows of the in-level boosters (`config/economy.json`). */
-function econ(id: BoosterSlotId): { readonly unlockLevel: number; readonly freeTrials: number } {
-  const b = economy.boosters[id];
-  return { unlockLevel: b.unlockLevel, freeTrials: b.freeTrials };
-}
+const econ = boosterUnlock;
 
 /** Boosters of slot `id` the attempt's log already applied (`start` excluded). */
 export function usedInAttempt(id: BoosterSlotId, log: readonly SessionAction[]): number {
@@ -91,21 +92,20 @@ export function usedInAttempt(id: BoosterSlotId, log: readonly SessionAction[]):
 }
 
 /**
- * K-54 slot models (pure): unlock from META §4, count = stored + pending free trials − used in this attempt, target
- * predicate from the core summary. Undo's target is `boosterTargets.undo` (K-39 `canUndo`).
+ * K-54 slot models (pure): unlock from META §4, count = stored + pending free trials (granted at the attempt start, so
+ * normally 0), target predicate from the core summary. Undo's target is `boosterTargets.undo` (K-39 `canUndo`).
  */
 export function boosterSlotModels(input: {
   readonly levelId: number;
   readonly inv: SlotInventory;
-  readonly log: readonly SessionAction[];
   readonly targets: TurnSummary['boosterTargets'];
 }): BoosterSlotModel[] {
+  const pending = pendingFreeTrials(input.levelId, input.inv.freeTrialsGranted);
   return BOOSTER_SLOT_IDS.map((id) => {
     const e = econ(id);
     const unlocked = input.levelId >= e.unlockLevel;
     const stored = input.inv.inventory[id] ?? 0;
-    const trials = unlocked && !input.inv.freeTrialsGranted.includes(id) ? e.freeTrials : 0;
-    const count = Math.max(0, stored + trials - usedInAttempt(id, input.log));
+    const count = Math.max(0, stored + (pending[id] ?? 0));
     const hasTarget = input.targets[id];
     return { id, state: slotState({ unlocked, hasTarget, count }), count, unlockLevel: e.unlockLevel };
   });
@@ -141,6 +141,8 @@ interface SlotView {
   readonly count: Phaser.GameObjects.Text;
   readonly lock: Phaser.GameObjects.Image;
   readonly caption: Phaser.GameObjects.Text;
+  /** UX §5.2 step 1 (DS-13): the red round × "Vazgeç" on the selected slot's face. */
+  readonly cancel: Phaser.GameObjects.Graphics;
   rect: Rect;
   key: string;
   shake: { start: number; ms: number } | null;
@@ -197,11 +199,11 @@ export class BoosterBar {
       const f = this.kit.button(look.color, v.rect.h, look.state);
       v.face.setTexture(f.ref.key, f.ref.frame);
       v.icon.setAlpha(m.state === 'locked' || m.state === 'noTarget' ? 0.55 : 1);
-      const showCount = m.state === 'ready' || (m.state !== 'locked' && m.count > 0);
+      const showCount = !v.raised && (m.state === 'ready' || (m.state !== 'locked' && m.count > 0));
       v.badge.setVisible(showCount || m.state === 'empty');
       v.count
         .setText(m.state === 'empty' ? '+' : String(m.count))
-        .setVisible(showCount || m.state === 'empty');
+        .setVisible(showCount || (!v.raised && m.state === 'empty'));
       v.lock.setVisible(m.state === 'locked');
       v.caption.setText(t('home.play', { n: m.unlockLevel })).setVisible(m.state === 'locked');
     });
@@ -217,14 +219,26 @@ export class BoosterBar {
     return this.views[i]?.rect ?? null;
   }
 
-  /** UX §5.2 step 1: the selected slot rises (null: none). */
+  /**
+   * UX §5.2 step 1 (DS-13): the selected slot rises and shows the red round × "Vazgeç" on its face (the count badge
+   * hides); a second tap on it cancels the pick (the scene's toggle). null: none selected.
+   */
   select(id: BoosterSlotId | null): void {
     this.views.forEach((v, i) => {
       const on = BOOSTER_SLOT_IDS[i] === id;
       if (on === v.raised) return;
       v.raised = on;
       v.root.setY(v.rect.y + v.rect.h / 2 - (on ? SLOT_RAISE_PX : 0));
+      v.cancel.setVisible(on);
+      v.key = ''; // the badge follows the selection
     });
+    if (this.models.length > 0) this.setSlots(this.models);
+  }
+
+  /** The selected slot's × (harness, tests): its centre, or null when no slot is selected. */
+  cancelPoint(): { x: number; y: number } | null {
+    const v = this.views.find((x) => x.raised);
+    return v ? { x: v.root.x, y: v.root.y - TOKENS.kit.button.lipPx / 2 } : null;
   }
 
   /** JUICE #108: 2 px left-right ×3 over `duration.blockedShake` (reduced motion: none). */
@@ -288,16 +302,35 @@ export class BoosterBar {
     const caption = s.add
       .text(0, r.h / 2 + CAPTION_GAP_PX, '', kitTextStyle('counter', TOKENS.font.size.caption))
       .setOrigin(0.5, 0);
-    const root = s.add.container(0, 0, [face, icon, badge, count, lock, caption]).setDepth(this.depth);
+    const cancel = addBakedGraphics(s).setPosition(0, -lip / 2).setVisible(false);
+    drawCancelX(cancel, CANCEL_PX);
+    const root = s.add
+      .container(0, 0, [face, icon, badge, count, lock, caption, cancel])
+      .setDepth(this.depth);
     root.on('pointerup', (p: Phaser.Input.Pointer) => {
       if (!p.wasCanceled) this.tapFn?.(id);
     });
-    return { root, face, icon, badge, count, lock, caption, rect: r, key: '', shake: null, raised: false };
+    return {
+      root,
+      face,
+      icon,
+      badge,
+      count,
+      lock,
+      caption,
+      cancel,
+      rect: r,
+      key: '',
+      shake: null,
+      raised: false,
+    };
   }
 }
 
 /** UX §5.2 step 1 "yuva yükselir". */
 const SLOT_RAISE_PX = 16;
+/** UX §5.2 step 1 (DS-13): the × "Vazgeç" on the selected slot, 128 px. */
+const CANCEL_PX = 128;
 /** JUICE #108 shake (2 px, 3 cycles). */
 const SHAKE_PX = 2;
 const SHAKE_CYCLES = 3;

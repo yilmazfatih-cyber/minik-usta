@@ -746,7 +746,8 @@ gerçekleştiği durum). Değişmeyenler: L-01, L-02 (koordinat sınırları `ge
    `compile`'dan önce gelir. L-05 (`plan_size`, `plan_has_window`, `elevator_overflow`) geçiş süresince yalnız
    validate'te koşar. Nedeni: geometri H'yi keser ve her boydaki planı güvenle okur. Faz 2 `levels/*.json`
    (varsayılan 2 × 8 şantiyede kısa planlar) diğer paketler için oynanabilir kalmalıdır. WP-M yeni bölümleri
-   yazınca L-05'i bu listeye geri ekler.
+   yazınca L-05'i bu listeye geri ekler. **Yapıldı (WP-M):** `RUNTIME_CHECKS` = L-02, L-04, L-05, L-08, L-09, L-24, L-25,
+   L-26, L-28 (test "K-45 runtime subset …", `tests/level/validator.test.ts`).
 3. **Adı olmayan durum.** `height > H` için K-45 madde 3 kod adı vermez. `wall.height` yolunda `size_out_of_range` (L-09,
    K-45/3) kullanılır. product-lead ayrı bir ad isterse kod tek satırda değişir.
 4. **Birikimli koşul (L-10).** Son önek (k = S − 1) bütün bölümdür ve L-30'un işidir. Bu yüzden `cover_prefix_short`
@@ -776,9 +777,9 @@ gerçekleştiği durum). Değişmeyenler: L-01, L-02 (koordinat sınırları `ge
    alabilir. Bu yalnız tipte geçerlidir, şema reddeder; sahne kodu ile testleri WP-H'ye kadar derlenebilir kalır.
    L-17 böyle bir adımı atlar.
 10. **Fikstürler ve araç.** Doğrulayıcı testleri `tests/level/*.test.ts`, fikstürler `tests/level/fixtures/`
-    altındadır (`invalid/` kod başına bir dosya, `valid/`, `cli-*`). `levels-2r/` LEVELS §2 Bölüm 1–10 taslaklarının
-    Faz 2R biçimidir; onu product-lead'in `levels/*.json` yazımı için doğrulanmış örnek olarak kullanırız.
-    `tests/fixtures/builders.ts` `loadFixture` buraya bakar. `tools/levels-allow.json` + `tools/lib/levelsAllow.ts`
+    altındadır (`invalid/` kod başına bir dosya, `valid/`, `cli-*`). `tests/fixtures/builders.ts` `loadFixture` buraya
+    bakar. WP-M `levels-2r/` taslak kopyasını kaldırdı (Bölüm 4, 5, 7, 10 solver turunda değişmişti); bölüm testleri
+    gerçek `levels/*.json`'u `loadLevelJson(n)` / `LEVELS_DIR` ile okur. `tools/levels-allow.json` + `tools/lib/levelsAllow.ts`
     (`loadAllowList`, `isAllowed`) yalnız uyarıları susturur. `levels:validate` yeni bayraklar alır: `--allow <dosya>` ve
     `--no-i18n`; sonuncusu WP-L anahtarları yazana kadar `tut_key_missing` aramasını atlar.
 11. **Kural eşlemesi.** L-10 ve L-11 K-45/8'e, L-16 ve L-22 K-45/10'a taşındı (GDD Faz 2R madde numaraları). L-02
@@ -801,7 +802,9 @@ export const D3A_MAX_EXPANSIONS = 20_000;
 - **Adım 12 sırası (K-30, K-35):** bölüm kazanılmadıysa her zaman çalışır.
   - Sayaç > 0: D1 → D2 → D3 (D3a, sonra D3b). D1 yardım yaptıysa D3 o yardımdan sonraki durumda denetlenir.
   - Sayaç 0: D1 çalışmaz; D2 → D3 → gerekiyorsa Söküm; ardından K-29 penceresi açılır (E-58).
-  - +5 kabulünden sonra, hamle olmadan: yalnız D1 bir kez (D1 yardım yaptıysa ardından D3) (K-29, E-42).
+  - +5 kabulünden sonra, hamle olmadan: yalnız D1 bir kez; ardından D3 **denetlenmez** (GDD K-29, E-42; uygulama notu
+    madde 4). Düzeltme WP-M, 2026-10-08: önceki "D1 yardım yaptıysa ardından D3" yazımı madde 4 ve GDD ile çelişiyordu;
+    kod (`runStep12 … afterOffer`) zaten madde 4'ü uyguluyordu.
 - **D1 (`noMoves`):** her parça için K-09 (a)–(d) denetimi (µs). Yardım: önce zincir ve ıslaklık kalkar, sonra saha
   yeniden dizilir (§9.7'deki yapıcı algoritma; şaşırtma ve `reshape` dalları yok; şekil, renk ve sayı korunur). Sonuç
   D3a ile ve "1 hamlede en az bir doğru yerleşim" denetimiyle doğrulanır. RNG tampondaki seed'li RNG'dir. D1 Söküm
@@ -1087,8 +1090,20 @@ Sonuçlar LEVEL_REPORT'ta "geçitsiz min" ve "Çekiç'le min" sütunlarına yaz�
     durumlar açıldı (`complete`); `d3aMaxExpansions` ≤ 10. Vitest'te solver testleri ≈ 25 s duvar saati ekler (B8 ve
     B10 ayrı dosyalarda paralel).
 14. **Yapılmayanlar:** D3b tablo yayımı (kesme 1), ana ölçütler için A* yedeği (Faz 3), G-L `steer` girdilerinin
-    üretimi (G-L'li bölümde not düşülür; Faz 3), `--update-golden` dosyaları (bayrak hazır; WP-K/WP-M koşar).
-    `artifacts/solver/` `.gitignore`'da değildir (yapılandırma notu WP-K'ye).
+    üretimi (G-L'li bölümde not düşülür; Faz 3). WP-M'de kapananlar: `--update-golden` dosyaları üretildi
+    (`tests/golden/level_001…010.{hand,solver}.json`, §2R.10 uygulama notu); `artifacts/solver/` `.gitignore`'da.
+15. **Solver turu araç kapıları (WP-M, product-lead isteği; GDD K-51 madde 2 ve 5, D-090):**
+    - **Bütün uzay kapısı** (`wholeSpaceGate`, `dead_table_missing`, kural `K-51/2`, error): D3b tablosu olmayan her
+      bölümde (Faz 2R'de hepsi) `metrics.deadEntries.states − caught > 0` hatadır: canlı bir durumdan herhangi bir
+      sürükleme hamlesiyle (kaydırma ve onun adım 9 teslimatı dahil) girilen ve D1/D2/D3a'nın yakalamadığı çıkmaz durum,
+      oyuncuyu Söküm'süz bırakır. K-50 kapsamındaki `deadRate > 0` kapısı bunun özel durumudur. GDD örneği (Bölüm 10'un
+      kuyruklu taslağı: `trapCount` 0, `deadRate` 0, 338 yakalanmayan çıkmaz) `tests/level/fixtures/solver/` altında;
+      test "K-51 item 2 …" (`tests/tools/solver/gates.test.ts`).
+    - **Teslimat adaleti** (`deliveryFairness` + `deliveryChecks`, `delivery_foresight`, `K-51/5`, warn): her parti
+      k ≥ 1 için `D(k)` = teslim sonrası durumlara başlangıçtan en az hamle (ileri BFS, maliyetli), `T(k)` = `D(k)`'de
+      ulaşılan teslim durumları; `g = D + min dist(T) − min`, `f = max dist(T) − min dist(T)`; `g ≠ 0` ya da `f ≠ 0`
+      (ya da `T`'de çıkmaz durum, `f = ∞`) uyarıdır. Bölüm 5, 7, 10: `g = 0`, `f = 0` (LEVEL_REPORT "teslimat g·f").
+    - `SOLVER_VERSION` 2 (önbellek anahtarı; iki kapı sonuç biçimini değiştirdi).
 
 ### 2R.6 Görsel boru hattı (R2-08 güncellemesi, ASSET §16)
 
@@ -1408,6 +1423,50 @@ kalır; yalnız `required` dalları silinir.
 
   LEVELS §2 ↔ `levels/*.json` inceleme kümeleri (`tests/review/data.review.test.ts`, 5 küme) LEVELS Faz 2R
   biçimindeyken kayıt edilmez ve yerine bir `it.todo` durur; WP-M yeni biçime göre yeniden yazar.
+
+**Uygulama notu (WP-M, 2026-10-08):**
+
+1. **Golden.** `npm run levels:solve -- --update-golden` (yalnız `levels/`) `tests/golden/level_001…010.hand.json`
+   (kanonik çözümün hamle hamle tarifi: harf, `piece:` kimliği, şekil, renk, başlangıç çapası, tür
+   `overWall | rail | shift`, iniş çapası, tamamlanan dilim, teslim edilen kamyon blokları, kuyruk; `geo`, son ASCII,
+   `eventLogHash`) ve `level_NNN.solver.json`'u (kanonik günlük + `eventLogHash`) yazar. `levelHash` öğretici alanını da
+   kapsar: product-lead'in Bölüm 2 vurgu düzeltmesi (`front` → `panorama`) yalnız hash'i değiştirdi, golden yeniden
+   üretildi. Eski Faz 2 `level_00{1..5}.hand.json` biçimi yoktur.
+2. **Bağımsız inceleme** (`tests/review/data.review.test.ts` sonu): her bölüm için LEVELS §2 kaydı test anında
+   ayrıştırılır ve JSON'la karşılaştırılır: blok tablosu = parti 0 dizisi (Ağır Yük renksiz), "Boyut"/"Saha" satırları
+   (Wy, Hy, Ws, Hs, H; C, F, E), başlangıç ASCII'si (harf, `Q`, `·`, duvar `# = :`, ilk dilimin planı), başlık satırları
+   (duvar ve geçitler, yerçekimi, dilimler, renk kümesi, şekil türleri, zorluk, `moves`, `teaches`), "Kamyon partisi 1"
+   (`y = Hy`), öğretici listesi (`startOn`, vurgu, eldiven türü + yolu, `textKey`, `done`; `count` yazılmadıysa 1),
+   kanonik çözüm metni = solver golden'ı (harf, şekil, renk, başlangıç, tür, iniş) ve `min`, YAO, N; ardından metin
+   çekirdekte hamle hamle oynatılır (başlangıç çapası, tür, iniş, doğru yerleşim; duvar üstünde kutu yüksekliği ≤
+   (H + 2) − height, rayda bütün satırlar geçitte) ve kazanır. LEVELS §1 satırları (zorluk, hamle, "(tanıtım)" =
+   `teaches`), §0 `teaches` listesi ve §0 açılış tablosu da denetlenir (R'nin kullanım/açılış farkı LEVELS notundan).
+3. **Faz 2 kural testleri** (K-02 bandı, K-27/L-10, L-11, S2, ağırlık, öğretici zorunlu adımı) Faz 2R kurallarıyla ve
+   GDD'nin yeni örnekleriyle yeniden yazıldı. GDD'den çıkan kuralların testleri (pencere hücreleri, erişim aramalı L-11
+   ve onun rastgele kehaneti, "şantiyeye geçebilen blok arzdır", geçit başına boya uyumu) yerlerine gerekçe notu
+   bırakılarak silindi; D3a'nın bağımsız kehaneti `tests/core/deadlock.test.ts`'tedir. Bu dosyada ve
+   `presentation.review`'da `it.fails`/`it.todo` kalmadı. `presentation.review`'daki "FINDING" testi gerçek bir hataydı:
+   Y8 harç yapışması `level_end.wrongPlacements`'ı iki kez sayıyordu (`placementWrong` + `mortarStuck`);
+   `scenes/flow/attempt.ts` yalnız `placementWrong`'u sayar.
+4. **Fikstürler.** `tests/level/fixtures/levels-2r/` silindi; testler `levels/`'i okur. `cli-valid/level_002.json`
+   `levels/` ile eşitlendi.
+5. **i18n.** `tut.l1…l5` ve sahipsiz `tut.l23.light` silindi (STORY §6: Bölüm 23 satırları Faz 3'te §6A biçimine
+   çevrilir); test "STORY 6 a tut.l<n> line is in i18n only while a levels/*.json step uses it". STORY'ye giren
+   `booster.crane.noTarget`, `settings.feedback`, `.feedbackCopied`, `.feedbackManual` eklendi (`NOT_IN_STORY` boş).
+6. **Token el sıkışması** (design-lead ekran incelemesi 1): 10 yeni anahtar tiplendi ve okunuyor
+   (`color.board.yardFrameTop/Bottom` + kontur `kit.panel.outline`, `layout.home.characterExpandShare`,
+   `kit.sunburst.blend` — `rayAlpha` son değerdir, kod +0,1 eklemez —, `duration.teardownLine` (`TEARDOWN_LINE_MS`),
+   `duration.targetPulse` (TrowelPicker), `tutorial.ghostAlpha/ghostLiftMs` (tipli; DS-15 hayaleti WP-H'nin işi),
+   `audio.seq.sfx_locked` (#73, #108), `audio.seq.sfx_hammer` (#61)); `sfx_teardown` tipli (#107). `meta._docRetire`
+   madde 1–2 şemadan çıktı (`RETIRED_TOKEN_KEYS`): `alpha.tutorialOverlay`, `alpha.tutorialSoftOverlay`,
+   `duration.tutorialHandLoop`, `duration.tutorialHandPause`, `duration.spotlightPulse` — design-lead artık silebilir.
+   Yerleşim testleri `cellMaxPx` 144 ve durum şeridi 1520/80 değerlerine (UX §5.8 tablosu) çekildi.
+7. **UX §13.2 Bölüm 2 adım 1** dikey panorama oku: tek dilimli planda ok aktif şeridin alt satırından üst satırına
+   bakar (−90°) ve 1,2 s'de 16 px yukarı kayar (`ui/Panorama.ts` `panoramaArrowPair` / `panoramaArrowPose`; test
+   "UX 13.2 Bölüm 2 …").
+8. **Ekran incelemesi 1'in iki ucuz maddesi:** DS-02 (Engel) `town_ch1_tree` katalog satırı (ASSET §16.3 #4b; P2,
+   hayaletsiz) — `npm run assets` 34 ok; `test:rules` GDD §13'ün "(Faz 2R: geçersiz …)" satırlarını (E-23, E-55) kural
+   saymaz, `--phase 2R` yeşil (76 kimlik; `package.json` geçişi WP-K'de).
 
 ### 2R.11 Ekran görüntüsü, performans ve kapsam araçları
 

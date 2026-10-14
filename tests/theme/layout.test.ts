@@ -128,10 +128,10 @@ describe('anchor groups (TECH 10.1, UX 0.1, D-015)', () => {
     }
   });
 
-  it('TECH 10.1 example: H = 2400, expandShare 0.5 → statusY 1504 → 1744 (not bottom-anchored 1984)', () => {
+  it('TECH 10.1 example: H = 2400, expandShare 0.5 → statusY 1520 → 1760 (not bottom-anchored 2000)', () => {
     const l = createLayout(TOKENS, 2400);
     expect(l.boardShift).toBe(240);
-    expect(l.board.status.y).toBe(1744);
+    expect(l.board.status.y).toBe(1760);
     expect(l.board.status.y).not.toBe(2400 - (1920 - b.statusY));
   });
 

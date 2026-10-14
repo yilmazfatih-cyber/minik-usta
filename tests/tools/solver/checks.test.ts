@@ -1,6 +1,6 @@
 /**
  * Solve-stage checks (GDD K-45 item 9, K-46, K-51, K-52, K-53; TECH §2R.3 L-19, L-27, L-32…L-35, §2R.5): every code
- * the solver reports, on Faz 2R draft levels (tests/level/fixtures/levels-2r) and hand-made boards.
+ * the solver reports, on the Faz 2R levels (levels/*.json) and hand-made boards.
  */
 import { describe, expect, it } from 'vitest';
 import { LevelSchema } from '../../../src/core/level/schema.ts';
@@ -8,11 +8,10 @@ import type { LevelData } from '../../../src/core/level/schema.ts';
 import { solveLevelData, solveLevelJson } from '../../../tools/solver/solveLevel.ts';
 import type { SolveReport } from '../../../tools/solver/solveLevel.ts';
 import { movesBand } from '../../../tools/solver/metrics.ts';
-import { level, loadFixture } from '../../fixtures/builders.ts';
+import { level, loadLevelJson } from '../../fixtures/builders.ts';
 import { MICRO } from './micro.ts';
 
-const draft = (n: number): LevelData =>
-  LevelSchema.parse(loadFixture('levels-2r', `level_${String(n).padStart(3, '0')}`));
+const draft = (n: number): LevelData => LevelSchema.parse(loadLevelJson(n));
 const solve = (data: LevelData): SolveReport => solveLevelData(data, {}, { variants: false });
 const codes = (r: SolveReport): string[] => r.issues.map((i) => i.code);
 const issue = (r: SolveReport, code: string) => r.issues.find((i) => i.code === code);
@@ -287,7 +286,7 @@ describe('K-45/9 solver status codes', () => {
   });
 
   it('K-45/9 a level that fails the validate stage is not solved (level_invalid)', () => {
-    const json = loadFixture('levels-2r', 'level_003') as Record<string, unknown>;
+    const json = loadLevelJson(3) as Record<string, unknown>;
     const r = solveLevelJson({ ...json, moves: 0 }, { fileId: 3 });
     expect(r.status).toBe('invalid');
     expect(codes(r)).toEqual(['level_invalid']);

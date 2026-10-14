@@ -21,6 +21,8 @@ const CONTENT_MARKERS: readonly { pattern: RegExp; why: string }[] = [
   { pattern: /\.get\(\s*["']debug["']\s*\)/, why: '?debug query handler' },
   { pattern: /\.get\(\s*["']harness["']\s*\)/, why: '?harness query handler' },
   { pattern: /[?&]debug=1/, why: '?debug=1 handler' },
+  // DS-20: the debug panel's own labels (its "DBG" toggle sits next to them in src/debug/labels.ts)
+  { pattern: /Drop the running attempt/, why: 'debug panel label (DBG toggle)' },
 ];
 
 /** File-name markers: a chunk named after the debug panel or harness. */

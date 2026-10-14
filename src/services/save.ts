@@ -17,9 +17,16 @@
  * penalty-free in one atomic write (`voidAttempt`: refunds + `voidNotice`) and then tracks `level_resume_invalid` and,
  * when coins were refunded, `coin_source{ reason: 'refund' }`.
  *
- * Schema rule: v1 is not frozen until the first store release; a field added before that uses `z._default` so
- * development saves keep loading. After the first release every shape change bumps `SAVE_VERSION`, adds
- * `MIGRATIONS[old]` and a fixture test (old JSON → expected new JSON).
+ * Schema rule: a field added before the first store release uses `z._default` so development saves keep loading;
+ * every rules change that voids saved logs and every shape change bumps `SAVE_VERSION`, adds `MIGRATIONS[old]` and a
+ * fixture test (old JSON → expected new JSON).
+ *
+ * v2 (Faz 2R, TECH §2R.10; `RULES_VERSION` 2): the shape is unchanged — `levels[id].won` / `attempts`, stars, wallet,
+ * boosters, settings and `seenContextTips` are kept as they are (the level ids are the same, their content is new). A
+ * Faz 2 in-level record that still reads stays and is voided penalty-free at launch by `resumeOnLaunch` (K-43 item 4:
+ * its `rulesVersion` 1 ≠ 2, `level_resume_invalid`, refunds, `voidNotice`); one this build cannot read at all is voided
+ * by the migration itself (`voidUnreadableAttempt`: reserved life and offer coins back, logged boosters back) — never a
+ * schema failure that would throw the whole save away.
  */
 import * as z from 'zod/mini';
 import type { PreBooster, SessionAction } from '../core/types.ts';
@@ -31,7 +38,7 @@ import { onAppHidden, randomId } from './platform.ts';
 export const SAVE_KEY = 'minikusta.save';
 export const BACKUP_KEY = 'minikusta.save.bak';
 export const CORRUPT_KEY = 'minikusta.save.corrupt';
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 /** Coalescing window of `update()` (TECH §11.1). */
 export const SAVE_DEBOUNCE_MS = 500;
 
@@ -79,7 +86,7 @@ export function browserStore(): KeyValueStore {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Schema v1
+// Schema v2 (same shape as v1)
 
 const nonNeg = () => z.int().check(z.gte(0));
 const level = () => z.int().check(z.gte(1));
@@ -323,8 +330,64 @@ export function createDefaultSave(init: {
 
 export type CorruptStage = 'parse' | 'migrate' | 'validate';
 export type Migration = (old: unknown) => unknown;
-/** `MIGRATIONS[n]` turns a v`n` `data` into v`n+1`. Empty while v1 is the only version. */
-export const MIGRATIONS: Readonly<Record<number, Migration>> = {};
+
+/** Inventory booster of a logged action (the Golden Trowel is not an inventory booster). */
+export const ACTION_BOOSTER: Partial<Record<StoredAction['kind'], BoosterId>> = {
+  hammer: 'hammer',
+  crane: 'crane',
+  paint: 'paintBrush',
+  undo: 'undo',
+};
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+const nonNegInt = (v: unknown): number => (typeof v === 'number' && Number.isInteger(v) && v > 0 ? v : 0);
+
+/**
+ * v1 → v2 helper (K-43 item 4, E-45): an in-level record this build cannot read (a Faz 2 action or field the v2 schema
+ * does not know) is voided in the migration, penalty-free: the reserved life is released (never charged), the coins
+ * paid for +5 offers come back and so do the pre-level boosters and the logged in-level boosters it can still read;
+ * `voidNotice` tells the home screen (UX §1 (c)). A record that reads is left alone (`resumeOnLaunch` voids it).
+ */
+export function voidUnreadableAttempt(d: Record<string, unknown>): void {
+  const il = d['inLevel'];
+  if (il === null || il === undefined || InLevelSchema.safeParse(il).success) return;
+  const rec = isRecord(il) ? il : {};
+  const refunds: Partial<Record<BoosterId, number>> = {};
+  const add = (id: BoosterId): void => void (refunds[id] = (refunds[id] ?? 0) + 1);
+  for (const p of Array.isArray(rec['preBoosters']) ? rec['preBoosters'] : []) {
+    if ((PRE_BOOSTERS as readonly unknown[]).includes(p)) add(p as BoosterId);
+  }
+  for (const a of Array.isArray(rec['actions']) ? rec['actions'] : []) {
+    const kind = isRecord(a) ? a['kind'] : undefined;
+    const id = typeof kind === 'string' ? ACTION_BOOSTER[kind as StoredAction['kind']] : undefined;
+    if (id !== undefined) add(id);
+  }
+  const coins = nonNegInt(rec['offerSpendCoins']);
+  const lives = isRecord(d['lives']) ? d['lives'] : null;
+  const life = lives && lives['reserved'] === 1 ? 1 : 0;
+  if (lives) lives['reserved'] = 0;
+  if (typeof d['coins'] === 'number') d['coins'] = d['coins'] + coins;
+  const boosters = isRecord(d['boosters']) ? d['boosters'] : null;
+  const inv = boosters && isRecord(boosters['inventory']) ? boosters['inventory'] : null;
+  if (inv) for (const [id, n] of Object.entries(refunds)) inv[id] = nonNegInt(inv[id]) + (n ?? 0);
+  d['inLevel'] = null;
+  const level = rec['levelId'];
+  if (typeof level === 'number' && Number.isInteger(level) && level >= 1) {
+    d['voidNotice'] = { level, refunds: { life, boosters: refunds, coins }, bridge: false };
+  }
+}
+
+/** v1 → v2 (Faz 2R, `RULES_VERSION` 2): same shape; an unreadable in-level record is voided (see above). */
+function migrateV1(old: unknown): unknown {
+  if (!isRecord(old)) return old; // the schema check reports it
+  const d = structuredClone(old);
+  voidUnreadableAttempt(d);
+  return d;
+}
+
+/** `MIGRATIONS[n]` turns a v`n` `data` into v`n+1`. */
+export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: migrateV1 };
 
 /** Runs the chain `from → target`; throws when the save is newer than `target` or a step is missing. */
 export function migrate(
@@ -394,13 +457,6 @@ export function resumeCause(inLevel: InLevel, current: LevelIdentity | null): Re
   const rules = inLevel.rulesVersion !== current.rulesVersion;
   return hash && rules ? 'both' : hash ? 'level_hash' : rules ? 'rules_version' : null;
 }
-
-const ACTION_BOOSTER: Partial<Record<StoredAction['kind'], BoosterId>> = {
-  hammer: 'hammer',
-  crane: 'crane',
-  paint: 'paintBrush',
-  undo: 'undo',
-};
 
 /**
  * Boosters used by an attempt: pre-level boosters + one per applied `hammer` / `crane` / `paint` / `undo` action (the
@@ -514,6 +570,27 @@ export interface AttemptStart {
   readonly reserveLife: boolean;
   /** Event instance id when the attempt counts for a Wobbly Bridge run. */
   readonly bridgeEventId?: string | null;
+  /**
+   * META §4: free trials of the boosters this level unlocks (and of earlier unlocks not granted yet), added to the
+   * inventory in the same write and marked in `freeTrialsGranted` (never twice).
+   */
+  readonly freeTrials?: Readonly<Partial<Record<BoosterId, number>>>;
+}
+
+/** META §4: adds `trials` to the inventory once per booster (`freeTrialsGranted`); returns the ids granted now. */
+export function grantFreeTrials(
+  d: SaveData,
+  trials: Readonly<Partial<Record<BoosterId, number>>>,
+): BoosterId[] {
+  const granted: BoosterId[] = [];
+  for (const id of BOOSTER_IDS) {
+    const n = trials[id];
+    if (n === undefined || d.boosters.freeTrialsGranted.includes(id)) continue;
+    d.boosters.inventory[id] = (d.boosters.inventory[id] ?? 0) + Math.max(0, n);
+    d.boosters.freeTrialsGranted.push(id);
+    granted.push(id);
+  }
+  return granted;
 }
 
 export type ResumeDecision =
@@ -696,6 +773,7 @@ export class SaveService {
       attempt = rec.attempts;
       d.progress.levels[key] = rec;
       d.lives.reserved = a.reserveLife ? 1 : 0;
+      if (a.freeTrials) grantFreeTrials(d, a.freeTrials);
       d.inLevel = {
         levelId: a.levelId,
         seed: a.seed,
@@ -722,7 +800,9 @@ export class SaveService {
   /**
    * Appends one committed action after K-35 step 12 (or a booster / accepted offer) and writes at once. `movesMade`
    * = `m` after the action. An accepted +5 offer (`addMoves` from `offerCoins` / `offerAd`) counts toward
-   * `offersUsed` (K-29) and adds `offerCoins` (coins actually paid; 0 for the free gift) to `offerSpendCoins`.
+   * `offersUsed` (K-29) and adds `offerCoins` (coins actually paid; 0 for the free gift) to `offerSpendCoins`. An
+   * applied inventory booster (`hammer`, `crane`, `paint`, `undo`; UX §5.2 step 3 "adet −1") leaves the inventory in
+   * the same write — the log and the count never disagree, and `voidAttempt` gives back exactly the logged ones.
    *
    * Hot path (one call per move): only the new entry is validated (a few µs) and appended in place; the full
    * copy + schema check of `commit` (≈ 0.5 ms for a 150-move log on desktop) is skipped. Nothing changes when the
@@ -741,6 +821,11 @@ export class SaveService {
     const entry = parsed.data; // a fresh object: the caller's action is never aliased
     il.actions.push(entry);
     il.movesMade = info.movesMade;
+    const used = ACTION_BOOSTER[entry.kind];
+    if (used !== undefined) {
+      const inv = this.#data.boosters.inventory;
+      inv[used] = Math.max(0, (inv[used] ?? 0) - 1);
+    }
     if (entry.kind === 'addMoves' && (entry.source === 'offerCoins' || entry.source === 'offerAd')) {
       il.offersUsed += 1;
       if (entry.source === 'offerAd') il.adOfferUsed = true;
@@ -777,6 +862,14 @@ export class SaveService {
       il.tutorial = parsed.data;
     }
     this.#write();
+  }
+
+  /** META §4 free trials not granted yet (an attempt begun before the grant existed); one write, none when nothing new. */
+  grantTrials(trials: Readonly<Partial<Record<BoosterId, number>>>): void {
+    const pending = BOOSTER_IDS.some(
+      (id) => trials[id] !== undefined && !this.#data.boosters.freeTrialsGranted.includes(id),
+    );
+    if (pending) this.commit((d) => void grantFreeTrials(d, trials));
   }
 
   /** Out-of-moves window open / closed (a kill while open reopens the same offer, UX §1 (a)). */

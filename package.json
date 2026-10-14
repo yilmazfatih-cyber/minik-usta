@@ -16,7 +16,7 @@
     "preview": "vite preview --host",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rules": "node tools/rule-coverage.ts --phase 2",
+    "test:rules": "node tools/rule-coverage.ts --phase 2R",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.core.json && tsc -p tsconfig.tools.json",
     "lint": "eslint .",
     "format": "prettier --write .",

@@ -31,7 +31,7 @@
   "tutorial": [
     {
       "step": 1,
-      "highlight": ["front", "build"],
+      "highlight": ["panorama", "build"],
       "textKey": "tut.m.pattern",
       "done": { "event": "placementCorrect", "count": 1 }
     },

@@ -287,7 +287,10 @@ async function main(): Promise<number> {
         // the hand golden (TECH §2R.10): the canonical solution described move by move, replayed on the level as loaded
         const loaded = loadLevel(JSON.parse(readFileSync(job.file.path, 'utf8')));
         if (!loaded.ok) throw new Error(`${job.file.name}: does not load for the hand golden`);
-        await writeGolden(join(ROOT, 'tests', 'golden', `level_${nnn}.hand.json`), handGolden(r, loaded.level));
+        await writeGolden(
+          join(ROOT, 'tests', 'golden', `level_${nnn}.hand.json`),
+          handGolden(r, loaded.level),
+        );
       }
   }
   if (has('--report')) {

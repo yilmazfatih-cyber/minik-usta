@@ -10,6 +10,14 @@
  * mutated levels 1–5) and gaps of round 1 (K-45/9 GDD example, `?` rules, batch 0, L-17 carousel/filter rules, schema
  * limits of K-45/2, K-45/3, K-45/6, heavy debris).
  *
+ * WP-M (Faz 2R, 2026-10-08): the suites were re-derived for the Faz 2R rules and data — full cover K-47 (`cover_mismatch`,
+ * `cover_prefix_short`, debris is supply, Ağır Yük is not), K-49 sizes, K-02 band `2 ≤ E ≤ ⌊0,4·C⌋`, Ağır Yük = I5/Q9
+ * with `piece_too_wide`, `plan_size` / no `.`, the light tutorial (no required step, no `timeoutMs`), the Faz 2R
+ * signature table — and the LEVELS §2 ↔ JSON reviews read the Faz 2R records of levels 1–10 (block table, start
+ * blockout, header rows, truck batch, tutorial list, canonical solution ↔ solver golden ↔ core replay; end of file).
+ * Tests of rules that left the GDD (window cells, the access-search L-11, reachability as supply, per-gate paint fit)
+ * were removed with a note at their place.
+ *
  * Round 1: level data rules against docs/GDD.md K-01, K-31, K-44,
  * K-45 (items 1–7 and 9 = TECH_DESIGN §8.3 checks L-01…L-18, L-21…L-26, incl. L-09 and L-17), the level files
  * levels/level_001…005.json against docs/LEVELS.md §0/§2 (the Markdown is read and parsed at test time) and the golden
@@ -35,13 +43,14 @@ import {
 } from '../../src/core/level/logic.ts';
 import type { CheckId, Issue, LogicContext } from '../../src/core/level/logic.ts';
 import { compile, loadLevel } from '../../src/core/level/compile.ts';
-import type { CompiledLevel } from '../../src/core/level/compile.ts';
-import { deriveMechanics } from '../../src/core/level/mechanics.ts';
+import { deriveMechanics, isCargo } from '../../src/core/level/mechanics.ts';
 import type { LevelInput, MechanicId } from '../../src/core/level/schema.ts';
 import { GameSession } from '../../src/core/session.ts';
-import { ArraySink } from '../../src/core/moves.ts';
-import { FREE, railMode, tryBeginDrag } from '../../src/core/movement.ts';
-import { createInitialState, pieceX, pieceY, pieceZone, queueIds } from '../../src/core/state.ts';
+import { ArraySink, applyMove } from '../../src/core/moves.ts';
+import { tryBeginDrag } from '../../src/core/movement.ts';
+import { cloneState, createInitialState, pieceX, pieceY, pieceZone, queueIds } from '../../src/core/state.ts';
+import type { GameState } from '../../src/core/state.ts';
+import { pieceBoardCells } from '../../src/core/grid.ts';
 import { COLOR_CODES, SHAPE_KINDS, Zone } from '../../src/core/types.ts';
 import type { ColorCode, GameEvent, Move, PieceId, ShapeId, ShapeKind } from '../../src/core/types.ts';
 import { level, levelJson } from '../fixtures/builders.ts';
@@ -83,7 +92,7 @@ const soft = (highlight: string[], done: Step['done'], extra: Partial<Step> = {}
   step: 1,
   mode: 'soft',
   highlight,
-  textKey: 'tut.l1.lift',
+  textKey: 'tut.m.lift',
   done,
   ...extra,
 });
@@ -97,6 +106,14 @@ function bricks(n: number, skip: readonly string[] = []): PieceSpec[] {
   return out;
 }
 
+/** B1 W bricks on the first `n` cells (row-major from (0,0)) of a yard `cols` wide. */
+function bricksIn(cols: number, n: number): PieceSpec[] {
+  const out: PieceSpec[] = [];
+  for (let y = 0; out.length < n; y++)
+    for (let x = 0; x < cols && out.length < n; x++) out.push(['B1_0', 'W', x, y]);
+  return out;
+}
+
 const cellKey = (x: number, y: number): string => `${x},${y}`;
 function cellsOf(shape: ShapeId, x: number, y: number): string[] {
   return shapeById(shape)
@@ -104,128 +121,12 @@ function cellsOf(shape: ShapeId, x: number, y: number): string[] {
     .sort();
 }
 
-// --- LEVELS.md parser (docs/LEVELS.md §2 blockouts) -------------------------------------------------------------------
+// --- LEVELS.md (docs/LEVELS.md §0–§2, Faz 2R); the parser of the §2 records is at the end of the file ------------------
 
 const LEVELS_MD = readFileSync(join(ROOT, 'docs', 'LEVELS.md'), 'utf8');
 
-/**
- * Faz 2R transition (TECH §2R.10, §2R.12 WP-M): LEVELS §2 now documents the Faz 2R levels 1–10 (new block tables, no
- * "Minimum hamle (el çözümü)" rows) while levels/*.json are still the Faz 2 levels 1–5. The LEVELS ↔ JSON suites below
- * are not registered until WP-M rewrites them for the Faz 2R format together with the new JSONs; the JSON-only suites
- * keep running. The todo at the end of the file names the pending work.
- */
-const LEVELS_IS_FAZ_2R = LEVELS_MD.includes('Faz 2R dikey dilimi');
-
-interface DocPiece {
-  readonly letter: string;
-  readonly shape: ShapeId;
-  readonly color: ColorCode;
-  readonly x: number;
-  readonly y: number;
-}
-interface DocLevel {
-  readonly n: number;
-  readonly fields: ReadonlyMap<string, string>;
-  readonly pieces: readonly DocPiece[];
-  /** y → the 9 blockout tokens: x 0–5, wall, x 6–7. */
-  readonly blockout: ReadonlyMap<number, readonly string[]>;
-  readonly trucks: readonly {
-    readonly batch: number;
-    readonly pieces: readonly [ShapeId, ColorCode, number][];
-  }[];
-  /** Numbered items, continuation lines joined with single spaces. */
-  readonly solution: readonly string[];
-  readonly tutorial: readonly string[];
-}
-
-function numberedList(lines: readonly string[], header: string): string[] {
-  let i = lines.findIndex((l) => l.startsWith(header));
-  if (i < 0) return [];
-  i++;
-  while (i < lines.length && (lines[i] ?? '').trim() === '') i++;
-  const items: string[] = [];
-  for (; i < lines.length; i++) {
-    const line = lines[i] ?? '';
-    if (line.trim() === '') break;
-    if (/^\d+\. /.test(line)) items.push(line.trim());
-    else if (items.length > 0) items[items.length - 1] = `${items[items.length - 1] ?? ''} ${line.trim()}`;
-    else break;
-  }
-  return items.map((s) => s.replace(/\s+/g, ' '));
-}
-
-function docLevel(n: number): DocLevel {
-  const start = LEVELS_MD.indexOf(`### Bölüm ${n} — `);
-  if (start < 0) throw new Error(`LEVELS.md has no "### Bölüm ${n} — " section`);
-  const end = LEVELS_MD.indexOf('\n### ', start + 1);
-  const lines = LEVELS_MD.slice(start, end < 0 ? undefined : end).split('\n');
-  const fields = new Map<string, string>();
-  const pieces: DocPiece[] = [];
-  const blockout = new Map<number, string[]>();
-  const trucks: { batch: number; pieces: [ShapeId, ColorCode, number][] }[] = [];
-  for (const line of lines) {
-    const piece = /^\| `([^`]+)` \| `([A-Z][0-9]_\d+)` \| ([A-Z]) \| \((\d+),(\d+)\) \|/.exec(line);
-    if (piece) {
-      pieces.push({
-        letter: piece[1] ?? '',
-        shape: piece[2] as ShapeId,
-        color: piece[3] as ColorCode,
-        x: Number(piece[4]),
-        y: Number(piece[5]),
-      });
-      continue;
-    }
-    const field = /^\| ([^`|][^|]*?) \| (.*) \|$/.exec(line);
-    if (field && field[1] !== 'Alan' && !(field[1] ?? '').startsWith('---'))
-      fields.set(field[1] ?? '', field[2] ?? '');
-    const row = /^\s+y=(\d):\s+(.*)$/.exec(line);
-    if (row) blockout.set(Number(row[1]), (row[2] ?? '').trim().split(/\s+/).slice(0, 9));
-    const truck = /^- Parti (\d+) \([^)]*\): (.*)$/.exec(line);
-    if (truck)
-      trucks.push({
-        batch: Number(truck[1]),
-        pieces: [...(truck[2] ?? '').matchAll(/`([A-Z][0-9]_\d+)` ([A-Z]) x=(\d)/g)].map(
-          (m) => [m[1] as ShapeId, m[2] as ColorCode, Number(m[3])] as [ShapeId, ColorCode, number],
-        ),
-      });
-  }
-  return {
-    n,
-    fields,
-    pieces,
-    blockout,
-    trucks,
-    solution: numberedList(lines, 'Çözüm (hamle hamle'),
-    tutorial: numberedList(lines, 'Öğretici adımları (`tutorial[]`)'),
-  };
-}
-
-function field(doc: DocLevel, name: string): string {
-  const v = doc.fields.get(name);
-  if (v === undefined) throw new Error(`LEVELS Bölüm ${doc.n}: no "${name}" row`);
-  return v;
-}
-function match(re: RegExp, text: string, what: string): RegExpExecArray {
-  const m = re.exec(text);
-  if (!m) throw new Error(`${what}: "${text}" does not match ${re}`);
-  return m;
-}
-
-const DIFFICULTY: Readonly<Record<string, LevelInput['difficulty']>> = {
-  Kolay: 'easy',
-  Normal: 'normal',
-  Zor: 'hard',
-  'Çok Zor': 'superhard',
-};
-/** LEVELS §0 "Hamle bütçesi": Kolay +8, Normal +5, Zor +3, Çok Zor +2. */
-const BUFFER: Readonly<Record<LevelInput['difficulty'], number>> = {
-  easy: 8,
-  normal: 5,
-  hard: 3,
-  superhard: 2,
-};
-
-const LEVEL_IDS = [1, 2, 3, 4, 5] as const;
+/** Faz 2R vertical slice (EN-2R-17): levels/level_001…010.json. */
+const LEVEL_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 // =====================================================================================================================
 // K-01 board, K-44 shapes
@@ -377,36 +278,36 @@ describe('review K-01 board and K-44 shapes', () => {
     expect(SHAPES.length).toBe(52);
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): w ≥ 3 "heavy" rule → piece_too_wide; Y5 = I5/Q9 (K-44 Faz 2R). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-44 symmetric aliases are accepted in level data and compile to the canonical shape (O4_90, D2_180, D2_270, I3_270, Q9_270)',
-    () => {
-      const spec: LevelSpec = {
-        id: 11,
-        plan: ['WW'],
-        pieces: [
-          ['O4_90', 'W', 0, 0],
-          ['D2_180', 'W', 2, 0],
-          ['D2_270', 'W', 3, 0],
-          ['I3_270', 'W', 0, 2],
-          ['Q9_270', 'W', 3, 1],
-        ],
-      };
-      expect(run(spec, ['L-02', 'L-04', 'L-21'])).toEqual([]);
-      const lvl = compile(level(spec));
-      const expected: [ShapeId, ShapeId][] = [
-        ['O4_90', 'O4_0'],
-        ['D2_180', 'D2_0'],
-        ['D2_270', 'D2_90'],
-        ['I3_270', 'I3_90'],
-        ['Q9_270', 'Q9_0'],
-      ];
-      expected.forEach(([data, canon], i) => {
-        const p = lvl.pieces[i];
-        expect([p?.dataShape, p?.shapeIndex], data).toEqual([data, shapeById(canon).index]);
-      });
-    },
-  );
+  // Faz 2R (WP-M): I3_270 is a 3-wide material orientation (K-44 `piece_too_wide` on Ws = 2), so the alias board is
+  // 5 × 8 | 3 × 8 (Wy + Ws ≤ 8, K-49); Q9_270 is Ağır Yük (any orientation, no width rule)
+  it('K-44 symmetric aliases are accepted in level data and compile to the canonical shape (O4_90, D2_180, D2_270, I3_270, Q9_270)', () => {
+    const spec: LevelSpec = {
+      id: 11,
+      yard: { cols: 5 },
+      site: { cols: 3 },
+      plan: ['WWW'],
+      pieces: [
+        ['O4_90', 'W', 0, 0],
+        ['D2_180', 'W', 2, 0],
+        ['D2_270', 'W', 3, 0],
+        ['I3_270', 'W', 0, 2],
+        ['Q9_270', 'W', 2, 3],
+      ],
+    };
+    expect(run(spec, ['L-02', 'L-04', 'L-21'])).toEqual([]);
+    const lvl = compile(level(spec));
+    const expected: [ShapeId, ShapeId][] = [
+      ['O4_90', 'O4_0'],
+      ['D2_180', 'D2_0'],
+      ['D2_270', 'D2_90'],
+      ['I3_270', 'I3_90'],
+      ['Q9_270', 'Q9_0'],
+    ];
+    expected.forEach(([data, canon], i) => {
+      const p = lvl.pieces[i];
+      expect([p?.dataShape, p?.shapeIndex], data).toEqual([data, shapeById(canon).index]);
+    });
+  });
 });
 
 // =====================================================================================================================
@@ -438,26 +339,29 @@ describe('review K-44 K-45/5 shapes and flags in level data', () => {
     }
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): w ≥ 3 "heavy" rule → piece_too_wide; Y5 = I5/Q9 (K-44 Faz 2R). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-44 heavy shapes only from level 8: I5_0/Q9_0 locked at 7, valid at 8 and 41; L4_90 usable once L4 is unlocked (11); I3_90 at 9 still locked (kind)',
-    () => {
-      const heavy: PieceSpec[] = [
-        ['I5_0', 'W', 0, 0],
-        ['Q9_0', 'W', 0, 1],
-      ];
-      expect(run({ id: 7, plan: ['WW'], pieces: heavy }, ['L-04']).map((i) => i.code)).toEqual([
-        'shape_locked',
-        'shape_locked',
-      ]);
-      expect(run({ id: 8, plan: ['WW'], pieces: heavy }, ['L-04'])).toEqual([]);
-      expect(run({ id: 41, plan: ['WW'], pieces: heavy }, ['L-04'])).toEqual([]);
-      expect(run({ id: 11, plan: ['WW'], pieces: [['L4_90', 'W', 0, 0]] }, ['L-04'])).toEqual([]);
-      expect(codes(run({ id: 9, plan: ['WW'], pieces: [['I3_90', 'W', 0, 0]] }, ['L-04']))).toEqual([
-        'shape_locked',
-      ]);
-    },
-  );
+  // Faz 2R K-44: "ağır" = Ağır Yük (I5/Q9) only; the old w ≥ 3 rule became `piece_too_wide` (material width ≤ Ws)
+  it('K-44 Ağır Yük only from level 8: I5_0/Q9_0 locked at 7, valid at 8 and 41; GDD example L4_90 on Ws = 2 is piece_too_wide, on Ws = 3 valid (11); I3_0 at 9 is shape_locked (kind)', () => {
+    const heavy: PieceSpec[] = [
+      ['I5_0', 'W', 0, 0],
+      ['Q9_0', 'W', 0, 1],
+    ];
+    expect(run({ id: 7, plan: ['WW'], pieces: heavy }, ['L-04']).map((i) => i.code)).toEqual([
+      'shape_locked',
+      'shape_locked',
+    ]);
+    expect(run({ id: 8, plan: ['WW'], pieces: heavy }, ['L-04'])).toEqual([]);
+    expect(run({ id: 41, plan: ['WW'], pieces: heavy }, ['L-04'])).toEqual([]);
+    const l4 = run({ id: 11, plan: ['WW'], pieces: [['L4_90', 'W', 0, 0]] }, ['L-04']);
+    expect(l4.map((i) => [i.code, i.rule, i.path])).toEqual([
+      ['piece_too_wide', 'K-45/5', 'yard.batches[0].pieces[0]'],
+    ]);
+    expect(
+      run({ id: 11, site: { cols: 3 }, plan: ['WWW'], pieces: [['L4_90', 'W', 0, 0]] }, ['L-04']),
+    ).toEqual([]);
+    expect(codes(run({ id: 9, plan: ['WW'], pieces: [['I3_0', 'W', 0, 0]] }, ['L-04']))).toEqual([
+      'shape_locked',
+    ]);
+  });
 
   it('K-44 I5_90 and I5_270 are forbidden in level data at every level; I5_0 and I5_180 are not', () => {
     for (const id of [8, 41]) {
@@ -510,44 +414,43 @@ describe('review K-44 K-45/5 shapes and flags in level data', () => {
     ]);
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): w ≥ 3 "heavy" rule → piece_too_wide; Y5 = I5/Q9 (K-44 Faz 2R). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-45/5 flag combinations follow the OBSTACLES table (✓ chained/wet on heavy, glass+mortar …; ✗ glass+balloon, heavy glass/balloon/mortar)',
-    () => {
-      const allowed: PieceSpec[] = [
-        ['D2_90', 'W', 0, 0, ['glass', 'mortar']],
-        ['D2_90', 'W', 2, 0, ['glass', 'chained']],
-        ['D2_90', 'W', 4, 0, ['glass', 'wet'], 2],
-        ['D2_90', 'W', 0, 1, ['balloon', 'mortar']],
-        ['D2_90', 'W', 2, 1, ['balloon', 'chained']],
-        ['D2_90', 'W', 4, 1, ['mortar', 'chained']],
-        ['D2_90', 'W', 0, 2, ['chained', 'wet'], 3],
-        ['I3_90', 'W', 0, 3, ['chained']],
-        ['I3_90', 'W', 3, 3, ['wet'], 1],
-      ];
-      expect(run({ id: 41, plan: ['WW'], pieces: allowed }, ['L-21', 'L-26'])).toEqual([]);
-      const forbidden: PieceSpec[] = [
-        ['D2_90', 'W', 0, 0, ['glass', 'balloon']],
-        ['I3_90', 'W', 0, 1, ['glass']],
-        ['I3_90', 'W', 0, 2, ['balloon']],
-        ['Q9_0', 'W', 0, 3, ['mortar']],
-      ];
-      // debris carries no flags at all (K-21 table: debris × every flag ✗) — the schema refuses the field
-      const debrisJson = levelJson({
-        id: 41,
-        plan: ['WW'],
-        pieces: [['B1_0', 'W', 0, 0]],
-        debris: [['B1_0', 'R', 6, 0]],
-      });
-      const d0 = debrisJson.build.debris?.[0];
-      if (d0) Object.assign(d0, { flags: ['glass'] });
-      expect(codes(runJson(debrisJson))).toEqual(['schema_invalid']);
-      const issues = run({ id: 41, plan: ['WW'], pieces: forbidden }, ['L-21']);
-      expect(issues.map((i) => [i.code, i.rule, i.path])).toEqual(
-        [0, 1, 2, 3].map((k) => ['flag_combo_forbidden', 'K-45/5', `yard.batches[0].pieces[${k}]`]),
-      );
-    },
-  );
+  // Faz 2R: the "ağır şekil" column of the OBSTACLES flag table is Ağır Yük (I5/Q9); a 3-wide material block is no
+  // longer heavy (its width is L-04 `piece_too_wide`, not a flag rule)
+  it('K-45/5 flag combinations follow the OBSTACLES table (✓ chained/wet on Ağır Yük, glass+mortar …; ✗ glass+balloon, Ağır Yük glass/balloon/mortar)', () => {
+    const allowed: PieceSpec[] = [
+      ['D2_90', 'W', 0, 0, ['glass', 'mortar']],
+      ['D2_90', 'W', 2, 0, ['glass', 'chained']],
+      ['D2_90', 'W', 4, 0, ['glass', 'wet'], 2],
+      ['D2_90', 'W', 0, 1, ['balloon', 'mortar']],
+      ['D2_90', 'W', 2, 1, ['balloon', 'chained']],
+      ['D2_90', 'W', 4, 1, ['mortar', 'chained']],
+      ['D2_90', 'W', 0, 2, ['chained', 'wet'], 3],
+      ['Q9_0', 'W', 0, 3, ['chained']],
+      ['I5_0', 'W', 0, 6, ['wet'], 1],
+      ['I3_90', 'W', 3, 3, ['glass']],
+    ];
+    expect(run({ id: 41, plan: ['WW'], pieces: allowed }, ['L-21', 'L-26'])).toEqual([]);
+    const forbidden: PieceSpec[] = [
+      ['D2_90', 'W', 0, 0, ['glass', 'balloon']],
+      ['Q9_0', 'W', 0, 1, ['glass']],
+      ['I5_0', 'W', 0, 4, ['balloon']],
+      ['Q9_0', 'W', 3, 1, ['mortar']],
+    ];
+    // debris carries no flags at all (K-21 table: debris × every flag ✗) — the schema refuses the field
+    const debrisJson = levelJson({
+      id: 41,
+      plan: ['WW'],
+      pieces: [['B1_0', 'W', 0, 0]],
+      debris: [['B1_0', 'R', 6, 0]],
+    });
+    const d0 = debrisJson.build.debris?.[0];
+    if (d0) Object.assign(d0, { flags: ['glass'] });
+    expect(codes(runJson(debrisJson))).toEqual(['schema_invalid']);
+    const issues = run({ id: 41, plan: ['WW'], pieces: forbidden }, ['L-21']);
+    expect(issues.map((i) => [i.code, i.rule, i.path])).toEqual(
+      [0, 1, 2, 3].map((k) => ['flag_combo_forbidden', 'K-45/5', `yard.batches[0].pieces[${k}]`]),
+    );
+  });
 });
 
 // =====================================================================================================================
@@ -563,17 +466,15 @@ describe('review K-31 colour set and unlocks', () => {
     expect(issues.map((i) => [i.code, i.rule, i.severity])).toEqual([['too_many_colors', 'K-45/4', 'error']]);
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): Faz 2 levels/*.json do not meet the Faz 2R rules. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-31 GDD example on level_005.json: G/R/W is valid; one Y decoy in the yard makes 4 colours → too_many_colors although the plan keeps 3',
-    () => {
-      const json = readLevelJson(5);
-      expect(runJson(json)).toEqual([]);
-      batchOf(json, 0).pieces.push({ shape: 'B1_0', color: 'Y', x: 2, y: 7 });
-      const issues = runJson(json);
-      expect(codes(issues)).toEqual(['too_many_colors']);
-    },
-  );
+  it('K-31 GDD example on level_005.json (limit 3): plan R/W/Y and blocks R/W/Y are valid; one G block in the yard makes 4 colours → too_many_colors (and the full cover breaks → cover_mismatch)', () => {
+    const json = readLevelJson(5);
+    expect(runJson(json)).toEqual([]);
+    const parsed = validateLevelJson(json).level;
+    if (!parsed) throw new Error('level 5 schema');
+    expect([...levelColorSet(parsed)].sort()).toEqual(['R', 'W', 'Y']);
+    batchOf(json, 0).pieces.push({ shape: 'B1_0', color: 'G', x: 2, y: 2 });
+    expect(codes(runJson(json))).toEqual(['cover_mismatch', 'too_many_colors']);
+  });
 
   it('K-31 GDD example: in level 22 the paint gate colour P joins the set (B, P, Y, R → 4 ≤ 5, nothing locked)', () => {
     const spec: LevelSpec = {
@@ -697,31 +598,44 @@ describe('review K-45/1 identity, seed', () => {
 });
 
 describe('review K-45/2 yard fill and overlap', () => {
-  // Faz 2R (WP-B, TECH §2R.3): K-02 80 % band → Faz 2R 2 ≤ E ≤ ⌊0,4·C⌋. WP-M ile yeniden üretilecek.
-  it.fails('K-45/2 K-02 GDD example: 46/48 is valid, 38/48 is yard_fill_low', () => {
+  it('K-45/2 K-02 GDD example (Faz 2R band 2 ≤ E ≤ ⌊0,4·C⌋): level 3 C 16 F 10 → E 6 valid, E 7 yard_fill_low, E 1 yard_fill_high; default 6 × 8 E ∈ [2, 19]', () => {
+    const small = (n: number): string[] =>
+      run({ id: 3, yard: { cols: 4, rows: 4 }, plan: ['WW'], pieces: bricksIn(4, n) }, ['L-03']).map(
+        (i) => i.code,
+      );
+    expect(small(10)).toEqual([]); // E = 6 = ⌊6,4⌋
+    expect(small(9)).toEqual(['yard_fill_low']); // E = 7
+    expect(small(14)).toEqual([]); // E = 2
+    expect(small(15)).toEqual(['yard_fill_high']); // E = 1
+    expect(runJson(readLevelJson(3), ['L-03'])).toEqual([]);
     const fill = (n: number): string[] =>
       run({ id: 1, plan: ['WW'], pieces: bricks(n) }, ['L-03']).map((i) => i.code);
-    expect(fill(46)).toEqual([]);
-    expect(fill(48)).toEqual([]);
-    expect(fill(38)).toEqual(['yard_fill_low']);
+    expect(fill(46)).toEqual([]); // E = 2
+    expect(fill(47)).toEqual(['yard_fill_high']);
+    expect(fill(48)).toEqual(['yard_fill_high']);
+    expect(fill(29)).toEqual([]); // E = 19
+    expect(fill(28)).toEqual(['yard_fill_low']);
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): K-02 80 % band → Faz 2R 2 ≤ E ≤ ⌊0,4·C⌋. WP-M ile yeniden üretilecek.
-  it.fails('K-45/2 crates and cement bags fill yard cells, screws and keys do not', () => {
+  it('K-45/2 crates and cement bags fill yard cells, screws and keys do not (K-02: F = material + Ağır Yük + crate + bag)', () => {
     const obstacles: LevelInput['obstacles'] = [
       { type: 'crate', x: 1, y: 6, hp: 1 },
       { type: 'cement_bag', x: 2, y: 6 },
     ];
-    // 37 bricks + crate + bag = 39 → valid
-    expect(run({ id: 18, plan: ['WW'], pieces: bricks(37), obstacles }, ['L-03'])).toEqual([]);
-    // 38 bricks + screw + key (both under bricks) = 38 → low
+    // 27 bricks + crate + bag = 29 → E = 19 → valid
+    expect(run({ id: 18, plan: ['WW'], pieces: bricks(27), obstacles }, ['L-03'])).toEqual([]);
+    // 28 bricks + screw + key (both under bricks) = 28 → E = 20 → low
     const hidden: LevelInput['obstacles'] = [
       { type: 'screw', x: 0, y: 0 },
       { type: 'key', x: 1, y: 0, id: 'a' },
     ];
     expect(
-      run({ id: 26, plan: ['WW'], pieces: bricks(38), obstacles: hidden }, ['L-03']).map((i) => i.code),
+      run({ id: 26, plan: ['WW'], pieces: bricks(28), obstacles: hidden }, ['L-03']).map((i) => i.code),
     ).toEqual(['yard_fill_low']);
+    // Ağır Yük fills its 9 cells: 20 bricks + Q9 = 29 → valid
+    expect(
+      run({ id: 8, plan: ['WW'], pieces: [...bricks(20), ['Q9_0', 'W', 0, 5]] }, ['L-03']).map((i) => i.code),
+    ).toEqual([]);
   });
 
   it('K-45/2 batch-0 cells must be x ≤ 5 and y ≤ 7: a block reaching the crane rows or the site is out_of_yard', () => {
@@ -936,43 +850,43 @@ describe('review K-45/3 wall and gaps (L-09)', () => {
 });
 
 describe('review K-45/4 plan rows, elevator, hidden cells (L-05, L-08)', () => {
-  // Faz 2R (WP-B, TECH §2R.3): row_width → plan_size (K-15 Faz 2R). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-45/4 a plan row of 1 character is row_width (not schema_invalid); an unknown letter is schema_invalid',
-    () => {
-      const json = levelJson({ id: 1, plan: ['WW'], pieces: [['B1_0', 'W', 0, 0]] });
-      const seg = json.build.segments[0];
-      if (!seg) throw new Error('no segment');
-      seg.rows = ['W', 'WW'];
-      expect(runJson(json).map((i) => [i.code, i.rule, i.path])).toEqual([
-        ['row_width', 'K-45/4', 'build.segments[0].rows[0]'],
-      ]);
-      seg.rows = ['WX'];
-      expect(codes(runJson(json))).toEqual(['schema_invalid']);
-    },
-  );
+  it('K-45/4 Faz 2R plan_size: a plan row of 1 character on a 2-column site is plan_size (not schema_invalid), so is a segment with fewer than Hs rows; an unknown letter is schema_invalid', () => {
+    const json: LevelInput = {
+      ...levelJson({ id: 1, plan: ['WW', 'WW', 'WW', 'WW'], pieces: [['B1_0', 'W', 0, 0]] }),
+      site: { cols: 2, rows: 4 },
+    };
+    const seg = json.build.segments[0];
+    if (!seg) throw new Error('no segment');
+    expect(runJson(json, ['L-05'])).toEqual([]);
+    seg.rows = ['W', 'WW', 'WW', 'WW'];
+    expect(runJson(json, ['L-05']).map((i) => [i.code, i.rule, i.path])).toEqual([
+      ['plan_size', 'K-45/4', 'build.segments[0].rows[0]'],
+    ]);
+    seg.rows = ['WW', 'WW', 'WW'];
+    expect(runJson(json, ['L-05']).map((i) => [i.code, i.path])).toEqual([
+      ['plan_size', 'build.segments[0].rows'],
+    ]);
+    seg.rows = ['WX', 'WW', 'WW', 'WW'];
+    expect(codes(runJson(json, ['L-05']))).toEqual(['schema_invalid']);
+  });
 
-  // Faz 2R (WP-B, TECH §2R.3): plans are exactly Hs × Ws (plan_size). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-45/4 K-24 elevator: h + b ≤ 8 for every segment (6 + 2 valid, 6 + 3 overflow on that segment only)',
-    () => {
-      const el = (b: number): Issue[] =>
-        run(
-          {
-            id: 37,
-            plan: [
-              ['WW', 'WW', 'WW', 'WW', 'WW', 'WW'],
-              ['WW', 'WW', 'WW', 'WW'],
-            ],
-            pieces: [['B1_0', 'W', 0, 0]],
-            elevator: { range: [0, b], start: 0, dir: 1 },
-          },
-          ['L-05'],
-        );
-      expect(el(2)).toEqual([]);
-      expect(el(3).map((i) => [i.code, i.path])).toEqual([['elevator_overflow', 'build.segments[0]']]);
-    },
-  );
+  it('K-45/4 K-24 elevator (Faz 2R): Hs + b ≤ 8 (Hs 6: b 2 valid, b 3 elevator_overflow)', () => {
+    const six = ['WW', 'WW', 'WW', 'WW', 'WW', 'WW'];
+    const el = (b: number): Issue[] =>
+      run(
+        {
+          id: 37,
+          site: { cols: 2, rows: 6 },
+          plan: [six, six],
+          pieces: [['B1_0', 'W', 0, 0]],
+          elevator: { range: [0, b], start: 0, dir: 1 },
+        },
+        ['L-05'],
+      );
+    expect(el(2)).toEqual([]);
+    expect(codes(el(3))).toEqual(['elevator_overflow']);
+    expect(el(3).every((i) => i.rule === 'K-45/4')).toBe(true);
+  });
 
   it('K-45/4 K-32 repeat: no `?` in the bottom p rows; a `?` that resolves to `.` is invalid ("`.` gizli olamaz"); chains resolve', () => {
     const hidden = (rows: string[], period: number): string[] =>
@@ -1149,18 +1063,19 @@ describe('review K-45/7 debris (L-13)', () => {
     expect(base([['D2_0', 'R', 7, 1]])).toEqual([]);
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): debris rules changed (S4 Faz 2R, plan_has_window). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-45/7 debris stays inside its own segment plan height (segment default 0); support is not required',
-    () => {
-      const plans = [['WW', 'WW', 'WW'], ['WW']];
-      expect(base([['B1_0', 'R', 6, 2]], plans)).toEqual([]); // floating at row 2 of segment 0 (OBSTACLES S4)
-      expect(base([['B1_0', 'R', 6, 2, 1]], plans)).toEqual(['debris_misplaced']); // segment 1 has 1 row
-      expect(base([['B1_0', 'R', 6, 0, 1]], plans)).toEqual([]);
-      expect(base([['D2_0', 'R', 6, 2]], plans)).toEqual(['debris_misplaced']); // rows 2–3, plan has 3 rows
-      expect(base([['B1_0', 'R', 6, 0, 2]], plans)).toEqual(['debris_misplaced']); // no segment 2
-    },
-  );
+  // Faz 2R (OBSTACLES S4, K-45/7): every plan covers the whole Hs × Ws site, so "its own segment's plan area" = Hs rows
+  it('K-45/7 debris stays inside the plan area of its own segment (Hs rows; segment default 0 and must exist); support is not required', () => {
+    const three = ['WW', 'WW', 'WW'];
+    const sized = (debris: LevelSpec['debris']): string[] =>
+      run(
+        { id: 17, site: { cols: 2, rows: 3 }, plan: [three, three], pieces: [['O4_0', 'W', 0, 0]], debris },
+        ['L-13'],
+      ).map((i) => i.code);
+    expect(sized([['B1_0', 'R', 6, 2]])).toEqual([]); // floating at row 2 of segment 0 (OBSTACLES S4)
+    expect(sized([['B1_0', 'R', 6, 2, 1]])).toEqual([]);
+    expect(sized([['D2_0', 'R', 6, 2]])).toEqual(['debris_misplaced']); // rows 2–3, Hs 3
+    expect(sized([['B1_0', 'R', 6, 0, 2]])).toEqual(['debris_misplaced']); // no segment 2
+  });
 
   it('K-45/7 debris pieces of one segment must not overlap; the same cell in two different segments is no overlap', () => {
     const plans = [['WW'], ['WW']];
@@ -1190,82 +1105,64 @@ describe('review K-45/7 debris (L-13)', () => {
 // =====================================================================================================================
 
 describe('review K-27 material and K-25 truck batches', () => {
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 GDD example: segment 2 has 6 W cells, batch 1 brings O4 + D2_0 W (6) and a decoy C3 W → enough; O4 alone is material_short',
-    () => {
-      const spec = (truck: PieceSpec[]): LevelSpec => ({
-        id: 5,
-        plan: [['GG'], ['W.', 'WW', 'WW', 'W.']],
-        pieces: [['D2_90', 'G', 0, 0]],
-        batches: [{ forSegment: 1, pieces: truck }],
-      });
-      expect(
-        run(
-          spec([
-            ['O4_0', 'W', 0, 8],
-            ['D2_0', 'W', 2, 8],
-            ['C3_0', 'W', 3, 8],
-          ]),
-          ['L-10'],
-        ),
-      ).toEqual([]);
-      const short = run(spec([['O4_0', 'W', 0, 8]]), ['L-10']);
-      expect(short.map((i) => [i.code, i.rule])).toEqual([['material_short', 'K-27']]);
-    },
-  );
+  it('K-27 GDD example (Faz 2R, K-47): level 5 segment 2 has R 4, W 2, Y 4 and batch 1 brings O4 Y, D2_0 R × 2, D2_90 W → valid; a C3 W added to the batch is cover_mismatch (no decoys)', () => {
+    const json = readLevelJson(5);
+    expect(runJson(json, ['L-10', 'L-30'])).toEqual([]);
+    expect(batchOf(json, 1).pieces.map((p) => [p.shape, p.color])).toEqual([
+      ['O4_0', 'Y'],
+      ['D2_0', 'R'],
+      ['D2_0', 'R'],
+      ['D2_90', 'W'],
+    ]);
+    batchOf(json, 1).pieces.push({ shape: 'C3_0', color: 'W', x: 0, y: 4 });
+    expect(runJson(json, ['L-10', 'L-30']).map((i) => [i.code, i.rule])).toEqual([
+      ['cover_mismatch', 'K-45/8'],
+    ]);
+  });
 
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails('K-27 heavy blocks are not supply ("ağır olmayan"): an I3_90 W cannot cover 2 W cells', () => {
+  it('K-27 K-47 Ağır Yük is not supply: a Q9 "W" next to one O4 W cannot cover 8 W cells (cover_mismatch); two O4 W can', () => {
     const supply = (pieces: PieceSpec[]): string[] =>
-      run({ id: 11, plan: ['WW'], pieces }, ['L-10']).map((i) => i.code);
-    expect(supply([['I3_90', 'W', 0, 0]])).toEqual(['material_short']);
+      run({ id: 8, site: { cols: 2, rows: 4 }, plan: ['WW', 'WW', 'WW', 'WW'], pieces }, [
+        'L-10',
+        'L-30',
+      ]).map((i) => i.code);
     expect(
       supply([
-        ['I3_90', 'W', 0, 0],
-        ['D2_90', 'W', 0, 1],
+        ['Q9_0', 'W', 0, 0],
+        ['O4_0', 'W', 3, 0],
+      ]),
+    ).toEqual(['cover_mismatch']);
+    expect(
+      supply([
+        ['Q9_0', 'W', 0, 0],
+        ['O4_0', 'W', 3, 0],
+        ['O4_0', 'W', 3, 2],
       ]),
     ).toEqual([]);
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 only blocks that can reach the site are supply: I3_0 cannot cross a height-8 wall (K-05) unless a gap of size ≥ 3 exists',
-    () => {
-      const pieces: PieceSpec[] = [
-        ['I3_0', 'W', 0, 0],
-        ['I3_0', 'W', 1, 0],
-      ];
-      const plan = ['WW', 'WW', 'WW'];
-      expect(run({ id: 11, wall: { height: 8 }, plan, pieces }, ['L-10']).map((i) => i.code)).toEqual([
-        'material_short',
-      ]);
-      expect(
-        run({ id: 11, wall: { height: 8, gaps: [{ type: 'static', y: 0, size: 3 }] }, plan, pieces }, [
-          'L-10',
-        ]),
-      ).toEqual([]);
-    },
-  );
+  // Faz 2R: K-47 counts every material block (cargo excluded) whatever its way to the site; reachability is the solver's
+  // (K-45/9 `unsolvable` / `unused_block`), not L-10's — the Faz 2 "only blocks that can reach the site are supply" test
+  // left with `material_short`. canReachSite itself is still checked against the drag engine further below.
 
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 TECH L-10 "her blok bir kez": one O4 that is either Y or P (paint gate) cannot supply 2 Y + 2 P cells → material_short',
-    () => {
-      const spec: LevelSpec = {
-        id: 22,
-        wall: { height: 6, gaps: [{ type: 'paint', y: 1, size: 2, color: 'P' }] },
-        plan: ['PP', 'YY'],
-        pieces: [['O4_0', 'Y', 0, 0]],
-      };
-      // The level is refused anyway by the exact cover (L-11) …
-      expect(codes(run(spec, ['L-11']))).toEqual(['untileable']);
-      // … but the material condition counts every block once, for one colour: 4 cells as Y or as P, never 2 + 2.
-      expect(codes(run(spec, ['L-10']))).toEqual(['material_short']);
-      const block = { forSegment: 0, color: 'Y' as const, cells: 4, alts: ['P' as const] };
-      expect(materialShortfall({ Y: 2, P: 2 }, [block]).length).toBeGreaterThan(0);
-    },
-  );
+  it("K-47 item 1 with a W6 paint gate the cover equality is on the total cell count (the per-colour balance is the solver's); without the gate the same data is cover_mismatch", () => {
+    const spec = (gaps: NonNullable<LevelSpec['wall']>['gaps']): LevelSpec => ({
+      id: 22,
+      site: { cols: 2, rows: 4 },
+      wall: { height: 6, gaps },
+      plan: ['PP', 'PP', 'YY', 'YY'],
+      pieces: [
+        ['O4_0', 'Y', 0, 0],
+        ['O4_0', 'Y', 2, 0],
+      ],
+    });
+    const paint = [{ type: 'paint' as const, y: 1, size: 2, color: 'P' as const }];
+    expect(run(spec(paint), ['L-10', 'L-30'])).toEqual([]);
+    expect(codes(run(spec([]), ['L-10', 'L-30']))).toEqual(['cover_mismatch']);
+    // the material condition still counts every block once, for one colour: 4 cells as Y or as P, never 2 + 2
+    const block = { forSegment: 0, color: 'Y' as const, cells: 4, alts: ['P' as const] };
+    expect(materialShortfall({ Y: 2, P: 2 }, [block]).length).toBeGreaterThan(0);
+  });
 
   it('K-25 truck blocks: y written as 8, 0 ≤ x ≤ 6 − w, forSegment 1…S−1, dropColumns fit the block', () => {
     const truck = (
@@ -1314,35 +1211,36 @@ describe('review K-27 material and K-25 truck batches', () => {
 // =====================================================================================================================
 
 describe('review K-45/9 mechanics derived from data', () => {
-  // Faz 2R (WP-B, TECH §2R.3): S2 left the signature table (CL-2R-12, plan_has_window). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-45/9 levels 1–5 derive {}, {}, {W1}, {W1, S2}, {S1}; each new mechanic equals `teaches`, 1 and 2 have none',
-    () => {
-      const previous = new Set<MechanicId>();
-      const expected: Record<number, [MechanicId[], MechanicId | undefined]> = {
-        1: [[], undefined],
-        2: [[], undefined],
-        3: [['W1'], 'W1'],
-        4: [['W1', 'S2'], 'S2'],
-        5: [['S1'], 'S1'],
-      };
-      for (const n of LEVEL_IDS) {
-        const res = validateLevelJson(readLevelJson(n), {
-          only: ['L-16', 'L-22'],
-          previousMechanics: new Set(previous),
-        });
-        expect(res.issues, `level ${n}`).toEqual([]);
-        const lvl = res.level;
-        if (!lvl) throw new Error(`level ${n} fails the schema`);
-        const [derived, teaches] = expected[n] ?? [[], undefined];
-        expect(deriveMechanics(lvl), `level ${n} derived set`).toEqual(derived);
-        expect(lvl.teaches, `level ${n} teaches`).toBe(teaches);
-        const fresh = derived.filter((m) => !previous.has(m));
-        expect(fresh, `level ${n} new mechanics`).toEqual(teaches ? [teaches] : []);
-        for (const m of derived) previous.add(m);
-      }
-    },
-  );
+  it('K-45/10 levels 1–10 derive {}, {}, {}, {W1}, {S1}, {W2}, {S1, W2}, {Y5}, {W1, W3}, {S1, W2, Y5}; the one new mechanic of 4, 5, 6, 8, 9 equals `teaches`, the others have none (OBSTACLES "Veri imzası" Faz 2R)', () => {
+    const previous = new Set<MechanicId>();
+    const expected: Record<number, [MechanicId[], MechanicId | undefined]> = {
+      1: [[], undefined],
+      2: [[], undefined],
+      3: [[], undefined],
+      4: [['W1'], 'W1'],
+      5: [['S1'], 'S1'],
+      6: [['W2'], 'W2'], // wall height 7 = H 7
+      7: [['S1', 'W2'], undefined], // two segments, wall 5 = H 5
+      8: [['Y5'], 'Y5'],
+      9: [['W1', 'W3'], 'W3'], // a static size-1 gap
+      10: [['S1', 'W2', 'Y5'], undefined],
+    };
+    for (const n of LEVEL_IDS) {
+      const res = validateLevelJson(readLevelJson(n), {
+        only: ['L-16', 'L-22'],
+        previousMechanics: new Set(previous),
+      });
+      expect(res.issues, `level ${n}`).toEqual([]);
+      const lvl = res.level;
+      if (!lvl) throw new Error(`level ${n} fails the schema`);
+      const [derived, teaches] = expected[n] ?? [[], undefined];
+      expect([...deriveMechanics(lvl)].sort(), `level ${n} derived set`).toEqual(derived);
+      expect(lvl.teaches, `level ${n} teaches`).toBe(teaches);
+      const fresh = derived.filter((m) => !previous.has(m));
+      expect(fresh, `level ${n} new mechanics`).toEqual(teaches ? [teaches] : []);
+      for (const m of derived) previous.add(m);
+    }
+  });
 
   it('K-45/9 teaches is only valid for the one new mechanic: an already seen mechanic, or a level without a new one, is teaches_mismatch', () => {
     const seen = new Set<MechanicId>(['W1', 'S2', 'S1']);
@@ -1376,24 +1274,24 @@ describe('review K-45/9 mechanics derived from data', () => {
 describe('review GDD 14.1 tutorial data (L-17)', () => {
   const l17 = (json: unknown): string[] => runJson(json, ['L-17']).map((i) => i.code);
 
-  it('GDD 14.1 highlights must exist in the level: piece:<i> < batch-0 size, cell on the board (y ≤ 7), gap/obstacle/debris index, truck, fan', () => {
+  it('GDD 14.1 highlights must exist in the level: piece:<i> < batch-0 size, cell on the board (x < Wy + Ws, y < H), gap/obstacle/debris index, truck, fan', () => {
     const one = (h: string, n = 1): string[] => l17(withTutorial(n, [soft([h], { event: 'turnEnd' })]));
-    expect(one('piece:22')).toEqual([]); // level 1 has 23 blocks
-    expect(one('piece:23')).toEqual(['tut_highlight_invalid']);
-    expect(one('cell:7,7')).toEqual([]);
-    expect(one('cell:6,8')).toEqual(['tut_highlight_invalid']); // crane row is not the board
+    expect(one('piece:4')).toEqual([]); // level 1 has 5 blocks
+    expect(one('piece:5')).toEqual(['tut_highlight_invalid']);
+    expect(one('cell:5,4')).toEqual([]); // 4 × 4 | 2 × 5: x 0–5, y 0–4
+    expect(one('cell:4,5')).toEqual(['tut_highlight_invalid']); // crane row is not the board
+    expect(one('cell:6,0')).toEqual(['tut_highlight_invalid']);
     expect(one('gap:0')).toEqual(['tut_highlight_invalid']);
-    expect(one('gap:0', 3)).toEqual([]);
+    expect(one('gap:0', 4)).toEqual([]);
     expect(one('truck')).toEqual(['tut_highlight_invalid']);
     expect(one('truck', 5)).toEqual([]);
     expect(one('fan')).toEqual(['tut_highlight_invalid']);
     expect(one('obstacle:0')).toEqual(['tut_highlight_invalid']);
     expect(one('debris:0')).toEqual(['tut_highlight_invalid']);
-    expect(one('piece:k1_0', 5)).toEqual(['tut_highlight_invalid']); // truck block needs startOn deliveryDone
+    expect(one('piece:k1_0', 5)).toEqual(['tut_highlight_invalid']); // truck block: startOn deliveryDone or segmentDone first
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): Faz 2 validator expectation. WP-M ile yeniden üretilecek.
-  it.fails('GDD 14.1 done and startOn events that can never happen in level 1 are tut_done_invalid', () => {
+  it('GDD 14.1 done and startOn events that can never happen in level 1 are tut_done_invalid', () => {
     const impossible: Step['done'][] = [
       { event: 'segmentDone' },
       { event: 'deliveryDone' },
@@ -1415,7 +1313,7 @@ describe('review GDD 14.1 tutorial data (L-17)', () => {
       ]);
       if ('event' in done)
         expect(
-          l17(withTutorial(1, [soft(['build'], { timeoutMs: 2000 }, { startOn: done })])),
+          l17(withTutorial(1, [soft(['build'], { event: 'turnEnd' }, { startOn: done })])),
           `startOn ${JSON.stringify(done)}`,
         ).toEqual(['tut_done_invalid']);
     }
@@ -1436,72 +1334,72 @@ describe('review GDD 14.1 tutorial data (L-17)', () => {
       );
     expect(l17(withTutorial(5, [soft(['build'], { event: 'segmentDone' })]))).toEqual([]);
     expect(l17(withTutorial(5, [soft(['build'], { event: 'deliveryDone' })]))).toEqual([]);
-    expect(l17(withTutorial(3, [soft(['build'], { event: 'gapPass' })]))).toEqual([]);
+    expect(l17(withTutorial(4, [soft(['build'], { event: 'gapPass' })]))).toEqual([]);
+    expect(l17(withTutorial(9, [soft(['build'], { event: 'gapPass' })]))).toEqual([]);
   });
 
-  it('GDD 14.1/3 done.at must be in the event zone: yardMove x ≤ 5, placementCorrect x ≥ 6', () => {
+  it('GDD 14.1/3 done.at must be in the event zone: yardMove a yard anchor (x ≤ Wy − 1, y ≤ Hy − 1), placementCorrect a site anchor (x Wy … Wy + Ws − 1, y ≤ H − 1); level 1 is 4 × 4 | 2 × 5', () => {
     const at = (event: 'yardMove' | 'placementCorrect', x: number, y: number): string[] =>
       l17(withTutorial(1, [soft(['build'], { event, at: [x, y] })]));
-    expect(at('yardMove', 5, 7)).toEqual([]);
-    expect(at('yardMove', 6, 0)).toEqual(['tut_done_invalid']);
-    expect(at('placementCorrect', 6, 0)).toEqual([]);
-    expect(at('placementCorrect', 5, 0)).toEqual(['tut_done_invalid']);
+    expect(at('yardMove', 3, 3)).toEqual([]);
+    expect(at('yardMove', 4, 0)).toEqual(['tut_done_invalid']);
+    expect(at('yardMove', 0, 4)).toEqual(['tut_done_invalid']); // yard air row
+    expect(at('placementCorrect', 4, 0)).toEqual([]);
+    expect(at('placementCorrect', 5, 4)).toEqual([]);
+    expect(at('placementCorrect', 3, 0)).toEqual(['tut_done_invalid']);
+    expect(at('placementCorrect', 4, 5)).toEqual(['tut_done_invalid']); // crane row
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): timeoutMs / required steps are invalid (K-53, CL-2R-10). WP-M ile yeniden üretilecek.
-  it.fails(
-    'GDD 14.1/4a a required step highlights a piece: or debris:; without piece: its done cannot be placementCorrect',
-    () => {
-      const req = (highlight: string[], done: Step['done'], n = 1): string[] =>
-        l17(withTutorial(n, [soft(highlight, done, { mode: 'required' })]));
-      expect(req(['piece:0'], { event: 'placementCorrect' })).toEqual([]);
-      expect(req(['cell:6,0', 'build'], { event: 'turnEnd' })).toEqual(['tut_highlight_invalid']);
-      const debrisLevel = (done: Step['done']): string[] =>
-        l17({
-          ...levelJson({
-            id: 17,
-            plan: ['WW', 'WW'],
-            pieces: [['O4_0', 'W', 0, 0]],
-            debris: [['B1_0', 'R', 6, 0]],
-          }),
-          tutorial: [soft(['debris:0'], done, { mode: 'required' })],
-        });
-      expect(debrisLevel({ event: 'yardMove' })).toEqual([]);
-      expect(debrisLevel({ event: 'placementCorrect' })).toEqual(['tut_done_invalid']);
-    },
-  );
-
-  // Faz 2R (WP-B, TECH §2R.3): Faz 2 validator expectation. WP-M ile yeniden üretilecek.
-  it.fails(
-    'GDD 14.1/5 piece:k<p>_<i> is the startOn delivery block: p follows the delivery order (forSegment ascending), not the array order; count picks the n-th',
-    () => {
-      // batch 1 is delivered for segment 2, batch 2 for segment 1 → batch 2 arrives first.
-      const make = (highlight: string, count?: number): unknown => ({
+  // Faz 2R K-53: the required step and its GDD 14.1/4a highlight rules are gone (TECH §2R.3 "Silinenler"); a step is
+  // always soft and a `mode` other than "soft" is `tut_blocking` (L-31)
+  it('K-53 GDD 14.1/4a (removed in Faz 2R): a step with mode "required" is tut_blocking; a soft step may light cells and end on turnEnd', () => {
+    const blocking = runJson(
+      withTutorial(1, [soft(['piece:0'], { event: 'placementCorrect' }, { mode: 'required' })]),
+      ['L-31'],
+    );
+    expect(blocking.map((i) => [i.code, i.rule])).toEqual([['tut_blocking', 'K-45/10']]);
+    expect(l17(withTutorial(1, [soft(['cell:4,0', 'build'], { event: 'turnEnd' })]))).toEqual([]);
+    const debrisLevel = (done: Step['done']): string[] =>
+      l17({
         ...levelJson({
-          id: 35,
-          plan: [['WW'], ['WW'], ['WW']],
-          pieces: [['D2_90', 'W', 0, 0]],
-          batches: [
-            { forSegment: 2, pieces: [['D2_90', 'W', 0, 8, ['mortar']]] },
-            { forSegment: 1, pieces: [['D2_90', 'W', 0, 8, ['mortar']]] },
-          ],
+          id: 17,
+          plan: ['WW', 'WW'],
+          pieces: [['O4_0', 'W', 0, 0]],
+          debris: [['B1_0', 'R', 6, 0]],
         }),
-        tutorial: [
-          soft(
-            [highlight],
-            { timeoutMs: 2500 },
-            {
-              startOn: { event: 'deliveryDone', flag: 'mortar', ...(count ? { count } : {}) },
-            },
-          ),
-        ],
+        tutorial: [soft(['debris:0'], done)],
       });
-      expect(l17(make('piece:k2_0'))).toEqual([]);
-      expect(l17(make('piece:k1_0'))).toEqual(['tut_highlight_invalid']);
-      expect(l17(make('piece:k1_0', 2))).toEqual([]);
-      expect(l17(make('piece:k2_0', 2))).toEqual(['tut_highlight_invalid']);
-    },
-  );
+    expect(debrisLevel({ event: 'yardMove' })).toEqual([]);
+    expect(debrisLevel({ event: 'placementCorrect' })).toEqual([]);
+  });
+
+  it('GDD 14.1/5 piece:k<p>_<i> is the startOn delivery block: p follows the delivery order (forSegment ascending), not the array order; count picks the n-th', () => {
+    // batch 1 is delivered for segment 2, batch 2 for segment 1 → batch 2 arrives first.
+    const make = (highlight: string, count?: number): unknown => ({
+      ...levelJson({
+        id: 35,
+        plan: [['WW'], ['WW'], ['WW']],
+        pieces: [['D2_90', 'W', 0, 0]],
+        batches: [
+          { forSegment: 2, pieces: [['D2_90', 'W', 0, 8, ['mortar']]] },
+          { forSegment: 1, pieces: [['D2_90', 'W', 0, 8, ['mortar']]] },
+        ],
+      }),
+      tutorial: [
+        soft(
+          [highlight],
+          { event: 'turnEnd' },
+          {
+            startOn: { event: 'deliveryDone', flag: 'mortar', ...(count ? { count } : {}) },
+          },
+        ),
+      ],
+    });
+    expect(l17(make('piece:k2_0'))).toEqual([]);
+    expect(l17(make('piece:k1_0'))).toEqual(['tut_highlight_invalid']);
+    expect(l17(make('piece:k1_0', 2))).toEqual([]);
+    expect(l17(make('piece:k2_0', 2))).toEqual(['tut_highlight_invalid']);
+  });
 
   it('GDD 14.1 booster:/pre: highlights need the item unlocked in this level (economy.json unlockLevel; brush → paintBrush, trowel → trowelStart, shutter → openShutter)', () => {
     const unlock = loadBoosterUnlock(ROOT);
@@ -1529,26 +1427,22 @@ describe('review GDD 14.1 tutorial data (L-17)', () => {
     }
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): textKey format is tut.l<n>|m|ctx.<topic> (GDD 14.1/1 Faz 2R). WP-M ile yeniden üretilecek.
-  it.fails(
-    'GDD 14.1 textKey must exist in both tr.json and en.json (tut_key_missing names the missing language)',
-    () => {
-      const json = withTutorial(1, [soft(['build'], { event: 'turnEnd' }, { textKey: 'tut.l1.only_tr' })]);
-      const issues = runJson(json, ['L-17'], {
-        i18nKeys: { tr: new Set(['tut.l1.only_tr']), en: new Set<string>() },
-      });
-      expect(issues.map((i) => i.code)).toEqual(['tut_key_missing']);
-      expect(issues[0]?.message).toContain('en');
-      const real = loadI18nKeys(ROOT);
-      if (!real) throw new Error('i18n files missing');
-      for (const n of LEVEL_IDS)
-        for (const st of readLevelJson(n).tutorial ?? [])
-          expect([real.tr.has(st.textKey), real.en.has(st.textKey)], `level ${n} ${st.textKey}`).toEqual([
-            true,
-            true,
-          ]);
-    },
-  );
+  it('GDD 14.1 textKey must exist in both tr.json and en.json (tut_key_missing names the missing language)', () => {
+    const json = withTutorial(1, [soft(['build'], { event: 'turnEnd' }, { textKey: 'tut.m.onlyTr' })]);
+    const issues = runJson(json, ['L-17'], {
+      i18nKeys: { tr: new Set(['tut.m.onlyTr']), en: new Set<string>() },
+    });
+    expect(issues.map((i) => i.code)).toEqual(['tut_key_missing']);
+    expect(issues[0]?.message).toContain('en');
+    const real = loadI18nKeys(ROOT);
+    if (!real) throw new Error('i18n files missing');
+    for (const n of LEVEL_IDS)
+      for (const st of readLevelJson(n).tutorial ?? [])
+        expect([real.tr.has(st.textKey), real.en.has(st.textKey)], `level ${n} ${st.textKey}`).toEqual([
+          true,
+          true,
+        ]);
+  });
 
   it('GDD 14.1 steps are numbered 1, 2, … in order', () => {
     const steps = [soft(['build'], { event: 'turnEnd' }), soft(['build'], { event: 'turnEnd' }, { step: 3 })];
@@ -1639,241 +1533,78 @@ describe('review LEVELS §0 sawtooth (L-18), K-24 (L-24), K-23 (L-25), Y4 (L-26)
 // levels/level_001…005.json against docs/LEVELS.md §0, §2
 // =====================================================================================================================
 
-if (!LEVELS_IS_FAZ_2R) {
-  describe.each(LEVEL_IDS)('review LEVELS §2 Bölüm %i ↔ levels JSON', (n) => {
-    const doc = docLevel(n);
-    const json = readLevelJson(n);
-    const batch0 = batchOf(json, 0).pieces;
-
-    it(`K-45/2 level ${n}: the LEVELS block table is the batch-0 array (order, shape, colour, anchor)`, () => {
-      expect(doc.pieces.length).toBeGreaterThan(0);
-      expect(batch0.map((p) => [p.shape, p.color, p.x, p.y])).toEqual(
-        doc.pieces.map((p) => [p.shape, p.color, p.x, p.y]),
-      );
-      expect(batch0.every((p) => p.flags === undefined)).toBe(true);
-    });
-
-    it(`K-45/2 level ${n}: blockout letters are exactly the table blocks' cells and the yard fill equals "Saha doluluğu"`, () => {
-      const byLetter = new Map<string, string[]>();
-      let empty = 0;
-      for (let y = 0; y < 8; y++) {
-        const row = doc.blockout.get(y);
-        if (!row) throw new Error(`no blockout row y=${y}`);
-        for (let x = 0; x < 6; x++) {
-          const t = row[x] ?? '?';
-          if (t === '.') empty++;
-          else byLetter.set(t, [...(byLetter.get(t) ?? []), cellKey(x, y)]);
-        }
-      }
-      expect([...byLetter.keys()].sort()).toEqual(doc.pieces.map((p) => p.letter).sort());
-      for (const p of doc.pieces)
-        expect(byLetter.get(p.letter)?.sort(), `block ${p.letter}`).toEqual(cellsOf(p.shape, p.x, p.y));
-      const docFill = Number(match(/^(\d+)\/48/, field(doc, 'Saha doluluğu'), 'Saha doluluğu')[1]);
-      expect(48 - empty).toBe(docFill);
-      const jsonCells = new Set(batch0.flatMap((p) => cellsOf(p.shape, p.x, p.y)));
-      expect(jsonCells.size).toBe(docFill);
-      expect(docFill).toBeGreaterThanOrEqual(39); // K-02
-    });
-
-    it(`K-04 level ${n}: blockout wall column and site columns match wall height, gaps and the first segment plan`, () => {
-      const gaps = json.wall.gaps;
-      const h = json.wall.height;
-      const rows = json.build.segments[0]?.rows ?? [];
-      for (let y = 0; y <= 9; y++) {
-        const row = doc.blockout.get(y);
-        if (!row) throw new Error(`no blockout row y=${y}`);
-        const inGap = gaps.some((g) => g.y <= y && y < g.y + g.size);
-        expect(row[6], `wall y=${y}`).toBe(y < h ? (inGap ? '=' : '#') : ':');
-        for (const sx of [0, 1]) {
-          const want =
-            y >= 8 ? '·' : y < rows.length ? (rows[rows.length - 1 - y]?.[sx] ?? '').replace('.', '+') : '~';
-          expect(row[7 + sx], `site (${6 + sx},${y})`).toBe(want);
-        }
-      }
-    });
-
-    it(`K-45/1 level ${n}: header rows (wall, gravity, segments, colours, shapes, difficulty, budget = min + buffer, teaches) match the JSON`, () => {
-      const wall = field(doc, 'Duvar');
-      expect(Number(match(/height (\d+)/, wall, 'Duvar')[1])).toBe(json.wall.height);
-      const gapText = match(/geçit: (.*)$/, wall, 'Duvar')[1] ?? '';
-      const docGaps = gapText.startsWith('yok')
-        ? []
-        : [...gapText.matchAll(/y=(\d+) boy \**(\d+)\**\s*\((\w+)/g)].map((m) => ({
-            type: m[3],
-            y: Number(m[1]),
-            size: Number(m[2]),
-          }));
-      expect(json.wall.gaps).toEqual(docGaps);
-      const grav = match(/build `(\w+)`, yard `(\w+)`/, field(doc, 'Yerçekimi'), 'Yerçekimi');
-      expect(json.gravity).toEqual({ build: grav[1], yard: grav[2] === 'true' });
-      const segs = [...field(doc, 'Dilimler').matchAll(/(\d+)\. (.+?) \(EN: (.+?)\) `(\[.*?\])`/g)].map(
-        (m) => ({
-          name: { tr: m[2], en: m[3] },
-          rows: JSON.parse(m[4] ?? '[]') as string[],
-        }),
-      );
-      expect(json.build).toEqual({ mode: 'segments', segments: segs });
-      const cs = match(/^(.*?) \((\d+)\) \/ (.*)$/, field(doc, 'Renkler / şekiller'), 'Renkler / şekiller');
-      const docColors = (cs[1] ?? '').split(', ').sort();
-      expect(docColors.length).toBe(Number(cs[2]));
-      const parsed = validateLevelJson(json).level;
-      if (!parsed) throw new Error('schema');
-      expect([...levelColorSet(parsed)].sort()).toEqual(docColors);
-      const kinds = [
-        ...new Set(json.yard.batches.flatMap((b) => b.pieces.map((p) => shapeById(p.shape).kind))),
-      ].sort();
-      expect(kinds).toEqual((cs[3] ?? '').split(', ').sort());
-      const diff =
-        DIFFICULTY[
-          match(/^(Kolay|Normal|Zor|Çok Zor) \//, field(doc, 'Zorluk / hedef kazanma'), 'Zorluk')[1] ?? ''
-        ];
-      expect(json.difficulty).toBe(diff);
-      const min = Number(field(doc, 'Minimum hamle (el çözümü)'));
-      const budget = match(/^(\d+) \+ (\d+) = \*\*(\d+)\*\*/, field(doc, 'Hamle bütçesi'), 'Hamle bütçesi');
-      expect([Number(budget[1]), Number(budget[2]), Number(budget[3])]).toEqual([
-        min,
-        BUFFER[json.difficulty],
-        json.moves,
-      ]);
-      expect(json.moves).toBe(min + BUFFER[json.difficulty]);
-      const taught = /^(W\d|Y\d|S\d|G-[HL]) /.exec(field(doc, 'Öğretilen'));
-      expect(json.teaches).toBe(taught?.[1]);
-      expect(json.goals).toEqual([{ type: 'build' }]);
-      expect(json.obstacles).toEqual([]);
-      expect(json.chapter).toBe(1);
-      expect(json.name.tr.length).toBeGreaterThan(0);
-    });
-
-    it(`K-25 level ${n}: truck batches equal LEVELS "Kamyon partileri" (array order, shape, colour, x; y written as 8)`, () => {
-      const trucks = json.yard.batches.slice(1);
-      expect(trucks.map((b, i) => [i + 1, b.forSegment])).toEqual(doc.trucks.map((t) => [t.batch, t.batch]));
-      trucks.forEach((b, i) => {
-        expect(b.pieces.map((p) => [p.shape, p.color, p.x, p.y])).toEqual(
-          (doc.trucks[i]?.pieces ?? []).map(([s, c, x]) => [s, c, x, 8]),
-        );
-      });
-    });
-
-    it(`GDD 14.1 level ${n}: tutorial[] equals the LEVELS step list (mode, highlight, hand kind, textKey, done)`, () => {
-      const steps = json.tutorial ?? [];
-      expect(steps.length).toBe(doc.tutorial.length);
-      doc.tutorial.forEach((item, i) => {
-        const parts = item.split(' · ');
-        const [head = '', hl = '', hand = '', key = '', done = ''] = parts;
-        const st = steps[i];
-        const where = `level ${n} step ${i + 1}`;
-        expect(parts.length, where).toBe(5);
-        expect(st?.step, where).toBe(Number(match(/^(\d+)\./, head, where)[1]));
-        expect(st?.mode, where).toBe(head.endsWith('Z') ? 'required' : 'soft');
-        expect(st?.highlight, where).toEqual([...hl.matchAll(/`([^`]+)`/g)].map((m) => m[1]));
-        const handKind = /^(drag|hold|tap)\b/.exec(hand)?.[1];
-        expect(st?.hand?.kind, where).toBe(handKind);
-        expect(st?.textKey, where).toBe(match(/^`([^`]+)`$/, key, where)[1]);
-        const timeout = /^`timeoutMs` (\d+)$/.exec(done);
-        const hold = /^`\{ event: (\w+), count: (\d+), minMs: (\d+) \}`$/.exec(done);
-        const simple = /^`(\w+)` ×(\d+)$/.exec(done);
-        const want = timeout
-          ? { timeoutMs: Number(timeout[1]) }
-          : hold
-            ? { event: hold[1], count: Number(hold[2]), minMs: Number(hold[3]) }
-            : { event: simple?.[1], count: Number(simple?.[2]) };
-        expect(st?.done, where).toEqual(want);
-      });
-    });
-  });
-}
-
 describe('review K-03 plan rows of the level data', () => {
-  it('K-03 GDD example (level 1 plan): rows top → bottom, (6,0)(7,0) = Y, (6,1)…(7,2) = W, rows 3–7 outside the plan', () => {
+  it('K-03 GDD example (Faz 2R, level 1 plan `["WW","YY","WW","YW","YW"]`): rows top → bottom, (4,0) Y (5,0) W, (4,1) Y (5,1) W, (4,2)…(5,2) W, (4,3)…(5,3) Y, (4,4)…(5,4) W; the plan covers the whole 2 × 5 site', () => {
     const loaded = loadLevel(readLevelJson(1));
     if (!loaded.ok) throw new Error('level 1 does not load');
     const seg = loaded.level.segments[0];
     const at = (sx: number, sy: number): number | undefined => seg?.planColors[sy * 2 + sx];
-    expect([at(0, 0), at(1, 0)]).toEqual([COLOR_CODES.indexOf('Y'), COLOR_CODES.indexOf('Y')]);
-    for (const sy of [1, 2])
-      for (const sx of [0, 1]) expect(at(sx, sy), `(${6 + sx},${sy})`).toBe(COLOR_CODES.indexOf('W'));
-    for (let sy = 3; sy < 8; sy++) for (const sx of [0, 1]) expect(at(sx, sy), `(${6 + sx},${sy})`).toBe(-2);
-    expect(seg?.height).toBe(3);
+    const W = COLOR_CODES.indexOf('W');
+    const Y = COLOR_CODES.indexOf('Y');
+    const want = [
+      [Y, W],
+      [Y, W],
+      [W, W],
+      [Y, Y],
+      [W, W],
+    ];
+    want.forEach((row, sy) =>
+      row.forEach((c, sx) => expect(at(sx, sy), `(${loaded.level.geo.siteX + sx},${sy})`).toBe(c)),
+    );
+    expect([loaded.level.geo.siteX, loaded.level.geo.ws, loaded.level.geo.hs]).toEqual([4, 2, 5]);
+    expect(seg?.height).toBe(5);
+    expect(seg?.planColors.length).toBe(10);
   });
 });
 
-if (!LEVELS_IS_FAZ_2R) {
-  describe('review LEVELS §1 difficulty curve rows for levels 1–5', () => {
-    it('K-45/1 LEVELS §1 table: difficulty and move budget of levels 1–5 equal the JSON (Kolay ×4, Normal; 11 11 11 12 11)', () => {
-      const rows = new Map<number, [string, number]>();
-      for (const line of LEVELS_MD.split('\n')) {
-        const m = /^\| (\d+) \| ([^|]+?) \| (\d+) \| [^|]+ \| (\d+) \| ([^|]+?) \| (\d+) \|/.exec(line);
-        if (!m) continue;
-        rows.set(Number(m[1]), [m[2] ?? '', Number(m[3])]);
-        rows.set(Number(m[4]), [m[5] ?? '', Number(m[6])]);
-      }
-      expect(rows.size).toBe(50);
-      for (const n of LEVEL_IDS) {
-        const [label, moves] = rows.get(n) ?? ['', 0];
-        const word = label
-          .replace(/\*\*/g, '')
-          .replace(/\s*\(nefes\)$/, '')
-          .trim();
-        const json = readLevelJson(n);
-        expect([json.difficulty, json.moves], `level ${n}`).toEqual([DIFFICULTY[word], moves]);
-      }
-    });
+describe('review K-45 levels 1–10 through the whole validator', () => {
+  it('K-45 levels 1–10 pass every validate check (L-01…L-18, L-21…L-31) in sequence (mechanic history, real tr/en keys and economy unlocks): no error, no warning', () => {
+    const i18nKeys = loadI18nKeys(ROOT);
+    const boosterUnlock = loadBoosterUnlock(ROOT);
+    expect(i18nKeys).not.toBeNull();
+    expect(boosterUnlock).not.toBeNull();
+    const previous = new Set<MechanicId>();
+    for (const n of LEVEL_IDS) {
+      const res = validateLevelJson(readLevelJson(n), {
+        fileId: n,
+        previousMechanics: new Set(previous),
+        ...(i18nKeys ? { i18nKeys } : {}),
+        ...(boosterUnlock ? { boosterUnlock } : {}),
+      });
+      expect(res.issues, `level ${n}`).toEqual([]);
+      if (res.level) for (const m of deriveMechanics(res.level)) previous.add(m);
+      // the game load path accepts it too
+      expect(loadLevel(readLevelJson(n)).ok, `level ${n} loadLevel`).toBe(true);
+    }
   });
-}
 
-describe('review K-45 levels 1–5 through the whole validator', () => {
-  // Faz 2R (WP-B, TECH §2R.3): Faz 2 levels/*.json do not meet the Faz 2R rules. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-45 levels 1–5 pass every check L-01…L-18, L-21…L-26 in sequence (mechanic history, real tr/en keys and economy unlocks): no error, no warning',
-    () => {
-      const i18nKeys = loadI18nKeys(ROOT);
-      const boosterUnlock = loadBoosterUnlock(ROOT);
-      expect(i18nKeys).not.toBeNull();
-      expect(boosterUnlock).not.toBeNull();
-      const previous = new Set<MechanicId>();
-      for (const n of LEVEL_IDS) {
-        const res = validateLevelJson(readLevelJson(n), {
-          fileId: n,
-          previousMechanics: new Set(previous),
-          ...(i18nKeys ? { i18nKeys } : {}),
-          ...(boosterUnlock ? { boosterUnlock } : {}),
-        });
-        expect(res.issues, `level ${n}`).toEqual([]);
-        if (res.level) for (const m of deriveMechanics(res.level)) previous.add(m);
-        // the game load path accepts it too
-        expect(loadLevel(readLevelJson(n)).ok, `level ${n} loadLevel`).toBe(true);
-      }
-    },
-  );
-
-  // Faz 2R (WP-B, TECH §2R.3): K-02 80 % band → Faz 2R 2 ≤ E ≤ ⌊0,4·C⌋. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-45/9 npm run levels:validate on levels/ exits 0; --level 4 still uses levels 1–3 as mechanic history (only S2 is new)',
-    () => {
-      const cli = (...args: string[]): { code: number | null; out: string } => {
-        const r = spawnSync(process.execPath, [join(ROOT, 'tools', 'validate-levels.ts'), ...args], {
-          cwd: ROOT,
-          encoding: 'utf8',
-        });
-        return { code: r.status, out: `${r.stdout}${r.stderr}` };
-      };
-      const all = cli();
-      expect(all.code, all.out).toBe(0);
-      for (const line of [
-        'level_001.json  OK',
-        'level_002.json  OK',
-        'level_003.json  OK  mechanics: W1',
-        'level_004.json  OK  mechanics: W1 S2',
-        'level_005.json  OK  mechanics: S1',
-      ])
-        expect(all.out).toContain(line);
-      expect(all.out).toMatch(/0 error\(s\), 0 warning\(s\)/);
-      const four = cli('--level', '4');
-      expect(four.code, four.out).toBe(0);
-      expect(four.out).toContain('level_004.json  OK  mechanics: W1 S2');
-      expect(four.out).toContain('1 file(s), 0 error(s)');
-    },
-  );
+  it('K-45/9 npm run levels:validate on levels/ exits 0; --level 4 still uses levels 1–3 as mechanic history (only W1 is new)', () => {
+    const cli = (...args: string[]): { code: number | null; out: string } => {
+      const r = spawnSync(process.execPath, [join(ROOT, 'tools', 'validate-levels.ts'), ...args], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+      return { code: r.status, out: `${r.stdout}${r.stderr}` };
+    };
+    const all = cli();
+    expect(all.code, all.out).toBe(0);
+    for (const line of [
+      'level_001.json  OK\n',
+      'level_002.json  OK\n',
+      'level_003.json  OK\n',
+      'level_004.json  OK  mechanics: W1\n',
+      'level_005.json  OK  mechanics: S1\n',
+      'level_006.json  OK  mechanics: W2\n',
+      'level_008.json  OK  mechanics: Y5\n',
+      'level_009.json  OK  mechanics: W1 W3\n',
+    ])
+      expect(all.out).toContain(line);
+    expect(all.out).toContain('10 file(s), 0 error(s), 0 warning(s)');
+    const four = cli('--level', '4');
+    expect(four.code, four.out).toBe(0);
+    expect(four.out).toContain('level_004.json  OK  mechanics: W1\n');
+    expect(four.out).toContain('1 file(s), 0 error(s)');
+  });
 
   it('K-45/1 a level file name number must equal its id (L-01 id_mismatch otherwise)', () => {
     const json = readLevelJson(2);
@@ -1881,176 +1612,6 @@ describe('review K-45 levels 1–5 through the whole validator', () => {
     expect(runJson(json, ['L-01'], { fileId: 2 })).toEqual([]);
   });
 });
-
-// =====================================================================================================================
-// Golden replays against the LEVELS §2 solution text
-// =====================================================================================================================
-
-interface DocMove {
-  readonly text: string;
-  readonly ref: string;
-  readonly shape: ShapeId;
-  readonly color: ColorCode;
-  readonly from: readonly [number, number];
-  readonly entry: 'overWall' | 'gap';
-  /** overWall: column x of "x=c üstüne"; gap: the rail landing. */
-  readonly release: readonly [number, number];
-  readonly lands: readonly [number, number];
-  readonly delivered: readonly (readonly [string, number, number])[];
-  readonly queued: readonly string[];
-}
-
-function docMoves(doc: DocLevel): DocMove[] {
-  const refOf = (letter: string): string => {
-    const i = doc.pieces.findIndex((p) => p.letter === letter);
-    if (i >= 0) return `piece:${i}`;
-    if (/^k\d+_\d+$/.test(letter)) return `piece:${letter}`;
-    throw new Error(`LEVELS Bölüm ${doc.n}: unknown block ${letter}`);
-  };
-  return doc.solution.map((text) => {
-    const head = match(/^\d+\. `([^`]+)` \(([A-Z][0-9]_\d+) ([A-Z])\) \((\d),(\d)\)/, text, 'solution step');
-    const over = /duvar üstünden x=(\d) üstüne taşı → bırak → \((\d),(\d)\)/.exec(text);
-    const rail = /geçitten raya → \((\d),(\d)\)'de bırak/.exec(text);
-    const lands: [number, number] = over
-      ? [Number(over[2]), Number(over[3])]
-      : rail
-        ? [Number(rail[1]), Number(rail[2])]
-        : [-1, -1];
-    const delivered: [string, number, number][] = [];
-    const truck = /kamyon partisi \d+ düşer: ([^;]*)/.exec(text);
-    if (truck)
-      for (const m of (truck[1] ?? '').matchAll(/`(k\d+_\d+)` \((\d),(\d)\)/g))
-        delivered.push([`piece:${m[1] ?? ''}`, Number(m[2]), Number(m[3])]);
-    for (const m of text.matchAll(/9\. adımında `(k\d+_\d+)` \([^)]*\) \((\d),(\d)\)/g))
-      delivered.push([`piece:${m[1] ?? ''}`, Number(m[2]), Number(m[3])]);
-    const queued = [...text.matchAll(/`(k\d+_\d+)` \([^)]*\) sığmaz, kuyrukta bekler/g)].map(
-      (m) => `piece:${m[1] ?? ''}`,
-    );
-    return {
-      text,
-      ref: refOf(head[1] ?? ''),
-      shape: head[2] as ShapeId,
-      color: head[3] as ColorCode,
-      from: [Number(head[4]), Number(head[5])] as const,
-      entry: rail ? 'gap' : 'overWall',
-      release: over ? [Number(over[1]), 8] : lands,
-      lands,
-      delivered,
-      queued,
-    };
-  });
-}
-
-function pieceIdOf(lvl: CompiledLevel, ref: string): PieceId {
-  const id = lvl.tutorialPieceIds.get(ref);
-  if (id === undefined) throw new Error(`level ${lvl.id}: no ${ref}`);
-  return id;
-}
-
-function moveOf(lvl: CompiledLevel, m: DocMove): Move {
-  const pieceId = pieceIdOf(lvl, m.ref);
-  if (m.entry === 'overWall') return { kind: 'drag', pieceId, to: { ix: m.release[0], iy: 8, mode: FREE } };
-  const gap = lvl.data.wall.gaps.findIndex((g) => g.y <= m.lands[1] && m.lands[1] < g.y + g.size);
-  return { kind: 'drag', pieceId, to: { ix: m.lands[0], iy: m.lands[1], mode: railMode(gap) } };
-}
-
-interface GoldenFile {
-  readonly budget: number;
-  readonly minMoves: number;
-  readonly yao: { readonly overWall: number; readonly rail: number };
-  readonly steps: readonly {
-    readonly ref: string;
-    readonly from: readonly number[];
-    readonly entry: string;
-    readonly lands: readonly number[];
-    readonly delivered?: readonly (readonly [string, number, number])[];
-    readonly queue?: readonly string[];
-  }[];
-  readonly log: readonly { readonly kind: string }[];
-}
-
-if (!LEVELS_IS_FAZ_2R) {
-  describe.each(LEVEL_IDS)('review golden Bölüm %i against the LEVELS §2 solution text', (n) => {
-    const doc = docLevel(n);
-    const moves = docMoves(doc);
-    const loaded = loadLevel(readLevelJson(n));
-    if (!loaded.ok) throw new Error(`level ${n} does not load`);
-    const lvl = loaded.level;
-    const min = Number(field(doc, 'Minimum hamle (el çözümü)'));
-    const yao = match(/^(\d+) duvar üstü \/ (\d+) yerleşim/, field(doc, 'YAO (çözüm)'), 'YAO');
-
-    it(`K-46 level ${n}: the LEVELS solution text replays move by move (start cell, entry, landing, deliveries, queue) and wins with the documented YAO`, () => {
-      expect(moves.length).toBe(min);
-      const sink = new ArraySink();
-      const session = GameSession.start(lvl, {}, { strict: true }, sink);
-      let queue: string[] = [];
-      moves.forEach((m, i) => {
-        const where = `L${n} step ${i + 1}: ${m.text}`;
-        const id = pieceIdOf(lvl, m.ref);
-        const p = lvl.pieces[id];
-        expect([p?.dataShape, COLOR_CODES[p?.colorIndex ?? -1]], where).toEqual([m.shape, m.color]);
-        const s = session.state;
-        expect([pieceZone(s, id), pieceX(s, id), pieceY(s, id)], `${where} — start cell`).toEqual([
-          Zone.yard,
-          ...m.from,
-        ]);
-        const first = sink.events.length;
-        const res = session.commit(moveOf(lvl, m), sink);
-        const ev: GameEvent[] = sink.events.slice(first);
-        expect([res.status, res.won], where).toEqual(['applied', i === moves.length - 1]);
-        const moved = ev.filter((e): e is Extract<GameEvent, { t: 'pieceMoved' }> => e.t === 'pieceMoved');
-        expect(
-          moved.map((e) => e.entry),
-          `${where} — entry`,
-        ).toEqual([m.entry]);
-        const correct = ev.filter(
-          (e): e is Extract<GameEvent, { t: 'placementCorrect' }> => e.t === 'placementCorrect',
-        );
-        expect(correct.length, `${where} — doğru`).toBe(1);
-        const cells = correct[0]?.cells ?? [];
-        expect(
-          [Math.min(...cells.map((c) => c.x)), Math.min(...cells.map((c) => c.y))],
-          `${where} — landing`,
-        ).toEqual([...m.lands]);
-        const arrived = ev.flatMap((e) => (e.t === 'deliveryArrived' ? e.pieces : []));
-        expect(arrived, `${where} — delivered`).toEqual(m.delivered.map(([ref]) => pieceIdOf(lvl, ref)));
-        for (const [ref, x, y] of m.delivered) {
-          const did = pieceIdOf(lvl, ref);
-          expect([pieceZone(s, did), pieceX(s, did), pieceY(s, did)], `${where} — ${ref}`).toEqual([
-            Zone.yard,
-            x,
-            y,
-          ]);
-        }
-        queue = [...queue, ...m.queued].filter((r) => !m.delivered.some(([d]) => d === r));
-        expect(queueIds(s), `${where} — queue`).toEqual(queue.map((r) => pieceIdOf(lvl, r)));
-      });
-      expect(session.outcome).toBe('won');
-      expect(session.movesLeft).toBe(lvl.moves - min);
-      const y = session.yao();
-      expect([y.overWall, y.overWall + y.rail]).toEqual([Number(yao[1]), Number(yao[2])]);
-      expect(y.yao ?? 0).toBeGreaterThanOrEqual(0.6);
-    });
-
-    it(`K-46 level ${n}: tests/golden/level_${pad(n)}.hand.json transcribes the same LEVELS solution (moves, cells, entries, deliveries, YAO)`, () => {
-      const golden = JSON.parse(
-        readFileSync(join(ROOT, 'tests', 'golden', `level_${pad(n)}.hand.json`), 'utf8'),
-      ) as GoldenFile;
-      expect([golden.minMoves, golden.budget]).toEqual([min, lvl.moves]);
-      expect([golden.yao.overWall, golden.yao.overWall + golden.yao.rail]).toEqual([
-        Number(yao[1]),
-        Number(yao[2]),
-      ]);
-      expect(golden.log.slice(1)).toEqual(moves.map((m) => moveOf(lvl, m)));
-      expect(golden.steps.map((s) => [s.ref, [...s.from], s.entry, [...s.lands]])).toEqual(
-        moves.map((m) => [m.ref, [...m.from], m.entry, [...m.lands]]),
-      );
-      expect(golden.steps.map((s) => (s.delivered ?? []).map((d) => [...d]))).toEqual(
-        moves.map((m) => m.delivered.map((d) => [...d])),
-      );
-    });
-  });
-}
 
 // =====================================================================================================================
 // Round 2 — TECH L-10 / GDD K-27 whole-block material check (the round-1 fix) and gaps of round 1
@@ -2061,242 +1622,142 @@ const l10 = (spec: LevelSpec, only: readonly CheckId[] = ['L-10']): [string, str
   run(spec, only).map((i) => [i.code, i.path]);
 
 /**
- * Independent count of TECH L-10 for levels without paint gates: for every segment k (segments mode) the plan cells of
- * segments 0…k per colour against the cells of the non-heavy blocks of batches with forSegment ≤ k that can reach the
- * site (K-05 over the wall: box height ≤ 10 − height; K-12 through a gap: height ≤ size). Returns the failing stages
- * as data paths `build.segments[k]`.
+ * Independent count of GDD K-47 (TECH L-30 / L-10) for levels without paint gates: per-colour totals of the plan cells
+ * of every segment against the cells of every material block (Ağır Yük I5/Q9 excluded, debris included) → `mismatch`;
+ * in `segments` mode, for every colour, the first prefix k < S − 1 whose plan cells exceed the blocks of batches with
+ * forSegment ≤ k and the debris of segments ≤ k → `prefix` (data paths, each colour once, TECH §2R.3 note 4).
  */
-function materialOracle(json: LevelInput): string[] {
-  const reaches = (id: ShapeId): boolean => {
-    const s = shapeById(id);
-    return !s.heavy && (s.h <= 10 - json.wall.height || json.wall.gaps.some((g) => s.h <= g.size));
+function coverOracle(json: LevelInput): { mismatch: boolean; prefix: string[] } {
+  const cargo = (id: ShapeId): boolean => ['I5', 'Q9'].includes(shapeById(id).kind);
+  const segs = json.build.segments;
+  const demand = (k: number): Map<string, number> => {
+    const m = new Map<string, number>();
+    for (const sg of segs.slice(0, k + 1))
+      for (const row of sg.rows) for (const ch of row) m.set(ch, (m.get(ch) ?? 0) + 1);
+    return m;
   };
-  const failing: string[] = [];
-  json.build.segments.forEach((_, k) => {
-    const need = new Map<string, number>();
-    for (const seg of json.build.segments.slice(0, k + 1))
-      for (const row of seg.rows) for (const ch of row) if (ch !== '.') need.set(ch, (need.get(ch) ?? 0) + 1);
-    const have = new Map<string, number>();
-    for (const b of json.yard.batches)
-      if (b.forSegment <= k)
-        for (const p of b.pieces)
-          if (p.color !== undefined && reaches(p.shape))
-            have.set(p.color, (have.get(p.color) ?? 0) + shapeById(p.shape).cells.length);
-    if ([...need].some(([c, d]) => d > (have.get(c) ?? 0))) failing.push(`build.segments[${k}]`);
-  });
-  return failing;
+  const supply = (k: number): Map<string, number> => {
+    const m = new Map<string, number>();
+    const add = (shape: ShapeId, color: string | undefined): void => {
+      if (cargo(shape) || color === undefined) return;
+      m.set(color, (m.get(color) ?? 0) + shapeById(shape).cells.length);
+    };
+    for (const b of json.yard.batches) if (b.forSegment <= k) for (const p of b.pieces) add(p.shape, p.color);
+    for (const d of json.build.debris ?? []) if ((d.segment ?? 0) <= k) add(d.shape, d.color);
+    return m;
+  };
+  const last = segs.length - 1;
+  const need = demand(last);
+  const have = supply(last);
+  const colours = new Set([...need.keys(), ...have.keys()]);
+  const mismatch = [...colours].some((c) => (need.get(c) ?? 0) !== (have.get(c) ?? 0));
+  const prefix = new Set<string>();
+  if (json.build.mode === 'segments')
+    for (const c of colours)
+      for (let k = 0; k < last; k++)
+        if ((demand(k).get(c) ?? 0) > (supply(k).get(c) ?? 0)) {
+          prefix.add(`build.segments[${k}]`);
+          break;
+        }
+  return { mismatch, prefix: [...prefix].sort() };
 }
 
 describe('review round 2: K-27 material (TECH L-10) after the whole-block fix', () => {
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 TECH L-10 is cumulative per segment: a truck batch for segment 1 cannot pay for segment 0; carousel checks only the total',
-    () => {
-      // segment 0 needs 4 W and batch 0 brings 2 W; batch 1 (segment 1) brings 4 W and the 2 Y of segment 1.
-      const spec = (mode: 'segments' | 'carousel'): LevelSpec => ({
-        id: mode === 'segments' ? 5 : 31,
-        mode,
-        ...(mode === 'carousel' ? { carouselEvery: 3 } : {}),
-        plan: [['WW', 'WW'], ['YY']],
-        pieces: [['D2_90', 'W', 0, 0]],
-        batches: [
-          {
-            forSegment: 1,
-            pieces: [
-              ['O4_0', 'W', 0, 8],
-              ['D2_90', 'Y', 2, 8],
-            ],
-          },
-        ],
-      });
-      expect(l10(spec('segments'))).toEqual([['material_short', 'build.segments[0]']]);
-      expect(l10(spec('carousel'))).toEqual([]);
-    },
-  );
-
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 TECH L-10 the shortage shows at the first segment whose cumulative demand exceeds the supply; a truck for that segment fixes it',
-    () => {
-      // stage 0: 2 W ≤ 2; stage 1: 4 W > 2 (batch 1 brings only Y); stage 2: 6 W ≤ 2 + 4 (batch 2 brings an O4 W).
-      const spec = (oForSegment: 1 | 2): LevelSpec => ({
-        id: 5,
-        plan: [['WW'], ['WW'], ['WW']],
-        pieces: [['D2_90', 'W', 0, 0]],
-        batches:
-          oForSegment === 2
-            ? [
-                { forSegment: 1, pieces: [['D2_90', 'Y', 0, 8]] },
-                { forSegment: 2, pieces: [['O4_0', 'W', 0, 8]] },
-              ]
-            : [
-                {
-                  forSegment: 1,
-                  pieces: [
-                    ['D2_90', 'Y', 0, 8],
-                    ['O4_0', 'W', 2, 8],
-                  ],
-                },
-              ],
-      });
-      expect(run(spec(2), ['L-10']).map((i) => [i.code, i.rule, i.severity, i.path])).toEqual([
-        ['material_short', 'K-27', 'error', 'build.segments[1]'],
-      ]);
-      expect(l10(spec(1))).toEqual([]);
-    },
-  );
-
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 TECH L-10 paint gate: only blocks that fit the gate rows count for its colour (D2_0 needs size ≥ 2, D2_90 fits size 1)',
-    () => {
-      // plan P W / P W: 2 P cells (left column) and 2 W cells; the Y block can only become P at the gate.
-      const gate = (size: number, shape: ShapeId): [string, string][] =>
-        l10({
-          id: 22,
-          wall: { height: 6, gaps: [{ type: 'paint', y: 1, size, color: 'P' }] },
-          plan: ['PW', 'PW'],
+  it('K-47 item 2 (TECH L-10 cover_prefix_short) is cumulative per segment: a truck batch for segment 1 cannot pay for segment 0; carousel checks only the totals', () => {
+    // segment 0 needs 8 W and batch 0 brings 4 W; batch 1 (segment 1) brings the other 4 W and the 8 Y of segment 1
+    const four = (c: string): string[] => [`${c}${c}`, `${c}${c}`, `${c}${c}`, `${c}${c}`];
+    const spec = (mode: 'segments' | 'carousel', early: boolean): LevelSpec => ({
+      id: mode === 'segments' ? 5 : 31,
+      mode,
+      ...(mode === 'carousel' ? { carouselEvery: 3 } : {}),
+      site: { cols: 2, rows: 4 },
+      plan: [four('W'), four('Y')],
+      pieces: early
+        ? [
+            ['O4_0', 'W', 0, 0],
+            ['O4_0', 'W', 2, 0],
+          ]
+        : [['O4_0', 'W', 0, 0]],
+      batches: [
+        {
+          forSegment: 1,
           pieces: [
-            [shape, 'Y', 0, 0],
-            ['D2_0', 'W', 3, 0],
+            ...(early ? [] : ([['O4_0', 'W', 4, 8]] as PieceSpec[])),
+            ['O4_0', 'Y', 0, 8],
+            ['O4_0', 'Y', 2, 8],
           ],
-        });
-      expect(gate(1, 'D2_0')).toEqual([['material_short', 'build.segments[0]']]);
-      expect(gate(2, 'D2_0')).toEqual([]);
-      expect(gate(1, 'D2_90')).toEqual([]);
-    },
-  );
+        },
+      ],
+    });
+    expect(l10(spec('segments', false), ['L-10', 'L-30'])).toEqual([
+      ['cover_prefix_short', 'build.segments[0]'],
+    ]);
+    expect(run(spec('segments', false), ['L-10'])[0]?.rule).toBe('K-45/8');
+    expect(l10(spec('carousel', false), ['L-10', 'L-30'])).toEqual([]);
+    expect(l10(spec('segments', true), ['L-10', 'L-30'])).toEqual([]);
+  });
 
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 TECH L-10 heavy blocks are never supply, not even for a paint gate they would fit by height (Y5 never crosses the boundary)',
-    () => {
-      const one = (shape: ShapeId): [string, string][] =>
-        l10({
-          id: 22,
-          wall: { height: 6, gaps: [{ type: 'paint', y: 1, size: 2, color: 'P' }] },
-          plan: ['PP'],
-          pieces: [[shape, 'Y', 0, 0]],
-        });
-      expect(one('I3_90')).toEqual([['material_short', 'build.segments[0]']]); // 3 wide → heavy (K-44)
-      expect(one('D2_90')).toEqual([]);
-      expect(one('O4_0')).toEqual([]);
-    },
-  );
-
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 TECH L-10 "her blok bir kez" with two paint gates (E-39: the last gate wins): one D2_90 is P or B as a whole, never P + B; L-11 agrees',
-    () => {
-      const twoGates = (pieces: PieceSpec[]): string[] =>
-        codes(
-          run(
-            {
-              id: 22,
-              wall: {
-                height: 6,
-                gaps: [
-                  { type: 'paint', y: 1, size: 1, color: 'P' },
-                  { type: 'paint', y: 3, size: 1, color: 'B' },
-                ],
-              },
-              plan: ['PB'],
-              pieces,
-            },
-            ['L-10', 'L-11'],
-          ),
-        );
-      expect(twoGates([['D2_90', 'Y', 0, 0]])).toEqual(['material_short', 'untileable']);
-      expect(
-        twoGates([
-          ['B1_0', 'Y', 0, 0],
-          ['B1_0', 'Y', 1, 0],
-        ]),
-      ).toEqual([]);
-    },
-  );
-
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 K-32 resolved `?` cells are demand in their resolved colour: `??` over `YW` (repeat 1) needs 2 Y and 2 W',
-    () => {
-      const hidden = (pieces: PieceSpec[]): [string, string][] =>
-        l10({ id: 27, plan: ['??', 'YW'], hidden: [{ kind: 'repeat', period: 1 }], pieces });
-      const w2: PieceSpec[] = [
-        ['B1_0', 'W', 0, 0],
-        ['B1_0', 'W', 1, 0],
-      ];
-      expect(hidden([...w2, ['B1_0', 'Y', 2, 0]])).toEqual([['material_short', 'build.segments[0]']]);
-      expect(hidden([...w2, ['B1_0', 'Y', 2, 0], ['B1_0', 'Y', 3, 0]])).toEqual([]);
-    },
-  );
-
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 a block whose only way to the site is a paint gate arrives in the gate colour: the validator refuses a plan of its own colour (L-10 or L-11) and accepts the gate colour',
-    () => {
-      // height 8: I3_0 (3 tall) cannot go over the wall (K-05: 3 > 10 − 8); the only gap tall enough is the P gate.
-      const behindGate = (rows: string[]): Issue[] =>
-        run(
-          {
-            id: 22,
-            wall: { height: 8, gaps: [{ type: 'paint', y: 0, size: 3, color: 'P' }] },
-            plan: rows,
-            pieces: [
-              ['I3_0', 'W', 0, 0],
-              ['I3_0', 'W', 1, 0],
-            ],
-          },
-          ['L-10', 'L-11'],
-        );
-      expect(errorCodes(behindGate(['WW', 'WW', 'WW'])).length).toBeGreaterThan(0);
-      expect(behindGate(['PP', 'PP', 'PP'])).toEqual([]);
-    },
-  );
-
-  // Faz 2R (WP-B, TECH §2R.3): L-11 untileable is D3a now (no access search, `.` rejected). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 K-34 TECH L-11 a cell above a window needs an aligned gap (K-24: plan row g.y − e), a 2-wide bridge or an arch shape: `WW` over `.W`',
-    () => {
-      // plan (bottom → top): r0 `.W`, r1 `WW`; (6,1) sits above the window (6,0).
-      const tile = (spec: Partial<LevelSpec>): string[] =>
-        codes(
-          run({ id: 37, wall: { height: 4 }, plan: ['WW', '.W'], pieces: bricks(3), ...spec }, [
-            'L-10',
-            'L-11',
-          ]),
-        );
-      // three bricks, no gap: a FREE drop in column 6 falls into the window → untileable
-      expect(tile({})).toEqual(['untileable']);
-      // a rail at board row 1 holds the brick above the window (K-12); a gap at row 2 is one row too high …
-      expect(tile({ wall: { height: 4, gaps: [{ type: 'static', y: 1, size: 1 }] } })).toEqual([]);
-      expect(tile({ wall: { height: 4, gaps: [{ type: 'static', y: 2, size: 1 }] } })).toEqual([
-        'untileable',
-      ]);
-      // … unless the scaffold stands one row higher: with e = 1 the gap opens onto plan row 2 − 1 = 1 (K-24)
-      expect(
-        tile({
-          wall: { height: 4, gaps: [{ type: 'static', y: 2, size: 1 }] },
-          elevator: { range: [0, 1], start: 0, dir: 1 },
-        }),
-      ).toEqual([]);
-      // a horizontal D2 bridges both columns (lands on top(7) = 1); C3_180 is the arch itself; C3_0 has no hole
-      expect(
-        tile({
-          pieces: [
-            ['D2_90', 'W', 0, 0],
-            ['B1_0', 'W', 2, 0],
+  it('K-47 item 2 the shortage shows at the first segment whose cumulative demand exceeds the supply (only k < S − 1; the last prefix is the L-30 total); a truck for that segment fixes it', () => {
+    // W 8 | W 8 | Y 8; batch 0: 8 W. late: batch 1 brings the Y, batch 2 the second 8 W → prefix 1 needs 16 W, has 8
+    const four = (c: string): string[] => [`${c}${c}`, `${c}${c}`, `${c}${c}`, `${c}${c}`];
+    const two = (c: ColorCode): PieceSpec[] => [
+      ['O4_0', c, 0, 8],
+      ['O4_0', c, 2, 8],
+    ];
+    const spec = (late: boolean): LevelSpec => ({
+      id: 5,
+      site: { cols: 2, rows: 4 },
+      plan: [four('W'), four('W'), four('Y')],
+      pieces: [
+        ['O4_0', 'W', 0, 0],
+        ['O4_0', 'W', 2, 0],
+      ],
+      batches: late
+        ? [
+            { forSegment: 1, pieces: two('Y') },
+            { forSegment: 2, pieces: two('W') },
+          ]
+        : [
+            { forSegment: 1, pieces: two('W') },
+            { forSegment: 2, pieces: two('Y') },
           ],
-        }),
-      ).toEqual([]);
-      expect(tile({ pieces: [['C3_180', 'W', 0, 0]] })).toEqual([]);
-      expect(tile({ pieces: [['C3_0', 'W', 0, 0]] })).toEqual(['untileable']);
-    },
-  );
+    });
+    expect(run(spec(true), ['L-10', 'L-30']).map((i) => [i.code, i.rule, i.severity, i.path])).toEqual([
+      ['cover_prefix_short', 'K-45/8', 'error', 'build.segments[1]'],
+    ]);
+    expect(l10(spec(false), ['L-10', 'L-30'])).toEqual([]);
+  });
 
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails.each(LEVEL_IDS)(
-    'K-27 TECH L-10 level %i: the verdict equals an independent cumulative count for the level, every one-block removal and every plan-cell recolouring',
+  // Faz 2R K-47 item 1: with a W6 paint gate the validator checks the total cell count only (which block fits which gate
+  // is the solver's colour balance; "K-47 item 1 with a W6 paint gate …" above). The Faz 2 per-gate fit (D2_0 needs
+  // size ≥ 2), "heavy never supply for a gate", the two-gate "her blok bir kez" and "only way is the paint gate" L-10
+  // tests left with `material_short`; Ağır Yük is covered by "K-27 K-47 Ağır Yük is not supply".
+
+  it('K-47 K-32 resolved `?` cells are demand in their resolved colour: GDD repeat p = 2 `["??","??","YW","WY"]` needs 4 W and 4 Y', () => {
+    const hidden = (pieces: PieceSpec[]): [string, string][] =>
+      l10(
+        {
+          id: 27,
+          site: { cols: 2, rows: 4 },
+          plan: ['??', '??', 'YW', 'WY'],
+          hidden: [{ kind: 'repeat', period: 2 }],
+          pieces,
+        },
+        ['L-10', 'L-30'],
+      );
+    const w4: PieceSpec[] = [
+      ['D2_90', 'W', 0, 0],
+      ['D2_90', 'W', 2, 0],
+    ];
+    expect(hidden([...w4, ['D2_90', 'Y', 0, 1], ['B1_0', 'Y', 2, 1]])).toEqual([['cover_mismatch', 'level']]);
+    expect(hidden([...w4, ['D2_90', 'Y', 0, 1], ['D2_90', 'Y', 2, 1]])).toEqual([]);
+  });
+
+  // Faz 2R: `.` cells are refused (L-05 plan_has_window, S2 out of the MVP) and L-11 is D3a on the start state without
+  // an access search (TECH §2R.3 note 5), so the Faz 2 "a cell above a window needs an aligned gap" L-11 test left.
+
+  it.each(LEVEL_IDS)(
+    'K-47 TECH L-10 + L-30 level %i: the verdict equals an independent count for the level as written, every one-block removal, every block moved to the next batch and every plan-cell recolouring',
     (n) => {
       const base = readLevelJson(n);
       expect(base.build.mode).toBe('segments');
@@ -2304,48 +1765,53 @@ describe('review round 2: K-27 material (TECH L-10) after the whole-block fix', 
       const variants: [string, LevelInput][] = [['as written', base]];
       base.yard.batches.forEach((b, bi) =>
         b.pieces.forEach((p, pi) => {
-          if (b.pieces.length < 2) return;
           const v = structuredClone(base);
           v.yard.batches[bi]?.pieces.splice(pi, 1);
-          variants.push([`without batches[${bi}].pieces[${pi}] ${p.shape} ${p.color}`, v]);
+          variants.push([`without batches[${bi}].pieces[${pi}] ${p.shape} ${p.color ?? '-'}`, v]);
+          const next = base.yard.batches[bi + 1];
+          if (next && b.pieces.length > 1) {
+            const w = structuredClone(base);
+            const [moved] = w.yard.batches[bi]?.pieces.splice(pi, 1) ?? [];
+            if (moved) w.yard.batches[bi + 1]?.pieces.push({ ...moved, y: base.yard.rows ?? 8 });
+            variants.push([`batches[${bi}].pieces[${pi}] moved to batch ${bi + 1}`, w]);
+          }
         }),
       );
-      base.build.segments.forEach((s, si) =>
-        s.rows.forEach((row, ri) =>
-          [0, 1].forEach((ci) => {
-            if (row[ci] === '.') return;
+      base.build.segments.forEach((sg, si) =>
+        sg.rows.forEach((row, ri) =>
+          [...row].forEach((ch, ci) => {
             for (const c of ['W', 'Y', 'G', 'R'] as const) {
-              if (row[ci] === c) continue;
+              if (ch === c) continue;
               const v = structuredClone(base);
               const seg = v.build.segments[si];
               if (!seg) continue;
-              seg.rows[ri] = ci === 0 ? `${c}${row[1] ?? ''}` : `${row[0] ?? ''}${c}`;
+              seg.rows[ri] = `${row.slice(0, ci)}${c}${row.slice(ci + 1)}`;
               variants.push([`segment ${si} row ${ri} col ${ci} → ${c}`, v]);
             }
           }),
         ),
       );
-      let shortVariants = 0;
+      let broken = 0;
       for (const [what, v] of variants) {
-        const failing = materialOracle(v);
-        const issues = runJson(v, ['L-10']);
+        const want = coverOracle(v);
+        const issues = runJson(v, ['L-10', 'L-30']);
         const where = `level ${n} ${what}`;
         expect(
-          issues.every((i) => i.code === 'material_short' && i.rule === 'K-27'),
+          issues.every((i) => i.code === 'cover_mismatch' || i.code === 'cover_prefix_short'),
           where,
         ).toBe(true);
-        expect(issues.length > 0, `${where}: oracle ${failing.join(' ')}`).toBe(failing.length > 0);
-        for (const i of issues) expect(failing, where).toContain(i.path);
-        if (failing.length > 0) {
-          shortVariants++;
-          expect(
-            issues.map((i) => i.path),
-            where,
-          ).toContain(failing[0]);
-        }
+        expect(
+          issues.some((i) => i.code === 'cover_mismatch'),
+          `${where}: totals`,
+        ).toBe(want.mismatch);
+        expect(
+          [...new Set(issues.filter((i) => i.code === 'cover_prefix_short').map((i) => i.path))].sort(),
+          `${where}: prefixes`,
+        ).toEqual(want.prefix);
+        if (want.mismatch || want.prefix.length > 0) broken++;
       }
-      expect(materialOracle(base)).toEqual([]);
-      expect(shortVariants).toBeGreaterThan(0);
+      expect(coverOracle(base)).toEqual({ mismatch: false, prefix: [] });
+      expect(broken).toBeGreaterThan(variants.length / 2);
     },
   );
 });
@@ -2353,33 +1819,29 @@ describe('review round 2: K-27 material (TECH L-10) after the whole-block fix', 
 describe('review round 2: gaps of round 1 (K-45/9, K-32, K-25, GDD 14.1/5, K-45/5, schema limits)', () => {
   const l17 = (json: unknown): string[] => runJson(json, ['L-17']).map((i) => i.code);
 
-  // Faz 2R (WP-B, TECH §2R.3): S2 left the signature table (CL-2R-12, plan_has_window). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-45/9 GDD example: a size-1 gap in level 4 makes the derived new mechanics {S2, W3} → too_many_new_mechanics',
-    () => {
-      const history = new Set<MechanicId>();
-      for (const n of [1, 2, 3]) {
-        const lvl = validateLevelJson(readLevelJson(n)).level;
-        if (!lvl) throw new Error(`level ${n} fails the schema`);
-        for (const m of deriveMechanics(lvl)) history.add(m);
-      }
-      expect([...history]).toEqual(['W1']);
-      const json = readLevelJson(4);
-      const gap = json.wall.gaps[0];
-      if (!gap) throw new Error('level 4 has no gap');
-      gap.size = 1;
-      const res = validateLevelJson(json, { only: ['L-22'], previousMechanics: history });
-      expect(res.issues.map((i) => [i.code, i.rule])).toEqual([['too_many_new_mechanics', 'K-45/9']]);
-      if (!res.level) throw new Error('schema');
-      expect(
-        deriveMechanics(res.level)
-          .filter((m) => !history.has(m))
-          .sort(),
-      ).toEqual(['S2', 'W3']);
-      // the moved gap itself is fine under K-04 (y 3 + size 1 ≤ height 6 − 1)
-      expect(runJson(json, ['L-09'])).toEqual([]);
-    },
-  );
+  it('K-45/10 GDD example (Faz 2R): a size-1 gap in level 4 makes the derived new mechanics {W1, W3} → too_many_new_mechanics', () => {
+    const history = new Set<MechanicId>();
+    for (const n of [1, 2, 3]) {
+      const lvl = validateLevelJson(readLevelJson(n)).level;
+      if (!lvl) throw new Error(`level ${n} fails the schema`);
+      for (const m of deriveMechanics(lvl)) history.add(m);
+    }
+    expect([...history]).toEqual([]);
+    const json = readLevelJson(4);
+    const gap = json.wall.gaps[0];
+    if (!gap) throw new Error('level 4 has no gap');
+    gap.size = 1;
+    const res = validateLevelJson(json, { only: ['L-22'], previousMechanics: history });
+    expect(res.issues.map((i) => [i.code, i.rule])).toEqual([['too_many_new_mechanics', 'K-45/10']]);
+    if (!res.level) throw new Error('schema');
+    expect(
+      deriveMechanics(res.level)
+        .filter((m) => !history.has(m))
+        .sort(),
+    ).toEqual(['W1', 'W3']);
+    // the smaller gap itself is fine under K-04 (y 0 + size 1 ≤ height 4 − 1)
+    expect(runJson(json, ['L-09'])).toEqual([]);
+  });
 
   it('K-32 a `?` needs a hidden rule in its segment, and a mirrorOf `?` that lands on a `.` is invalid ("`.` hücresi hiçbir zaman gizli değildir")', () => {
     expect(codes(run({ id: 27, plan: ['?W', 'WW'], pieces: [['B1_0', 'W', 0, 0]] }, ['L-08']))).toEqual([
@@ -2416,96 +1878,83 @@ describe('review round 2: gaps of round 1 (K-45/9, K-32, K-25, GDD 14.1/5, K-45/
     ]);
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): flag table: heavy debris is shape_forbidden / piece_too_wide now. WP-M ile yeniden üretilecek.
-  it.fails(
-    'GDD 14.1/5 TECH L-17 carousel: for piece:k<p>_<i> only the startOn filter is checked (delivery order depends on the player); a block without the flag stays invalid',
-    () => {
-      const make = (highlight: string, mode: 'segments' | 'carousel'): unknown => ({
-        ...levelJson({
-          id: 35,
-          mode,
-          ...(mode === 'carousel' ? { carouselEvery: 3 } : {}),
-          plan: [['WW'], ['WW'], ['WW']],
-          pieces: [['D2_90', 'W', 0, 0]],
-          batches: [
-            { forSegment: 1, pieces: [['D2_90', 'W', 0, 8, ['mortar']]] },
-            {
-              forSegment: 2,
-              pieces: [
-                ['D2_90', 'W', 0, 8, ['mortar']],
-                ['B1_0', 'W', 2, 8],
-              ],
-            },
-          ],
-        }),
-        tutorial: [
-          soft([highlight], { timeoutMs: 2500 }, { startOn: { event: 'deliveryDone', flag: 'mortar' } }),
+  it('GDD 14.1/5 TECH L-17 carousel: for piece:k<p>_<i> only the startOn filter is checked (delivery order depends on the player); a block without the flag stays invalid', () => {
+    const make = (highlight: string, mode: 'segments' | 'carousel'): unknown => ({
+      ...levelJson({
+        id: 35,
+        mode,
+        ...(mode === 'carousel' ? { carouselEvery: 3 } : {}),
+        plan: [['WW'], ['WW'], ['WW']],
+        pieces: [['D2_90', 'W', 0, 0]],
+        batches: [
+          { forSegment: 1, pieces: [['D2_90', 'W', 0, 8, ['mortar']]] },
+          {
+            forSegment: 2,
+            pieces: [
+              ['D2_90', 'W', 0, 8, ['mortar']],
+              ['B1_0', 'W', 2, 8],
+            ],
+          },
         ],
-      });
-      expect(l17(make('piece:k1_0', 'carousel'))).toEqual([]);
-      expect(l17(make('piece:k2_0', 'carousel'))).toEqual([]);
-      expect(l17(make('piece:k2_1', 'carousel'))).toEqual(['tut_highlight_invalid']);
-      // segments mode keeps the order rule: the first mortar delivery is batch 1
-      expect(l17(make('piece:k1_0', 'segments'))).toEqual([]);
-      expect(l17(make('piece:k2_0', 'segments'))).toEqual(['tut_highlight_invalid']);
-    },
-  );
+      }),
+      tutorial: [
+        soft([highlight], { event: 'turnEnd' }, { startOn: { event: 'deliveryDone', flag: 'mortar' } }),
+      ],
+    });
+    expect(l17(make('piece:k1_0', 'carousel'))).toEqual([]);
+    expect(l17(make('piece:k2_0', 'carousel'))).toEqual([]);
+    expect(l17(make('piece:k2_1', 'carousel'))).toEqual(['tut_highlight_invalid']);
+    // segments mode keeps the order rule: the first mortar delivery is batch 1
+    expect(l17(make('piece:k1_0', 'segments'))).toEqual([]);
+    expect(l17(make('piece:k2_0', 'segments'))).toEqual(['tut_highlight_invalid']);
+  });
 
-  // Faz 2R (WP-B, TECH §2R.3): flag table: heavy debris is shape_forbidden / piece_too_wide now. WP-M ile yeniden üretilecek.
-  it.fails(
-    'GDD 14.1 TECH L-17 deliveryDone.flag needs a truck (k ≥ 1) block with that flag: a flagged batch-0 block is not enough (done and startOn)',
-    () => {
-      const make = (truckFlag: boolean, done: Step['done'], startOn?: Step['startOn']): unknown => ({
-        ...levelJson({
-          id: 35,
-          plan: [['WW'], ['WW']],
-          pieces: [['D2_90', 'W', 0, 0, truckFlag ? [] : ['mortar']]],
-          batches: [{ forSegment: 1, pieces: [['D2_90', 'W', 0, 8, truckFlag ? ['mortar'] : []]] }],
-        }),
-        tutorial: [soft(['truck'], done, startOn ? { startOn } : {})],
-      });
-      const flagged = { event: 'deliveryDone', flag: 'mortar' } as const;
-      expect(l17(make(false, flagged))).toEqual(['tut_done_invalid']);
-      expect(l17(make(false, { timeoutMs: 2000 }, flagged))).toEqual(['tut_done_invalid']);
-      expect(l17(make(false, { event: 'deliveryDone' }))).toEqual([]);
-      expect(l17(make(true, flagged))).toEqual([]);
-      expect(l17(make(true, { timeoutMs: 2000 }, flagged))).toEqual([]);
-    },
-  );
+  it('GDD 14.1 TECH L-17 deliveryDone.flag needs a truck (k ≥ 1) block with that flag: a flagged batch-0 block is not enough (done and startOn)', () => {
+    const make = (truckFlag: boolean, done: Step['done'], startOn?: Step['startOn']): unknown => ({
+      ...levelJson({
+        id: 35,
+        plan: [['WW'], ['WW']],
+        pieces: [['D2_90', 'W', 0, 0, truckFlag ? [] : ['mortar']]],
+        batches: [{ forSegment: 1, pieces: [['D2_90', 'W', 0, 8, truckFlag ? ['mortar'] : []]] }],
+      }),
+      tutorial: [soft(['truck'], done, startOn ? { startOn } : {})],
+    });
+    const flagged = { event: 'deliveryDone', flag: 'mortar' } as const;
+    expect(l17(make(false, flagged))).toEqual(['tut_done_invalid']);
+    expect(l17(make(false, { event: 'turnEnd' }, flagged))).toEqual(['tut_done_invalid']);
+    expect(l17(make(false, { event: 'deliveryDone' }))).toEqual([]);
+    expect(l17(make(true, flagged))).toEqual([]);
+    expect(l17(make(true, { event: 'turnEnd' }, flagged))).toEqual([]);
+  });
 
-  // Faz 2R (WP-B, TECH §2R.3): Faz 2 validator expectation. WP-M ile yeniden üretilecek.
-  it.fails(
-    'GDD 14.1 TECH L-17 piece:k<p>_<i> needs 1 ≤ p < batch count and i < that batch size (level 5: k1_3 valid; k1_4 and k2_0 invalid)',
-    () => {
-      const one = (h: string): string[] =>
-        l17(withTutorial(5, [soft([h], { timeoutMs: 2500 }, { startOn: { event: 'deliveryDone' } })]));
-      expect(batchOf(readLevelJson(5), 1).pieces.length).toBe(4);
-      expect(one('piece:k1_0')).toEqual([]);
-      expect(one('piece:k1_3')).toEqual([]);
-      expect(one('piece:k1_4')).toEqual(['tut_highlight_invalid']);
-      expect(one('piece:k2_0')).toEqual(['tut_highlight_invalid']);
-    },
-  );
+  it('GDD 14.1 TECH L-17 piece:k<p>_<i> needs 1 ≤ p < batch count and i < that batch size (level 5: k1_3 valid; k1_4 and k2_0 invalid)', () => {
+    const one = (h: string): string[] =>
+      l17(withTutorial(5, [soft([h], { event: 'turnEnd' }, { startOn: { event: 'deliveryDone' } })]));
+    expect(batchOf(readLevelJson(5), 1).pieces.length).toBe(4);
+    expect(one('piece:k1_0')).toEqual([]);
+    expect(one('piece:k1_3')).toEqual([]);
+    expect(one('piece:k1_4')).toEqual(['tut_highlight_invalid']);
+    expect(one('piece:k2_0')).toEqual(['tut_highlight_invalid']);
+  });
 
-  // Faz 2R (WP-B, TECH §2R.3): w ≥ 3 "heavy" rule → piece_too_wide; Y5 = I5/Q9 (K-44 Faz 2R). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-45/5 OBSTACLES flag table "debris × ağır şekil ✗ (moloz ≤ 2 geniş)": heavy debris is flag_combo_forbidden, 2-wide debris is not',
-    () => {
-      const debris = (shape: ShapeId, only: readonly CheckId[]): string[] =>
-        codes(
-          run(
-            { id: 41, plan: ['WW', 'WW', 'WW'], pieces: [['B1_0', 'W', 0, 0]], debris: [[shape, 'R', 6, 0]] },
-            only,
-          ),
-        );
-      expect(debris('I3_90', ['L-21'])).toEqual(['flag_combo_forbidden']);
-      expect(debris('L4_90', ['L-21'])).toEqual(['flag_combo_forbidden']);
-      expect(debris('D2_90', ['L-21'])).toEqual([]);
-      expect(debris('O4_0', ['L-21', 'L-13'])).toEqual([]);
-      // a 3-wide debris also leaves x 6–7 (K-45/7)
-      expect(debris('I3_90', ['L-13'])).toEqual(['debris_misplaced']);
-    },
-  );
+  // Faz 2R: "ağır şekil" = Ağır Yük (I5/Q9), which never is debris (K-44: only in the yard → shape_forbidden); a 3-wide
+  // material debris is `piece_too_wide` on a 2-column site (K-44) and leaves x 6–7 (K-45/7) — no flag rule any more
+  it('K-45/5 OBSTACLES flag table "debris × ağır şekil ✗ (moloz ≤ 2 geniş)" in Faz 2R: Q9/I5 debris is shape_forbidden, 3-wide debris piece_too_wide and debris_misplaced, 2-wide debris valid', () => {
+    const debris = (shape: ShapeId, only: readonly CheckId[]): string[] =>
+      codes(
+        run(
+          { id: 41, plan: ['WW', 'WW', 'WW'], pieces: [['B1_0', 'W', 0, 0]], debris: [[shape, 'R', 6, 0]] },
+          only,
+        ),
+      );
+    expect(debris('Q9_0', ['L-04'])).toEqual(['shape_forbidden']);
+    expect(debris('I5_0', ['L-04'])).toEqual(['shape_forbidden']);
+    expect(debris('I3_90', ['L-04'])).toEqual(['piece_too_wide']);
+    expect(debris('I3_90', ['L-21'])).toEqual([]);
+    expect(debris('D2_90', ['L-04', 'L-21'])).toEqual([]);
+    expect(debris('O4_0', ['L-04', 'L-21', 'L-13'])).toEqual([]);
+    expect(debris('I3_90', ['L-13'])).toEqual(['debris_misplaced']);
+  });
 
   it('K-45/3 wall limits are schema errors: height 9, paint gate without colour, shutter period 0, slider range start −1, locked gate without keyId', () => {
     const base = (): LevelInput =>
@@ -2566,77 +2015,83 @@ describe('review round 2: gaps of round 1 (K-45/9, K-32, K-25, GDD 14.1/5, K-45/
       expect(withObstacle(bad), JSON.stringify(bad)).toEqual(['schema_invalid']);
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): w ≥ 3 "heavy" rule → piece_too_wide; Y5 = I5/Q9 (K-44 Faz 2R). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-45/9 OBSTACLES "Veri imzası": every one of the 27 signatures derives exactly its mechanic from a minimal level (W3 always comes with its gap type)',
-    () => {
-      const base: LevelSpec = { id: 41, wall: { height: 4 }, plan: ['WW'], pieces: [['B1_0', 'W', 0, 0]] };
-      const derive = (extra: Partial<LevelSpec>): string[] =>
-        deriveMechanics(level({ ...base, ...extra })).sort();
-      expect(derive({})).toEqual([]);
-      const gap = (g: LevelInput['wall']['gaps'][number]): Partial<LevelSpec> => ({
-        wall: { height: 4, gaps: [g] },
-      });
-      const two: Partial<LevelSpec> = { plan: [['WW'], ['WW']] };
-      const cases: [string, Partial<LevelSpec>, string[]][] = [
-        ['W1', gap({ type: 'static', y: 0, size: 2 }), ['W1']],
-        ['W2', { wall: { height: 8 } }, ['W2']],
-        ['W3 static', gap({ type: 'static', y: 0, size: 1 }), ['W1', 'W3']],
-        ['W3 shutter', gap({ type: 'shutter', y: 0, size: 1, period: 2 }), ['W3', 'W4']],
-        ['W4', gap({ type: 'shutter', y: 0, size: 2, period: 2 }), ['W4']],
-        ['W5', gap({ type: 'slider', y: 0, size: 1, range: [0, 1] }), ['W3', 'W5']],
-        [
-          'W5 size 2',
-          { wall: { height: 6, gaps: [{ type: 'slider', y: 0, size: 2, range: [0, 1] }] } },
-          ['W5'],
-        ],
-        ['W6', gap({ type: 'paint', y: 0, size: 2, color: 'W' }), ['W6']],
-        [
-          'W7',
-          {
-            ...gap({ type: 'locked', y: 0, size: 2, keyId: 'a' }),
-            obstacles: [{ type: 'key', x: 0, y: 0, id: 'a' }],
-          },
-          ['W7'],
-        ],
-        ['W8', { wall: { height: 4, fan: 'left' } }, ['W8']],
-        ['Y1', { obstacles: [{ type: 'crate', x: 3, y: 3, hp: 1 }] }, ['Y1']],
-        ['Y2', { obstacles: [{ type: 'cement_bag', x: 3, y: 3 }] }, ['Y2']],
-        ['Y3 batch 0', { pieces: [['B1_0', 'W', 0, 0, ['chained']]] }, ['Y3']],
-        [
-          'Y3 truck',
-          { ...two, batches: [{ forSegment: 1, pieces: [['B1_0', 'W', 0, 8, ['chained']]] }] },
-          ['S1', 'Y3'],
-        ],
-        ['Y4', { pieces: [['B1_0', 'W', 0, 0, ['wet'], 2]] }, ['Y4']],
-        ['Y5', { pieces: [['I3_90', 'W', 0, 0]] }, ['Y5']],
-        ['Y6', { gravity: { yard: true } }, ['Y6']],
-        ['Y7', { obstacles: [{ type: 'screw', x: 0, y: 0 }] }, ['Y7']],
-        ['Y8', { pieces: [['B1_0', 'W', 0, 0, ['mortar']]] }, ['Y8']],
-        ['S1', two, ['S1']],
-        ['S2', { plan: ['W.'] }, ['S2']],
-        ['S3', { pieces: [['B1_0', 'W', 0, 0, ['glass']]] }, ['S3']],
-        ['S4', { plan: ['WW', 'WW'], debris: [['B1_0', 'R', 6, 0]] }, ['S4']],
-        ['S5', { ...two, mode: 'carousel', carouselEvery: 3 }, ['S5']],
-        ['S6', { elevator: { range: [0, 1], start: 0, dir: 1 } }, ['S6']],
-        ['S7-R', { plan: ['??', 'WY'], hidden: [{ kind: 'repeat', period: 1 }] }, ['S7-R']],
-        [
-          'S7-M',
-          { plan: [['WY'], ['?R']], hidden: [undefined, { kind: 'mirrorOf', segment: 0 }] },
-          ['S1', 'S7-M'],
-        ],
-        ['S8', { pieces: [['B1_0', 'W', 0, 0, ['balloon']]] }, ['S8']],
-        ['G-H', { gravity: { build: 'high' } }, ['G-H']],
-        ['G-L', { gravity: { build: 'low' } }, ['G-L']],
-      ];
-      const covered = new Set<string>();
-      for (const [name, extra, want] of cases) {
-        expect(derive(extra), name).toEqual([...want].sort());
-        for (const m of want) covered.add(m);
-      }
-      expect(covered.size).toBe(27);
-    },
-  );
+  it('K-45/10 OBSTACLES "Veri imzası" (Faz 2R): every one of the 27 signatures derives exactly its mechanic from a minimal level (W2 = height H, Y5 = I5/Q9, S9 = site.cols ≥ 3; S2 is out of the table)', () => {
+    const base: LevelSpec = { id: 41, wall: { height: 4 }, plan: ['WW'], pieces: [['B1_0', 'W', 0, 0]] };
+    const derive = (extra: Partial<LevelSpec>): string[] =>
+      deriveMechanics(level({ ...base, ...extra })).sort();
+    expect(derive({})).toEqual([]);
+    const gap = (g: LevelInput['wall']['gaps'][number]): Partial<LevelSpec> => ({
+      wall: { height: 4, gaps: [g] },
+    });
+    const two: Partial<LevelSpec> = { plan: [['WW'], ['WW']] };
+    const cases: [string, Partial<LevelSpec>, string[]][] = [
+      ['W1', gap({ type: 'static', y: 0, size: 2 }), ['W1']],
+      ['W2', { wall: { height: 8 } }, ['W2']], // default board: H = 8
+      [
+        'W2 small board',
+        { yard: { cols: 4, rows: 4 }, site: { cols: 2, rows: 5 }, wall: { height: 5 } },
+        ['W2'],
+      ],
+      ['not W2', { yard: { cols: 4, rows: 4 }, site: { cols: 2, rows: 5 }, wall: { height: 4 } }, []],
+      ['W3 static', gap({ type: 'static', y: 0, size: 1 }), ['W1', 'W3']],
+      ['W3 shutter', gap({ type: 'shutter', y: 0, size: 1, period: 2 }), ['W3', 'W4']],
+      ['W4', gap({ type: 'shutter', y: 0, size: 2, period: 2 }), ['W4']],
+      ['W5', gap({ type: 'slider', y: 0, size: 1, range: [0, 1] }), ['W3', 'W5']],
+      [
+        'W5 size 2',
+        { wall: { height: 6, gaps: [{ type: 'slider', y: 0, size: 2, range: [0, 1] }] } },
+        ['W5'],
+      ],
+      ['W6', gap({ type: 'paint', y: 0, size: 2, color: 'W' }), ['W6']],
+      [
+        'W7',
+        {
+          ...gap({ type: 'locked', y: 0, size: 2, keyId: 'a' }),
+          obstacles: [{ type: 'key', x: 0, y: 0, id: 'a' }],
+        },
+        ['W7'],
+      ],
+      ['W8', { wall: { height: 4, fan: 'left' } }, ['W8']],
+      ['Y1', { obstacles: [{ type: 'crate', x: 3, y: 3, hp: 1 }] }, ['Y1']],
+      ['Y2', { obstacles: [{ type: 'cement_bag', x: 3, y: 3 }] }, ['Y2']],
+      ['Y3 batch 0', { pieces: [['B1_0', 'W', 0, 0, ['chained']]] }, ['Y3']],
+      [
+        'Y3 truck',
+        { ...two, batches: [{ forSegment: 1, pieces: [['B1_0', 'W', 0, 8, ['chained']]] }] },
+        ['S1', 'Y3'],
+      ],
+      ['Y4', { pieces: [['B1_0', 'W', 0, 0, ['wet'], 2]] }, ['Y4']],
+      ['Y5 Q9', { pieces: [['Q9_0', 'W', 0, 0]] }, ['Y5']],
+      ['Y5 I5', { pieces: [['I5_0', 'W', 0, 0]] }, ['Y5']],
+      ['not Y5: a 3-wide material block', { pieces: [['I3_90', 'W', 0, 0]] }, []],
+      ['Y6', { gravity: { yard: true } }, ['Y6']],
+      ['Y7', { obstacles: [{ type: 'screw', x: 0, y: 0 }] }, ['Y7']],
+      ['Y8', { pieces: [['B1_0', 'W', 0, 0, ['mortar']]] }, ['Y8']],
+      ['S1', two, ['S1']],
+      ['S2 (MVP dışı)', { plan: ['W.'] }, []],
+      ['S3', { pieces: [['B1_0', 'W', 0, 0, ['glass']]] }, ['S3']],
+      ['S4', { plan: ['WW', 'WW'], debris: [['B1_0', 'R', 6, 0]] }, ['S4']],
+      ['S5', { ...two, mode: 'carousel', carouselEvery: 3 }, ['S5']],
+      ['S6', { elevator: { range: [0, 1], start: 0, dir: 1 } }, ['S6']],
+      ['S7-R', { plan: ['??', 'WY'], hidden: [{ kind: 'repeat', period: 1 }] }, ['S7-R']],
+      [
+        'S7-M',
+        { plan: [['WY'], ['?R']], hidden: [undefined, { kind: 'mirrorOf', segment: 0 }] },
+        ['S1', 'S7-M'],
+      ],
+      ['S8', { pieces: [['B1_0', 'W', 0, 0, ['balloon']]] }, ['S8']],
+      ['S9', { yard: { cols: 5 }, site: { cols: 3 }, plan: ['WWW'] }, ['S9']],
+      ['G-H', { gravity: { build: 'high' } }, ['G-H']],
+      ['G-L', { gravity: { build: 'low' } }, ['G-L']],
+    ];
+    const covered = new Set<string>();
+    for (const [name, extra, want] of cases) {
+      expect(derive(extra), name).toEqual([...want].sort());
+      for (const m of want) covered.add(m);
+    }
+    expect(covered.size).toBe(27);
+    expect(covered.has('S2')).toBe(false);
+  });
 });
 
 // =====================================================================================================================
@@ -2646,10 +2101,10 @@ describe('review round 2: gaps of round 1 (K-45/9, K-32, K-25, GDD 14.1/5, K-45/
 
 /** Box height of a shape from its cells (BRIEF §5 cells were checked against shapes.ts in round 1). */
 const boxH = (id: ShapeId): number => Math.max(...shapeById(id).cells.map((c) => c.y)) + 1;
-/** OBSTACLES Y5 / GDD K-44: heavy = width ≥ 3 or kind I5 / Q9. */
+/** OBSTACLES Y5 / GDD K-44 (Faz 2R): Ağır Yük = kind I5 / Q9 in any orientation. */
 const isHeavyByText = (id: ShapeId): boolean => {
   const s = shapeById(id);
-  return Math.max(...s.cells.map((c) => c.x)) + 1 >= 3 || s.kind === 'I5' || s.kind === 'Q9';
+  return s.kind === 'I5' || s.kind === 'Q9';
 };
 
 /**
@@ -2667,414 +2122,99 @@ function reachByText(
 }
 
 describe('review round 3: K-05 box-height rule (round-2 movement fix) seen from the validator', () => {
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 K-05 K-12 Y5 every shape × wall height 0–8 × gap size: L-10 supply, canReachSite and the drag engine (site nodes) agree with the K-05 / K-12 text',
-    () => {
-      let free = 0;
-      let railOnly = 0;
-      let never = 0;
-      for (const s of SHAPES) {
-        if (s.id === 'I5_90' || s.id === 'I5_270') continue; // forbidden in level data (K-44)
-        for (let height = 0; height <= 8; height++) {
-          // one static gap at row 0 of every legal size (K-04: y + size ≤ height − 1), or none
-          const options: number[][] = [[]];
-          for (let size = 1; size <= height - 1; size++) options.push([size]);
-          for (const sizes of options) {
-            const lvl = level({
-              id: 41,
-              wall: { height, gaps: sizes.map((size) => ({ type: 'static' as const, y: 0, size })) },
-              plan: ['W.'],
-              pieces: [[s.id, 'W', 0, 0]],
-            });
-            const where = `${s.id} height ${height} gap ${sizes.join() || '—'}`;
-            const want = reachByText(s.id, height, sizes);
-            const compiled = compile(lvl);
-            const id = compiled.tutorialPieceIds.get('piece:0');
-            if (id === undefined) throw new Error('piece:0 missing');
-            const attempt = tryBeginDrag(createInitialState(compiled), id);
-            if (!attempt.ok)
-              throw new Error(`${where}: a lone block in an empty yard is not pickable (${attempt.reason})`);
-            const kinds = new Set(
-              attempt.session.reachableNodes().map((n) => attempt.session.classify(n).kind),
-            );
-            expect({ free: kinds.has('siteFree'), rail: kinds.has('siteRail') }, `${where}: engine`).toEqual(
-              want,
-            );
-            const reach = want.free || want.rail;
-            expect(canReachSite(s, lvl), `${where}: canReachSite`).toBe(reach);
-            // plan `W.` needs 1 W cell: the block is the only supply (TECH L-10 "şantiyeye geçebilen ağır olmayan")
-            expect(
-              checkLevel(lvl, { only: ['L-10'] }).map((i) => i.code),
-              `${where}: L-10`,
-            ).toEqual(reach ? [] : ['material_short']);
-            if (want.free) free++;
-            else if (want.rail) railOnly++;
-            else never++;
-          }
+  it('K-05 K-12 Y5 every shape × wall height 0–8 × gap size: canReachSite and the drag engine (site nodes) agree with the K-05 / K-12 text (Faz 2R: Ağır Yük never crosses; a material orientation wider than Ws = 2 cannot be in the data)', () => {
+    let free = 0;
+    let railOnly = 0;
+    let never = 0;
+    for (const s of SHAPES) {
+      if (s.id === 'I5_90' || s.id === 'I5_270') continue; // forbidden in level data (K-44)
+      if (!isHeavyByText(s.id) && s.w > 2) continue; // piece_too_wide on the 2-column site (K-44)
+      for (let height = 0; height <= 8; height++) {
+        // one static gap at row 0 of every legal size (K-04: y + size ≤ height − 1), or none
+        const options: number[][] = [[]];
+        for (let size = 1; size <= height - 1; size++) options.push([size]);
+        for (const sizes of options) {
+          const lvl = level({
+            id: 41,
+            wall: { height, gaps: sizes.map((size) => ({ type: 'static' as const, y: 0, size })) },
+            plan: ['WW'],
+            pieces: [[s.id, 'W', 0, 0]],
+          });
+          const where = `${s.id} height ${height} gap ${sizes.join() || '—'}`;
+          const want = reachByText(s.id, height, sizes);
+          const compiled = compile(lvl);
+          const id = compiled.tutorialPieceIds.get('piece:0');
+          if (id === undefined) throw new Error('piece:0 missing');
+          const attempt = tryBeginDrag(createInitialState(compiled), id);
+          if (!attempt.ok)
+            throw new Error(`${where}: a lone block in an empty yard is not pickable (${attempt.reason})`);
+          const kinds = new Set(
+            attempt.session.reachableNodes().map((n) => attempt.session.classify(n).kind),
+          );
+          expect({ free: kinds.has('siteFree'), rail: kinds.has('siteRail') }, `${where}: engine`).toEqual(
+            want,
+          );
+          const reach = want.free || want.rail;
+          expect(canReachSite(s, lvl), `${where}: canReachSite`).toBe(reach);
+          if (want.free) free++;
+          else if (want.rail) railOnly++;
+          else never++;
         }
       }
-      // the sweep really exercises all three outcomes
-      expect(Math.min(free, railOnly, never)).toBeGreaterThan(50);
-      // GDD K-05 example: height 8 I3_0 never crosses; height 7 it does (cells 7, 8, 9 ≥ 7)
-      expect(reachByText('I3_0', 8, [])).toEqual({ free: false, rail: false });
-      expect(reachByText('I3_0', 7, [])).toEqual({ free: true, rail: false });
-    },
-  );
-
-  if (!LEVELS_IS_FAZ_2R) {
-    it.each(LEVEL_IDS)(
-      'K-05 K-12 LEVELS level %i: every solution step obeys the open height (over the wall: box height ≤ 10 − height) or K-12 (rail: block rows inside the gap rows)',
-      (n) => {
-        const doc = docLevel(n);
-        const json = readLevelJson(n);
-        const moves = docMoves(doc);
-        expect(moves.length).toBeGreaterThan(0);
-        for (const m of moves) {
-          const h = boxH(m.shape);
-          if (m.entry === 'overWall') {
-            expect(h, `${m.text}: K-05`).toBeLessThanOrEqual(10 - json.wall.height);
-          } else {
-            const [, ly] = m.lands;
-            const gate = json.wall.gaps.find((g) => g.y <= ly && ly + h - 1 <= g.y + g.size - 1);
-            expect(gate, `${m.text}: K-12 rows ${ly}–${ly + h - 1}`).toBeDefined();
-          }
-          expect(isHeavyByText(m.shape), `${m.text}: Y5`).toBe(false);
-        }
-      },
-    );
-  }
+    }
+    // the sweep really exercises all three outcomes
+    expect(Math.min(free, railOnly, never)).toBeGreaterThan(50);
+    // GDD K-05 example: height 8 I3_0 never crosses; height 7 it does (cells 7, 8, 9 ≥ 7)
+    expect(reachByText('I3_0', 8, [])).toEqual({ free: false, rail: false });
+    expect(reachByText('I3_0', 7, [])).toEqual({ free: true, rail: false });
+  });
 });
 
-// --- independent L-11 oracle (GDD K-11, K-12, K-16 (1), K-34, K-05, Y5) -------------------------------------------------
+describe('review round 3: K-47 / K-30 D3a tiling (TECH L-11, Faz 2R)', () => {
+  // Faz 2R: L-11 is the K-30 D3a tiling search on the start state (no access search, no `.`); its independent oracle is
+  // tests/core/deadlock.test.ts "K-30 D3a equals an independent oracle … on 400 seeded plans", and L-11 = `tileLevel` on
+  // the level data is tests/level/validator.test.ts. The Faz 2 bottom-up access oracle (W1 rails, windows) left with it.
 
-interface TileBlock {
-  readonly shape: ShapeId;
-  readonly color: 'W' | 'Y';
-  readonly seg: number;
-}
-interface TileCase {
-  readonly height: number;
-  readonly gaps: readonly { readonly y: number; readonly size: number }[];
-  /** Rows per segment, top → bottom. */
-  readonly plans: readonly (readonly string[])[];
-  readonly blocks: readonly TileBlock[];
-}
-
-/**
- * Can every segment be built, one after another (segments mode), from the blocks delivered so far? A placement counts
- * when its cells are empty plan cells of the block colour (K-16 (1)), K-34 holds (every non-`.` plan cell below the
- * block's lowest cell in each of its columns is filled) and the block can get there: FREE (K-05 open height) dropped
- * from above, landing row `max_c(top(c) − altOfset_c)` (K-11), or on a rail through a gap that holds all block rows
- * (K-12), sliding in from the yard over empty site cells and held there ("düşmez"). Heavy blocks never (Y5).
- */
-function tileOracle(c: TileCase): boolean {
-  const plans = c.plans.map((rows) => ({
-    h: rows.length,
-    at: (x: number, y: number): string => rows[rows.length - 1 - y]?.[x] ?? '?',
-  }));
-  const key = (x: number, y: number): string => `${x},${y}`;
-  const failed = new Set<string>();
-  const dfs = (k: number, filled: ReadonlySet<string>, pool: readonly TileBlock[]): boolean => {
-    const p = plans[k];
-    if (!p) return true;
-    let done = true;
-    for (let y = 0; y < p.h; y++)
-      for (let x = 0; x < 2; x++) if (p.at(x, y) !== '.' && !filled.has(key(x, y))) done = false;
-    if (done) return dfs(k + 1, new Set(), [...pool, ...c.blocks.filter((b) => b.seg === k + 1)]);
-    const memo = `${k}|${[...filled].sort().join(' ')}|${pool
-      .map((b) => `${shapeById(b.shape).canonical}${b.color}`)
-      .sort()
-      .join(',')}`;
-    if (failed.has(memo)) return false;
-    const top = (x: number): number => {
-      let t = 0;
-      for (let y = 0; y < p.h; y++) if (filled.has(key(x, y))) t = y + 1;
-      return t;
-    };
-    const tried = new Set<string>();
-    for (let i = 0; i < pool.length; i++) {
-      const b = pool[i];
-      if (!b) continue;
-      const s = shapeById(b.shape);
-      const sig = `${s.canonical}${b.color}`;
-      if (tried.has(sig) || isHeavyByText(b.shape)) continue;
-      tried.add(sig);
-      const h = boxH(b.shape);
-      const w = Math.max(...s.cells.map((q) => q.x)) + 1;
-      const freeOk = h <= 10 - c.height;
-      for (let ax = 0; ax + w <= 2; ax++) {
-        for (let ay = 0; ay + h <= p.h; ay++) {
-          const cells = s.cells.map((q) => ({ x: ax + q.x, y: ay + q.y }));
-          if (!cells.every((q) => p.at(q.x, q.y) === b.color && !filled.has(key(q.x, q.y)))) continue;
-          const cols = [...new Set(cells.map((q) => q.x))];
-          const lowest = (x: number): number => Math.min(...cells.filter((q) => q.x === x).map((q) => q.y));
-          const supported = cols.every((x) => {
-            for (let y = 0; y < lowest(x); y++)
-              if (p.at(x, y) !== '.' && !filled.has(key(x, y))) return false;
-            return true;
-          });
-          if (!supported) continue;
-          const landing = Math.max(...cols.map((x) => top(x) - (lowest(x) - ay)));
-          let reach = freeOk && landing === ay;
-          if (!reach && c.gaps.some((g) => g.y <= ay && ay + h - 1 <= g.y + g.size - 1)) {
-            reach = true;
-            for (let tx = ax - 1; tx > -w; tx--)
-              for (const q of s.cells) {
-                const x = tx + q.x;
-                if (x >= 0 && x < 2 && filled.has(key(x, ay + q.y))) reach = false;
-              }
-          }
-          if (!reach) continue;
-          const next = new Set(filled);
-          for (const q of cells) next.add(key(q.x, q.y));
-          if (
-            dfs(
-              k,
-              next,
-              pool.filter((_, j) => j !== i),
-            )
-          )
-            return true;
-        }
-      }
-    }
-    failed.add(memo);
-    return false;
-  };
-  return dfs(
-    0,
-    new Set(),
-    c.blocks.filter((b) => b.seg === 0),
-  );
-}
-
-/** Deterministic LCG (test data only). */
-function lcg(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (Math.imul(s, 1103515245) + 12345) >>> 0;
-    return (s >>> 8) / 0x1000000;
-  };
-}
-
-const TILE_POOL: readonly ShapeId[] = [
-  'B1_0',
-  'D2_0',
-  'D2_90',
-  'O4_0',
-  'C3_0',
-  'C3_90',
-  'C3_180',
-  'C3_270',
-  'I3_0',
-  'L4_0',
-  'L4_180',
-  'J4_0',
-  'J4_180',
-  'T4_0',
-  'T4_180',
-  'S4_0',
-  'Z4_0',
-  'I4_0',
-];
-
-/** A random 1–2 segment level: plans tiled by random blocks (plus `.` and bricks), then perturbed. */
-function randomTileCase(rnd: () => number): TileCase {
-  const pick = <T>(a: readonly T[]): T => {
-    const v = a[Math.floor(rnd() * a.length)];
-    if (v === undefined) throw new Error('empty pick');
-    return v;
-  };
-  const colour = (): 'W' | 'Y' => (rnd() < 0.5 ? 'W' : 'Y');
-  const S = rnd() < 0.3 ? 2 : 1;
-  const blocks: TileBlock[] = [];
-  const plans: string[][] = [];
-  for (let k = 0; k < S; k++) {
-    const ph = 1 + Math.floor(rnd() * 4);
-    const grid: string[][] = Array.from({ length: ph }, () => ['', '']);
-    for (let t = 0; t < 30; t++) {
-      const id = pick(TILE_POOL);
-      const s = shapeById(id);
-      const w = Math.max(...s.cells.map((q) => q.x)) + 1;
-      const h = boxH(id);
-      if (w > 2 || h > ph) continue;
-      const ax = Math.floor(rnd() * (3 - w));
-      const ay = Math.floor(rnd() * (ph - h + 1));
-      if (s.cells.some((q) => grid[ay + q.y]?.[ax + q.x] !== '')) continue;
-      const c = colour();
-      for (const q of s.cells) {
-        const row = grid[ay + q.y];
-        if (row) row[ax + q.x] = c;
-      }
-      blocks.push({ shape: id, color: c, seg: k });
-    }
-    for (const row of grid)
-      for (let x = 0; x < 2; x++)
-        if (row[x] === '') {
-          if (rnd() < 0.5) row[x] = '.';
-          else {
-            const c = colour();
-            row[x] = c;
-            blocks.push({ shape: 'B1_0', color: c, seg: k });
-          }
-        }
-    if (!grid.some((row) => row.some((ch) => ch !== '.'))) {
-      const row0 = grid[0];
-      if (row0) row0[0] = 'W';
-      blocks.push({ shape: 'B1_0', color: 'W', seg: k });
-    }
-    plans.push(grid.map((row) => row.join('')).reverse());
-  }
-  const r = rnd();
-  if (r < 0.2 && blocks.length > 1) blocks.splice(Math.floor(rnd() * blocks.length), 1);
-  else if (r < 0.4) blocks.push({ shape: pick(TILE_POOL), color: colour(), seg: Math.floor(rnd() * S) });
-  else if (r < 0.5 && S === 2) {
-    const i = blocks.findIndex((b) => b.seg === 0);
-    const b = blocks[i];
-    if (b) blocks[i] = { ...b, seg: 1 };
-  } else if (r < 0.6) {
-    const i = Math.floor(rnd() * blocks.length);
-    const b = blocks[i];
-    if (b) blocks[i] = { ...b, shape: pick(TILE_POOL) };
-  }
-  // the schema wants at least one block per batch
-  for (let k = 0; k < S; k++)
-    if (!blocks.some((b) => b.seg === k)) blocks.push({ shape: 'B1_0', color: 'W', seg: k });
-  const height = Math.floor(rnd() * 9);
-  const gaps: { y: number; size: number }[] = [];
-  if (rnd() < 0.6 && height >= 2) {
-    const size = 1 + Math.floor(rnd() * Math.min(4, height - 1));
-    gaps.push({ y: Math.floor(rnd() * (height - size)), size });
-  }
-  return { height, gaps, plans, blocks };
-}
-
-function tileSpec(c: TileCase): LevelSpec {
-  const spec = (b: TileBlock): PieceSpec => [b.shape, b.color, 0, 0];
-  return {
-    id: 41,
-    wall: { height: c.height, gaps: c.gaps.map((g) => ({ type: 'static' as const, ...g })) },
-    plan: c.plans.map((rows) => [...rows]),
-    pieces: c.blocks.filter((b) => b.seg === 0).map(spec),
-    batches:
-      c.plans.length > 1 ? [{ forSegment: 1, pieces: c.blocks.filter((b) => b.seg === 1).map(spec) }] : [],
-  };
-}
-
-describe('review round 3: K-27 / K-34 tiling (TECH L-11) against an independent oracle', () => {
-  // Faz 2R (WP-B, TECH §2R.3): L-11 untileable is D3a now (no access search, `.` rejected). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 K-34 TECH L-11 on 2 500 seeded random 1–2 segment levels (W1 gaps, wall 0–8, B1…I4): `untileable` exactly when the oracle finds no bottom-up build',
-    () => {
-      const rnd = lcg(20261006);
-      let ok = 0;
-      let bad = 0;
-      const mismatches: string[] = [];
-      for (let n = 0; n < 2500; n++) {
-        const c = randomTileCase(rnd);
-        const want = tileOracle(c);
-        const got = run(tileSpec(c), ['L-11']);
-        if (want) ok++;
-        else bad++;
-        const gotOk = got.length === 0;
-        if (gotOk !== want || got.some((i) => i.code !== 'untileable' || i.severity !== 'error'))
-          mismatches.push(
-            `${JSON.stringify(c)} oracle ${want} L-11 ${JSON.stringify(got.map((i) => i.path))}`,
-          );
-      }
-      expect(mismatches.slice(0, 5)).toEqual([]);
-      // both verdicts are well represented
-      expect(Math.min(ok, bad)).toBeGreaterThan(500);
-    },
-  );
-
-  // Faz 2R (WP-B, TECH §2R.3): L-11 untileable is D3a now (no access search, `.` rejected). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-34 TECH L-11 order matters: plan y0 `YY`, y1 `Y.`, y2 `YW` with L4_0 Y + B1 W is untileable (the W brick reaches (7,2) only by rail before the L4 blocks (6,2), and then hangs over the empty (7,0)); D2_90 + D2_0 Y instead is fine',
-    () => {
-      const wall = { height: 4, gaps: [{ type: 'static' as const, y: 0, size: 3 }] };
-      const plan = ['YW', 'Y.', 'YY'];
-      const l4: LevelSpec = {
-        id: 41,
-        wall,
-        plan,
-        pieces: [
-          ['L4_0', 'Y', 0, 0],
-          ['B1_0', 'W', 3, 0],
-        ],
-      };
-      // material is exact (4 Y + 1 W) and an exact cover exists (L4_0 at (6,0), B1 at (7,2)) …
-      expect(run(l4, ['L-10'])).toEqual([]);
-      // … but no bottom-up order: L4 first closes the rail path, B1 first breaks K-34 in column 7
-      expect(run(l4, ['L-11']).map((i) => [i.code, i.severity])).toEqual([['untileable', 'error']]);
-      const pair: LevelSpec = {
-        ...l4,
-        pieces: [
-          ['D2_90', 'Y', 0, 0],
-          ['D2_0', 'Y', 2, 0],
-          ['B1_0', 'W', 3, 0],
-        ],
-      };
-      // D2_90 at y0, B1 W by rail at (7,2) over the window, D2_0 dropped into column 6 (lands on top(6) = 1)
-      expect(run(pair, ['L-10', 'L-11'])).toEqual([]);
-      // without the gap the W brick falls into the window (7,1) → untileable
-      expect(codes(run({ ...pair, wall: { height: 4 } }, ['L-11']))).toEqual(['untileable']);
-    },
-  );
-
-  it('K-27 OBSTACLES W6 TECH L-11 a block painted at the paint gate keeps its colour and may then enter through a plain gap ("sahaya geri çekilse de boya kalıcıdır"): the level is tileable', () => {
-    // height 8: I3_0 (3 tall) never crosses over the wall (K-05). Gap 0 = P paint gate rows 0–2, gap 1 = static rows 4–6.
-    // Plan column 7: W rows 0–3 (two D2_0 W dropped over the wall), P rows 4–6; column 6 all `.`.
-    // Route for the Y I3_0: half into the paint gate (rows 0–2) → painted P → back to the yard (W6 example: 1 move) →
-    // rail through the static gap at rows 4–6 → (7,4)–(7,6), held by the scaffold (K-12), K-34 holds (rows 0–3 W).
-    const spec = (color: ColorCode): LevelSpec => ({
-      id: 41,
-      wall: {
-        height: 8,
-        gaps: [
-          { type: 'paint', y: 0, size: 3, color: 'P' },
-          { type: 'static', y: 4, size: 3 },
-        ],
-      },
-      plan: ['.P', '.P', '.P', '.W', '.W', '.W', '.W'],
+  it('K-30 D3a W6 joker (TECH L-11, §2R.4 step 1): a Y block whose box height fits the P paint gate may become P, so the level tiles; a gate too small for it is untileable; without a gate the colours do not cover (cover_mismatch)', () => {
+    const spec = (gaps: NonNullable<LevelSpec['wall']>['gaps']): LevelSpec => ({
+      id: 22,
+      site: { cols: 2, rows: 4 },
+      wall: { height: 6, gaps },
+      plan: ['PP', 'PP', 'WW', 'WW'],
       pieces: [
-        ['I3_0', color, 0, 0],
-        ['D2_0', 'W', 1, 0],
-        ['D2_0', 'W', 2, 0],
+        ['O4_0', 'W', 0, 0],
+        ['O4_0', 'Y', 2, 0],
       ],
     });
-    // the data itself is fine: wall, material (the Y block counts for P, TECH L-10)
-    expect(run(spec('Y'), ['L-09', 'L-10'])).toEqual([]);
-    // a block that is P from the start uses the same static gap → tileable
-    expect(run(spec('P'), ['L-11'])).toEqual([]);
-    // the painted Y block reaches exactly the same cells through exactly the same gap
-    expect(run(spec('Y'), ['L-11'])).toEqual([]);
+    const gate = (size: number) => [{ type: 'paint' as const, y: 1, size, color: 'P' as const }];
+    expect(run(spec(gate(2)), ['L-09', 'L-10', 'L-11', 'L-30'])).toEqual([]);
+    expect(codes(run(spec(gate(1)), ['L-10', 'L-11', 'L-30']))).toEqual(['untileable']);
+    expect(codes(run(spec([]), ['L-10', 'L-11', 'L-30']))).toEqual(['cover_mismatch']);
   });
 });
 
 // --- debris, K-32 examples, K-02 / K-44 boundaries -------------------------------------------------------------------
 
 describe('review round 3: debris, K-32 worked examples, boundaries', () => {
-  // Faz 2R (WP-B, TECH §2R.3): K-27 material_short → Faz 2R K-47 cover_mismatch / cover_prefix_short. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-27 debris is never supply ("moloz olmayan … sahaya taşınmış moloz arz değildir"): an R plan row with only R debris is material_short and untileable; one R yard block fixes both',
-    () => {
-      const base: LevelSpec = {
-        id: 17,
-        plan: ['RR', 'WW'],
-        pieces: [['D2_90', 'W', 0, 0]],
-        debris: [['D2_90', 'R', 6, 1]],
-      };
-      expect(run(base, ['L-10', 'L-11']).map((i) => [i.code, i.rule])).toEqual([
-        ['material_short', 'K-27'],
-        ['untileable', 'K-27'],
-      ]);
-      expect(
-        run({ ...base, pieces: [...(base.pieces ?? []), ['D2_90', 'R', 2, 0]] }, ['L-10', 'L-11']),
-      ).toEqual([]);
-    },
-  );
+  it('K-47 debris is supply (OBSTACLES S4 Faz 2R): plan from the bottom RR, WW, WW, WW with a W debris D2_90 on the R row — the R yard block + the debris + an O4 W cover it exactly and it tiles; without the debris W is short', () => {
+    const base: LevelSpec = {
+      id: 17,
+      site: { cols: 2, rows: 4 },
+      plan: ['WW', 'WW', 'WW', 'RR'],
+      pieces: [
+        ['D2_90', 'R', 0, 0],
+        ['O4_0', 'W', 2, 0],
+      ],
+      debris: [['D2_90', 'W', 6, 0]],
+    };
+    expect(run(base, ['L-10', 'L-11', 'L-29', 'L-30'])).toEqual([]);
+    const noDebris = { ...base, debris: [] };
+    expect(codes(run(noDebris, ['L-10', 'L-30']))).toEqual(['cover_mismatch']);
+    // the debris may not start correct (L-29): on a bottom W row it would be (colour and K-34 support hold)
+    expect(codes(run({ ...base, plan: ['RR', 'WW', 'WW', 'WW'] }, ['L-29']))).toEqual([
+      'debris_correct_at_start',
+    ]);
+  });
 
   it('K-31 debris colours join the colour set: level 5 (limit 3) with plan W/Y/G and one R debris has 4 colours → too_many_colors', () => {
     const spec = (debrisColor: ColorCode): LevelSpec => ({
@@ -3088,22 +2228,8 @@ describe('review round 3: debris, K-32 worked examples, boundaries', () => {
     expect(run(spec('G'), ['L-06'])).toEqual([]);
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): debris rules changed (S4 Faz 2R, plan_has_window). WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-45/7 OBSTACLES S4 debris may stand on a `.` plan cell ("Bir `.` hücresindeki moloz", GDD E-43): no debris_misplaced',
-    () => {
-      const spec: LevelSpec = {
-        id: 17,
-        plan: ['WW', '.W'],
-        pieces: [['D2_90', 'W', 0, 0]],
-        debris: [['B1_0', 'R', 6, 0]],
-      };
-      expect(run(spec, ['L-13'])).toEqual([]);
-      // still inside x 6–7 and the plan rows: one row higher is the top W row (fine), two rows higher is outside
-      expect(run({ ...spec, debris: [['B1_0', 'R', 6, 1]] }, ['L-13'])).toEqual([]);
-      expect(codes(run({ ...spec, debris: [['B1_0', 'R', 6, 2]] }, ['L-13']))).toEqual(['debris_misplaced']);
-    },
-  );
+  // Faz 2R: `.` cells are refused (S2 out of the MVP, L-05 plan_has_window; GDD E-24 / E-43 only if S2 returns), so the
+  // "debris on a `.` plan cell" test left.
 
   it('K-32 GDD examples: repeat p=2 `["??","??","YW","WY"]` resolves y2 = y0 = `WY`, y3 = y1 = `YW`; mirrorOf 0 of y0 `RW` is `WR`', () => {
     const W = COLOR_CODES.indexOf('W');
@@ -3171,24 +2297,16 @@ describe('review round 3: debris, K-32 worked examples, boundaries', () => {
     ).toEqual([]);
   });
 
-  // Faz 2R (WP-B, TECH §2R.3): K-02 80 % band → Faz 2R 2 ≤ E ≤ ⌊0,4·C⌋. WP-M ile yeniden üretilecek.
-  it.fails(
-    'K-02 the lower bound is exactly 39/48 ("en az %80\'i (≥ 39/48)"): 39 bricks or 38 bricks + 1 crate are valid, 38 bricks + 1 screw are not',
-    () => {
-      const fill = (spec: Partial<LevelSpec>): string[] =>
-        run({ id: 26, plan: ['WW'], pieces: bricks(39), ...spec }, ['L-03']).map((i) => i.code);
-      expect(fill({})).toEqual([]);
-      expect(
-        fill({ pieces: bricks(38, ['5,7']), obstacles: [{ type: 'crate', x: 5, y: 7, hp: 1 }] }),
-      ).toEqual([]);
-      expect(fill({ pieces: bricks(38, ['5,7']), obstacles: [{ type: 'cement_bag', x: 5, y: 7 }] })).toEqual(
-        [],
-      );
-      expect(fill({ pieces: bricks(38), obstacles: [{ type: 'screw', x: 0, y: 0 }] })).toEqual([
-        'yard_fill_low',
-      ]);
-    },
-  );
+  it('K-02 the Faz 2R bound on the default 6 × 8 yard is exactly E ≤ ⌊0,4 · 48⌋ = 19: 29 bricks or 28 bricks + 1 crate (or bag) are valid, 28 bricks + 1 screw are not', () => {
+    const fill = (spec: Partial<LevelSpec>): string[] =>
+      run({ id: 26, plan: ['WW'], pieces: bricks(29), ...spec }, ['L-03']).map((i) => i.code);
+    expect(fill({})).toEqual([]);
+    expect(fill({ pieces: bricks(28), obstacles: [{ type: 'crate', x: 5, y: 7, hp: 1 }] })).toEqual([]);
+    expect(fill({ pieces: bricks(28), obstacles: [{ type: 'cement_bag', x: 5, y: 7 }] })).toEqual([]);
+    expect(fill({ pieces: bricks(28), obstacles: [{ type: 'screw', x: 0, y: 0 }] })).toEqual([
+      'yard_fill_low',
+    ]);
+  });
 
   it('K-44 kinds per story chapter hold for debris too: I3_0 debris in level 10 is shape_locked (build.debris[0]), in level 11 valid', () => {
     const debris = (id: number): [string, string][] =>
@@ -3208,168 +2326,540 @@ describe('review round 3: debris, K-32 worked examples, boundaries', () => {
 
 // --- LEVELS §0 tables and §2 block roles against the validator, the data and the engine -----------------------------
 
-if (!LEVELS_IS_FAZ_2R) {
-  describe('review round 3: LEVELS §0 tables and §2 block roles', () => {
-    it('K-31 K-44 LEVELS §0 unlock table (colour pool, colours per level, shapes) is what the validator enforces at every chapter boundary', () => {
-      const lines = LEVELS_MD.split('\n').filter((l) => /^\| \d [^|]+ \| \d+–\d+ \|/.test(l));
-      expect(lines.length).toBe(5);
-      let kinds: ShapeKind[] = [];
-      for (const line of lines) {
-        const cols = line.split('|').map((c) => c.trim());
-        const chapter = Number(/^(\d)/.exec(cols[1] ?? '')?.[1]);
-        const [first, last] = (cols[2] ?? '').split('–').map(Number) as [number, number];
-        expect([first, last], `chapter ${chapter} range`).toEqual([chapter * 10 - 9, chapter * 10]);
-        // colours: "W (1), Y (1), G (2), R (4)" / "+ O, C (11)" / "hepsi"
-        for (const m of (cols[3] ?? '').matchAll(/([A-Z](?:, [A-Z])*) \((\d+)\)/g)) {
-          const at = Number(m[2]);
-          for (const c of (m[1] ?? '').split(', ') as ColorCode[]) {
-            const spec = (id: number): LevelSpec => ({ id, plan: [`${c}${c}`], pieces: [['B1_0', c, 0, 0]] });
-            expect(run(spec(at), ['L-07']), `${c} at ${at}`).toEqual([]);
-            if (at > 1)
-              expect(codes(run(spec(at - 1), ['L-07'])), `${c} at ${at - 1}`).toEqual(['color_locked']);
-          }
-        }
-        // colours per level: limit passes, limit + 1 fails (L-06 does not look at unlocks)
-        const limit = Number(cols[4]);
-        const palette: ColorCode[] = ['W', 'Y', 'G', 'R', 'O', 'C', 'B', 'P'];
-        const plan = (k: number): string[] => {
-          const cs = palette.slice(0, k);
-          const rows: string[] = [];
-          for (let i = 0; i < cs.length; i += 2) rows.push(`${cs[i] ?? 'W'}${cs[i + 1] ?? cs[i] ?? 'W'}`);
-          return rows;
-        };
-        for (const id of [first, last]) {
-          expect(
-            run({ id, plan: plan(limit), pieces: [['B1_0', 'W', 0, 0]] }, ['L-06']),
-            `${id}: ${limit}`,
-          ).toEqual([]);
-          expect(
-            codes(run({ id, plan: plan(limit + 1), pieces: [['B1_0', 'W', 0, 0]] }, ['L-06'])),
-            `${id}: ${limit + 1}`,
-          ).toEqual(['too_many_colors']);
-        }
-        // shapes: "B1, D2, O4, C3; 8'den itibaren ağır I5, Q9" / "+ I3, L4, J4" / "hepsi"
-        const shapeText = (cols[5] ?? '').split(';')[0] ?? '';
-        const fresh =
-          shapeText === 'hepsi' ? [] : (shapeText.match(/[A-Z]\d/g) ?? []).map((k) => k as ShapeKind);
-        for (const kind of fresh) {
-          const piece = (id: number): LevelSpec => ({
-            id,
-            plan: ['WW'],
-            pieces: [[`${kind}_0` as ShapeId, 'W', 0, 0]],
-          });
-          if (kind === 'I5' || kind === 'Q9') continue; // heavy: level 8, round 1
-          expect(run(piece(first), ['L-04']), `${kind} at ${first}`).toEqual([]);
-          if (first > 1)
-            expect(codes(run(piece(first - 1), ['L-04'])), `${kind} at ${first - 1}`).toEqual([
-              'shape_locked',
-            ]);
-        }
-        kinds = [...kinds, ...fresh];
-      }
-      expect([...kinds].sort()).toEqual(
-        SHAPE_KINDS.filter((k) => k !== 'I5' && k !== 'Q9')
-          .slice()
-          .sort(),
-      );
-    });
+// =====================================================================================================================
+// WP-M (Faz 2R, TECH §2R.10, §2R.12): docs/LEVELS.md §0–§2 ↔ levels/level_001…010.json, the canonical solution text ↔
+// the solver goldens (tests/golden/level_NNN.hand.json) and the core. The Markdown is parsed at test time; every
+// expectation comes from the LEVELS text, the JSON is the thing under review.
+// =====================================================================================================================
 
-    it('K-45/9 LEVELS §0 "Tanıtım bölümü" list: among levels 1–5 exactly the listed ones (3, 4, 5) derive a new mechanic; 1 and 2 teach only through tutorial[]', () => {
-      const para = /\*\*Tanıtım bölümü\*\* = [^(]*\(OBSTACLES "Veri imzası"; ([^)]*)\)/.exec(
-        LEVELS_MD.replace(/\n/g, ' '),
-      );
-      expect(para).not.toBeNull();
-      const listed = new Set<number>();
-      for (const part of (para?.[1] ?? '').split(',').map((p) => p.trim())) {
-        const range = /^(\d+)–(\d+)$/.exec(part);
-        if (range) for (let i = Number(range[1]); i <= Number(range[2]); i++) listed.add(i);
-        else listed.add(Number(part));
-      }
-      const history = new Set<MechanicId>();
-      for (const n of LEVEL_IDS) {
-        const res = validateLevelJson(readLevelJson(n));
-        if (!res.level) throw new Error(`level ${n} fails the schema`);
-        const fresh = deriveMechanics(res.level).filter((m) => !history.has(m));
-        expect(fresh.length === 1, `level ${n}: new ${fresh.join() || '—'}`).toBe(listed.has(n));
-        for (const m of deriveMechanics(res.level)) history.add(m);
-      }
-      for (const n of [1, 2]) {
-        const json = readLevelJson(n);
-        expect(json.teaches, `level ${n}`).toBeUndefined();
-        expect((json.tutorial ?? []).length, `level ${n}`).toBeGreaterThan(0);
-      }
-    });
-
-    describe.each(LEVEL_IDS)('LEVELS §2 Bölüm %i block roles', (n) => {
-      const doc = docLevel(n);
-      const roles = new Map<string, string>();
-      const start = LEVELS_MD.indexOf(`### Bölüm ${n} — `);
-      const end = LEVELS_MD.indexOf('\n### ', start + 1);
-      for (const line of LEVELS_MD.slice(start, end).split('\n')) {
-        const m = /^\| `([^`]+)` \| `[A-Z][0-9]_\d+` \| [A-Z] \| \(\d+,\d+\) \| (.*) \|$/.exec(line);
-        if (m) roles.set(m[1] ?? '', m[2] ?? '');
-      }
-
-      it(`K-27 level ${n}: the "hedef" (target) blocks are exactly the batch-0 blocks the LEVELS solution moves; the rest are decoys or filler`, () => {
-        expect(roles.size).toBe(doc.pieces.length);
-        const targets = [...roles].filter(([, r]) => r.startsWith('hedef')).map(([l]) => l);
-        const moved = docMoves(doc)
-          .map((m) => m.ref)
-          .filter((ref) => /^piece:\d+$/.test(ref))
-          .map((ref) => doc.pieces[Number(ref.slice(6))]?.letter);
-        expect([...new Set(moved)].sort()).toEqual(targets.sort());
-      });
-
-      it(`K-09 level ${n}: every block marked "başta tutulabilir" has a free unit step on the start board, and the drag engine lets it be picked`, () => {
-        const json = readLevelJson(n);
-        const loaded = loadLevel(json);
-        if (!loaded.ok) throw new Error(`level ${n} does not load`);
-        const state = createInitialState(loaded.level);
-        const occupied = new Map<string, number>();
-        batchOf(json, 0).pieces.forEach((p, i) => {
-          for (const c of cellsOf(p.shape, p.x, p.y)) occupied.set(c, i);
-        });
-        const claimed = [...roles].filter(([, r]) => r.includes('başta tutulabilir')).map(([l]) => l);
-        for (const letter of claimed) {
-          const i = doc.pieces.findIndex((p) => p.letter === letter);
-          const p = batchOf(json, 0).pieces[i];
-          if (!p) throw new Error(`no block ${letter}`);
-          // K-09 (a): one unit translation onto empty cells of the 8 × 10 grid (K-01) that K-08 allows: cells that cross
-          // the boundary into the (empty) site need y ≥ height (K-05) — or, on a right step, every block row inside one
-          // gap (K-12 rail).
-          const cells = shapeById(p.shape).cells;
-          const free = [
-            [-1, 0],
-            [1, 0],
-            [0, -1],
-            [0, 1],
-          ].some(([dx = 0, dy = 0]) => {
-            const moved = cells.map((c) => ({ x: p.x + c.x + dx, y: p.y + c.y + dy }));
-            const empty = moved.every((c) => {
-              const other = occupied.get(cellKey(c.x, c.y));
-              return inGrid(DEFAULT_GEO, c.x, c.y) && (other === undefined || other === i);
-            });
-            const crossing = moved.filter((c) => c.x >= 6);
-            const ys = moved.map((c) => c.y);
-            const rail =
-              dx === 1 &&
-              json.wall.gaps.some((g) => g.y <= Math.min(...ys) && Math.max(...ys) <= g.y + g.size - 1);
-            return empty && (crossing.every((c) => c.y >= json.wall.height) || rail);
-          });
-          expect(free, `block ${letter}: free unit step`).toBe(true);
-          const id = loaded.level.tutorialPieceIds.get(`piece:${i}`);
-          if (id === undefined) throw new Error(`piece:${i} missing`);
-          expect(tryBeginDrag(state, id).ok, `block ${letter}: tryBeginDrag`).toBe(true);
-        }
-      });
-    });
-  });
+interface DocBlock {
+  readonly letter: string;
+  readonly shape: ShapeId;
+  /** null for Ağır Yük ("— (Ağır Yük, `color` yazılmaz)"). */
+  readonly color: ColorCode | null;
+  readonly x: number;
+  readonly y: number;
+  readonly role: string;
+}
+interface DocStep {
+  readonly text: string;
+  readonly letter: string;
+  readonly shape: ShapeId;
+  readonly color: ColorCode | null;
+  readonly from: readonly [number, number];
+  /** Landing anchor: site anchor of a correct placement, new yard anchor of a shift. */
+  readonly to: readonly [number, number];
+  readonly kind: 'overWall' | 'rail' | 'shift';
+}
+interface DocTutorialStep {
+  readonly startOn?: Record<string, unknown>;
+  readonly highlight: readonly string[];
+  readonly hand?: { readonly kind: string; readonly path?: readonly (readonly number[])[] };
+  readonly textKey: string;
+  readonly done: Record<string, unknown>;
+}
+interface DocRecord {
+  readonly n: number;
+  readonly fields: ReadonlyMap<string, string>;
+  readonly blocks: readonly DocBlock[];
+  /** The first blockout (start board): y → tokens (Wy yard, wall, Ws site). */
+  readonly blockout: ReadonlyMap<number, readonly string[]>;
+  readonly trucks: readonly {
+    readonly ref: string;
+    readonly shape: ShapeId;
+    readonly color: ColorCode;
+    readonly x: number;
+  }[];
+  readonly solution: readonly DocStep[];
+  readonly tutorial: readonly DocTutorialStep[];
 }
 
-if (LEVELS_IS_FAZ_2R) {
-  describe('review LEVELS §0–§2 ↔ levels JSON (Faz 2R transition)', () => {
-    it.todo(
-      'WP-M: rewrite the LEVELS §2 ↔ levels JSON, golden and block-role reviews for the Faz 2R format (levels 1–10)',
+/** Numbered items under the first line starting with `header`, continuation lines joined with single spaces. */
+function numberedList(lines: readonly string[], header: string): string[] {
+  let i = lines.findIndex((l) => l.startsWith(header));
+  if (i < 0) return [];
+  i++;
+  while (i < lines.length && (lines[i] ?? '').trim() === '') i++;
+  const items: string[] = [];
+  for (; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    if (line.trim() === '') break;
+    if (/^\d+\. /.test(line)) items.push(line.trim());
+    else if (items.length > 0) items[items.length - 1] = `${items[items.length - 1] ?? ''} ${line.trim()}`;
+    else break;
+  }
+  return items.map((s) => s.replace(/\s+/g, ' '));
+}
+
+/** Drops every (balanced) parenthesised note: LEVELS steps explain themselves in brackets. */
+function withoutNotes(text: string): string {
+  let out = '';
+  let depth = 0;
+  for (const ch of text) {
+    if (ch === '(') depth++;
+    else if (ch === ')') depth = Math.max(0, depth - 1);
+    else if (depth === 0) out += ch;
+  }
+  return out.replace(/\s+/g, ' ').trim();
+}
+
+/** A LEVELS object literal (`{ event: yardMove, count: 1, piece: 'piece:4', at: [2, 3] }`) as data. */
+function docObject(text: string): Record<string, unknown> {
+  const json = text
+    .replace(/'([^']*)'/g, '"$1"')
+    .replace(/([{,]\s*)([A-Za-z]\w*)\s*:/g, '$1"$2":')
+    .replace(/:\s*([A-Za-z]\w*)(?=\s*[,}])/g, ': "$1"');
+  return JSON.parse(json) as Record<string, unknown>;
+}
+
+function match(re: RegExp, text: string, what: string): RegExpExecArray {
+  const m = re.exec(text);
+  if (!m) throw new Error(`${what}: "${text}" does not match ${re}`);
+  return m;
+}
+
+function docRecord(n: number): DocRecord {
+  const start = LEVELS_MD.indexOf(`### Bölüm ${n} — `);
+  if (start < 0) throw new Error(`LEVELS.md has no "### Bölüm ${n} — " section`);
+  const end = LEVELS_MD.indexOf('\n### ', start + 1);
+  const section = LEVELS_MD.slice(start, end < 0 ? undefined : end);
+  const lines = section.split('\n');
+  const fields = new Map<string, string>();
+  const blocks: DocBlock[] = [];
+  for (const line of lines) {
+    const b = /^\| `([^`]+)` \| `([A-Z]\d_\d+)` \| ([A-Z]|—[^|]*) \| \((\d+),(\d+)\) \| (.*) \|$/.exec(line);
+    if (b) {
+      blocks.push({
+        letter: b[1] ?? '',
+        shape: b[2] as ShapeId,
+        color: /^[A-Z]$/.test(b[3] ?? '') ? (b[3] as ColorCode) : null,
+        x: Number(b[4]),
+        y: Number(b[5]),
+        role: b[6] ?? '',
+      });
+      continue;
+    }
+    const f = /^\| ([^`|][^|]*?) \| (.*) \|$/.exec(line);
+    if (f && f[1] !== 'Alan' && f[1] !== 'Kimlik' && !(f[1] ?? '').startsWith('---'))
+      fields.set(f[1] ?? '', f[2] ?? '');
+  }
+  // first ``` block = the start board
+  const blockout = new Map<number, string[]>();
+  const fence = lines.findIndex((l) => l.startsWith('```'));
+  for (let i = fence + 1; fence >= 0 && i < lines.length && !(lines[i] ?? '').startsWith('```'); i++) {
+    const row = /^\s+y=(\d):\s+(.*)$/.exec(lines[i] ?? '');
+    if (row) blockout.set(Number(row[1]), (row[2] ?? '').replace(/←.*$/, '').trim().split(/\s+/));
+  }
+  const flat = section.replace(/\s+/g, ' ');
+  const truckText = /Kamyon partisi 1 \([^)]*\): (.*?)\. /.exec(flat)?.[1] ?? '';
+  const trucks = [...truckText.matchAll(/`(k\d+_\d+)` `([A-Z]\d_\d+)` ([A-Z]) x=(\d+)/g)].map((m) => ({
+    ref: m[1] ?? '',
+    shape: m[2] as ShapeId,
+    color: m[3] as ColorCode,
+    x: Number(m[4]),
+  }));
+  const solution = numberedList(lines, 'Kanonik çözüm').map((text): DocStep => {
+    const m = match(
+      /^\d+\. `([^`]+)` \(([A-Z]\d_\d+)(?: ([A-Z]))?(?: Ağır Yük)?\) \((\d+),(\d+)\) → (.*?) — (.*)$/,
+      text,
+      `LEVELS Bölüm ${n} solution`,
+    );
+    const to = [...(m[6] ?? '').matchAll(/\((\d+),(\d+)\)/g)].at(-1);
+    const how = m[7] ?? '';
+    return {
+      text,
+      letter: m[1] ?? '',
+      shape: m[2] as ShapeId,
+      color: m[3] ? (m[3] as ColorCode) : null,
+      from: [Number(m[4]), Number(m[5])],
+      to: [Number(to?.[1]), Number(to?.[2])],
+      kind: how.startsWith('**kaydırma**') ? 'shift' : how.startsWith('**ray**') ? 'rail' : 'overWall',
+    };
+  });
+  const tutorial = numberedList(lines, 'Öğretici').map((item): DocTutorialStep => {
+    const parts = withoutNotes(item.replace(/^\d+\. /, '')).split(' · ');
+    let startOn: Record<string, unknown> | undefined;
+    if ((parts[0] ?? '').startsWith('`startOn:')) {
+      startOn = docObject(match(/`startOn: (\{.*\})`/, parts.shift() ?? '', `Bölüm ${n} startOn`)[1] ?? '');
+    }
+    const highlight = [...(parts[0] ?? '').matchAll(/`([^`]+)`/g)].map((x) => x[1] ?? '');
+    const handText = parts[1] ?? '';
+    const drag = /^(drag|hold) `(\[.*\])`/.exec(handText);
+    const hand = drag
+      ? { kind: drag[1] ?? '', path: JSON.parse(drag[2] ?? '[]') as number[][] }
+      : /^tap\b/.test(handText)
+        ? { kind: 'tap' }
+        : undefined;
+    const textKey = match(/`(tut\.[^`]+)`/, parts[2] ?? '', `Bölüm ${n} textKey`)[1] ?? '';
+    const done = docObject(match(/`(\{[^`]*\})`/, parts.slice(3).join(' · '), `Bölüm ${n} done`)[1] ?? '');
+    return { ...(startOn ? { startOn } : {}), highlight, ...(hand ? { hand } : {}), textKey, done };
+  });
+  return { n, fields, blocks, blockout, trucks, solution, tutorial };
+}
+
+/** The value of the field row whose name starts with `name` ("Boyut (K-49)", "Hamle (K-52)"). */
+function docField(doc: DocRecord, name: string): string {
+  for (const [k, v] of doc.fields) if (k === name || k.startsWith(`${name} `)) return v;
+  throw new Error(`LEVELS Bölüm ${doc.n}: no "${name}" row`);
+}
+
+const DIFFICULTY: Readonly<Record<string, LevelInput['difficulty']>> = {
+  Kolay: 'easy',
+  Normal: 'normal',
+  Zor: 'hard',
+  'Çok Zor': 'superhard',
+};
+
+/** The `piece:` reference of a LEVELS letter (`a` = `piece:0` …, `k1_0` = `piece:k1_0`). */
+function refOfLetter(doc: DocRecord, letter: string): string {
+  const i = doc.blocks.findIndex((b) => b.letter === letter);
+  if (i >= 0) return `piece:${i}`;
+  if (/^k\d+_\d+$/.test(letter)) return `piece:${letter}`;
+  throw new Error(`LEVELS Bölüm ${doc.n}: unknown block ${letter}`);
+}
+
+/** Anchor (min x, min y of its board cells) of a block. */
+function anchorOf(s: GameState, id: PieceId): [number, number] | null {
+  const cells = pieceBoardCells(s, id);
+  if (cells.length === 0) return null;
+  return [Math.min(...cells.map((c) => c.x)), Math.min(...cells.map((c) => c.y))];
+}
+
+/** A drag release that does what the LEVELS step says: its kind, landing at its anchor (first such node). */
+function releaseFor(s: GameState, id: PieceId, step: DocStep): Move | null {
+  const a = tryBeginDrag(s, id);
+  if (!a.ok) return null;
+  const want = step.kind === 'shift' ? 'yard' : step.kind === 'rail' ? 'siteRail' : 'siteFree';
+  for (const node of a.session.reachableNodes()) {
+    if (a.session.classify(node).kind !== want) continue;
+    const move: Move = { kind: 'drag', pieceId: id, to: node };
+    const copy = cloneState(s);
+    const sink = new ArraySink();
+    const res = applyMove(copy, move, sink);
+    const at = anchorOf(copy, id);
+    const placed =
+      step.kind === 'shift' || sink.events.some((e) => e.t === 'placementCorrect' && e.pieceId === id);
+    if (res.status === 'applied' && placed && at && at[0] === step.to[0] && at[1] === step.to[1]) return move;
+  }
+  return null;
+}
+
+interface HandGolden {
+  readonly minMoves: number;
+  readonly budget: number;
+  readonly yao: { readonly overWall: number; readonly rail: number };
+  readonly steps: readonly {
+    readonly piece: string;
+    readonly shape: string;
+    readonly color: string;
+    readonly from: readonly number[];
+    readonly kind: string;
+    readonly to: readonly number[];
+  }[];
+}
+const goldenOf = (n: number): HandGolden =>
+  JSON.parse(readFileSync(join(ROOT, 'tests', 'golden', `level_${pad(n)}.hand.json`), 'utf8')) as HandGolden;
+
+describe.each(LEVEL_IDS)('review LEVELS §2 Bölüm %i ↔ levels JSON (Faz 2R)', (n) => {
+  const doc = docRecord(n);
+  const json = readLevelJson(n);
+  const batch0 = batchOf(json, 0).pieces;
+  const loaded = loadLevel(json);
+  if (!loaded.ok) throw new Error(`level ${n} does not load`);
+  const lvl = loaded.level;
+  const geo = lvl.geo;
+
+  it(`K-45/2 level ${n}: the LEVELS block table is the batch-0 array (order, shape, colour or Ağır Yük, anchor)`, () => {
+    expect(doc.blocks.length).toBeGreaterThan(0);
+    expect(batch0.map((p) => [p.shape, isCargo(shapeById(p.shape)) ? null : p.color, p.x, p.y])).toEqual(
+      doc.blocks.map((b) => [b.shape, b.color, b.x, b.y]),
+    );
+    // LEVELS §0 "Ağır Yük … `color` yazılmaz"
+    for (const p of batch0)
+      if (isCargo(shapeById(p.shape))) expect(p.color, `${p.shape} colour`).toBeUndefined();
+    expect(batch0.every((p) => p.flags === undefined)).toBe(true);
+  });
+
+  it(`K-49 K-02 level ${n}: "Boyut" and "Saha" rows are the JSON sizes and the yard fill (C, F, E)`, () => {
+    const size = match(
+      /`yard \{ cols (\d+), rows (\d+) \}`, `site \{ cols (\d+), rows (\d+) \}` → H = (\d+)/,
+      docField(doc, 'Boyut'),
+      'Boyut',
+    );
+    expect([json.yard.cols, json.yard.rows, json.site?.cols, json.site?.rows, geo.h]).toEqual(
+      size.slice(1, 6).map(Number),
+    );
+    const fill = match(/C = (\d+), F = (\d+).*E = (\d+)/, docField(doc, 'Saha'), 'Saha');
+    const F = batch0.reduce((t, p) => t + shapeById(p.shape).cells.length, 0);
+    expect([geo.wy * geo.hy, F, geo.wy * geo.hy - F]).toEqual(fill.slice(1, 4).map(Number));
+  });
+
+  it(`K-04 K-15 level ${n}: the start blockout is the batch-0 yard (letters, Q = Ağır Yük, · = air), the wall column (# closed, = gap, : open) and the first segment plan`, () => {
+    const cellOf = new Map<string, string>();
+    doc.blocks.forEach((b) => {
+      for (const c of cellsOf(b.shape, b.x, b.y)) cellOf.set(c, b.color === null ? 'Q' : b.letter);
+    });
+    const rows = json.build.segments[0]?.rows ?? [];
+    expect([...doc.blockout.keys()].sort((a, b) => a - b)).toEqual(
+      Array.from({ length: geo.h + 2 }, (_, y) => y),
+    );
+    for (let y = 0; y < geo.h + 2; y++) {
+      const t = doc.blockout.get(y) ?? [];
+      expect(t.length, `y=${y} tokens`).toBe(geo.wy + 1 + geo.ws);
+      for (let x = 0; x < geo.wy; x++)
+        expect(t[x], `yard (${x},${y})`).toBe(y >= geo.hy ? '·' : (cellOf.get(cellKey(x, y)) ?? '.'));
+      const inGap = json.wall.gaps.some((g) => g.y <= y && y < g.y + g.size);
+      expect(t[geo.wy], `wall y=${y}`).toBe(y < json.wall.height ? (inGap ? '=' : '#') : ':');
+      for (let sx = 0; sx < geo.ws; sx++)
+        expect(t[geo.wy + 1 + sx], `site (${geo.wy + sx},${y})`).toBe(
+          y >= geo.hs ? '·' : (rows[rows.length - 1 - y]?.[sx] ?? '?'),
+        );
+    }
+  });
+
+  it(`K-45/1 level ${n}: header rows (wall, gravity, segments, colours, shapes, difficulty, moves, teaches) match the JSON`, () => {
+    const wall = docField(doc, 'Duvar');
+    expect(Number(match(/`height (\d+)`/, wall, 'Duvar')[1])).toBe(json.wall.height);
+    const gaps = [...wall.matchAll(/geçit `(\{[^`]*\})`/g)].map((m) => docObject(m[1] ?? ''));
+    expect(json.wall.gaps).toEqual(gaps);
+    if (gaps.length === 0) expect(wall).toContain('geçit yok');
+    const grav = match(/build `(\w+)`, yard `(\w+)`/, docField(doc, 'Yerçekimi'), 'Yerçekimi');
+    expect(json.gravity).toEqual({ build: grav[1], yard: grav[2] === 'true' });
+    const segs = [...docField(doc, 'Dilimler').matchAll(/(\d+)\. (.+?) \(EN: (.+?)\) `(\[.*?\])`/g)].map(
+      (m) => ({
+        name: { tr: m[2], en: m[3] },
+        rows: JSON.parse(m[4] ?? '[]') as string[],
+      }),
+    );
+    expect(json.build).toEqual({ mode: 'segments', segments: segs });
+    const cs = match(/^(.*?) \((\d+)\) \/ (.*)$/, docField(doc, 'Renkler / şekiller'), 'Renkler / şekiller');
+    const docColors = (cs[1] ?? '').split(', ').sort();
+    expect(docColors.length).toBe(Number(cs[2]));
+    const parsed = validateLevelJson(json).level;
+    if (!parsed) throw new Error('schema');
+    expect([...levelColorSet(parsed)].sort()).toEqual(docColors);
+    const kinds = [
+      ...new Set(json.yard.batches.flatMap((b) => b.pieces.map((p) => shapeById(p.shape).kind))),
+    ].sort();
+    expect(kinds).toEqual([...new Set((cs[3] ?? '').match(/[A-Z]\d/g) ?? [])].sort());
+    const word =
+      match(
+        /^(Çok Zor|Kolay|Normal|Zor)\b/,
+        docField(doc, 'Zorluk / hedef kazanma').replace(/\*\*/g, ''),
+        'Zorluk',
+      )[1] ?? '';
+    expect(json.difficulty).toBe(DIFFICULTY[word]);
+    expect(Number(match(/\*\*(\d+)\*\*/, docField(doc, 'Hamle'), 'Hamle')[1])).toBe(json.moves);
+    expect(json.teaches).toBe(/`teaches: "([^"]+)"`/.exec(docField(doc, 'Öğretilen'))?.[1]);
+    expect(json.goals).toEqual([{ type: 'build' }]);
+    expect(json.obstacles).toEqual([]);
+    expect(json.chapter).toBe(1);
+    expect(json.name.tr.length).toBeGreaterThan(0);
+  });
+
+  it(`K-25 level ${n}: truck batch 1 equals LEVELS "Kamyon partisi 1" (array order, shape, colour, x; y written as Hy)`, () => {
+    const trucks = json.yard.batches.slice(1);
+    expect(trucks.length).toBe(doc.trucks.length > 0 ? 1 : 0);
+    expect(json.build.segments.length).toBe(trucks.length + 1);
+    if (doc.trucks.length === 0) return;
+    expect(trucks[0]?.forSegment).toBe(1);
+    expect(doc.trucks.map((t) => t.ref)).toEqual(doc.trucks.map((_, i) => `k1_${i}`));
+    expect(trucks[0]?.pieces.map((p) => [p.shape, p.color, p.x, p.y])).toEqual(
+      doc.trucks.map((t) => [t.shape, t.color, t.x, json.yard.rows]),
     );
   });
-}
+
+  it(`GDD 14.1 K-53 level ${n}: tutorial[] equals the LEVELS step list (startOn, highlight, hand kind + path, textKey, done; count 1 when not written)`, () => {
+    const one = (o: Record<string, unknown> | undefined): Record<string, unknown> | undefined =>
+      o ? { count: 1, ...o } : undefined;
+    const steps = json.tutorial ?? [];
+    expect(steps.length).toBe(doc.tutorial.length);
+    doc.tutorial.forEach((d, i) => {
+      const st = steps[i];
+      const where = `level ${n} step ${i + 1}`;
+      expect(st?.step, where).toBe(i + 1);
+      expect(st?.mode ?? 'soft', where).toBe('soft');
+      expect(st?.highlight, where).toEqual(d.highlight);
+      expect(st?.hand, where).toEqual(d.hand);
+      expect(st?.textKey, where).toBe(d.textKey);
+      expect(one(st?.done as Record<string, unknown>), where).toEqual(one(d.done));
+      expect(one(st?.startOn as Record<string, unknown> | undefined), where).toEqual(one(d.startOn));
+    });
+  });
+
+  it(`K-50 K-46 level ${n}: the LEVELS canonical solution is the solver golden (letter, shape, colour, from, kind, to), its length is "min" and its YAO the "Ölçütler" one`, () => {
+    const golden = goldenOf(n);
+    expect(golden.steps.map((s) => [s.piece, s.shape, s.color, [...s.from], s.kind, [...s.to]])).toEqual(
+      doc.solution.map((s) => [s.letter, s.shape, s.color ?? '-', [...s.from], s.kind, [...s.to]]),
+    );
+    const metrics = docField(doc, 'Ölçütler');
+    const min = Number(match(/\bmin (\d+)/, metrics, 'Ölçütler min')[1]);
+    expect([doc.solution.length, golden.minMoves]).toEqual([min, min]);
+    const yao = match(/YAO (\d+)\/(\d+)/, metrics, 'Ölçütler YAO');
+    const placed = doc.solution.filter((s) => s.kind !== 'shift');
+    expect([placed.filter((s) => s.kind === 'overWall').length, placed.length]).toEqual([
+      Number(yao[1]),
+      Number(yao[2]),
+    ]);
+    expect([golden.yao.overWall, golden.yao.overWall + golden.yao.rail]).toEqual([
+      Number(yao[1]),
+      Number(yao[2]),
+    ]);
+    expect(Number(match(/\bN (\d+)/, metrics, 'Ölçütler N')[1])).toBe(placed.length);
+    expect(golden.budget).toBe(json.moves);
+  });
+
+  it(`K-05 K-12 K-16 K-48 level ${n}: the LEVELS solution text replays move by move on the core (start anchor, kind, landing, correct placement; over the wall box height ≤ (H + 2) − height, rail rows inside a gap) and wins`, () => {
+    const session = GameSession.start(lvl, {}, { strict: true });
+    const open = geo.h + 2 - json.wall.height;
+    doc.solution.forEach((step, i) => {
+      const where = `L${n} step ${i + 1}: ${step.text}`;
+      const id = lvl.tutorialPieceIds.get(refOfLetter(doc, step.letter));
+      if (id === undefined) throw new Error(`${where}: no block`);
+      const p = lvl.pieces[id];
+      expect([p?.dataShape, step.color === null ? null : COLOR_CODES[p?.colorIndex ?? -1]], where).toEqual([
+        step.shape,
+        step.color,
+      ]);
+      const s = session.state;
+      expect([pieceZone(s, id), pieceX(s, id), pieceY(s, id)], `${where} — start`).toEqual([
+        Zone.yard,
+        ...step.from,
+      ]);
+      const h = Math.max(...shapeById(step.shape).cells.map((c) => c.y)) + 1;
+      if (step.kind === 'overWall') expect(h, `${where} — K-05`).toBeLessThanOrEqual(open);
+      if (step.kind === 'rail')
+        expect(
+          json.wall.gaps.some((g) => g.y <= step.to[1] && step.to[1] + h - 1 <= g.y + g.size - 1),
+          `${where} — K-12`,
+        ).toBe(true);
+      const move = releaseFor(s, id, step);
+      expect(move, `${where} — a release with this kind and landing`).not.toBeNull();
+      if (!move) return;
+      const sink = new ArraySink();
+      const res = session.commit(move, sink);
+      expect([res.status, session.outcome], where).toEqual([
+        'applied',
+        i === doc.solution.length - 1 ? 'won' : 'playing',
+      ]);
+      expect(
+        sink.events.some((e: GameEvent) => e.t === 'placementWrong'),
+        where,
+      ).toBe(false);
+    });
+    expect(queueIds(session.state)).toEqual([]);
+  });
+});
+
+describe('review LEVELS §0–§1 tables (Faz 2R)', () => {
+  it('K-45/1 LEVELS §1 table: difficulty and moves of levels 1–10 equal the JSON ("(tanıtım)" = teaches is set)', () => {
+    const rows = new Map<number, [string, number]>();
+    const curve = LEVELS_MD.slice(LEVELS_MD.indexOf('## 1. Zorluk eğrisi'), LEVELS_MD.indexOf('## 2. '));
+    for (const line of curve.split('\n')) {
+      const m = /^\| (\d+) \| ([^|]+?) \| (\d+) \| [^|]+ \| (\d+) \| ([^|]+?) \| (\d+) \|/.exec(line);
+      if (!m) continue;
+      rows.set(Number(m[1]), [m[2] ?? '', Number(m[3])]);
+      rows.set(Number(m[4]), [m[5] ?? '', Number(m[6])]);
+    }
+    expect(rows.size).toBe(50);
+    for (const n of LEVEL_IDS) {
+      const [label, moves] = rows.get(n) ?? ['', 0];
+      const word = label
+        .replace(/\*\*/g, '')
+        .replace(/\s*\((nefes|tanıtım)\)$/, '')
+        .trim();
+      const json = readLevelJson(n);
+      expect([json.difficulty, json.moves], `level ${n}`).toEqual([DIFFICULTY[word], moves]);
+      expect(label.includes('(tanıtım)'), `level ${n} tanıtım`).toBe(json.teaches !== undefined);
+    }
+  });
+
+  it('K-45/10 LEVELS §0 "JSON eşlemesi" teaches list (4 → W1, 5 → S1, 6 → W2, 8 → Y5, 9 → W3) is exactly the derived new mechanic of each level 1–10', () => {
+    const list =
+      match(
+        /`teaches` yalnızca veri imzası olan\s+mekanik için yazılır \(OBSTACLES "Veri imzası": ([^)]*)\)/,
+        LEVELS_MD,
+        'teaches list',
+      )[1] ?? '';
+    const listed = new Map(
+      [...list.matchAll(/(\d+) → ([A-Z][\w-]*)/g)].map((m) => [Number(m[1]), m[2] ?? '']),
+    );
+    expect([...listed.keys()]).toEqual([4, 5, 6, 8, 9]);
+    const history = new Set<MechanicId>();
+    for (const n of LEVEL_IDS) {
+      const res = validateLevelJson(readLevelJson(n));
+      if (!res.level) throw new Error(`level ${n} fails the schema`);
+      const fresh = deriveMechanics(res.level).filter((m) => !history.has(m));
+      expect([fresh, res.level.teaches], `level ${n}`).toEqual(
+        listed.has(n) ? [[listed.get(n)], listed.get(n)] : [[], undefined],
+      );
+      for (const m of deriveMechanics(res.level)) history.add(m);
+    }
+  });
+
+  it('K-31 K-44 LEVELS §0 unlock table (colour pool and first level, colours per level, shapes) is what the validator enforces at every chapter boundary', () => {
+    const lines = LEVELS_MD.split('\n').filter((l) => /^\| \d [^|]+ \| \d+–\d+ \|/.test(l));
+    expect(lines.length).toBe(5);
+    // LEVELS §0: "R'nin ilk kullanımı Faz 2R'de Bölüm 5'tir (brif: 4; … `color_locked` R için id ≥ 4 ister)"
+    const r = match(/R'nin ilk kullanımı Faz 2R'de\s+Bölüm (\d+)'tir \(brif: (\d+)/, LEVELS_MD, 'R note');
+    const unlockAt = (c: ColorCode, at: number): number =>
+      c === 'R' && at === Number(r[1]) ? Number(r[2]) : at;
+    let kinds: ShapeKind[] = [];
+    for (const line of lines) {
+      const cols = line.split('|').map((c) => c.trim());
+      const chapter = Number(/^(\d)/.exec(cols[1] ?? '')?.[1]);
+      const [first, last] = (cols[2] ?? '').split('–').map(Number) as [number, number];
+      expect([first, last], `chapter ${chapter} range`).toEqual([chapter * 10 - 9, chapter * 10]);
+      for (const m of (cols[3] ?? '').matchAll(/([A-Z](?:, [A-Z])*) \((\d+)\)/g)) {
+        const at = Number(m[2]);
+        for (const c of (m[1] ?? '').split(', ') as ColorCode[]) {
+          const spec = (id: number): LevelSpec => ({ id, plan: [`${c}${c}`], pieces: [['B1_0', c, 0, 0]] });
+          expect(run(spec(at), ['L-07']), `${c} at ${at}`).toEqual([]);
+          const open = unlockAt(c, at);
+          expect(run(spec(open), ['L-07']), `${c} at ${open}`).toEqual([]);
+          if (open > 1)
+            expect(codes(run(spec(open - 1), ['L-07'])), `${c} at ${open - 1}`).toEqual(['color_locked']);
+        }
+      }
+      const limit = Number(cols[4]);
+      const palette: ColorCode[] = ['W', 'Y', 'G', 'R', 'O', 'C', 'B', 'P'];
+      const plan = (k: number): string[] => {
+        const cs = palette.slice(0, k);
+        const rows: string[] = [];
+        for (let i = 0; i < cs.length; i += 2) rows.push(`${cs[i] ?? 'W'}${cs[i + 1] ?? cs[i] ?? 'W'}`);
+        return rows;
+      };
+      for (const id of [first, last]) {
+        expect(
+          run({ id, plan: plan(limit), pieces: [['B1_0', 'W', 0, 0]] }, ['L-06']),
+          `${id}: ${limit}`,
+        ).toEqual([]);
+        expect(
+          codes(run({ id, plan: plan(limit + 1), pieces: [['B1_0', 'W', 0, 0]] }, ['L-06'])),
+          `${id}: ${limit + 1}`,
+        ).toEqual(['too_many_colors']);
+      }
+      // shapes: "B1, D2, O4, C3; 8'den itibaren Ağır Yük I5, Q9" / "+ I3, L4, J4" / "hepsi"; a ≤ 2-wide orientation
+      // of each kind (K-44 piece_too_wide on the default 2-column site)
+      const shapeText = (cols[5] ?? '').split(';')[0] ?? '';
+      const fresh =
+        shapeText === 'hepsi' ? [] : (shapeText.match(/[A-Z]\d/g) ?? []).map((k) => k as ShapeKind);
+      for (const kind of fresh) {
+        const narrow = SHAPES.find((sh) => sh.kind === kind && sh.w <= 2);
+        if (!narrow) throw new Error(`${kind}: no ≤ 2-wide orientation`);
+        const piece = (id: number): LevelSpec => ({ id, plan: ['WW'], pieces: [[narrow.id, 'W', 0, 0]] });
+        expect(run(piece(first), ['L-04']), `${narrow.id} at ${first}`).toEqual([]);
+        if (first > 1)
+          expect(codes(run(piece(first - 1), ['L-04'])), `${narrow.id} at ${first - 1}`).toEqual([
+            'shape_locked',
+          ]);
+      }
+      kinds = [...kinds, ...fresh];
+    }
+    expect([...kinds].sort()).toEqual(
+      SHAPE_KINDS.filter((k) => k !== 'I5' && k !== 'Q9')
+        .slice()
+        .sort(),
+    );
+  });
+});

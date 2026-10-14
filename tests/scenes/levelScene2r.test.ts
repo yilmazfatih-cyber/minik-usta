@@ -24,18 +24,19 @@ import { planMove } from '../../src/scenes/level/juice/plan.ts';
 import type { PlanContext } from '../../src/scenes/level/juice/plan.ts';
 import { STUCK_PULSES, StuckPulse, stuckIdleMs } from '../../src/scenes/level/stuckPulse.ts';
 import { pickEligible, pickSpots } from '../../src/scenes/level/TrowelPicker.ts';
+import { pendingFreeTrials } from '../../src/meta/boosters.ts';
 import { BOOSTER_SLOT_IDS, boosterSlotModels, slotLook, usedInAttempt } from '../../src/ui/boosterSlots.ts';
 import { chipMetrics, goalChips } from '../../src/ui/GoalsPanel.ts';
 import { lowMovesWarning, remainingBlocks } from '../../src/ui/remaining.ts';
 import { exitKind } from '../../src/ui/windowLines.ts';
 import { TOKENS } from '../../src/theme/tokens.ts';
-import { loadFixture } from '../fixtures/builders.ts';
+import { loadLevelJson } from '../fixtures/builders.ts';
 
 const src = (path: string): string => readFileSync(new URL(`../../src/${path}`, import.meta.url), 'utf8');
 
-/** LEVELS §2 draft of level `n` (Faz 2R format, tests/level/fixtures/levels-2r), without its tutorial. */
+/** Level `n` (levels/level_NNN.json, Faz 2R format), without its tutorial. */
 function draft(n: number): CompiledLevel {
-  const data = loadFixture('levels-2r', `level_${String(n).padStart(3, '0')}`) as Record<string, unknown>;
+  const data = loadLevelJson(n) as Record<string, unknown>;
   delete data['tutorial'];
   const res = loadLevel(data);
   if (!res.ok) throw new Error(`level ${n}: ${JSON.stringify(res.issues)}`);
@@ -82,8 +83,9 @@ describe('UX 5.8 web back guard (TECH 2R.1, DL-2R-16)', () => {
     expect(src('main.ts')).toMatch(/installBackGuard\(window, \(\) => game\.events\.emit\(BACK_EVENT\)\)/);
     const scene = src('scenes/level/LevelScene.ts');
     expect(scene).toMatch(/this\.game\.events\.on\(BACK_EVENT, onBack\)/);
+    // UX 5.2 step 1 (DS-13): an open booster / trowel pick is cancelled first, else Pause opens
     expect(scene).toMatch(
-      /const onBack = \(\): void => \{\s+if \(this\.sys\.isActive\(\)\) this\.openPause\(false\);/,
+      /const onBack = \(\): void => \{\s+if \(!this\.sys\.isActive\(\)\) return;[\s\S]{0,160}if \(this\.picker\.active\) this\.picker\.close\(\);\s+else this\.openPause\(false\);/,
     );
     expect(BACK_EVENT).toBe('backGuard');
   });
@@ -94,53 +96,42 @@ describe('UX 5.8 web back guard (TECH 2R.1, DL-2R-16)', () => {
 const NO_INV = { inventory: {}, freeTrialsGranted: [] } as const;
 
 describe('UX 5.10 booster bar (K-54, META 4)', () => {
-  it('K-54 slot models: locked below the unlock level (levels 1–7 all four), free trials at unlock, applied boosters subtract', () => {
+  it('K-54 slot models: locked below the unlock level (levels 1–7 all four), free trials at unlock (META 4), stored count after use', () => {
     const lvl = draft(1);
     const g = GameSession.start(lvl);
-    const m1 = boosterSlotModels({
-      levelId: 1,
-      inv: NO_INV,
-      log: g.log,
-      targets: g.summary().boosterTargets,
-    });
+    const m1 = boosterSlotModels({ levelId: 1, inv: NO_INV, targets: g.summary().boosterTargets });
     expect(m1.map((m) => m.id)).toEqual([...BOOSTER_SLOT_IDS]);
     expect(m1.map((m) => m.state)).toEqual(['locked', 'locked', 'locked', 'locked']);
     expect(m1.map((m) => m.unlockLevel)).toEqual([8, 10, 22, 13]);
-    // level 8: the hammer is open with its 3 free trials; one applied hammer leaves 2
+    expect(pendingFreeTrials(7, [])).toEqual({});
+    // level 8: the hammer is open; before the attempt grants them, its 3 free trials show as pending
+    expect(pendingFreeTrials(8, [])).toEqual({ hammer: 3 });
+    expect(pendingFreeTrials(10, ['hammer'])).toEqual({ crane: 2 });
     const b8 = draft(8);
     const s8 = GameSession.start(b8);
     const cargo =
       [...Array(b8.layout.counts.pieces).keys()].find((id) => b8.pieces[id]?.cls === 'cargo') ?? -1;
-    const before = boosterSlotModels({
-      levelId: 8,
-      inv: NO_INV,
-      log: s8.log,
-      targets: s8.summary().boosterTargets,
-    });
+    const before = boosterSlotModels({ levelId: 8, inv: NO_INV, targets: s8.summary().boosterTargets });
     expect(before[0]).toMatchObject({ id: 'hammer', state: 'ready', count: 3 });
+    // granted at the attempt start (inventory 3, marked), one applied hammer leaves the inventory at 2 in its write
+    const granted = { inventory: { hammer: 3 }, freeTrialsGranted: ['hammer'] };
+    expect(
+      boosterSlotModels({ levelId: 8, inv: granted, targets: s8.summary().boosterTargets })[0],
+    ).toMatchObject({ state: 'ready', count: 3 });
     const res = s8.apply({ kind: 'hammer', target: { pieceId: cargo } });
     expect(res.status).toBe('applied');
     expect(usedInAttempt('hammer', s8.log)).toBe(1);
     const after = boosterSlotModels({
       levelId: 8,
-      inv: NO_INV,
-      log: s8.log,
+      inv: { inventory: { hammer: 2 }, freeTrialsGranted: ['hammer'] },
       targets: res.summary.boosterTargets,
     });
     // K-54: the only hammer target is gone → noTarget wins over the count (no "+", no purchase window)
     expect(after[0]).toMatchObject({ id: 'hammer', state: 'noTarget', count: 2 });
-    // stored inventory adds up; a granted trial is not given twice
-    const stored = boosterSlotModels({
-      levelId: 8,
-      inv: { inventory: { hammer: 2 }, freeTrialsGranted: ['hammer'] },
-      log: s8.log,
-      targets: { ...res.summary.boosterTargets, hammer: true },
-    });
-    expect(stored[0]).toMatchObject({ state: 'ready', count: 1 });
+    // a granted trial is not given twice; 0 left with a target = empty
     const empty = boosterSlotModels({
       levelId: 8,
       inv: { inventory: {}, freeTrialsGranted: ['hammer'] },
-      log: [],
       targets: { ...res.summary.boosterTargets, hammer: true },
     });
     expect(empty[0]?.state).toBe('empty');
@@ -154,7 +145,6 @@ describe('UX 5.10 booster bar (K-54, META 4)', () => {
     const [hammer, crane] = boosterSlotModels({
       levelId: 9,
       inv: NO_INV,
-      log: g.log,
       targets: g.summary().boosterTargets,
     });
     expect(hammer).toMatchObject({ id: 'hammer', state: 'noTarget' });

@@ -85,7 +85,6 @@ function expectConsistent(s: GameState): void {
   expect(stateInvariantErrors(s)).toEqual([]);
 }
 
-
 /** S3-like landing hook for tests (the real one is the obstacle plugin): glass breaks when d > threshold. */
 const GLASS_RULES: FallRules = {
   onLanded: (s, id, fall) =>

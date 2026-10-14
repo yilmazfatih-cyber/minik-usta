@@ -16,11 +16,14 @@
  *   item 6): the level's step texts at level start (`prepare`), so a step that opens mid-drag only shows a ready one.
  * - Glove: `ui_tutorial_glove` (art or the procedural fallback; the fingertip is the touch point), 160 ms fade-in, a
  *   `handLoopMs` loop — `drag`: along the rounded fingertip path, `hold`: the path then pressed at its end, `tap`:
- *   pressed 0,9× with a ring at the target — with the dotted trail (12 px, 22 px apart, white α 0,85). Reduced motion:
- *   the glove rests at the start of its path, the whole trail is drawn. It plays only when the scene says so
- *   (DL-2R-20 `glovePlays`).
- * - Panorama arrow (UX §13.2 level 5 row): with `panorama` lit and a next segment, a 64 × 40 arrow from the active
- *   segment to the next one slides 16 px right every 1,2 s.
+ *   pressed 0,9× with a ring at the target. `drag` / `hold` (2026-10-08, DS-15): the glove walks in finger space and an
+ *   α `tutorial.ghostAlpha` copy of the touched block (its baked frame, no shadow) walks in block space with it,
+ *   rising to `drag.liftScale` in `tutorial.ghostLiftMs` at the start of each loop; the dotted trail (12 px, 22 px
+ *   apart, white α 0,85) follows the ghost's centre. Reduced motion: the glove rests at the start of its path, the
+ *   ghost at its end, the whole trail is drawn. It plays only when the scene says so (DL-2R-20 `glovePlays`).
+ * - Panorama arrow (UX §13.2 level 2 and level 5 rows): with `panorama` lit, a 64 × 40 arrow from the active segment
+ *   to the next one slides 16 px right every 1,2 s; on a single-segment plan (level 2) it points up inside the active
+ *   strip, from the bottom row to the top row, and slides 16 px up.
  * Drawing order (UX §13.1): board → highlight → bubble → glove → the dragged block and its shadow (`overTutorial`) →
  * windows.
  */
@@ -38,10 +41,12 @@ import { KIT, bubbleTailFrameName } from '../../theme/textures.ts';
 import { TOKENS } from '../../theme/tokens.ts';
 import { addBakedGraphics } from '../../ui/BakedGraphics.ts';
 import { drawPanoramaArrow } from '../../ui/icons.ts';
+import { panoramaArrowPose } from '../../ui/Panorama.ts';
+import type { PanoramaArrowPair } from '../../ui/Panorama.ts';
 import { kitRef, kitSlice } from '../../ui/kit/atlas.ts';
 import { kitTextStyle } from '../../ui/kit/text.ts';
 import { DEPTH } from './depth.ts';
-import { fingerPoints, pathAt, roundedPath, trailDots } from './tutorial/glove.ts';
+import { fingerPoints, ghostPoints, pathAt, roundedPath, trailDots } from './tutorial/glove.ts';
 import type { Point } from './tutorial/glove.ts';
 import { boundsOf, highlightAll, placeBubble } from './tutorial/highlights.ts';
 import type { DockPlace, HudRects } from './tutorial/highlights.ts';
@@ -67,10 +72,18 @@ export interface TutorialViewHost {
   hud(): HudRects;
   /** The dragged block and its current drag node (null while nothing is dragged). */
   dragging(): { readonly pieceId: number; readonly ix: number; readonly iy: number } | null;
-  /** Panorama columns of the active segment and the next one (null: fewer than 2 segments or no next one). */
-  panoramaArrow(): { readonly from: Rect; readonly to: Rect } | null;
+  /**
+   * Panorama arrow ends (ui/Panorama `panoramaArrowPair`): the active segment's strip → the next one (`right`), or on a
+   * single-segment plan its bottom row → top row (`up`); null when there is no next segment.
+   */
+  panoramaArrow(): PanoramaArrowPair | null;
   /** Glove and portrait textures (art or fallback). */
   glove(): TextureRef | null;
+  /**
+   * UX §13.1 (DS-15): the baked frame and the resting rect (design px) of the highlighted block covering board cell
+   * `cell` (a `drag` / `hold` path's first point); null without one.
+   */
+  ghost?(cell: readonly [number, number]): { readonly key: string; readonly frame?: string; readonly rect: Rect } | null;
   portrait(): TextureRef;
 }
 
@@ -121,6 +134,8 @@ export class TutorialView {
   private readonly dots: Phaser.GameObjects.Graphics;
   private readonly ring: Phaser.GameObjects.Graphics;
   private readonly gloveImg: Phaser.GameObjects.Image;
+  /** UX §13.1 (DS-15): the block ghost of a `drag` / `hold` glove. */
+  private readonly ghostImg: Phaser.GameObjects.Image;
   private readonly bubbles = new Map<string, BubbleParts>();
   private preparedKeys: readonly string[] = [];
   private content: ViewContent = null;
@@ -138,9 +153,13 @@ export class TutorialView {
   private highlightEdge = 0;
   /** Glove path (fingertip points, rounded) and kind of the content on screen. */
   private path: Point[] = [];
+  /** The ghost's block-space path (rounded) and its resting size; empty / null without a ghost. */
+  private ghostPath: Point[] = [];
+  private ghostSize: { readonly w: number; readonly h: number } | null = null;
   private handKind: 'tap' | 'drag' | 'hold' | null = null;
   private rects: Rect[] = [];
   private arrowAt: { x: number; y: number } | null = null;
+  private arrowPair: PanoramaArrowPair | null = null;
 
   constructor(scene: Phaser.Scene, host: TutorialViewHost) {
     this.scene = scene;
@@ -158,6 +177,10 @@ export class TutorialView {
     this.ring = scene.add
       .graphics()
       .setDepth(d + 3)
+      .setVisible(false);
+    this.ghostImg = scene.add
+      .image(0, 0, '__WHITE')
+      .setDepth(d + 2)
       .setVisible(false);
     const tip = gloveTip(TOKENS);
     this.gloveImg = scene.add
@@ -271,7 +294,7 @@ export class TutorialView {
   destroy(): void {
     for (const h of this.highlights) h.destroy();
     this.highlights.length = 0;
-    for (const o of [this.arrow, this.dots, this.ring, this.gloveImg]) o.destroy();
+    for (const o of [this.arrow, this.dots, this.ring, this.gloveImg, this.ghostImg]) o.destroy();
     for (const v of this.bubbles.values()) v.root.destroy(true);
     this.bubbles.clear();
     this.bubble = null;
@@ -383,6 +406,7 @@ export class TutorialView {
     for (const h of this.highlights) h.setVisible(false);
     this.arrow.setVisible(false);
     this.arrowAt = null;
+    this.arrowPair = null;
     const c = this.content;
     this.rects = this.contentRects();
     this.rebuildGlove();
@@ -405,13 +429,13 @@ export class TutorialView {
     bubble.root.setPosition(this.place.rect.x, this.place.rect.y);
     bubble.tailUp.setVisible(this.place.tailUp);
     bubble.tailLeft.setVisible(!this.place.tailUp);
-    // UX §13.2 level 5: the panorama arrow from the active segment to the next one
+    // UX §13.2 level 5: the panorama arrow from the active segment to the next one; level 2: bottom row → top row
     const pair = c.highlight.includes('panorama') ? this.host.panoramaArrow() : null;
+    this.arrowPair = pair;
     if (pair) {
-      const y = (pair.from.y + pair.from.h / 2 + pair.to.y + pair.to.h / 2) / 2;
-      const x = (pair.from.x + pair.from.w + pair.to.x) / 2 - VIEW.panoramaArrowSlidePx / 2;
-      this.arrowAt = { x, y };
-      this.arrow.setPosition(x, y);
+      const pose = panoramaArrowPose(pair, 0, VIEW.panoramaArrowSlidePx);
+      this.arrowAt = { x: pose.x, y: pose.y };
+      this.arrow.setPosition(pose.x, pose.y).setRotation(pose.rotation);
     }
   }
 
@@ -419,9 +443,12 @@ export class TutorialView {
   private rebuildGlove(): void {
     const c = this.content;
     this.path = [];
+    this.ghostPath = [];
+    this.ghostSize = null;
     this.handKind = null;
     this.dots.clear().setVisible(false);
     this.ring.setVisible(false);
+    this.ghostImg.setVisible(false);
     if (c?.kind !== 'step' || !c.hand || !c.glove) return;
     const hand = c.hand;
     if (hand.kind === 'tap') {
@@ -431,13 +458,25 @@ export class TutorialView {
       this.handKind = 'tap';
       return;
     }
-    const pts = fingerPoints(this.host.layout(), hand.path ?? []);
+    const layout = this.host.layout();
+    const cells = hand.path ?? [];
+    const pts = fingerPoints(layout, cells);
     if (pts.length === 0) return;
     this.path = roundedPath(pts);
     this.handKind = hand.kind;
+    // DS-15: the touched block's ghost walks in block space; the trail follows its centre
+    const p0 = cells[0];
+    const ghost = p0 ? (this.host.ghost?.(p0) ?? null) : null;
+    if (ghost) {
+      const r = ghost.rect;
+      this.ghostPath = roundedPath(ghostPoints(layout, cells, { x: r.x + r.w / 2, y: r.y + r.h / 2 }));
+      this.ghostSize = { w: r.w, h: r.h };
+      this.ghostImg.setTexture(ghost.key, ghost.frame);
+    }
     const d = this.dots;
     d.fillStyle(0xffffff, TT.trailAlpha);
-    for (const p of trailDots(this.path)) d.fillCircle(p.x, p.y, TT.trailDotPx / 2);
+    const trail = this.ghostPath.length > 0 ? this.ghostPath : this.path;
+    for (const p of trailDots(trail)) d.fillCircle(p.x, p.y, TT.trailDotPx / 2);
   }
 
   // --- per frame --------------------------------------------------------------------------------------------------------
@@ -520,14 +559,15 @@ export class TutorialView {
   }
 
   private drawArrow(now: number): void {
-    const at = this.arrowAt;
-    if (!at || !this.highlightOn) {
+    const pair = this.arrowPair;
+    if (!pair || !this.arrowAt || !this.highlightOn) {
       this.arrow.setVisible(false);
       return;
     }
     const period = VIEW.panoramaArrowPeriodMs;
     const slide = this.reduced ? 0 : (VIEW.panoramaArrowSlidePx * (now % period)) / period;
-    this.arrow.setPosition(at.x + slide, at.y).setVisible(true);
+    const pose = panoramaArrowPose(pair, slide, VIEW.panoramaArrowSlidePx);
+    this.arrow.setPosition(pose.x, pose.y).setRotation(pose.rotation).setVisible(true);
   }
 
   private drawGlove(now: number): void {
@@ -538,15 +578,18 @@ export class TutorialView {
       g.setVisible(false);
       this.dots.setVisible(false);
       this.ring.setVisible(false);
+      this.ghostImg.setVisible(false);
       return;
     }
     g.setVisible(true).setAlpha(a);
     this.dots.setVisible(kind !== 'tap').setAlpha(a);
     const start = this.path[0] as Point;
     if (this.reduced) {
-      // JUICE §0 rule 8 / UX §13.1: the glove rests at the start of its path, the trail is the path
+      // JUICE §0 rule 8 / UX §13.1: the glove rests at the start of its path, the ghost at its end, the trail is drawn
       g.setPosition(start.x, start.y).setScale(kind === 'tap' ? TT.glovePressScale : 1);
       this.ring.setVisible(false);
+      const end = this.ghostPath[this.ghostPath.length - 1];
+      if (end) this.drawGhost(end, TOKENS.drag.liftScale, a);
       return;
     }
     const loop = TT.handLoopMs;
@@ -568,8 +611,29 @@ export class TutorialView {
     }
     const holdMs = kind === 'hold' ? HOLD_MS : 0;
     const travel = Math.max(1, move - holdMs);
-    const p = pathAt(this.path, Math.min(1, t / travel));
+    const u = Math.min(1, t / travel);
+    const p = pathAt(this.path, u);
+    const fade = t < move ? 1 : 1 - (t - move) / pause;
     g.setPosition(p.x, p.y).setScale(t < move ? TT.glovePressScale : 1);
-    g.setAlpha(a * (t < move ? 1 : 1 - (t - move) / pause));
+    g.setAlpha(a * fade);
+    if (this.ghostPath.length > 0) {
+      // DS-15: lifted to `drag.liftScale` in `ghostLiftMs` at the loop start, then it follows the finger in block space
+      const lift = 1 + (TOKENS.drag.liftScale - 1) * Math.min(1, t / TT.ghostLiftMs);
+      this.drawGhost(pathAt(this.ghostPath, u), lift, a * fade);
+    }
+  }
+
+  /** The block ghost centred on `p` at `scale`, α `ghostAlpha` × `a` (no shadow). */
+  private drawGhost(p: Point, scale: number, a: number): void {
+    const size = this.ghostSize;
+    if (!size || a <= 0) {
+      this.ghostImg.setVisible(false);
+      return;
+    }
+    this.ghostImg
+      .setVisible(true)
+      .setPosition(p.x, p.y)
+      .setDisplaySize(size.w * scale, size.h * scale)
+      .setAlpha(TT.ghostAlpha * a);
   }
 }

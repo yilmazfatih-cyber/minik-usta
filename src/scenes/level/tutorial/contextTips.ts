@@ -26,6 +26,7 @@ import { pieceShape } from '../../../core/state.ts';
 import type { GameState } from '../../../core/state.ts';
 import type { At, GameEvent, VerdictReason } from '../../../core/types.ts';
 import { pidHighlight } from './highlights.ts';
+import { TOKENS } from '../../../theme/tokens.ts';
 
 export const CTX_TOPICS = [
   'streak',
@@ -185,8 +186,21 @@ export const CTX_LASTING: ReadonlySet<CtxTopic> = new Set<CtxTopic>([
   'resume',
 ]);
 
-/** UX §13.1 / JUICE #107: the Söküm line stays 1,2 s (no token yet; design-lead `tutorial.teardownLineMs`). */
-export const TEARDOWN_LINE_MS = 1200;
+/**
+ * UX §13.1 "kilitli dizi satırları" / JUICE #107: the Söküm line stays `duration.teardownLine` (2,4 s since the
+ * 2026-10-08 screen review, DS-14: at 1,2 s it ended with the locked sequence and was never read).
+ */
+export const TEARDOWN_LINE_MS = TOKENS.duration.teardownLine;
+
+/**
+ * UX §13.1 "kilitli dizi satırları" (DS-14): the lines that open inside a locked sequence — the Söküm (#107) and the
+ * truck help D1 (#21a `truckhelp.free`, #21c `reshuffle`) — stay `duration.teardownLine` instead of `visibleMs`.
+ */
+export const LOCKED_LINE_TOPICS: ReadonlySet<CtxTopic> = new Set<CtxTopic>([
+  'teardown',
+  'truckhelp.free',
+  'reshuffle',
+]);
 
 interface Showing {
   readonly topic: CtxTopic;
@@ -300,7 +314,8 @@ export class ContextTips {
     if (this.#host.seen(next.topic)) return; // a tutorial step showed the same text meanwhile
     if (!valid(next.topic, next.serial)) return; // out of context now: the next occurrence brings it back
     this.#host.markSeen(next.topic);
-    this.#showing = { topic: next.topic, since: now, ms: showMs, highlight: next.highlight };
+    const ms = LOCKED_LINE_TOPICS.has(next.topic) ? TEARDOWN_LINE_MS : showMs;
+    this.#showing = { topic: next.topic, since: now, ms, highlight: next.highlight };
     this.#version += 1;
   }
 

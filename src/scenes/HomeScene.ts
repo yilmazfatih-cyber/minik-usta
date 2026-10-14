@@ -21,6 +21,7 @@ import { HOME_TABS, formatCountdown, homeModel } from '../meta/home.ts';
 import type { Difficulty, HomeModel, HomeTab } from '../meta/home.ts';
 import { ICON_ATLAS_KEY } from '../services/assetCatalog.ts';
 import type { AssetService } from '../services/assets.ts';
+import { copyFeedback } from '../services/feedback.ts';
 import { t, tDynamic, upper } from '../services/i18n.ts';
 import type { DeepReadonly, VoidNotice } from '../services/save.ts';
 import { createLayout, designHeight } from '../theme/layout.ts';
@@ -29,6 +30,7 @@ import { TOKENS } from '../theme/tokens.ts';
 import { addBakedGraphics } from '../ui/BakedGraphics.ts';
 import { drawHeart } from '../ui/icons.ts';
 import { InlineLabel } from '../ui/InlineLabel.ts';
+import { openManualCopy } from '../ui/manualCopy.ts';
 import type { OptionButton } from '../ui/OptionButton.ts';
 import { Popup } from '../ui/Popup.ts';
 import { hex } from '../ui/text.ts';
@@ -53,6 +55,7 @@ import {
   appTrack,
   applySettings,
   changeSetting,
+  feedbackText,
   onSettingChanged,
   reducedMotion,
 } from './appServices.ts';
@@ -61,7 +64,7 @@ import { HOME_SCENE_KEY, LEVEL_SCENE_KEY } from './level/LevelScene.ts';
 import type { HomeSceneData, LevelSceneData } from './level/LevelScene.ts';
 import { DEPTH } from './level/depth.ts';
 import { availableLevels, loadLevelById } from './level/levels.ts';
-import { gameAudio } from './level/sceneServices.ts';
+import { gameAudio, gameHaptics } from './level/sceneServices.ts';
 import { shaderWarmup } from './shaderWarmup.ts';
 
 const C = TOKENS.color.ui;
@@ -102,6 +105,23 @@ const TOGGLES = [
   ['haptics', 'settings.haptics'],
 ] as const;
 
+/** UX §3 Ayarlar "Geri bildirim": cream secondary button 640 × 128, the window's last item; the copied balloon 1,5 s. */
+const FEEDBACK_W = 640;
+const FEEDBACK_H = 128;
+const FEEDBACK_ROW_PAD = 24;
+const FEEDBACK_COPIED_MS = 1500;
+
+/** DS-06: the "Yakında" balloon keeps this gap above the "Bölüm N" button, else it drops into the nav bar. */
+const BALLOON_BUTTON_GAP_PX = 8;
+/** DS-06: inside the nav bar the balloon's tail points up at the tab icon from just under its top. */
+const NAV_BALLOON_DROP_PX = 96;
+
+/** Height of a one-line HintBubble with its tail (ui/kit/HintBubble: body line × 1,3 + pads + tail). */
+function comingSoonBalloonH(): number {
+  const bb = TOKENS.kit.bubble;
+  return Math.ceil(TOKENS.font.size.body * 1.3) + 2 * bb.padYPx + bb.tailPx;
+}
+
 /** Kepçe's share of the character corner (UX §3: 70 %). */
 const KEPCE_SCALE = 0.7;
 /** Character corner dressing: hedge height, how far it sits below / around the bust, Kepçe's overlap with it. */
@@ -136,6 +156,10 @@ export class HomeScene extends Phaser.Scene {
   private view: HomeView | null = null;
   private notice: Popup | null = null;
   private settings: Popup | null = null;
+  /** The settings window's balloon (above the window; the screen's own hint sits under windows). */
+  private windowHint!: HintBubble;
+  /** The manual copy box is open (TECH §2R.16: the clipboard refused). */
+  private closeManual: (() => void) | null = null;
   private reduced = false;
   private starting = false;
   private iconsArt = false;
@@ -162,6 +186,7 @@ export class HomeScene extends Phaser.Scene {
     this.icons = new IconBinder((id) => this.assets.icon(id));
     this.iconsArt = this.assets.hasArt(ICON_ATLAS_KEY);
     this.hint = new HintBubble(this, D.hint);
+    this.windowHint = new HintBubble(this, D.windows + 10);
     this.model = this.computeModel();
     this.layoutNow = this.computeLayout();
     this.build();
@@ -184,6 +209,8 @@ export class HomeScene extends Phaser.Scene {
       offSettings();
       this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
       this.hint.hide();
+      this.windowHint.hide();
+      this.closeManual?.();
       this.clearView();
       this.notice?.destroy();
       this.settings?.destroy();
@@ -541,7 +568,17 @@ export class HomeScene extends Phaser.Scene {
     appTrack({ name: 'nav_tap', tab: id, locked });
     if (!locked) return;
     nav.shakeLock(id, this.reduced);
-    this.comingSoon(at, 'down');
+    // DS-06: above the tab only when the balloon clears the "Bölüm N" button (top ≥ button bottom + 8); else it sits
+    // inside the bar, over the tab's label, so the button's text is never covered
+    const b = this.geo.button;
+    const fits = at.y - comingSoonBalloonH() >= b.y + b.h + BALLOON_BUTTON_GAP_PX;
+    this.comingSoon(fits ? at : { x: at.x, y: at.y + NAV_BALLOON_DROP_PX }, fits ? 'down' : 'up');
+  }
+
+  /** Centre of the top bar's settings gear in design px (harness: the settings window shots). */
+  get settingsPoint(): { readonly x: number; readonly y: number } | null {
+    const g = this.view ? this.geo.settings : null;
+    return g ? { x: g.x + g.w / 2, y: g.y + g.h / 2 } : null;
   }
 
   /** JUICE §0 rule 8: the pulse stops (steady gold edge) or starts again; buttons keep only the thickness change. */
@@ -580,6 +617,22 @@ export class HomeScene extends Phaser.Scene {
         rows: [
           { kind: 'title', text: upper(tDynamic(KEY.settings)) },
           ...TOGGLES.map(([id, key]) => ({ kind: 'toggle' as const, id, label: t(key), on: s()[id] })),
+          // UX §3 / §11 (EN-2R-20): "Geri bildirim" is the window's last item, a cream secondary button
+          {
+            kind: 'custom' as const,
+            h: FEEDBACK_H + 2 * FEEDBACK_ROW_PAD,
+            build: (scene: Phaser.Scene) => {
+              const b = new KitButton(scene, {
+                color: 'cream',
+                w: FEEDBACK_W,
+                h: FEEDBACK_H,
+                label: t('settings.feedback'),
+              });
+              b.root.setPosition(0, FEEDBACK_ROW_PAD + FEEDBACK_H / 2);
+              b.onPress(buttonFeel).onTap(() => void this.sendFeedback(b));
+              return [b.root];
+            },
+          },
         ],
         options: [{ id: 'ok', label: upper(t('common.ok')), tone: 'primary' }],
         close: true,
@@ -601,8 +654,41 @@ export class HomeScene extends Phaser.Scene {
   }
 
   private closeSettings(): void {
+    this.windowHint.hide();
     this.settings?.destroy();
     this.settings = null;
+  }
+
+  /**
+   * TECH §2R.16 / EN-2R-20 "Geri bildirim": the device's funnel events as JSON to the clipboard. Copied → the 1,5 s
+   * `settings.feedbackCopied` balloon over the button + `sfx_button` + a light haptic; refused → the read-only, selected
+   * text box with `settings.feedbackManual` and `common.continue` (UX §3).
+   */
+  private async sendFeedback(button: KitButton): Promise<void> {
+    if (this.closeManual) return;
+    const text = feedbackText();
+    const result = await copyFeedback(text);
+    if (!this.sys.isActive()) return;
+    if (result === 'copied') {
+      const m = button.root.getWorldTransformMatrix();
+      const at = { x: m.tx, y: m.ty - button.h / 2 - 8 };
+      this.windowHint.show(t('settings.feedbackCopied'), at, 'down', this.reduced, FEEDBACK_COPIED_MS);
+      gameAudio().play('sfx_button');
+      gameHaptics().play('light');
+      return;
+    }
+    const doc = globalThis.document;
+    if (!doc) return;
+    const parent = this.game.canvas.parentElement ?? doc.body;
+    this.closeManual = openManualCopy(
+      doc,
+      parent,
+      text,
+      { hint: t('settings.feedbackManual'), close: t('common.continue') },
+      () => {
+        this.closeManual = null;
+      },
+    );
   }
 
   /** UX §1 (c): the update window (refund row: life, coins; no blame, no red). */

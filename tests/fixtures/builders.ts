@@ -244,3 +244,14 @@ export function loadFixture(group: string, name: string): unknown {
 export function fixturePath(...parts: string[]): string {
   return join(FIXTURE_DIR, ...parts);
 }
+
+/**
+ * The real level directory (`levels/`, product-lead's Faz 2R levels 1–10). WP-M removed the `levels-2r` fixture copy of
+ * the LEVELS §2 drafts (Bölüm 4, 5, 7 and 10 had drifted from the solver round): tests read the shipped data.
+ */
+export const LEVELS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'levels');
+
+/** A fresh parse of `levels/level_NNN.json` (callers may mutate it). */
+export function loadLevelJson(n: number): unknown {
+  return JSON.parse(readFileSync(join(LEVELS_DIR, `level_${String(n).padStart(3, '0')}.json`), 'utf8'));
+}

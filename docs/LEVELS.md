@@ -341,8 +341,9 @@ Kanonik çözüm (solver; karalama çözücüsüyle aynı):
 3. `c` (C3_180 Y) (0,2) → (4,3) — duvar üstü, doğru (hücreler (5,3),(4,4),(5,4)) → kazanma
 
 Öğretici:
-1. `front`, `build` · — · `tut.m.pattern` · `{ event: placementCorrect, count: 1 }` (tek dilimli bölümde panorama
-   şantiyenin kopyasıdır; "alttan üste" fikrini inşa cephesi gösterir, DL-2R-10)
+1. `panorama`, `build` · — · `tut.m.pattern` · `{ event: placementCorrect, count: 1 }` (UX §13.2 Bölüm 2 adım 1:
+   "alttan üste" fikrini panoramadaki dikey ok gösterir — aktif dilimin alt satırından üst satırına; ok yalnız
+   `panorama` vurgusuyla çizilir. DL-2R-10 (a)'daki `front` önerisinin yerine UX satırı geçti, 2026-10-08)
 2. `piece:2`, `build` · hold `[[1,3],[1,5],[5,5]]` (`c`'nin sağ üst hücresi (1,3), ofset (1,1); son çapa (4,4) tamamen
    şantiye üstünde; gölge (4,2)'ye iner ve renk + destek için "!" gösterir) · `tut.m.shadow` · `{ event: placementCorrect,
    count: 1 }`

@@ -90,7 +90,29 @@ describe('catalogue = ASSET 16.3 table', () => {
       'chr_tuna_bust',
       'ui_tutorial_glove',
     ]);
-    expect(g('P2').sort()).toEqual(['bg_home_town', 'chr_kepce_bust', 'logo_emblem', 'town_ch1_treehouse']);
+    // ASSET §16.3 #4b town_ch1_tree (DS-02): P2 with the tree house it stands under, no ghost texture
+    // DS-04: the full-figure `chr_tuna_stand` is an optional P2 row until design-lead delivers it (home corner)
+    expect(g('P2').sort()).toEqual([
+      'bg_home_town',
+      'chr_kepce_bust',
+      'chr_tuna_stand',
+      'logo_emblem',
+      'town_ch1_tree',
+      'town_ch1_treehouse',
+    ]);
+    expect(def('chr_tuna_stand')).toMatchObject({
+      category: 'chr',
+      viewBox: { w: 300, h: 480 },
+      raster: { w: 300, h: 480 },
+      optional: true,
+    });
+    expect(def('town_ch1_tree')).toMatchObject({
+      category: 'town',
+      viewBox: { w: 760, h: 820 },
+      raster: { w: 760, h: 820 },
+    });
+    expect(def('town_ch1_tree').ghost).toBeUndefined();
+    expect(def('town_ch1_treehouse').ghost).toBe(true);
     expect(g('P3').sort()).toEqual(['bg_win_plaza', 'chr_gribeton_bust', 'chr_tuna_cheer']);
     expect(ASSET_CATALOG.filter((a) => a.category === 'icon').every((a) => a.group === 'P1')).toBe(true);
   });

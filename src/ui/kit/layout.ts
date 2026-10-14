@@ -52,13 +52,6 @@ export interface HomeLayout {
   readonly navTabs: readonly Rect[];
 }
 
-/**
- * The character corner keeps its FIT distance to the "Bölüm N" button at every height (share 1 of the surplus, the
- * structure keeps 0.5): on a tall phone Tuna and Kepçe stand on the foreground lawn in front of the structure instead
- * of leaving ≈ 450 px of empty grass above the button (390 × 844 review, 2026-10-07; design-lead to confirm, REVIEW_LOG).
- */
-export const CHARACTER_EXPAND_SHARE = 1;
-
 /** Tag overhang (UX §3 "düğmenin sol üstüne 24 px taşar"). */
 export const TAG_OVERHANG_PX = 24;
 /** `home.moreSoon` band height and gap above the button (UX §3 "küçük şerit 480 × 80"). */
@@ -116,7 +109,9 @@ export function homeLayout(tokens: Tokens, H: number): HomeLayout {
     },
     character: {
       x: L.characterX,
-      y: L.characterBaseY + (H - BASE_H) * CHARACTER_EXPAND_SHARE - L.characterH,
+      // `layout.home.characterExpandShare` (1, accepted 2026-10-08): the corner keeps its FIT distance to the "Bölüm N"
+      // button; on a tall phone Tuna and Kepçe stand on the foreground lawn (the structure keeps `expandShare` 0,5)
+      y: L.characterBaseY + (H - BASE_H) * L.characterExpandShare - L.characterH,
       w: L.characterW,
       h: L.characterH,
     },

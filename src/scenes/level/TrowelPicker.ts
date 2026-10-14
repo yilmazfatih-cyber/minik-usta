@@ -4,9 +4,12 @@
  * chosen action is committed through `GameSession` by the scene (`commit`), which the core checks again (an invalid
  * target — e.g. the D3a pre-check, E-60 — is refused and spends nothing; the picker then stays open and the block shakes).
  *
- * - Opening (`start`): the hint strip `booster.hint.<id>` with "Vazgeç" (`common.cancel`) above the board; the
- *   selectable blocks pulse every `duration.spotlightPulse`, the others dim to α 0,5 (placed blocks, HUD and scene keep
- *   their look; information, so also with reduced motion).
+ * - Opening (`start`): the hint strip `booster.hint.<id>` — text only, its bottom edge 16 px above the crane area
+ *   (under the HUD + 16 when there is no room; UX §5.2 step 1); the selectable blocks pulse every
+ *   `duration.targetPulse`, the others dim to α 0,5 (placed blocks, HUD and scene keep their look; information, so also
+ *   with reduced motion). "Vazgeç" is in the thumb zone (2026-10-08, DS-13): the red × on the selected booster slot
+ *   (or in place of the strip's trowel icon), a second tap on it closes the pick, and so does the system back
+ *   (`popstate`); a tap on the empty scene off the board does not.
  * - Golden Trowel (K-33): selectable = yard material blocks with a non-empty `P` (core `trowelPieces`). A tap on one:
  *   |P| = 1 → it flies there at once (`goldTrowel { pieceId, x, y }`); |P| ≥ 2 → the `P` spots show as valid ghosts
  *   (`ghost_<shape>_valid`), a tap on a ghost flies it; another selectable block changes the choice. Without any
@@ -16,7 +19,7 @@
  * - Crane (K-37): selectable = `craneSelectable`. Cheaper than the UX drag-and-rotate flow (CL note, TECH §2R.12
  *   WP-G): after the block is chosen its correct site spots in every orientation (`craneSiteSpots`) show as ghosts
  *   (the rotation is part of the spot), and a tap on an empty yard cell moves it there (K-37 (a), same orientation).
- * - A tap on a block that is not selectable shakes it 2 px (nothing spent); "Vazgeç" closes.
+ * - A tap on a block that is not selectable shakes it 2 px (nothing spent).
  *
  * While it is open a full-screen input zone takes the touches, so the board's DragController stays out.
  */
@@ -34,11 +37,10 @@ import type { ShapeDef } from '../../core/shapes.ts';
 import { pieceShape } from '../../core/state.ts';
 import type { GameState } from '../../core/state.ts';
 import type { Move, PieceId } from '../../core/types.ts';
-import { hasKey, t, tDynamic } from '../../services/i18n.ts';
+import { hasKey, tDynamic } from '../../services/i18n.ts';
 import type { Layout, Rect } from '../../theme/layout.ts';
 import { FRAME, ghostFrameName } from '../../theme/textures.ts';
 import { TOKENS } from '../../theme/tokens.ts';
-import { TextButton } from '../../ui/TextButton.ts';
 import { textStyle } from '../../ui/text.ts';
 import { BOOT_ATLAS_KEY } from '../atlas.ts';
 import type { Frames } from '../atlas.ts';
@@ -65,10 +67,8 @@ export interface TrowelPickerHost {
   hooks(): MoveHooks;
   /** Commits the chosen action; false when the core refused it (nothing spent). */
   commit(move: Move): boolean;
-  /** The pick mode opened / closed (strip and slot highlight). */
+  /** The pick mode opened / closed (strip and slot highlight, the × "Vazgeç" of UX §5.2). */
   changed(kind: PickKind | null): void;
-  /** JUICE #69 on the cancel button. */
-  button(button: TextButton, variant: 'press' | 'release'): void;
   /** Reduced motion (JUICE §0 rule 8): the selectable blocks and spots do not pulse. */
   reduced(): boolean;
   /**
@@ -80,10 +80,10 @@ export interface TrowelPickerHost {
   refused(id: PieceId | null): void;
 }
 
-/** UX §5.2: valid targets pulse once every `duration.spotlightPulse` (1,2 s). */
+/** UX §5.2: valid targets pulse once every `duration.targetPulse` (1,2 s). */
 const PULSE_MIN = 0.35;
-const CANCEL_W = 360;
-const CANCEL_H = 144;
+/** UX §5.2 step 1: the hint strip's bottom edge sits this far above the crane area (or its top this far under the HUD). */
+export const HINT_GAP_PX = 16;
 const GHOST_CELL_TINT = hexColor(TOKENS.color.ghost.valid);
 
 /** Selectable blocks of a pick kind now (core queries). */
@@ -143,12 +143,21 @@ export function spotAt(layout: Layout, spots: readonly PickSpot[], x: number, y:
   return best;
 }
 
+/**
+ * UX §5.2 step 1 (DS-13): top y of the hint strip of height `h` — its bottom edge `HINT_GAP_PX` above the crane area;
+ * when that would reach into the HUD, under the HUD (`top.groupBottomY + 16`).
+ */
+export function hintStripY(layout: Layout, h: number): number {
+  const above = layout.board.crane.y - HINT_GAP_PX - h;
+  const floor = layout.top.groupBottomY + HINT_GAP_PX;
+  return Math.max(above, floor);
+}
+
 export class TrowelPicker {
   private readonly scene: Phaser.Scene;
   private readonly host: TrowelPickerHost;
   private readonly zone: Phaser.GameObjects.Zone;
   private readonly hint: Phaser.GameObjects.Text;
-  private readonly cancel: TextButton;
   private readonly marks: Phaser.GameObjects.Image[] = [];
   private kindNow: PickKind | null = null;
   private eligible = new Set<PieceId>();
@@ -171,19 +180,6 @@ export class TrowelPicker {
       .setOrigin(0.5)
       .setDepth(DEPTH.hud + 1)
       .setVisible(false);
-    this.cancel = new TextButton(
-      scene,
-      t('common.cancel'),
-      { w: CANCEL_W, h: CANCEL_H },
-      'neutral',
-      DEPTH.hud + 1,
-    );
-    this.cancel.setVisible(false);
-    this.cancel.on('pointerdown', () => host.button(this.cancel, 'press'));
-    this.cancel.on('pointerup', (canceled) => {
-      host.button(this.cancel, 'release');
-      if (!canceled) this.close();
-    });
   }
 
   get active(): boolean {
@@ -219,7 +215,6 @@ export class TrowelPicker {
     this.zone.setInteractive();
     const key = `booster.hint.${kind}`;
     this.hint.setText(hasKey(key) ? tDynamic(key) : '').setVisible(true);
-    this.cancel.setVisible(true);
     this.place();
     this.host.dimPieces(this.eligible, null, 1);
     this.host.changed(kind);
@@ -234,7 +229,6 @@ export class TrowelPicker {
     this.eligible = new Set();
     this.zone.disableInteractive();
     this.hint.setVisible(false);
-    this.cancel.setVisible(false);
     for (const m of this.marks) m.setVisible(false);
     this.host.dimPieces(null, null, 1);
     this.host.changed(null);
@@ -245,14 +239,20 @@ export class TrowelPicker {
     if (this.kindNow) this.place();
   }
 
-  /** New language: the hint and the cancel button. */
+  /** New language: the hint. */
   relabel(): void {
     if (this.kindNow) {
       const key = `booster.hint.${this.kindNow}`;
       this.hint.setText(hasKey(key) ? tDynamic(key) : '');
     }
-    this.cancel.setLabel(t('common.cancel'));
     this.relayout();
+  }
+
+  /** The hint strip on screen (harness, tests), or null. */
+  get hintRect(): Rect | null {
+    if (!this.hint.visible) return null;
+    const b = this.hint.getBounds();
+    return { x: b.x, y: b.y, w: b.width, h: b.height };
   }
 
   /** Per frame: the selectable blocks and the spots pulse (steady with reduced motion, JUICE §0 rule 8). */
@@ -262,7 +262,7 @@ export class TrowelPicker {
     if (this.host.reduced()) {
       for (const m of this.marks) if (m.visible) m.setAlpha(1);
     } else {
-      const period = TOKENS.duration.spotlightPulse;
+      const period = TOKENS.duration.targetPulse;
       k = 0.5 + 0.5 * Math.cos((2 * Math.PI * (now - this.since)) / period);
       const a = PULSE_MIN + (1 - PULSE_MIN) * k;
       for (const m of this.marks) if (m.visible) m.setAlpha(a);
@@ -273,7 +273,6 @@ export class TrowelPicker {
   destroy(): void {
     this.zone.destroy();
     this.hint.destroy();
-    this.cancel.destroy();
     for (const m of this.marks) m.destroy();
   }
 
@@ -283,11 +282,9 @@ export class TrowelPicker {
     if (!f) return;
     this.zone.setPosition(0, 0).setSize(layout.W, layout.H);
     this.zone.input?.hitArea.setSize(layout.W, layout.H);
-    // UX §5.2 "tahta üstünde ince açıklama şeridi": hint and "Vazgeç" above the board, in the crane area band
-    const crane = layout.board.crane;
-    this.cancel.x = crane.x + crane.w / 2;
-    this.cancel.y = crane.y + crane.h - CANCEL_H / 2 - 8;
-    this.hint.setPosition(crane.x + crane.w / 2, this.cancel.y - CANCEL_H / 2 - this.hint.height / 2 - 8);
+    // UX §5.2 step 1 "tahta üstünde ince açıklama şeridi": text only, never over the crane area when it fits
+    const at = hintStripY(layout, this.hint.height);
+    this.hint.setPosition(layout.board.crane.x + layout.board.crane.w / 2, at + this.hint.height / 2);
     // spot ghosts: the baked `ghost_<shape>_valid` when the level has it, else a valid-green contour per cell
     let used = 0;
     const take = (): Phaser.GameObjects.Image => {

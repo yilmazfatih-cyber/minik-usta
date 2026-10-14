@@ -15,11 +15,10 @@ import { Expander, normalizeState } from '../../../tools/solver/expand.ts';
 import { solverStart } from '../../../tools/solver/explore.ts';
 import { StateSpace } from '../../../tools/solver/space.ts';
 import { levelHooks } from '../../../src/core/obstacles/registry.ts';
-import { compiledLevel, loadFixture } from '../../fixtures/builders.ts';
+import { compiledLevel, loadLevelJson } from '../../fixtures/builders.ts';
 import { MICRO } from './micro.ts';
 
-const draft = (n: number): CompiledLevel =>
-  compile(LevelSchema.parse(loadFixture('levels-2r', `level_${String(n).padStart(3, '0')}`)));
+const draft = (n: number): CompiledLevel => compile(LevelSchema.parse(loadLevelJson(n)));
 
 /** Small deterministic LCG (test-local; the core RNG is not needed here). */
 function lcg(seed: number): () => number {

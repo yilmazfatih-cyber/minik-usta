@@ -6,3 +6,4 @@ coverage
 artifacts/harness
 artifacts/perf
 artifacts/reference
+artifacts/solver

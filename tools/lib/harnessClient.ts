@@ -155,6 +155,10 @@ export interface OpenOptions {
   readonly query?: string;
   /** Wait for `window.__ready` (default true). */
   readonly waitReady?: boolean;
+  /** localStorage items written before the page runs (a seeded save: `minikusta.save`). */
+  readonly storage?: Readonly<Record<string, string>>;
+  /** Browser permissions of the context (screens: `clipboard-write` for the feedback copy). */
+  readonly permissions?: readonly string[];
 }
 
 /** A fresh browser context (empty storage and cache) on the harness page. */
@@ -167,6 +171,15 @@ export async function openGame(browser: Browser, opts: OpenOptions): Promise<Gam
     hasTouch: true,
     reducedMotion: opts.reducedMotion ? 'reduce' : 'no-preference',
   });
+  if (opts.storage) {
+    await context.addInitScript((items: Record<string, string>) => {
+      // once per context: a reload keeps what the game wrote since
+      if (sessionStorage.getItem('harness.seeded') === '1') return;
+      for (const [k, v] of Object.entries(items)) localStorage.setItem(k, v);
+      sessionStorage.setItem('harness.seeded', '1');
+    }, opts.storage);
+  }
+  if (opts.permissions) await context.grantPermissions([...opts.permissions], { origin: opts.url });
   const page = await context.newPage();
   const gp = await attachGame(page, context);
   if (opts.cpuRate && opts.cpuRate !== 1)

@@ -16,6 +16,7 @@ import type { Rect } from '../theme/layout.ts';
 import { TOKENS } from '../theme/tokens.ts';
 import { hex, textStyle } from './text.ts';
 import { addBakedGraphics } from './BakedGraphics.ts';
+import { drawCancelX } from './icons.ts';
 
 const C = TOKENS.color.ui;
 const CP = TOKENS.kit.capsule;
@@ -27,6 +28,8 @@ const PAD = 24;
 const BEAD_R = 20;
 const BEAD_STEP = 56;
 const ICON = 72;
+/** UX §5.2 (DS-13): the × in place of the 72 px trowel icon, inside the 80 px strip. */
+const CANCEL_PX = 80;
 const CHIP_H = 72;
 
 export class StatusStrip {
@@ -35,6 +38,8 @@ export class StatusStrip {
   private readonly beads: Phaser.GameObjects.Graphics[] = [];
   private readonly glow: Phaser.GameObjects.Graphics;
   private readonly trowel: Phaser.GameObjects.Graphics;
+  /** UX §5.2 step 1 (DS-13): the red × "Vazgeç" in place of the trowel icon while the trowel pick is open. */
+  private readonly cancel: Phaser.GameObjects.Graphics;
   private readonly trowelCount: Phaser.GameObjects.Text;
   private readonly trowelZone: Phaser.GameObjects.Zone;
   private readonly chip: Phaser.GameObjects.Container;
@@ -65,6 +70,10 @@ export class StatusStrip {
       .setDepth(depth + 1)
       .setAlpha(0);
     this.trowel = addBakedGraphics(scene).setDepth(depth + 2);
+    this.cancel = addBakedGraphics(scene)
+      .setDepth(depth + 2)
+      .setVisible(false);
+    drawCancelX(this.cancel, CANCEL_PX);
     this.trowelCount = scene.add
       .text(0, 0, '', textStyle('small', C.inkOnDark))
       .setOrigin(0, 0.5)
@@ -107,6 +116,7 @@ export class StatusStrip {
     this.beads.forEach((b, i) => b.setPosition(this.beadXs[i] ?? 0, y));
     this.trowelX = beadsX + (STREAK_BEADS - 1) * BEAD_STEP + BEAD_R + PAD + ICON / 2;
     this.trowel.setPosition(this.trowelX, y);
+    this.cancel.setPosition(this.trowelX, y);
     this.glow.setPosition(this.trowelX, y);
     this.trowelCount.setPosition(this.trowelX + ICON / 2 + 4, y);
     const countX = this.trowelX + ICON / 2 + 4 + 72;
@@ -181,8 +191,10 @@ export class StatusStrip {
 
   setTrowels(n: number): void {
     if (n === this.trowels) return;
+    const was = this.trowels;
     this.trowels = n;
-    this.trowel.setAlpha(n > 0 ? 1 : 0.35);
+    // DS-18: passive = white α 0,55 silhouette, a held trowel in full colour (redrawn only when that flips)
+    if (was < 0 || was > 0 !== n > 0) drawTrowelIcon(this.trowel, n === 0);
     this.trowelCount.setText(n > 0 ? t('common.times', { n }) : '').setVisible(n > 0);
   }
 
@@ -192,9 +204,14 @@ export class StatusStrip {
     this.glow.setScale(scale).setAlpha(glow);
   }
 
-  /** UX §5.2: the trowel is selected (picking a build-front cell). */
+  /**
+   * UX §5.2 step 1 (DS-13): the trowel pick is open — the red × "Vazgeç" is drawn in place of the trowel icon (a tap
+   * on the strip cancels, the scene's toggle).
+   */
   setTrowelSelected(on: boolean): void {
     this.glow.setAlpha(on ? 0.6 : 0);
+    this.cancel.setVisible(on);
+    this.trowel.setVisible(!on);
   }
 
   /** K-26 truck queue N (chip hidden at 0). */
@@ -228,6 +245,7 @@ export class StatusStrip {
       this.label,
       this.glow,
       this.trowel,
+      this.cancel,
       this.trowelCount,
       this.trowelZone,
       this.countText,
@@ -266,9 +284,21 @@ export class StatusStrip {
   }
 }
 
-/** The Golden Trowel icon (gold blade, wooden handle; placeholder until the `ui_trowel` asset), drawn once at (0, 0). */
-export function drawTrowelIcon(g: Phaser.GameObjects.Graphics): void {
+/** UX §5.10 / ART §14.5 (DS-18): a passive trowel (none held) is a white α 0,55 silhouette on the dark capsule. */
+export const TROWEL_PASSIVE_ALPHA = 0.55;
+
+/**
+ * The Golden Trowel icon (gold blade, wooden handle; placeholder until the `ui_trowel` asset), drawn at (0, 0). Passive
+ * (DS-18, no trowel held): a white α `TROWEL_PASSIVE_ALPHA` silhouette — the brown one read ≈ 2:1 on the dark capsule.
+ */
+export function drawTrowelIcon(g: Phaser.GameObjects.Graphics, passive = false): void {
   g.clear();
+  if (passive) {
+    g.fillStyle(0xffffff, TROWEL_PASSIVE_ALPHA).fillRoundedRect(-6, 8, 12, 30, 5);
+    g.fillTriangle(0, -34, 26, 2, -26, 2).fillTriangle(26, 2, 0, 14, -26, 2);
+    g.setAngle(-20);
+    return;
+  }
   g.fillStyle(hex(TOKENS.color.board.yardFrame), 1).fillRoundedRect(-6, 8, 12, 30, 5);
   g.fillStyle(hex(C.gold), 1).fillTriangle(0, -34, 26, 2, -26, 2).fillTriangle(26, 2, 0, 14, -26, 2);
   g.lineStyle(4, hex(C.goldDark), 1).beginPath();

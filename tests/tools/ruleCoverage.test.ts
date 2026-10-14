@@ -69,7 +69,6 @@ describe('test:rules (TECH 12.2)', () => {
     // E-49 names K-48 (2R); E-50 names only K-33 (phase 2) but is tagged "(Faz 2R)" in GDD §13; the K-30 / K-36 / K-37
     // rows follow those rules unless they also name a phase 3 obstacle (E-59 names W4).
     expect(only2R('E')).toEqual([
-      'E-23',
       'E-26',
       'E-27',
       'E-37',
@@ -79,7 +78,6 @@ describe('test:rules (TECH 12.2)', () => {
       'E-50',
       'E-51',
       'E-54',
-      'E-55',
       'E-56',
       'E-57',
       'E-58',
@@ -87,6 +85,9 @@ describe('test:rules (TECH 12.2)', () => {
       'E-61',
     ]);
     expect(only2R('E')).not.toContain('E-59');
+    // GDD §13 "(Faz 2R: geçersiz …)" rows keep their id but are no rule any more: E-23 (truck help B1), E-55 (multi-step
+    // Söküm) need no test at any phase
+    expect(ids.some((r) => r.id === 'E-23' || r.id === 'E-55')).toBe(false);
     // Obstacles first seen in levels 6–10 (OBSTACLES "Veri imzası": W2 6, Y5 8, W3 9).
     expect(only2R('obstacle').sort()).toEqual(['W2', 'W3', 'Y5']);
     expect(phase(2, 'K')).not.toContain('K-47');

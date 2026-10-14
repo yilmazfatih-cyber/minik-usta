@@ -136,13 +136,8 @@ export function drawYardFloorV2(ctx: DrawContext, tokens: Tokens, k = 1): void {
   ctx.stroke();
 }
 
-/** UX §5.8 yard frame colours (wood gradient + contour); no token yet → requested `color.board.yardFrameTop/Bottom`. */
-export const YARD_FRAME = Object.freeze({
-  top: '#E2A653',
-  bottom: '#B97A35',
-  outline: '#5A3A1E',
-  outlinePx: 6,
-});
+/** UX §5.8 yard frame contour width (the colours are `color.board.yardFrameTop/Bottom` + `kit.panel.outline`). */
+const YARD_FRAME_OUTLINE_PX = 6;
 
 /** 9-slice source of the yard frame: a `2·(radius + frame) + 32` square; the centre is transparent. */
 export function yardFrameSize(tokens: Tokens): Size {
@@ -164,7 +159,8 @@ export function yardFrameSlices(tokens: Tokens): {
 
 /**
  * UX §5.8 "malzeme sandığı" frame (ASSET §16.5 `yard_frame` v2): `yardFramePx` wooden ring (vertical gradient
- * #E2A653 → #B97A35) with a 6 px #5A3A1E contour, an inner shade line and outer corner `yardFrameRadiusPx`. The frame
+ * `color.board.yardFrameTop` → `yardFrameBottom`) with a 6 px `kit.panel.outline` contour, an inner shade line and outer
+ * corner `yardFrameRadiusPx`. The frame
  * sits OUTSIDE the yard cells: the inner hole is the yard rectangle.
  */
 export function drawYardFrameV2(ctx: DrawContext, size: Size, tokens: Tokens): void {
@@ -172,7 +168,8 @@ export function drawYardFrameV2(ctx: DrawContext, size: Size, tokens: Tokens): v
   const f = a.yardFramePx;
   const R = a.yardFrameRadiusPx;
   const { w, h } = size;
-  const o = YARD_FRAME.outlinePx;
+  const o = YARD_FRAME_OUTLINE_PX;
+  const wood = tokens.color.board;
   const inner = R / 2;
   // every layer is a ring (outer rounded rect + inner hole, even-odd): nothing under the hole is touched
   const ring = (inset: number, r: number, holeInset: number, holeR: number): void => {
@@ -182,12 +179,12 @@ export function drawYardFrameV2(ctx: DrawContext, size: Size, tokens: Tokens): v
   };
   ctx.save();
   ring(0, R + f, f - o / 2, inner + o / 2);
-  ctx.fillStyle = css(hexRgb(YARD_FRAME.outline));
+  ctx.fillStyle = css(hexRgb(tokens.kit.panel.outline));
   ctx.fill('evenodd');
   ring(o, R + f - o, f - o / 2, inner + o / 2);
   const g = ctx.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, YARD_FRAME.top);
-  g.addColorStop(1, YARD_FRAME.bottom);
+  g.addColorStop(0, wood.yardFrameTop);
+  g.addColorStop(1, wood.yardFrameBottom);
   ctx.fillStyle = g;
   ctx.fill('evenodd');
   // top light on the wood
@@ -478,7 +475,11 @@ export function drawWinPlazaFallback(ctx: DrawContext, size: Size, tokens: Token
 /** viewBox of `town_ch1_treehouse` (ASSET §16.3). */
 export const STRUCTURE_SIZE: Size = Object.freeze({ w: 760, h: 820 });
 
-export type StructureStyle = 'color' | 'ghost';
+/**
+ * `color` / `ghost` = the tree house (`town_ch1_treehouse` and its blueprint ghost, ART §7.2); `tree` = the plane tree it
+ * stands on (`town_ch1_tree`, ASSET §16.3 #4b: trunk + leaf discs, always full colour, never cropped or ghosted).
+ */
+export type StructureStyle = 'color' | 'ghost' | 'tree';
 
 /** One drawn part of the fallback structure: `trace` appends sub-paths (no `beginPath`). */
 interface StructurePart {
@@ -488,6 +489,8 @@ interface StructurePart {
   readonly top?: Rgb;
   /** Decoration (foliage): drawn in colour only, not part of the blueprint ghost. */
   readonly decor?: boolean;
+  /** Part of the plane tree (`town_ch1_tree`, ASSET #4b): not drawn by the tree house fallback. */
+  readonly tree?: boolean;
 }
 
 const disc =
@@ -525,10 +528,21 @@ function structureParts(tokens: Tokens): StructurePart[] {
     [cx + 220, 330, 130],
     [cx, 190, 170],
   ] as const) {
-    parts.push({ trace: disc(x, y, r), color: shade(leaf, 0.9), top: mix(leaf, WHITE, 0.25), decor: true });
+    parts.push({
+      trace: disc(x, y, r),
+      color: shade(leaf, 0.9),
+      top: mix(leaf, WHITE, 0.25),
+      decor: true,
+      tree: true,
+    });
   }
-  // t1 trunk + steps
-  parts.push({ trace: rrect(cx - 46, 470, 92, H - 480, 18), color: shade(wood, 0.95), top: woodLight });
+  // the trunk belongs to the tree (#4b); t1 = the steps on it
+  parts.push({
+    trace: rrect(cx - 46, 470, 92, H - 480, 18),
+    color: shade(wood, 0.95),
+    top: woodLight,
+    tree: true,
+  });
   for (let i = 0; i < 4; i++) {
     parts.push({ trace: rrect(cx + 60 + i * 34, H - 40 - i * 36, 70, 22, 6), color: wood, top: woodLight });
   }
@@ -568,15 +582,16 @@ function structureParts(tokens: Tokens): StructurePart[] {
 }
 
 /**
- * `town_ch1_treehouse` fallback (ASSET §16.3: trunk + leaf discs + platform …) drawn bottom-up in the order of the ART
- * §7.2 tasks (steps → platform → walls → window → roof → rope ladder + pulley → flag), so `setCrop` at
- * `layout.home.ch1CropStops` reveals one task per stop. `ghost` = the blueprint ghost (ART §7.2): ONE union fill of
- * the parts in `board.blueprint` α 0.35 (no alpha stacking) + 4 px white α 0.9 dashed contour (16/12) per part;
- * foliage is decoration and has no ghost.
+ * `town_ch1_treehouse` fallback (ASSET §16.3 #4: platform, walls … without the tree, which is #4b) drawn bottom-up in
+ * the order of the ART §7.2 tasks (steps → platform → walls → window → roof → rope ladder + pulley → flag), so `setCrop`
+ * at `layout.home.ch1CropStops` reveals one task per stop. `ghost` = the blueprint ghost (ART §7.2): ONE union fill of
+ * the parts in `board.blueprint` α 0.35 (no alpha stacking) + 4 px white α 0.9 dashed contour (16/12) per part.
+ * `tree` = the `town_ch1_tree` fallback (#4b, "#4 yedeğinin ağaç kısmı"): trunk + 3 leaf discs in colour.
  */
 export function drawStructureFallback(ctx: DrawContext, style: StructureStyle, tokens: Tokens): void {
   const ink = hexRgb(tokens.color.ui.ink);
-  const parts = structureParts(tokens);
+  const all = structureParts(tokens);
+  const parts = all.filter((p) => (style === 'tree') === (p.tree === true));
   ctx.save();
   ctx.lineJoin = 'round';
   if (style === 'ghost') {

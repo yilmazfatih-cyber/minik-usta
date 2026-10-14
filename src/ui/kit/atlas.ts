@@ -22,6 +22,7 @@ import {
 import type { FrameRef, UploadedAtlas } from '../../theme/textures.ts';
 import { KIT_BUTTON_HEIGHTS, buttonSlices, kitButtonFrameName } from '../../theme/draw/kit.ts';
 import type { ButtonState, KitButtonColor, Slices } from '../../theme/draw/kit.ts';
+import { timed } from '../../services/timings.ts';
 
 /** Fallback when the renderer reports no limit (Canvas). */
 const DEFAULT_MAX_TEXTURE = 4096;
@@ -45,7 +46,7 @@ function maxTextureSize(game: Phaser.Game): number {
 function kitState(game: Phaser.Game): KitState {
   let st = states.get(game);
   if (st && game.textures.exists(KIT_ATLAS_KEY)) return st;
-  const atlas = bakeKitAtlas(game.textures, TOKENS, maxTextureSize(game));
+  const atlas = timed('kitBake', () => bakeKitAtlas(game.textures, TOKENS, maxTextureSize(game)));
   st = { atlas, extra: new Map(), extraAtlases: [], hooked: st?.hooked ?? false };
   states.set(game, st);
   if (!st.hooked) {

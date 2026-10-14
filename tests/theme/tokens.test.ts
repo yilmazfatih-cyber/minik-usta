@@ -1,8 +1,10 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import rawTokens from '../../src/theme/tokens.json' with { type: 'json' };
 import { COLOR_CODES } from '../../src/core/types.ts';
 import type { ColorCode } from '../../src/core/types.ts';
-import { PENDING_TOKEN_KEYS, TOKENS, parseTokens } from '../../src/theme/tokens.ts';
+import { PENDING_TOKEN_KEYS, RETIRED_TOKEN_KEYS, TOKENS, parseTokens } from '../../src/theme/tokens.ts';
 import {
   blockPalette,
   css,
@@ -15,6 +17,7 @@ import {
 import type { Rgb } from '../../src/theme/draw/color.ts';
 
 type CheckGroup = 'blockTop' | 'blockBottom' | 'blockOutline' | 'symbolInk' | 'plan' | 'planStroke';
+const ROOT = join(import.meta.dirname, '..', '..');
 const check = (rawTokens as unknown as { check: Record<CheckGroup, Record<ColorCode, string>> }).check;
 
 function expectWithinOne(actual: Rgb, expectedHex: string, label: string): void {
@@ -152,7 +155,7 @@ describe('tokens v2 schema (TECH 2R.7; ART 3A, 7.1, 14; UX 3, 5.8, 5.9, 6.1, 13.
     expect(TOKENS.stroke.yardPreviewPx).toBe(4);
     expect(TOKENS.duration.placeSheen).toBe(260);
     expect(TOKENS.particles.sparkle).toBe(6);
-    expect(PENDING_TOKEN_KEYS).toEqual(['audio.sfx.sfx_teardown']);
+    expect(PENDING_TOKEN_KEYS).toEqual([]);
     expect(Object.isFrozen(TOKENS.kit.buttonColor.green)).toBe(true);
     expect('_doc' in TOKENS.blockV2 || '_docStud' in TOKENS.blockV2).toBe(false);
   });
@@ -163,7 +166,7 @@ describe('tokens v2 schema (TECH 2R.7; ART 3A, 7.1, 14; UX 3, 5.8, 5.9, 6.1, 13.
       if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
       for (const [k, v] of Object.entries(raw)) {
         if (k.startsWith('_doc') || k === 'check' || path + k === 'meta.units') continue;
-        if (PENDING_TOKEN_KEYS.includes(path + k)) continue;
+        if (PENDING_TOKEN_KEYS.includes(path + k) || RETIRED_TOKEN_KEYS.includes(path + k)) continue;
         const t = (typed as Record<string, unknown> | undefined)?.[k];
         if (t === undefined) missing.push(path + k);
         else walk(v, t, `${path}${k}.`);
@@ -171,6 +174,30 @@ describe('tokens v2 schema (TECH 2R.7; ART 3A, 7.1, 14; UX 3, 5.8, 5.9, 6.1, 13.
     };
     walk(rawTokens, TOKENS, '');
     expect(missing).toEqual([]);
+  });
+
+  it('TECH 2R.7 retired keys (tokens meta._docRetire 1–2) are not typed and no source file reads them', () => {
+    expect(RETIRED_TOKEN_KEYS).toEqual([
+      'alpha.tutorialOverlay',
+      'alpha.tutorialSoftOverlay',
+      'duration.tutorialHandLoop',
+      'duration.tutorialHandPause',
+      'duration.spotlightPulse',
+    ]);
+    const typed = TOKENS as unknown as Record<string, Record<string, unknown>>;
+    for (const key of RETIRED_TOKEN_KEYS) {
+      const [group, leaf] = key.split('.') as [string, string];
+      expect(typed[group]?.[leaf], key).toBeUndefined();
+    }
+    const files = (dir: string): string[] =>
+      readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap((e) =>
+        e.isDirectory() ? files(`${dir}/${e.name}`) : e.name.endsWith('.ts') ? [`${dir}/${e.name}`] : [],
+      );
+    const readers = files('src').filter((f) => {
+      const text = readFileSync(join(ROOT, f), 'utf8');
+      return RETIRED_TOKEN_KEYS.some((k) => text.includes(k) && !f.endsWith('theme/tokens.ts'));
+    });
+    expect(readers).toEqual([]);
   });
 
   it('TECH 2R.7 a missing v2 key is a boot error that names the path', () => {

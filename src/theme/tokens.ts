@@ -126,9 +126,6 @@ const DURATION_KEYS = [
   'panelEnter',
   'ftuePanelAuto',
   'reducedFade',
-  'tutorialHandLoop',
-  'tutorialHandPause',
-  'spotlightPulse',
   'loadingShowDelay',
   'hint',
   'supportFlash',
@@ -158,6 +155,9 @@ const DURATION_KEYS = [
   'teardownSettle',
   'holdableFade',
   'truckPreviewSlide',
+  // 2026-10-08 screen review (DS-14 Söküm line, UX §5.2 TrowelPicker target pulse)
+  'teardownLine',
+  'targetPulse',
 ] as const;
 
 /** ZzFX 1.4.0 `buildSamples` parameter list (≤ 21 values, tokens `audio._doc`). */
@@ -186,12 +186,27 @@ const SFX_KEYS = [
   'sfx_streak_pip',
   'sfx_trowel',
   'sfx_clamp',
-  // `sfx_teardown` (JUICE #107) is in tokens.json but not yet in ASSET_LIST §13, which tests/services/audio.test.ts
-  // requires for every typed sound: it joins this list with the ASSET row (REVIEW_LOG code-lead → design-lead, 2R).
+  'sfx_teardown',
 ] as const;
 
-/** tokens.json keys deliberately not typed yet (see the comment above); tests/theme/tokens.test.ts skips them. */
-export const PENDING_TOKEN_KEYS: readonly string[] = ['audio.sfx.sfx_teardown'];
+/**
+ * tokens.json keys deliberately not typed (tests/theme/tokens.test.ts skips them). Empty since the 2026-10-08 screen
+ * review: `sfx_teardown` got its ASSET §13 row and is typed.
+ */
+export const PENDING_TOKEN_KEYS: readonly string[] = [];
+
+/**
+ * tokens.json keys the code no longer reads and the schema no longer types (`meta._docRetire`, 2026-10-08): the order is
+ * code-lead drops them from the schema first, then design-lead deletes them from tokens.json (deleting a key the schema
+ * still requires is a boot error). tests/theme/tokens.test.ts skips them while they are still in the file.
+ */
+export const RETIRED_TOKEN_KEYS: readonly string[] = [
+  'alpha.tutorialOverlay',
+  'alpha.tutorialSoftOverlay',
+  'duration.tutorialHandLoop',
+  'duration.tutorialHandPause',
+  'duration.spotlightPulse',
+];
 const SEQ_KEYS = [
   'sfx_segment',
   'sfx_combo',
@@ -203,6 +218,8 @@ const SEQ_KEYS = [
   'sfx_chest',
   'music_win',
   'sfx_gap_rail',
+  'sfx_locked',
+  'sfx_hammer',
 ] as const;
 /** `[startMs, params]` steps mixed into one buffer (TECH §11.6). */
 const SeqSteps = z.array(z.tuple([num, ZzfxParams]));
@@ -390,6 +407,8 @@ const Kit = z.object({
   sunburst: z.object({
     ...shapeOf(['rayColor', 'innerColor', 'outerColor'] as const, hex),
     ...shapeOf(['rays', 'rayAlpha', 'turnsPerSecond'] as const, num),
+    /** ART §15.4: blend of the rays over the plaza; `rayAlpha` is the final α (no code offset). */
+    blend: z.enum(['add', 'normal']),
   }),
 });
 
@@ -423,6 +442,8 @@ const Tutorial = nums([
   'portraitPx',
   'portraitGapPx',
   'dockGapPx',
+  'ghostAlpha',
+  'ghostLiftMs',
 ]);
 
 /** UX §5.8 variable board (`layout.adaptive.*`, K-49). `cellMaxPx` is optional: 120 when absent (TECH §2R.1). */
@@ -489,6 +510,7 @@ const LayoutHome = z.object({
       'navH',
       'navTabW',
       'expandShare',
+      'characterExpandShare',
       'chestRingPx',
     ] as const,
     num,
@@ -620,6 +642,9 @@ export const TokensSchema = z.object({
       'sliderPlate',
       'lockBar',
       'buildFront',
+      // UX §5.8 yard frame wood gradient (2026-10-08; contour = kit.panel.outline)
+      'yardFrameTop',
+      'yardFrameBottom',
     ]),
     obstacle: hexes([
       'crate',
@@ -660,8 +685,6 @@ export const TokensSchema = z.object({
   }),
   alpha: nums([
     'overlay',
-    'tutorialOverlay',
-    'tutorialSoftOverlay',
     'symbolWhite',
     'planFill',
     'planInkLight',

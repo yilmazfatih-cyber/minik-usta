@@ -939,20 +939,36 @@ export function fallbackArt(
     return { w, h, draw: (ctx) => drawCharacter(ctx, id, { w, h }, tokens) };
   }
   switch (key) {
+    case 'chr_tuna_stand': {
+      // DS-04 (optional until the SVG arrives): the cheer figure standing on the box's bottom edge
+      const vb = CHARACTER_VIEWBOX.chr_tuna_cheer;
+      const fh = Math.min(h, (w * vb.h) / vb.w);
+      return {
+        w,
+        h,
+        draw: (ctx) => {
+          ctx.save();
+          ctx.translate(0, h - fh);
+          drawCharacter(ctx, 'chr_tuna_cheer', { w, h: fh }, tokens);
+          ctx.restore();
+        },
+      };
+    }
     case 'bg_home_town':
       return { w, h, draw: (ctx) => drawTownFallback(ctx, { w, h }, tokens) };
     case 'bg_win_plaza':
       return { w, h, draw: (ctx) => drawWinPlazaFallback(ctx, { w, h }, tokens) };
+    case 'town_ch1_tree':
     case 'town_ch1_treehouse':
     case 'town_ch1_treehouse_ghost': {
-      const ghost = key.endsWith('_ghost');
+      const style = key === 'town_ch1_tree' ? 'tree' : key.endsWith('_ghost') ? 'ghost' : 'color';
       return {
         w,
         h,
         draw: (ctx) => {
           ctx.save();
           ctx.scale(w / STRUCTURE_SIZE.w, h / STRUCTURE_SIZE.h);
-          drawStructureFallback(ctx, ghost ? 'ghost' : 'color', tokens);
+          drawStructureFallback(ctx, style, tokens);
           ctx.restore();
         },
       };

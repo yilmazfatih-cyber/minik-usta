@@ -1310,7 +1310,6 @@ describe('Round 2 · K-22 / K-33 / W1 / S2 across segments', () => {
     expect(measureYao(s)).toEqual({ overWall: 0, rail: 0, yao: null });
     expect(hdr(s, H.wrongCount)).toBe(2);
   });
-
 });
 
 describe('Round 2 · K-39 Undo corner cases', () => {
@@ -1762,7 +1761,13 @@ describe('Round 3 · K-22 / K-33 / E-09 segment shift outside a drag', () => {
   it('E-09 K-33 a Golden Trowel that completes a NON-final segment runs steps 8 (shift + batch), 9 (delivery) and 12; m, the counter and the streak stay', () => {
     const calls: number[] = [];
     const session = GameSession.start(
-      compiledLevel({ ...TROWEL_SHIFT, pieces: [['B1_0', 'W', 0, 0], ['B1_0', 'W', 1, 0]] }),
+      compiledLevel({
+        ...TROWEL_SHIFT,
+        pieces: [
+          ['B1_0', 'W', 0, 0],
+          ['B1_0', 'W', 1, 0],
+        ],
+      }),
       { preBoosters: ['trowelStart'] },
       { hooks: deadlockSpy(calls) },
     );
@@ -1783,9 +1788,7 @@ describe('Round 3 · K-22 / K-33 / E-09 segment shift outside a drag', () => {
     ]);
     expect(first(sink.events, 'siteShifted').toSeg).toBe(1);
     expect(at(s, 2)).toEqual([3, 0, Zone.yard]);
-    expect([session.movesMade, session.movesLeft, hdr(s, H.combo), hdr(s, H.trowels)]).toEqual([
-      1, 19, 1, 0,
-    ]);
+    expect([session.movesMade, session.movesLeft, hdr(s, H.combo), hdr(s, H.trowels)]).toEqual([1, 19, 1, 0]);
     expect(calls).toEqual([1, 1]);
     // K-39: a trowel use in between closes Undo
     expect(session.undoBlock()).toBe('noDragMove');

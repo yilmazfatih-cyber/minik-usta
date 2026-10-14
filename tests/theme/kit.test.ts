@@ -283,12 +283,15 @@ describe('scene drawing (ART 2.4, 7.1–7.4; UX 5.8)', () => {
     expect(SC.yardFrameSlices(TOKENS).left).toBeGreaterThanOrEqual(a.yardFrameRadiusPx + a.yardFramePx);
   });
 
-  it('ART 7.2 structure ghost: ONE union fill (blueprint α 0.35) + white α 0.9 dashed 16/12 contour per part, no foliage', () => {
+  it('ART 7.2 structure ghost: ONE union fill (blueprint α 0.35) + white α 0.9 dashed 16/12 contour per part, no tree; ASSET 16.3 #4b the tree (trunk + 3 leaf discs) is its own full-colour fallback', () => {
     const ops = record((ctx) => SC.drawStructureFallback(ctx, 'ghost', TOKENS));
     expect(styleAt(ops, 'fill', 'fillStyle')).toEqual([css(parseHex(TOKENS.color.board.blueprint), 0.35)]);
     expect(opsOf(ops, 'setLineDash')).toEqual([['setLineDash', [16, 12]]]);
     const color = record((ctx) => SC.drawStructureFallback(ctx, 'color', TOKENS));
-    expect(opsOf(color, 'fill').length).toBe(opsOf(ops, 'stroke').length + 3);
+    expect(opsOf(color, 'fill').length).toBe(opsOf(ops, 'stroke').length);
+    const tree = record((ctx) => SC.drawStructureFallback(ctx, 'tree', TOKENS));
+    expect(opsOf(tree, 'fill').length).toBe(4);
+    expect(opsOf(tree, 'setLineDash')).toEqual([]);
   });
 });
 
@@ -361,6 +364,7 @@ describe('determinism of every v2 drawer (TECH 2R.7)', () => {
   pureCheck('scene town fallback', (ctx) => SC.drawTownFallback(ctx, { w: 540, h: 960 }, TOKENS));
   pureCheck('scene win plaza fallback', (ctx) => SC.drawWinPlazaFallback(ctx, { w: 540, h: 960 }, TOKENS));
   pureCheck('scene structure colour', (ctx) => SC.drawStructureFallback(ctx, 'color', TOKENS));
+  pureCheck('scene structure tree', (ctx) => SC.drawStructureFallback(ctx, 'tree', TOKENS));
   pureCheck('scene logo emblem', (ctx) => SC.drawLogoEmblemFallback(ctx, TOKENS));
   for (const id of CH.CHARACTER_IDS)
     pureCheck(`character ${id}`, (ctx) => CH.drawCharacter(ctx, id, { w: 300, h: 375 }, TOKENS));

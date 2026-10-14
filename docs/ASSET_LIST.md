@@ -1,6 +1,6 @@
 # Varlık listesi — Minik Usta
 
-Sahip: design-lead · Sürüm: **Faz 2R uygulama (2026-10-07)** — 33 SVG teslim edildi (§15 kayıt, §16.6 teslim durumu); **Faz 2R (2026-10-07)** — görsel listesi v2 §16: **elle yazılmış SVG** (R2-08 güncellemesi: Canva ve üretken yapay zekâ yok; 26 varlık, ücret 0), bellek ve indirme bütçesi (CL-2R-23), R2-12 studlu tuğla ve çivit sahne varlıkları, prosedürel v2 varlıkları §16.5; çapraz inceleme kapanışı aynı gün; önceki: Faz 1 revizyonu (2026-10-05; R-04, R-05, R-07, R-14, R-19, R-24), Faz 2 boşluğu 2 (2026-10-06) · Görsel
+Sahip: design-lead · Sürüm: **Faz 2R uygulama (2026-10-07; r2 2026-10-08: Tuna D-087, kazanma lambaları, §13 `sfx_teardown` / `sfx_locked` / `sfx_hammer`)** — 33 SVG teslim edildi (§15 kayıt, §16.6 teslim durumu); **Faz 2R (2026-10-07)** — görsel listesi v2 §16: **elle yazılmış SVG** (R2-08 güncellemesi: Canva ve üretken yapay zekâ yok; 26 varlık, ücret 0), bellek ve indirme bütçesi (CL-2R-23), R2-12 studlu tuğla ve çivit sahne varlıkları, prosedürel v2 varlıkları §16.5; çapraz inceleme kapanışı aynı gün; önceki: Faz 1 revizyonu (2026-10-05; R-04, R-05, R-07, R-14, R-19, R-24), Faz 2 boşluğu 2 (2026-10-06) · Görsel
 tarifler: `docs/ART_DIRECTION.md` · Animasyon/ses: `docs/JUICE.md` · Sahneler: `docs/STORY.md`
 
 ---
@@ -319,11 +319,17 @@ ve güçlendirici sesleri ilgili mekanikle (Faz 2–3) eklenir. Perde/ses farkla
 never harsh; failure sounds gentle and non-judgmental; all sounds mono, 44.1 kHz, peak −3 dBFS, delivered as OGG +
 M4A."
 
+**Tokens durumu (2026-10-08, ekran incelemesi):** Faz 2R dilimi için `tokens.json`'a eklenenler: `audio.sfx.sfx_teardown`
+(#107; satır bu tabloya girdi, code-lead `PENDING_TOKEN_KEYS`'ten çıkarır), `audio.seq.sfx_locked` (#73 kilitli öğe, #108
+hedefsiz yuva; bugün yerine `sfx_blocked` çalıyor) ve `audio.seq.sfx_hammer` (#61 Çekiç; Bölüm 8'de açılır — vuruş +
+gövde + çelik tınısı tek dizide, Ağır Yük'ün kırılma sesi ayrı ad almaz). Kasa / torba kırılma sesleri (`sfx_crate_*`,
+`sfx_bag_*`) Faz 3'te mekanikleriyle gelir.
+
 | Grup | Adlar | Adet |
 | ---- | ----- | ---- |
 | Sürükleme | `sfx_pick`, `sfx_blocked`, `sfx_bump`, `sfx_whoosh`, `sfx_ghost_ok`, `sfx_cancel`, `sfx_set_yard`, `sfx_fall`, `sfx_land` | 9 |
 | Yerleşim / kombo | `sfx_place_ok` (perde kademeli), `sfx_place_bad`, `sfx_bounce`, `sfx_mortar`, `sfx_streak_pip`, `sfx_combo`, `sfx_trowel`, `sfx_segment` | 8 |
-| Teslimat | `sfx_truck_horn`, `sfx_queue`, `sfx_reshuffle` | 3 |
+| Teslimat ve kilitlenme | `sfx_truck_horn`, `sfx_queue`, `sfx_reshuffle`, `sfx_teardown` (Söküm, JUICE #107; Faz 2R) | 4 |
 | Geçitler | `sfx_gap_rail`, `sfx_clamp`, `sfx_gap_squeeze`, `sfx_shutter`, `sfx_tick`, `sfx_slider`, `sfx_paint`, `sfx_unlock`, `sfx_wind` | 9 |
 | Engeller | `sfx_crate_hit`, `sfx_crate_break`, `sfx_bag_tear`, `sfx_bag_thud`, `sfx_chain_break`, `sfx_dry`, `sfx_key`, `sfx_screw`, `sfx_goal_tick`, `sfx_debris`, `sfx_glass`, `sfx_balloon`, `sfx_slip`, `sfx_steer`, `sfx_carousel`, `sfx_elevator`, `sfx_reveal` | 17 |
 | Hamle / sonuç | `sfx_lastmoves`, `sfx_offer`, `sfx_moves_add`, `sfx_goal_done`, `music_win`, `sfx_coin`, `sfx_out_of_moves`, `sfx_life_lost`, `sfx_star` | 9 |
@@ -383,11 +389,11 @@ yeniden çizilir).
 | `font_baloo2_latin_tr` | 1 | Ek Type (OFL 1.1) | pyftsubset (ücretsiz) | final (alt küme) | 2026-10-04 | yok | — (font) | `fonts/baloo2/` | OFL 1.1, Lisanslar sayfasında |
 | `bg_home_town` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/bg/bg_home_town.svg` | proje sahibine ait |
 | `bg_level_site_edge` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/bg/bg_level_site_edge.svg` | proje sahibine ait |
-| `bg_win_plaza` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/bg/bg_win_plaza.svg` | proje sahibine ait |
+| `bg_win_plaza` | 2 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07; r2 2026-10-08 | yok | mağaza öncesi (yapılmadı) | `public/art/bg/bg_win_plaza.svg` | proje sahibine ait |
 | `town_ch1_tree` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/town/town_ch1_tree.svg` | proje sahibine ait |
 | `town_ch1_treehouse` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/town/town_ch1_treehouse.svg` | proje sahibine ait |
-| `chr_tuna_bust` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_tuna_bust.svg` | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 |
-| `chr_tuna_cheer` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_tuna_cheer.svg` | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 |
+| `chr_tuna_bust` | 2 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07; r2 2026-10-08 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_tuna_bust.svg` | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 |
+| `chr_tuna_cheer` | 2 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07; r2 2026-10-08 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_tuna_cheer.svg` | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 |
 | `chr_dede_bust` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_dede_bust.svg` | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 |
 | `chr_kepce_bust` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_kepce_bust.svg` | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 |
 | `chr_gribeton_bust` | 1 | design-lead ajanı | elle SVG, metin düzenleyici + Chromium önizleme (ücret 0) | web MVP final | 2026-10-07 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_gribeton_bust.svg` | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 |
@@ -427,7 +433,7 @@ genel brifinin ve §6–§11'deki tek tek brif cümlelerinin **yerine geçer** (
 ### 16.1 Üretim yolu, bütçe ve kayıt
 
 - **Yol (ücret 0):** design-lead SVG'yi elle yazar → `public/art/<kategori>/<kimlik>.svg` (depoya girer) → code-lead
-  boru hattı (TECH §2R.7) kullanım boyutunda raster eder (çalışma anında `load.svg` boyutla ya da derlemede `npm run
+  boru hattı (TECH §2R.6) kullanım boyutunda raster eder (çalışma anında `load.svg` boyutla ya da derlemede `npm run
   assets` ile kurulu Chromium'da PNG/WebP; seçim code-lead'in) → ikonlar tek atlasa. Şeffaflık SVG'de doğaldır: zemin
   çizilmez, **arka plan kaldırma adımı yoktur**. Yeni bağımlılık, hesap, kota ve ağ erişimi gerekmez.
 - **Klasörler:** `public/art/bg/`, `public/art/town/`, `public/art/chr/`, `public/art/icon/`, `public/art/logo/`.
@@ -496,8 +502,8 @@ Raster = oyunun yüklediği doku boyutu; GPU = RGBA bellek. "Faz" sütunu: **2R*
 | 3 | `bg/bg_win_plaza` | 0 0 1080 1920 | 540×960 / 2,1 MB | Kazanma katmanı (UX §6.1, ART §7.3) | Merkez (x 240–840, y 440–1040) açık ve sade; bayraklar üst %30'da | `kit.sunburst` ışın + bayrak üçgenleri | 2R |
 | 4 | `town/town_ch1_treehouse` | 0 0 760 820 | 760×820 / 2,5 MB + hayalet dokusu 2,5 MB | Ana sayfa yapısı (UX §3, ART §7.2) | Görev sırası alttan üste (ART §7.2: basamak → platform → duvar → pencere → çatı → ip merdiven + makara yukarıda → bayrak); her görev parçası kendi `<g id="t1">`…`<g id="t7">` grubunda; kırpma durakları `layout.home.ch1CropStops` ile örtüşür; **ağaç bu dosyada yoktur** (4b); grup sınırları ve bant taşmaları §16.6 | gövde + 3 yaprak dairesi + platform + ozalit hayaleti | 2R |
 | 4b | `town/town_ch1_tree` (2026-10-07 eklendi) | 0 0 760 820 | 760×820 / 2,5 MB | Ana sayfa: yapının **altında**, aynı kutuda (merkez x 540, taban y 1180), her zaman tam renk | Ozalit hayaleti ve `setCrop` **uygulanmaz** (ağaç inşa edilmez, yalnız yapı); gövde x 340–436 basamakların arkasında, gözcü dalı y 80–200 makara ve bayrak direğini taşır; taç yapının arkasında | gövde + 3 yaprak dairesi (#4 yedeğinin ağaç kısmı) | 2R |
-| 5 | `chr/chr_tuna_bust` | 0 0 256 320 | 300×375 / 0,45 MB | Oyun köşesi, ana sayfa, ara sahne | `color.character.tuna` birebir; sarı kask ve tulum yok; görünür yaş 10–12 (açık soru ART §11.1); 6 ifade `face` grubu | ART §11.7 Tuna | 2R |
-| 6 | `chr/chr_tuna_cheer` | 0 0 300 400 | 300×400 / 0,48 MB | Kazanma (UX §6.1) | #5 ile aynı karakter (yan yana 2 kişiden 2'si aynı der) | Tuna SVG + eldivenler yukarıda | 2R |
+| 5 | `chr/chr_tuna_bust` | 0 0 256 320 | 300×375 / 0,45 MB | Oyun köşesi, ana sayfa, ara sahne | `color.character.tuna` birebir; sarı kask ve tulum yok; görünür yaş 10–12 (D-087; ART §11.1 oran tablosu: göz ≤ yüzün %30'u, burun çizgisi, küçük yan gülüş; 2026-10-08 uygulandı); 6 ifade `face` grubu | ART §11.7 Tuna | 2R |
+| 6 | `chr/chr_tuna_cheer` | 0 0 300 400 | 300×400 / 0,48 MB | Kazanma (UX §6.1) | #5 ile aynı karakter (yan yana 2 kişiden 2'si aynı der); tam boy ≥ 3,6 baş (kafatası ölçüsüyle, D-087) | Tuna SVG + eldivenler yukarıda | 2R |
 | 7 | `chr/chr_dede_bust` | 0 0 256 320 | 256×320 / 0,33 MB + portre 128×128 (Canvas2D daire kırpımı, bir kez; ART §14.8) | Öğretici balonu, ara sahne | Kasket #C65A3A, ceket #7A8B4A birebir; katlanır metre görünür; Ø 128 dairede yüz + kasket sığar **Portre kırpım dairesi: viewBox merkezi (126, 142), r 84** → 128 px (yüz, kasket, bıyık ve metrenin ucu içeride; 72 px'te de okunur, `contact_characters.png`) | ART §11.7 Usta Dede | 2R |
 | 8 | `chr/chr_kepce_bust` | 0 0 320 220 | 300×206 / 0,25 MB | Oyun köşesi, ana sayfa | Kask #FF9A1F, tasma #7FE0C4; sosis köpek oranı (gövde ≥ 2,5 × omuz yüksekliği) | ART §11.7 Kepçe | 2R |
 | 9 | `chr/chr_gribeton_bust` | 0 0 256 320 | 256×320 / 0,33 MB | Ara sahne, rakip satırları | Dikdörtgen siluet, beton blok saç; takım #8C939C; kötü adam ifadesi yok | ART §11.7 Gribeton | 2R |
@@ -546,7 +552,7 @@ incelemesi ve REVIEW_LOG kaydı.
 | `ui_blocks_left_icon` | 96×96 (3–4 çipte 72×72) | L3 şeker blok geometrisi, **krem kit rengi + `ui.ink` kontur, sembol yok** (ART §14.9, PL-2R-14) | Faz 2R |
 | `ui_structure_ghost_<ch>` | yapı kutusu | yapı görselinin siluetinden ozalit hayaleti: `board.blueprint` %35 + 4 px beyaz %90 kesik kontur (ART §7.2) | Faz 2R |
 | `fx_sparkle4`, `fx_sunburst`, `fx_ring` | 48×48 / 1080×1080 / 256×256 | ART §15 | Faz 2R |
-| `yard_frame` v2 | 9-dilim, köşe 24 | 20 px ahşap gradyan #E2A653 → #B97A35 + 6 px #5A3A1E kontur + iç gölge (UX §5.8) | Faz 2R |
+| `yard_frame` v2 | 9-dilim, köşe 24 | 20 px ahşap gradyan #E2A653 → #B97A35 (`color.board.yardFrameTop` / `yardFrameBottom`, 2026-10-08) + 6 px #5A3A1E kontur (`kit.panel.outline`) + iç gölge (UX §5.8) | Faz 2R |
 | `site_scaffold` v2 | boru 16 × ((Hs + e)·120 + 40; şantiye üstü hava varsa H·120 + 40), kelepçe 24×20 | ART §4 Faz 2R notu, UX §5.8 | Faz 2R |
 
 **Kaldırılan:** `ui_spotlight` (§10) — Faz 2R'de karartma ve delik yok (UX §13.1, R2-10).
@@ -595,3 +601,12 @@ Faz 4'te görev sistemi gelince grup bazlı açılış (her `<g id="tk">` ayrı)
 (UI örtüyor, ama tek başına sade); `chr_gribeton_bust` eli ve klasörü basit; Tuna'nın oranları (büyük kafa, iri göz)
 D-087'nin 10–12 yaş görünümünden genç okunabilir — 5 kişilik yaş tahmini testi ART §12'deki yan yana testle birlikte
 yapılır; `icon_moves` duvarı 128 px'te küçük bir sıraya benzer (64 px'te sorun yok).
+
+**r2 (2026-10-08, ekran incelemesi `review_inbox/design-lead-2R-screens-1.md`):** (a) `chr_tuna_bust` ve `chr_tuna_cheer`
+D-087 oran tablosuna (ART §11.1) çekildi: göz ry 19 → 15, üst kapak çizgisi, düz kaş, burun çizgisi, küçük yan gülüş,
+yanak α 0,45 → 0,22, hafif sivri çene; sevinç pozunda baş ölçeği 0,8 → 0,66, boyun, uzun gövde ve bacak (kafatası
+ölçüsüyle 2,9 → 3,7 baş), eldivenler başın yanına açıldı. (b) `bg_win_plaza`: iki sokak lambası x 286 / 794 → 40 / 1040
+(ödül satırlarının altından "ayak" gibi çıkıyorlardı; merkez sade kuralı). `npm run assets` yeniden üretildi (33 ok +
+1 bilinen sorun: katalog dışı `town_ch1_tree`), `assets:check` çıkış 0. **Planlanan (screens-2):** `chr/chr_tuna_stand`
+(tam boy, başparmak yukarı, 300×480; ana sayfa karakter köşesi, UX §3) — SVG ve §16.3 satırı code-lead katalog
+satırıyla aynı turda gelir (katalog dışı SVG `npm run assets`'i kırmızıya çeviriyor, `town_ch1_tree` örneği).

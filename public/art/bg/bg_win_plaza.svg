@@ -46,7 +46,7 @@
     <path d="M-10 1330Q540 1290 1090 1330V1930H-10Z" fill="url(#pz)"/>
   </g>
   <g stroke="#3B2A1A" stroke-width="8" stroke-linejoin="round">
-    <use href="#lamp" transform="translate(286 1200)"/><use href="#lamp" transform="translate(794 1200)"/>
+    <use href="#lamp" transform="translate(40 1200)"/><use href="#lamp" transform="translate(1040 1200)"/>
   </g>
   <g fill="#FFFFFF" fill-opacity=".5"><ellipse cx="276" cy="1172" rx="5" ry="12"/><ellipse cx="784" cy="1172" rx="5" ry="12"/></g>
   <g fill="none" stroke="#D4AE6E" stroke-width="6" stroke-linecap="round">

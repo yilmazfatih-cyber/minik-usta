@@ -325,7 +325,7 @@
       "min": 8,
       "bandOk": true,
       "states": 79,
-      "ms": 16
+      "ms": 8
     }
   ],
   "issues": [],
@@ -334,7 +334,7 @@
     "states": 224,
     "expanded": 224,
     "edges": 1299,
-    "ms": 45,
+    "ms": 65,
     "bytes": 155971,
     "dragSessions": 164,
     "applyMoves": 155,
@@ -344,7 +344,7 @@
     "d3aUnknown": 0,
     "complete": true,
     "limit": null,
-    "totalMs": 86
+    "totalMs": 101
   },
   "cacheKey": "e196e723:rules2:solver2:level:var:d3a"
 }

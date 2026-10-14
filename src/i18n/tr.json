@@ -15,6 +15,9 @@
     "brush": {
       "noTarget": "Renk takası için eş blok yok."
     },
+    "crane": {
+      "noTarget": "Şu an taşınacak blok yok."
+    },
     "hammer": {
       "noTarget": "Burada kırılacak yük yok."
     },
@@ -333,6 +336,9 @@
     }
   },
   "settings": {
+    "feedback": "Geri bildirim",
+    "feedbackCopied": "Kopyalandı. Mesaja yapıştırıp gönder.",
+    "feedbackManual": "Metni seçip elle kopyala.",
     "haptics": "Titreşim",
     "music": "Müzik",
     "sound": "Ses",
@@ -400,9 +406,6 @@
       "truckhelp": {
         "free": "Kamyon yardım etti, bloklar serbest. Devam!"
       }
-    },
-    "l23": {
-      "light": "Hafif yerçekimi! Bloklar yavaş düşer."
     },
     "m": {
       "carry": "Bu blok sonraki kat için.",

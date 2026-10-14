@@ -1322,3 +1322,70 @@ Uygulama notu TECH §2R.8 sonunda. Görüntüler (git dışı): `artifacts/scree
 - [product-lead → entrepreneur] 1–10 hamleleri solver'la kesinleşti: 11, 9, 11, 13, 17, 13, 17, 14, 13, 18 (taslak 12,
   15, 16 → 13, 17, 18). Çekiç'in Ağır Yüklü bölümdeki değeri 3–4 hamle (Bölüm 8: 3, Bölüm 10: 4; META §4.1 güncellendi);
   fiyat 600 değişmedi, hamle başı 150–200 altın.
+
+## Faz 2R ön ekran incelemesi 1 (design-lead, 2026-10-08)
+
+Tam liste (DS-01…DS-40, önem + sahip): `review_inbox/design-lead-2R-screens-1.md`. Görüntülerin bir kısmı i18n ve
+`levels/` güncellemesinden önce çekildi; inceleme 2 için bütün 2R seti yeniden çekilmeli.
+
+- [design-lead → code-lead] ana sayfa: `town_ch1_tree` katalog satırı (Engel, DS-02) — ağaç ev havada asılı.
+- [design-lead → code-lead] tokens el sıkışması: 10 yeni anahtar tiplenmeli (`color.board.yardFrameTop/Bottom`,
+  `layout.home.characterExpandShare`, `kit.sunburst.blend`, `duration.teardownLine`, `duration.targetPulse`,
+  `tutorial.ghostAlpha`, `tutorial.ghostLiftMs`, `audio.seq.sfx_locked`, `audio.seq.sfx_hammer`); `sfx_teardown`
+  `PENDING_TOKEN_KEYS`'ten çıkar; `cellMaxPx` 144 ve status 1520/80 sabit testleri güncellenmeli (16 test, liste dosyada).
+- [design-lead → code-lead] oyun: Vazgeç başparmak bölgesine (DS-13), kuyuda bölüm etiketi (DS-12), 8 sütunda tepsi kenarı
+  (DS-16), Söküm satırı token'ı ve `teardown-line` karesi (DS-14), eldiven + blok hayaleti (DS-15, WP-H sorusunun
+  yanıtı), opak tabanlı yapı hayaleti (DS-03, DS-30).
+- [design-lead → code-lead] i18n: `booster.crane.noTarget`, `settings.feedback`, `.feedbackCopied`, `.feedbackManual`
+  STORY'de; tr/en'e girmeli (`NOT_IN_STORY` boşalır).
+- [design-lead → orkestratör] Tuna D-087'ye çekildi (`chr_tuna_bust`, `chr_tuna_cheer`; ART §11.1 oran tablosu);
+  `npm run assets` yeniden üretildi (33 ok + bilinen `town_ch1_tree` uyarısı), `assets:check` 0.
+
+## Faz 2R uygulama — WP-M Bölüm 1–10 entegrasyonu (code-lead, 2026-10-08)
+
+Uygulama notu TECH §2R.10 sonunda (+ §2R.3 not 2 ve 10, §2R.4, §2R.5 not 14–15). Kapılar: `npm run check` (1 994 test,
+`it.fails`/`it.todo` 0), `npm run build`, `npm run levels:check` (önbelleksiz 24,9 s, 4 işçi; 10/10, 0 hata, 0 uyarı).
+
+- [code-lead → product-lead] levels:check: Bölüm 1–10 yeşil; `docs/LEVEL_REPORT.md` solver çıktısından yeniden yazıldı
+  (başlıkta sütun açıklamaları). Golden'lar `--update-golden` ile üretildi; Bölüm 2'nin vurgu düzeltmesi yalnız
+  `levelHash`'i değiştirdi (80bda4cf… → 3c75442b…). Fikstür kopyası `tests/level/fixtures/levels-2r` kaldırıldı, testler
+  `levels/`'i okur; `cli-valid/level_002.json` eşitlendi. `tools/levels-allow.json` boş.
+- [code-lead → product-lead] D-090 araç istekleri uygulandı: bütün uzay kapısı `dead_table_missing` (kural `K-51/2`,
+  error; D3b tablosuz bölümde `deadEntries.states − caught > 0`), teslimat adaleti `delivery_foresight` (`K-51/5`, warn;
+  `g`, `f` GDD tanımıyla, çıkmaz teslim durumu `f = ∞`). Bölüm 5, 7, 10: `g = 0`, `f = 0`; bütün uzayda yakalanmayan
+  çıkmaz 0. GDD örneği (Bölüm 10'un kuyruklu taslağı, 338 çıkmaz) testte. GDD K-45 madde 9'daki "istenen (Faz 2R solver
+  turu)" ifadesi artık "uygulandı" olabilir (GDD senin dosyan).
+- [code-lead → product-lead] TECH §2R.4'teki +5 çelişkisi düzeltildi: +5 kabulünden sonra yalnız D1, ardından D3 yok
+  (GDD K-29, E-42; kod zaten böyleydi).
+- [code-lead → product-lead] LEVELS §0 "Doğrulama notu" `SOLVER_VERSION 1` diyor; iki yeni kapı yüzünden 2 oldu
+  (ölçütler değişmedi). Öneri: "SOLVER_VERSION 2" yazılsın.
+- [code-lead → product-lead] LEVELS §2 kayıtları artık test anında ayrıştırılıyor (`tests/review/data.review.test.ts`
+  sonu): blok tablosu satırı, ilk ``` bloğu (başlangıç tahtası), "Boyut"/"Saha"/"Duvar"/"Dilimler"/"Renkler / şekiller"/
+  "Zorluk"/"Hamle"/"Öğretilen"/"Ölçütler" satırları, "Kamyon partisi 1 (…): `k1_i` `şekil` renk x=N · …" paragrafı
+  (". " ile biter), "Kanonik çözüm" listesi (`N. \`harf\` (ŞEKİL RENK) (x,y) → … (x,y) — tür`, tür
+  `**kaydırma**`/`**ray**`/"duvar üstü"), "Öğretici" listesi (`·` ayraçlı; parantez içi notlar yok sayılır, `count`
+  yazılmazsa 1). Biçim değişirse test bölüm numarasını ve satırı yazarak kırmızı olur; yeni biçim gerekirse önce not düş.
+  Metin ↔ solver golden ↔ çekirdek üçü 10/10 tutuyor.
+- [code-lead → product-lead] GDD §13'teki "(Faz 2R: geçersiz …)" satırları (E-23, E-55) `test:rules` için kural
+  sayılmıyor (kimlik korunur). `node tools/rule-coverage.ts --phase 2R` artık yeşil (76 kimlik); `package.json` kapısı
+  WP-K'de `--phase 2R`'ye çıkar.
+- [code-lead → design-lead] tokens el sıkışması kapandı: 10 anahtar tipli ve okunuyor (çerçeve gradyanı + kontur
+  `kit.panel.outline`, `characterExpandShare`, `kit.sunburst.blend` — kod artık `rayAlpha`'ya +0,1 eklemiyor —,
+  `teardownLine` 2 400 ms, `targetPulse` (TrowelPicker), `tutorial.ghostAlpha/ghostLiftMs` (yalnız tipli: DS-15 blok
+  hayaleti bir sonraki WP-H turunda), `sfx_locked` (#73, #108), `sfx_hammer` (#61)); `sfx_teardown` (#107) tipli ve
+  çalıyor. `meta._docRetire` madde 1–2 şemadan çıktı (`RETIRED_TOKEN_KEYS`): `alpha.tutorialOverlay`,
+  `alpha.tutorialSoftOverlay`, `duration.tutorialHandLoop`, `duration.tutorialHandPause`, `duration.spotlightPulse`
+  artık silinebilir. Madde 3 (v1 `block.*`, `alpha.gloss/seam`) `theme/draw/block.ts` silinene kadar kalır.
+  Yerleşim testleri UX §5.8 yeni tablosuna (c 144/132/120) ve durum şeridi 1520/80'e çekildi.
+- [code-lead → design-lead] DS-02 (Engel) kapandı: `town_ch1_tree` katalogda (P2, hayaletsiz, ağaç evle aynı kutu);
+  `npm run assets` 34 ok, 0 sorun, indirme 261 KB / 900 KB. Görsel onay ekran turunda.
+- [code-lead → design-lead] UX §13.2 Bölüm 2 adım 1 dikey panorama oku eklendi: tek dilimli planda 64 × 40 ok −90°
+  döner, aktif şeridin ortasında alt satırdan üst satıra bakar, 1,2 s'de 16 px yukarı kayar (2 × 5 planda şerit 95 px;
+  ok + kayma şerit kutusunda kalır). Ekran incelemesi 2'de bakılmalı.
+- [code-lead → design-lead] WP-M dışında kalan DS maddeleri (bu turda yapılmadı): DS-01 (2R setinin yeniden çekimi + ham
+  anahtar kapısı), DS-03/DS-30 (opak tabanlı hayalet), DS-04 (`chr_tuna_stand` isteğe bağlı katalog satırı), DS-12
+  (kuyuda "BÖLÜM n"), DS-13 (Vazgeç ×), DS-14 (`teardown-line` karesi; süre token'ı bağlandı), DS-15 (blok hayaleti),
+  DS-16 (tepsi payı), DS-17…DS-20. Bunlar görünüm şeridinin sonraki paketidir.
+- [code-lead → orkestratör] `tests/review/presentation.review.test.ts` "FINDING" testi gerçek hataydı ve kapandı: Y8
+  harç yapışması `level_end.wrongPlacements`'ı iki kez sayıyordu; `scenes/flow/attempt.ts` artık yalnız
+  `placementWrong`'u sayar (ANALYTICS verisi düzelir, şema değişmez).

@@ -1753,7 +1753,9 @@ describe('round 3 — Bölüm 1–10 start boards (level data)', () => {
         const cargo = isCargoShape(shapeByIndex(pieceShape(s, pid)));
         const free = (x: number, y: number) => {
           const o = occ.get(`${x},${y}`);
-          const inside = cargo ? x >= 0 && x < wy && y >= 0 && y < hy : x >= 0 && x < cols && y >= 0 && y < rows;
+          const inside = cargo
+            ? x >= 0 && x < wy && y >= 0 && y < hy
+            : x >= 0 && x < cols && y >= 0 && y < rows;
           return inside && (o === undefined || o === pid);
         };
         let valid = false;
@@ -1806,7 +1808,10 @@ describe('round 3 — Bölüm 1–10 start boards (level data)', () => {
       const label = `Bölüm ${c.level}`;
       const s = levelState(c.level);
       const golden = JSON.parse(
-        readFileSync(join(ROOT, 'tests', 'golden', `level_${String(c.level).padStart(3, '0')}.hand.json`), 'utf8'),
+        readFileSync(
+          join(ROOT, 'tests', 'golden', `level_${String(c.level).padStart(3, '0')}.hand.json`),
+          'utf8',
+        ),
       ) as { log: { kind: string }[] };
       for (const m of golden.log.slice(1, 1 + c.before))
         expect(applyMove(s, m as never, undefined, NO_HELP).status, label).toBe('applied');

@@ -103,11 +103,19 @@ export const ASSET_CATALOG: readonly AssetDef[] = Object.freeze([
   def('bg_home_town', 'bg', { w: 1080, h: 1920 }, { w: 540, h: 960 }, 'P2'),
   def('bg_level_site_edge', 'bg', { w: 120, h: 1920 }, { w: 60, h: 960 }, 'P1'),
   def('bg_win_plaza', 'bg', { w: 1080, h: 1920 }, { w: 540, h: 960 }, 'P3'),
+  // ASSET §16.3 #4b: the plane tree under the tree house, same box, always in full colour (no ghost, no crop; DS-02)
+  def('town_ch1_tree', 'town', { w: 760, h: 820 }, { w: 760, h: 820 }, 'P2'),
   def('town_ch1_treehouse', 'town', { w: 760, h: 820 }, { w: 760, h: 820 }, 'P2', { ghost: true }),
   def('chr_tuna_bust', 'chr', { w: 256, h: 320 }, { w: 300, h: 375 }, 'P1', {
     signature: { who: 'tuna', keys: ['helmet', 'vest', 'gloves'] },
   }),
   def('chr_tuna_cheer', 'chr', { w: 300, h: 400 }, { w: 300, h: 400 }, 'P3', {
+    signature: { who: 'tuna', keys: ['helmet', 'vest', 'gloves'] },
+  }),
+  // DS-04 (design-lead ekran incelemesi 1): full-figure Tuna for the home character corner (thumb up, D-087
+  // proportions). Optional until design-lead delivers the SVG and its ASSET §16.3 row; the home screen keeps the bust.
+  def('chr_tuna_stand', 'chr', { w: 300, h: 480 }, { w: 300, h: 480 }, 'P2', {
+    optional: true,
     signature: { who: 'tuna', keys: ['helmet', 'vest', 'gloves'] },
   }),
   def('chr_dede_bust', 'chr', { w: 256, h: 320 }, { w: 256, h: 320 }, 'P1', {

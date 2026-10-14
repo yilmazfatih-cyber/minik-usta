@@ -19,11 +19,11 @@
       "w": 60
     },
     "bg_win_plaza": {
-      "bytes": 26056,
+      "bytes": 26088,
       "file": "bg_win_plaza.webp",
       "group": "P3",
       "h": 960,
-      "srcSha1": "9ddc99f20bc0bfd9260f9f915a7131a834e37eb8",
+      "srcSha1": "dadb597301eaf0548cac0dab2caffe620c6ca613",
       "status": "ok",
       "w": 540
     },
@@ -55,20 +55,20 @@
       "w": 300
     },
     "chr_tuna_bust": {
-      "bytes": 12524,
+      "bytes": 12342,
       "file": "chr_tuna_bust.webp",
       "group": "P1",
       "h": 375,
-      "srcSha1": "bc1099bd86ff892dbdba895bfefae071fe9191a5",
+      "srcSha1": "2f17f43a43078222c54ab5e98281d5518e621e0c",
       "status": "ok",
       "w": 300
     },
     "chr_tuna_cheer": {
-      "bytes": 16266,
+      "bytes": 16114,
       "file": "chr_tuna_cheer.webp",
       "group": "P3",
       "h": 400,
-      "srcSha1": "db582e9da9da01d6aa4556caf66e99afeeec009a",
+      "srcSha1": "248cd4f49611e4fe73336a9e3e786b9d3a6100d1",
       "status": "ok",
       "w": 300
     },
@@ -270,6 +270,15 @@
       "status": "ok",
       "w": 360
     },
+    "town_ch1_tree": {
+      "bytes": 33202,
+      "file": "town_ch1_tree.webp",
+      "group": "P2",
+      "h": 820,
+      "srcSha1": "781022df906cece7c6544899d0f1bff5cb3792e8",
+      "status": "ok",
+      "w": 760
+    },
     "town_ch1_treehouse": {
       "bytes": 25840,
       "file": "town_ch1_treehouse.webp",
@@ -280,7 +289,7 @@
       "w": 760
     },
     "town_ch1_treehouse_ghost": {
-      "bytes": 24486,
+      "bytes": 20884,
       "file": "town_ch1_treehouse_ghost.webp",
       "group": "P2",
       "h": 820,
@@ -332,11 +341,6 @@
     }
   },
   "generator": "tools/assets.ts",
-  "unknown": [
-    {
-      "path": "public/art/town/town_ch1_tree.svg",
-      "srcSha1": "781022df906cece7c6544899d0f1bff5cb3792e8"
-    }
-  ],
+  "unknown": [],
   "version": 1
 }

@@ -440,3 +440,34 @@ function deepFreeze<T>(value: T): T {
   }
   return value;
 }
+
+/** UX §5.8 rule 9 / ART §7.1 board tray (DS-16): the largest pad, the screen edge it keeps, the smallest side pad. */
+export const TRAY_PAD_MAX_PX = 24;
+export const TRAY_EDGE_GAP_PX = 12;
+export const TRAY_SIDE_MIN_PX = 8;
+
+/** The board tray rect; `sides` false = only the top and bottom bands are drawn (full width, no side edges). */
+export interface BoardTray extends Rect {
+  readonly sides: boolean;
+  /** Side pad outside the yard frame (px; < `TRAY_SIDE_MIN_PX` → no sides). */
+  readonly pad: number;
+}
+
+/**
+ * UX §5.8 rule 9 (2026-10-08, DS-16): the dark rounded tray behind the board group (crane area top − 24 … status strip
+ * bottom + 12). Its side pad outside the 20 px yard frame is `min(24, yardX − 20 − 12)`, so at least 12 px of screen
+ * stay outside it; under 8 px (the 8-column boards: yardX 30) the side edges are not drawn and the tray is a full-width
+ * band with its top and bottom edges only. Symmetric (the board is centred).
+ */
+export function boardTray(L: Layout, tokens: Tokens): BoardTray {
+  const g = L.grid;
+  const frame = tokens.layout.adaptive.yardFramePx;
+  const pad = Math.min(TRAY_PAD_MAX_PX, g.yardX - frame - TRAY_EDGE_GAP_PX);
+  const top = L.board.crane.y - TRAY_PAD_MAX_PX;
+  const st = L.board.status;
+  const bottom = Math.max(g.boardBottomY + frame, st.y + st.h) + TRAY_PAD_MAX_PX / 2;
+  if (pad < TRAY_SIDE_MIN_PX) return { x: 0, y: top, w: L.W, h: bottom - top, sides: false, pad };
+  const left = g.yardX - frame - pad;
+  const right = g.siteRight + frame + pad;
+  return { x: left, y: top, w: right - left, h: bottom - top, sides: true, pad };
+}

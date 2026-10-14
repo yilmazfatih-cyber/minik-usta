@@ -31,9 +31,16 @@ export class HintBubble {
   }
 
   /**
-   * Shows `text` with the tail tip at `at`: above the point (`dir` 'down', the tail points down) or below it ('up').
+   * Shows `text` with the tail tip at `at`: above the point (`dir` 'down', the tail points down) or below it ('up'),
+   * for `ms` (default `duration.lockedHint`; the feedback "Kopyalandı" balloon stays 1,5 s, UX §3).
    */
-  show(text: string, at: { x: number; y: number }, dir: 'down' | 'up', reduced: boolean): void {
+  show(
+    text: string,
+    at: { x: number; y: number },
+    dir: 'down' | 'up',
+    reduced: boolean,
+    ms: number = TOKENS.duration.lockedHint,
+  ): void {
     this.hide();
     const s = this.scene;
     const label = addKitText(s, 0, 0, text, 'panel', TOKENS.font.size.body);
@@ -74,7 +81,7 @@ export class HintBubble {
         ease: 'Back.easeOut',
       });
     }
-    this.timer = s.time.delayedCall(TOKENS.duration.lockedHint, () => this.fadeOut());
+    this.timer = s.time.delayedCall(ms, () => this.fadeOut());
   }
 
   private fadeOut(): void {

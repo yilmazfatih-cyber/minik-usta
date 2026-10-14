@@ -42,6 +42,7 @@ import { comboOf, trowelsOf } from '../../core/combo.ts';
 import { DEFAULT_GEO } from '../../core/geometry.ts';
 import { blocksLeft, goalViews } from '../../core/goals.ts';
 import { computeFall } from '../../core/gravity.ts';
+import { pieceBoardCells } from '../../core/grid.ts';
 import type { CompiledLevel } from '../../core/level/compile.ts';
 import { FREE, blockCells, tryBeginDrag } from '../../core/movement.ts';
 import type { DragRules, DragSession, DropClass, PickFailure } from '../../core/movement.ts';
@@ -59,9 +60,10 @@ import type { GameState } from '../../core/state.ts';
 import { COLOR_CODES } from '../../core/types.ts';
 import type { DragNode, GameEvent, Move, PieceId, SessionAction } from '../../core/types.ts';
 import { systemClock } from '../../services/clock.ts';
-import { t } from '../../services/i18n.ts';
+import { timed } from '../../services/timings.ts';
+import { t, upper } from '../../services/i18n.ts';
 import type { DeepReadonly, Settings } from '../../services/save.ts';
-import { createLayout, designHeight } from '../../theme/layout.ts';
+import { boardTray, createLayout, designHeight } from '../../theme/layout.ts';
 import type { Layout, Rect } from '../../theme/layout.ts';
 import { gameBackgroundSpec } from '../../theme/draw/scene.ts';
 import { YARD_PREVIEW_FRAME, uploadCanvasArt } from '../../theme/textures.ts';
@@ -73,14 +75,15 @@ import { addBakedGraphics } from '../../ui/BakedGraphics.ts';
 import { optText } from '../../ui/GoalsPanel.ts';
 import { ensureKitAtlas, kitButtonRef, kitRef, kitSlice } from '../../ui/kit/atlas.ts';
 import { HintBubble } from '../../ui/kit/HintBubble.ts';
+import { kitTextStyle } from '../../ui/kit/text.ts';
 import { GoalsPanel } from '../../ui/GoalsPanel.ts';
 import { MovesCounter } from '../../ui/MovesCounter.ts';
 import { offerModel } from '../../ui/offer.ts';
 import type { OfferModel } from '../../ui/offer.ts';
-import { Panorama } from '../../ui/Panorama.ts';
+import { Panorama, panoramaWellSplit } from '../../ui/Panorama.ts';
+import type { PanoramaArrowPair } from '../../ui/Panorama.ts';
 import { PauseButton } from '../../ui/PauseButton.ts';
 import { hex } from '../../ui/text.ts';
-import { winRewards } from '../../ui/rewards.ts';
 import { StatusStrip } from '../../ui/StatusStrip.ts';
 import { exitLines, lossLines } from '../../ui/windowLines.ts';
 import {
@@ -104,7 +107,7 @@ import {
   streakBonusOf,
   streakTierOf,
 } from '../flow/attempt.ts';
-import type { AttemptEnd } from '../flow/attempt.ts';
+import type { AttemptEnd, ReplayedAction } from '../flow/attempt.ts';
 import type { LastLevel } from '../flow/launch.ts';
 import { BoardView } from './BoardView.ts';
 import { DEPTH } from './depth.ts';
@@ -116,7 +119,7 @@ import { LevelWindows } from './LevelWindows.ts';
 import type { PauseToggle } from './LevelWindows.ts';
 import { loadLevelById } from './levels.ts';
 import { PieceLayer } from './PieceLayer.ts';
-import { blockersAbove, pieceFrameName } from './pieceState.ts';
+import { blockersAbove, pieceFrameName, statePose } from './pieceState.ts';
 import { STUCK_PULSES, StuckPulse } from './stuckPulse.ts';
 import { gameAudio, gameHaptics, systemReducedMotion } from './sceneServices.ts';
 import { shaderWarmup } from '../shaderWarmup.ts';
@@ -166,14 +169,21 @@ const BAND_KEY = 'lv_bottom_band';
 const GRADIENT_PX = 256;
 /** UX §5.10: the band covers the bottom 330 px. */
 const BAND_PX = 330;
-/** Board tray (R2-12 "tahta çerçeveli"): padding around the board group, edge distance, radius, line, fill alpha. */
-const TRAY_PAD_PX = 28;
-const TRAY_EDGE_PX = 6;
+/** Board tray (R2-12 "tahta çerçeveli"; rect: theme/layout `boardTray`, UX §5.8 rule 9): radius, line, fill alpha. */
 const TRAY_RADIUS_PX = 40;
 const TRAY_LINE_PX = 6;
 const TRAY_ALPHA = 0.55;
 /** UX §5.9 item 7: the panorama's blueprint well radius. */
 const WELL_RADIUS_PX = 24;
+/** UX §5.9 item 8 (DS-12): the level label in the well, ART §8.1 "Parlak başlık" 52 px. */
+const LEVEL_LABEL_PX = 52;
+const PANORAMA_STYLE = {
+  padPx: VIEW.panoramaPadPx,
+  gapCells: VIEW.panoramaGapCells,
+  framePx: VIEW.panoramaFramePx,
+  maxCellPx: VIEW.panoramaMaxCellPx,
+  minCellPx: VIEW.panoramaMinCellPx,
+} as const;
 /** UX §5.10 corner: Tuna bust (256 × 320 viewBox) and Kepçe (320 × 220) display widths inside 280 × 296. */
 const TUNA_W = 200;
 const KEPCE_W = 170;
@@ -238,6 +248,8 @@ export class LevelScene extends Phaser.Scene {
   private tray!: Phaser.GameObjects.Graphics;
   private band!: Phaser.GameObjects.Image;
   private panoWell!: Phaser.GameObjects.Graphics;
+  /** UX §5.9 item 8 (DS-12): "BÖLÜM {n}" at the left of the panorama well (hidden when the panorama needs the room). */
+  private levelLabel!: Phaser.GameObjects.Text;
   /** UX §5.10 Tuna + Kepçe corner. */
   private tuna!: Phaser.GameObjects.Image;
   private kepce!: Phaser.GameObjects.Image;
@@ -290,14 +302,7 @@ export class LevelScene extends Phaser.Scene {
     this.board = new BoardView(this, kit);
     this.pieces = new PieceLayer(this, (v) => this.player?.viewReleased(v));
     this.shadow = new ShadowView(this);
-    this.panorama = new Panorama(this, {
-      depth: DEPTH.hud,
-      padPx: VIEW.panoramaPadPx,
-      gapCells: VIEW.panoramaGapCells,
-      framePx: VIEW.panoramaFramePx,
-      maxCellPx: VIEW.panoramaMaxCellPx,
-      minCellPx: VIEW.panoramaMinCellPx,
-    });
+    this.panorama = new Panorama(this, { depth: DEPTH.hud, ...PANORAMA_STYLE });
     this.goals = new GoalsPanel(this, DEPTH.hud, {
       ...kit,
       boot: (n) => (this.frames?.has(n) ? this.frames.ref(n) : null),
@@ -371,6 +376,7 @@ export class LevelScene extends Phaser.Scene {
       },
       panoramaArrow: () => this.panoramaArrow(),
       glove: () => assets.texture('ui_tutorial_glove'),
+      ghost: (cell) => this.tutorialGhost(cell),
       portrait: () => assets.portrait(),
     });
     const offGlove = assets.onChange('ui_tutorial_glove', () => this.overlay.refreshArt());
@@ -388,7 +394,6 @@ export class LevelScene extends Phaser.Scene {
       commit: (move) => this.commitBooster(move),
       changed: (kind) => this.pickChanged(kind),
       reduced: () => this.player.reduced,
-      button: (button, variant) => this.player.play(69, { button, variant }),
       dimPieces: (eligible, selected, k) => this.dimPieces(eligible, selected, k),
       refused: (id) => {
         if (id !== null) this.pieces.view(id)?.startShake(this.animNow);
@@ -413,7 +418,10 @@ export class LevelScene extends Phaser.Scene {
     this.input.on('pointerupoutside', onInputUp);
     // TECH §2R.1 web back guard (main.ts): a back gesture / button opens Pause instead of leaving the page
     const onBack = (): void => {
-      if (this.sys.isActive()) this.openPause(false);
+      if (!this.sys.isActive()) return;
+      // UX §5.2 step 1 (DS-13): the system back cancels an open booster / trowel pick, else opens Pause
+      if (this.picker.active) this.picker.close();
+      else this.openPause(false);
     };
     this.game.events.on(BACK_EVENT, onBack);
     const onHidden = (): void => {
@@ -568,6 +576,38 @@ export class LevelScene extends Phaser.Scene {
     return this.windows.closePoint;
   }
 
+  /** Centre of booster slot `id` in design px, or null (harness: K-54 slot taps, UX §5.2). */
+  slotPoint(id: string): { readonly x: number; readonly y: number } | null {
+    const r = this.boosters.slotRect(id as BoosterSlotId);
+    return r ? { x: r.x + r.w / 2, y: r.y + r.h / 2 } : null;
+  }
+
+  /** The open pick's × "Vazgeç" in design px (selected slot, or the strip's trowel), or null (harness; DS-13). */
+  get cancelPoint(): { readonly x: number; readonly y: number } | null {
+    if (!this.picker.active) return null;
+    return this.picker.kind === 'trowel' ? this.trowelPoint : this.boosters.cancelPoint();
+  }
+
+  /** The open pick mode and its shown target spots (harness). */
+  get pick(): { readonly kind: string | null; readonly spots: readonly Rect[] } {
+    const L = this.layoutNow;
+    return {
+      kind: this.picker.kind,
+      spots: this.picker.shownSpots.map((sp) => L.grid.pieceRect(sp.ax, sp.ay, sp.shape.w, sp.shape.h)),
+    };
+  }
+
+  /** Centre of piece `id` at rest in design px, or null when it is not on the board (harness: pick taps). */
+  piecePoint(id: number): { readonly x: number; readonly y: number } | null {
+    const s = this.session?.state;
+    if (!s) return null;
+    const pose = statePose(s, id);
+    if (!pose) return null;
+    const shape = shapeByIndex(pieceShape(s, id));
+    const r = this.layoutNow.grid.pieceRect(pose.ax, pose.ay, shape.w, shape.h);
+    return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+  }
+
   /** Settings "Animasyonları azalt" (OR-ed with `prefers-reduced-motion`; JUICE §0 rule 8). */
   setReducedMotion(on: boolean): void {
     const reduced = on || systemReducedMotion();
@@ -609,6 +649,7 @@ export class LevelScene extends Phaser.Scene {
     this.player.reset();
     this.pieces.clear();
     this.board.clear();
+    this.levelLabel.setVisible(false);
     this.session = null;
     this.lvl = null;
     this.attempt = null;
@@ -662,6 +703,7 @@ export class LevelScene extends Phaser.Scene {
       const savedTut = il && il.levelId === id ? il.tutorial : null;
       const tutResume = tut ? new TutorialResume(tut, savedTut, resumed.actions.length) : null;
       let mark = 0;
+      const packages: ReplayedAction[] = [];
       try {
         session = GameSession.replay(
           lvl,
@@ -673,6 +715,7 @@ export class LevelScene extends Phaser.Scene {
             this.replayTail = tutResume?.isTail(index) ?? false;
             const events = replayed.events.slice(mark);
             mark = replayed.events.length;
+            packages.push({ action, events });
             tutResume?.action(index, action, events, this.animNow);
           },
         );
@@ -692,9 +735,7 @@ export class LevelScene extends Phaser.Scene {
       this.tutActions = resumed.actions.length; // the replay read every move end
       const deps = { save, track: appTrack, clock: systemClock };
       // the attempt's counters cover the moves before the kill too (ANALYTICS §2 level_end, K-43 item 3)
-      this.attempt = save.data.inLevel
-        ? LevelAttempt.resumed(deps, save.data.inLevel, replayed.events)
-        : null;
+      this.attempt = save.data.inLevel ? LevelAttempt.resumed(deps, save.data.inLevel, packages) : null;
       // ANALYTICS tutorial_step of a step the killed run ended but never reported (its move's cues were playing)
       for (const st of this.tailSteps) this.attempt?.tutorialStep(st, 0, 1);
       this.tailSteps = [];
@@ -715,7 +756,7 @@ export class LevelScene extends Phaser.Scene {
     this.layoutNow = this.computeLayout();
     this.placeHud();
     this.picker.relayout();
-    this.frames = bakeLevelAtlas(this.game, lvl, this.layoutNow.grid.k);
+    this.frames = timed('levelBake', () => bakeLevelAtlas(this.game, lvl, this.layoutNow.grid.k));
     const s = session.state;
     this.pieces.setFrames(this.frames);
     this.shadow.setFrames(this.frames, easeOf(TOKENS.easing.move));
@@ -883,6 +924,11 @@ export class LevelScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setDepth(DEPTH.background + 3);
     this.panoWell = addBakedGraphics(this).setDepth(DEPTH.hud - 1);
+    this.levelLabel = this.add
+      .text(0, 0, '', kitTextStyle('brightTitle', LEVEL_LABEL_PX, TOKENS.color.ui.ink))
+      .setOrigin(0, 0.5)
+      .setDepth(DEPTH.hud)
+      .setVisible(false);
   }
 
   /**
@@ -903,20 +949,21 @@ export class LevelScene extends Phaser.Scene {
       if (l.axis === 'v') lines.fillRect(l.at - l.px / 2, 0, l.px, L.H);
       else lines.fillRect(0, l.at - l.px / 2, W, l.px);
     }
-    const g = L.grid;
-    const crane = L.board.crane;
-    const left = Math.max(TRAY_EDGE_PX, g.yardX - TRAY_PAD_PX);
-    const right = Math.min(W - TRAY_EDGE_PX, g.siteRight + TRAY_PAD_PX);
-    const top = crane.y - TRAY_PAD_PX;
-    // the tray holds the board group: the board, its yard frame and the status strip under it (UX §5.1)
-    const st = L.board.status;
-    const bottom =
-      Math.max(g.boardBottomY + TOKENS.layout.adaptive.yardFramePx, st.y + st.h) + TRAY_PAD_PX / 2;
+    // the tray holds the board group: the board, its yard frame and the status strip under it (UX §5.1, §5.8 rule 9)
+    const r = boardTray(L, TOKENS);
     const tray = this.tray.clear();
     tray.fillStyle(hex(TOKENS.color.scene.gameBottom), TRAY_ALPHA);
-    tray.fillRoundedRect(left, top, right - left, bottom - top, TRAY_RADIUS_PX);
     tray.lineStyle(TRAY_LINE_PX, hex(TOKENS.kit.nav.edge), 1);
-    tray.strokeRoundedRect(left, top, right - left, bottom - top, TRAY_RADIUS_PX);
+    if (r.sides) {
+      tray.fillRoundedRect(r.x, r.y, r.w, r.h, TRAY_RADIUS_PX);
+      tray.strokeRoundedRect(r.x, r.y, r.w, r.h, TRAY_RADIUS_PX);
+    } else {
+      // DS-16: an 8-column board leaves < 8 px beside its frame — a full-width band, top and bottom edges only
+      tray.fillRect(r.x, r.y, r.w, r.h);
+      tray.fillStyle(hex(TOKENS.kit.nav.edge), 1);
+      tray.fillRect(r.x, r.y - TRAY_LINE_PX / 2, r.w, TRAY_LINE_PX);
+      tray.fillRect(r.x, r.y + r.h - TRAY_LINE_PX / 2, r.w, TRAY_LINE_PX);
+    }
     this.band.setPosition(0, L.H - BAND_PX).setDisplaySize(W, BAND_PX);
     const p = L.top.panorama;
     const well = this.panoWell.clear();
@@ -928,28 +975,60 @@ export class LevelScene extends Phaser.Scene {
   private refreshPanorama(): void {
     const s = this.session?.state;
     if (!this.frames || !s) return;
-    this.panorama.draw(this.layoutNow.top.panorama, panoramaView(s), this.frames);
+    this.panorama.draw(this.panoRect(), panoramaView(s), this.frames);
     this.goals.setGoals(goalViews(s));
   }
 
+  /**
+   * UX §5.9 item 8 (DS-12): the panorama's rect inside its well — right of the "BÖLÜM {n}" label, or the whole well
+   * when the plan needs it (the label hides). Every panorama read (draw, #18 slot, tutorial arrow) uses this rect.
+   */
+  private panoRect(): Rect {
+    const well = this.layoutNow.top.panorama;
+    const s = this.session?.state;
+    const label = this.levelLabel;
+    if (!s || !label) return well;
+    const text = upper(t('home.play', { n: this.levelId }));
+    if (label.text !== text) label.setText(text);
+    const split = panoramaWellSplit(well, panoramaView(s), PANORAMA_STYLE, Math.ceil(label.width));
+    if (split.label) label.setPosition(split.label.x, split.label.y + split.label.h / 2).setVisible(true);
+    else label.setVisible(false);
+    return split.strip;
+  }
+
   /** UX §13.2 level 5: the active segment's panorama column and the next one (≥ 2 segments). */
-  private panoramaArrow(): { readonly from: Rect; readonly to: Rect } | null {
+  /**
+   * UX §13.1 (DS-15): the baked frame and resting rect of the active step's highlighted block that covers board cell
+   * `cell` (the glove path's first point), for the block ghost that walks with the glove.
+   */
+  private tutorialGhost(
+    cell: readonly [number, number],
+  ): { readonly key: string; readonly frame?: string; readonly rect: Rect } | null {
+    const s = this.session?.state;
+    const f = this.frames;
+    if (!s || !f) return null;
+    const ids = this.tutorial?.current?.pieces ?? [];
+    const id = ids.find((p) => pieceBoardCells(s, p).some((c) => c.x === cell[0] && c.y === cell[1]));
+    if (id === undefined) return null;
+    const pose = statePose(s, id);
+    const name = pieceFrameName(s, id);
+    if (!pose || !f.has(name)) return null;
+    const shape = shapeByIndex(pieceShape(s, id));
+    const ref = f.ref(name);
+    return { key: ref.key, frame: ref.frame, rect: this.layoutNow.grid.pieceRect(pose.ax, pose.ay, shape.w, shape.h) };
+  }
+
+  /** UX §13.2: the panorama arrow of a `panorama` highlight (Bölüm 5 → next segment, Bölüm 2 → bottom → top row). */
+  private panoramaArrow(): PanoramaArrowPair | null {
     const s = this.session?.state;
     if (!s) return null;
-    const view = panoramaView(s);
-    if (view.length < 2) return null;
-    const active = view.findIndex((v) => v.status === 'active');
-    if (active < 0 || active + 1 >= view.length) return null;
-    const rect = this.layoutNow.top.panorama;
-    const from = this.panorama.slot(rect, view, active);
-    const to = this.panorama.slot(rect, view, active + 1);
-    return from && to ? { from, to } : null;
+    return this.panorama.arrow(this.panoRect(), panoramaView(s));
   }
 
   private panoramaSlot(seg: number): Rect | null {
     const s = this.session?.state;
     if (!s) return null;
-    return this.panorama.slot(this.layoutNow.top.panorama, panoramaView(s), seg);
+    return this.panorama.slot(this.panoRect(), panoramaView(s), seg);
   }
 
   // --- tutorial ----------------------------------------------------------------------------------------------------------
@@ -1295,10 +1374,10 @@ export class LevelScene extends Phaser.Scene {
     const s = game.state;
     const queuedBefore = queueIds(s);
     const movesBefore = game.movesLeft;
-    const res = game.apply(action);
+    const res = timed('apply', () => game.apply(action)); // TECH §2R.13 step 12 gate (perf)
     beforePlay?.();
     if (res.status !== 'applied') return res;
-    this.recordMove(action as SessionAction, res.events, movesBefore);
+    this.recordMove(action as SessionAction, res, movesBefore);
     this.summaryNow = res.summary;
     this.unlockDue = true;
     if (res.teardown) {
@@ -1323,13 +1402,13 @@ export class LevelScene extends Phaser.Scene {
    * K-43: the committed action is written at once, and a game it ended is saved at once too (`settle`: win rewards or
    * the loss, before the cues); the move's events wait for the end of its cues.
    */
-  private recordMove(action: SessionAction, events: readonly GameEvent[], movesBefore: number): void {
+  private recordMove(action: SessionAction, res: ActionResult, movesBefore: number): void {
     const game = this.session;
     if (!game) return;
-    this.attempt?.observe(events);
-    this.attempt?.recorded(action, game.movesMade);
+    // K-43 + ANALYTICS v6: the log entry (and a booster's inventory count) at once, then booster_used / deadlock_teardown
+    this.attempt?.applied(action, res, game);
     this.settle(game);
-    this.lastEvents = events;
+    this.lastEvents = res.events;
     this.lastMovesBefore = movesBefore;
     this.tutPendingActions = game.log.length;
   }
@@ -1338,9 +1417,9 @@ export class LevelScene extends Phaser.Scene {
   private settle(game: GameSession): void {
     const lvl = this.lvl;
     if (this.ended || !this.attempt || !lvl) return;
-    this.ended = this.attempt.settle(game, () =>
-      winRewards({ difficulty: lvl.difficulty, movesLeft: game.movesLeft, trowels: trowelsOf(game.state) }),
-    );
+    const attempt = this.attempt;
+    // META §3.1 / §10: a first win pays base + Bonus İnşaat + trowels and 1 ★; a 1–10 loop replay only the base coins
+    this.ended = attempt.settle(game, () => attempt.rewards(game, lvl.difficulty));
   }
 
   /** The dragged view leaves the drag at its drawn pose and current lift scale (the cues move it from there). */
@@ -1452,14 +1531,14 @@ export class LevelScene extends Phaser.Scene {
     const above = { x: rect.x + rect.w / 2, y: rect.y - 8 };
     if (model.state === 'locked') {
       this.bubble.show(t('common.unlockAt', { n: model.unlockLevel }), above, 'down', this.player.reduced);
-      this.player.sound('sfx_blocked');
+      this.player.sound('sfx_locked'); // JUICE #73
       return;
     }
     if (model.state === 'noTarget') {
       if (!this.player.reduced) this.boosters.shake(id, this.animNow);
       const text = optText(SLOT_NO_TARGET_KEY[id]);
       if (text) this.bubble.show(text, above, 'down', this.player.reduced);
-      this.player.sound('sfx_blocked');
+      this.player.sound('sfx_locked'); // JUICE #108
       this.player.haptic('light');
       return;
     }
@@ -1482,7 +1561,7 @@ export class LevelScene extends Phaser.Scene {
     this.player.fastForward();
     const res = game.apply({ kind: 'undo' });
     if (res.status !== 'applied') return;
-    this.attempt?.recorded({ kind: 'undo' }, game.movesMade);
+    this.attempt?.applied({ kind: 'undo' }, res, game);
     this.summaryNow = res.summary;
     this.reach.reset();
     this.player.startLevel(game.state, this.lvl?.gravity.build ?? 'normal');
@@ -1508,7 +1587,6 @@ export class LevelScene extends Phaser.Scene {
       boosterSlotModels({
         levelId: this.levelId,
         inv: { inventory: save.boosters.inventory, freeTrialsGranted: save.boosters.freeTrialsGranted },
-        log: game.log,
         targets: sum.boosterTargets,
       }),
     );

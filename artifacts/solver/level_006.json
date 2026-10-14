@@ -326,7 +326,7 @@
     "states": 5175,
     "expanded": 5175,
     "edges": 52941,
-    "ms": 274,
+    "ms": 374,
     "bytes": 999412,
     "dragSessions": 5943,
     "applyMoves": 2287,
@@ -336,7 +336,7 @@
     "d3aUnknown": 0,
     "complete": true,
     "limit": null,
-    "totalMs": 318
+    "totalMs": 403
   },
   "cacheKey": "25980969:rules2:solver2:level:var:d3a"
 }

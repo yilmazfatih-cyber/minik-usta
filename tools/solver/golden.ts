@@ -125,11 +125,14 @@ export function handGolden(r: SolveReport, lvl: CompiledLevel): HandGolden {
       ...(queue.length > 0 ? { queue: queue.map(ref) } : {}),
     });
   });
-  if (session.outcome !== 'won') throw new Error(`level ${r.level}: the canonical replay ends ${session.outcome}`);
+  if (session.outcome !== 'won')
+    throw new Error(`level ${r.level}: the canonical replay ends ${session.outcome}`);
   const yao = session.yao();
   const hash = eventLogHash(sink.events);
   if (hash !== r.replay.eventLogHash)
-    throw new Error(`level ${r.level}: eventLogHash ${hash} differs from the solver replay ${r.replay.eventLogHash}`);
+    throw new Error(
+      `level ${r.level}: eventLogHash ${hash} differs from the solver replay ${r.replay.eventLogHash}`,
+    );
   const g = lvl.geo;
   return {
     level: r.level,

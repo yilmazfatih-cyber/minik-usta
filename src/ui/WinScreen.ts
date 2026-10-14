@@ -63,10 +63,11 @@ const CARD_STAR_PX = 168;
 /** Sunburst display size over the plaza (its 512 px frame is soft and scales up). */
 const SUNBURST_PX = 1500;
 /**
- * The plaza is already light: the `kit.sunburst.rayColor` rays are added (ADD) at `rayAlpha` + 0.1 so they read on it
- * (ART §15 "Işın"; at plain α 0.35 they vanish into the art's own glow).
+ * ART §15.4 "Işın": the `kit.sunburst.rayColor` rays at `rayAlpha` with the `blend` of the token (2026-10-08: ADD at
+ * 0,45, the WP-I choice; the plaza's own glow swallows them in normal blend). No code offset on the α.
  */
-const SUNBURST_ALPHA = Math.min(1, TOKENS.kit.sunburst.rayAlpha + 0.1);
+const SUNBURST_ALPHA = TOKENS.kit.sunburst.rayAlpha;
+const SUNBURST_BLEND = TOKENS.kit.sunburst.blend === 'add' ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL;
 
 export interface WinScreenOptions {
   /** Asset service, reduced motion and the tree house reveal; default from the running game (ui/kit/gameContext). */
@@ -135,7 +136,7 @@ export class WinScreen {
       .image(cardCx, cardCy, sb.key, sb.frame)
       .setDisplaySize(SUNBURST_PX, SUNBURST_PX)
       .setTint(hex(TOKENS.kit.sunburst.rayColor))
-      .setBlendMode(Phaser.BlendModes.ADD)
+      .setBlendMode(SUNBURST_BLEND)
       .setAlpha(SUNBURST_ALPHA);
     layerParts.push(this.sunburst);
     this.layer = scene.add.container(0, 0, layerParts).setDepth(depth);

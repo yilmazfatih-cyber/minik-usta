@@ -43,7 +43,8 @@ describe('S1 Kayan Şantiye — sliding site (OBSTACLES S1, GDD K-22, K-25, K-26
     for (const id of [5, 7, 10]) expect(S1_slidingSite.appliesTo(levelFile(id)), `level ${id}`).toBe(true);
     expect(activeRuleIds(levelFile(5))).toEqual(['S1']);
     expect(infoKeysFor(levelFile(5))).toEqual(['obs.s1.desc']);
-    for (const id of [1, 2, 3, 4, 6, 8, 9]) expect(S1_slidingSite.appliesTo(levelFile(id)), `level ${id}`).toBe(false);
+    for (const id of [1, 2, 3, 4, 6, 8, 9])
+      expect(S1_slidingSite.appliesTo(levelFile(id)), `level ${id}`).toBe(false);
     const carousel = compiledLevel({
       plan: [['WW'], ['WW']],
       mode: 'carousel',

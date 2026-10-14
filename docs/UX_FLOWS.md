@@ -1,6 +1,6 @@
 # UX akışları — Minik Usta
 
-Sahip: design-lead · Sürüm: **Faz 2R (2026-10-07)** — ana sayfa v2 (§3, R2-09), değişken boyut yerleşimi (§5.8, R2-02), kalan blok ve tam örtü (§5.9, R2-01), kazanma v2 (§6.1), hafif öğretici (§13, R2-10); **Faz 2R çapraz inceleme kapanışı** (aynı gün; `docs/review_inbox/design-lead-2R-closure.md`: H/Hy/Hs yerleşimi, güçlendirici akışları K-33/K-36/K-38, hedefsiz yuva, Söküm, kalan blok formülü, öğretici tablosu = LEVELS §2); önceki: Faz 1 revizyonu (2026-10-04; R-01…R-24), Faz 2 boşlukları 1 ve 3 (2026-10-06) · Kaynak:
+Sahip: design-lead · Sürüm: **Faz 2R (2026-10-07; ekran incelemesi 1 ekleri 2026-10-08: §5.8 uyarlanır hücre tablosu c 144/132/120, durum şeridi 1520/80, tepsi kuralı; §5.2 Vazgeç başparmak bölgesinde, Vinç hedefsiz; §5.9 kuyuda bölüm etiketi; §13.1 kilitli dizi satırı `teardownLine` ve eldiven + blok hayaleti; §11 Geri bildirim; `review_inbox/design-lead-2R-screens-1.md`)** — ana sayfa v2 (§3, R2-09), değişken boyut yerleşimi (§5.8, R2-02), kalan blok ve tam örtü (§5.9, R2-01), kazanma v2 (§6.1), hafif öğretici (§13, R2-10); **Faz 2R çapraz inceleme kapanışı** (aynı gün; `docs/review_inbox/design-lead-2R-closure.md`: H/Hy/Hs yerleşimi, güçlendirici akışları K-33/K-36/K-38, hedefsiz yuva, Söküm, kalan blok formülü, öğretici tablosu = LEVELS §2); önceki: Faz 1 revizyonu (2026-10-04; R-01…R-24), Faz 2 boşlukları 1 ve 3 (2026-10-06) · Kaynak:
 `docs/BRIEF.md` §4, §8, §10, §11 · Görsel tarifler: `docs/ART_DIRECTION.md` · Animasyonlar: `docs/JUICE.md` · Metinler:
 `docs/STORY.md` · Ölçüler: `src/theme/tokens.json` · Sayılar (fiyat, ödül, tavan): `config/economy.json`,
 `config/events.json` — bu belgedeki sayılar **örnektir**, ekran değeri her zaman config'ten okunur.
@@ -47,8 +47,9 @@ yeri ayrılmış · **[Mağaza]** yalnız Capacitor/mağaza sürümü. Etiketsiz
     seçenekli pencerede ilk düğme esneme bölgesine (y < 1056) çıkıyordu. En uzun pencere (bölüm öncesi, h 1280) FIT'te
     y 344'ten başlar.
   - Arka planlar (Faz 2R, ART §7): ana sayfa ve kazanma sahnesi elle yazılmış SVG'dir (R2-08), 1080×1920 alanı 0,5
-    ölçekte (540×960) raster edilip ×2 çizilir; 1920'nin üstündeki fazla yükseklik (en çok 480 px) prosedürel gök
-    gradyanıyla dolar. Oyun ekranının arka planı prosedürel çivit gradyandır (R2-12), doku değildir.
+    ölçekte (540×960) raster edilip ×2 çizilir. EXPAND'de görsel orta grupla birlikte `(H − 1920) × 0,5` aşağı kayar;
+    fazla yükseklik üstte ve altta görselin ilk / son piksel satırı gerilerek dolar (dikişsiz; WP-I kararı, 2026-10-08
+    kabul). Ana sayfada karakter köşesi `layout.home.characterExpandShare` (1) ile kayar: düğmeye FIT mesafesi korunur. Oyun ekranının arka planı prosedürel çivit gradyandır (R2-12), doku değildir.
   Bu belgedeki wireframe'ler `H = 1920`'yi gösterir; 2337 px'te (390×844, EXPAND) tahta 208 px aşağı kayar ve başparmak
   bölgesine yaklaşır. Ekran görüntüleri iki profilde de incelenir (`ios67` 1290×2796, `android` 1080×1920; TECH §12).
 - Güvenli alan (çentik): `index.html` oyun kabını `env(safe-area-inset-*)` ile içeri alıyor; tasarım tuvali zaten güvenli
@@ -88,7 +89,7 @@ blok parmağın 1,2 hücre üstünde göründüğü için parmak bloğun altınd
 | Pencere | krem panel, kenar 12 px `panelEdge`, köşe 48 px, arkada `ui.overlay` %55; açılış 220 ms (JUICE) |
 | Rozet | Ø 56 px kırmızı (#E8473B) daire, beyaz sayı ya da "!" |
 | Kilitli öğe | %55 gri (`ui.disabled`) + asma kilit 64 px + açılış bölümü ("Bölüm 15"); dokununca 1,2 s ipucu balonu `common.unlockAt` ("15. bölümde açılır"; JUICE #73). **Adedi olan kilitli öğe** (açılış bölümünden önce ödül ya da paketle gelen güçlendirici, META §4): sağ üst köşede **gri adet rozeti** Ø 56 px, `ui.badgeLocked` dolgu + beyaz sayı (7,1:1; kırmızı `ui.badge` değil). Adet 0 ise rozet yok. Kilitliyken "+" gösterilmez. **Durum önceliği (Faz 2R, EN-2R-11, BUSINESS E12): kilitli > hedefsiz > adet 0** |
-| Hedefsiz yuva (Faz 2R, K-36, K-38, BUSINESS E12) | Bölüm içi güçlendiricinin o anki durumda geçerli hedefi yoksa (Çekiç: K-36 hedef kümesi boş; Boya Fırçası: sahada hücre sayısı eşit ve rengi farklı iki uygun malzeme bloğu yok) yuva **gri** (`kit.buttonColor.grey`), ikon α 0,55, adet rozeti gri (`ui.badgeLocked`) ve **"+" gösterilmez** (adet 0 olsa da). Dokununca yuva 2 px titrer ve yuvanın üstünde 1,2 s balon: `booster.hammer.noTarget` "Burada kırılacak yük yok." / `booster.brush.noTarget` "Renk takası için eş blok yok."; mini satın alma penceresi açılmaz, `offer_shown` gönderilmez (ANALYTICS v6). Hedef durumu her hamle sonunda ve her güçlendirici/Mala mini hattından sonra yeniden hesaplanır (çekirdek `boosterTargets`); hedef oluşunca yuva 200 ms'de normale döner. Vinç ve Geri Al bu kalıbı kullanmaz (Vinç'in sahada her zaman hedefi vardır; Geri Al'ın kendi gri durumu §5.2) |
+| Hedefsiz yuva (Faz 2R, K-36, K-38, BUSINESS E12) | Bölüm içi güçlendiricinin o anki durumda geçerli hedefi yoksa (Çekiç: K-36 hedef kümesi boş; Boya Fırçası: sahada hücre sayısı eşit ve rengi farklı iki uygun malzeme bloğu yok) yuva **gri** (`kit.buttonColor.grey`), ikon α 0,55, adet rozeti gri (`ui.badgeLocked`) ve **"+" gösterilmez** (adet 0 olsa da). Dokununca yuva 2 px titrer ve yuvanın üstünde 1,2 s balon: `booster.hammer.noTarget` "Burada kırılacak yük yok." / `booster.brush.noTarget` "Renk takası için eş blok yok."; mini satın alma penceresi açılmaz, `offer_shown` gönderilmez (ANALYTICS v6). Hedef durumu her hamle sonunda ve her güçlendirici/Mala mini hattından sonra yeniden hesaplanır (çekirdek `boosterTargets`); hedef oluşunca yuva 200 ms'de normale döner. Vinç de bu kalıbı kullanır: sahada zincirsiz ve ıslak olmayan blok yoksa `booster.crane.noTarget` "Şu an taşınacak blok yok." (2026-10-08). Geri Al kullanmaz (kendi gri durumu §5.2) |
 | Yükleniyor | bloklardan dönen mini vinç döngüsü (96 px) + 0,4 s gecikmeyle görünür (kısa yüklemede titreşim olmasın) |
 | Hata | krem panel + Kepçe "kafası karışık" + kısa metin + "Tekrar dene"; kırmızı çarpı ve suçlayıcı dil yok |
 | Boş durum | Kepçe kazıyor illüstrasyonu + tek satır açıklama + (varsa) eyleme götüren düğme |
@@ -284,7 +285,7 @@ EXPAND (390×844 → H = 2337): üst çubuk, alan şeridi ve ilerleme yerinde; y
 | Can kapsülü | (24, 40) 290×96 + üst/alt 16 px pay → 128 | ART §14.5; `icon_life` 112 px sol uçtan 16 px taşar; sayı + yenilenme sayacı ("29:12") ya da `hud.livesFull` "Dolu" | Dokun → Can penceresi (§3.1). Sınırsız can süresinde `icon_life_unlimited` + geri sayım |
 | Altın kapsülü | (338, 40) 330×96 + pay | `icon_coin` + sayı (TR "1.250") + Ø 68 yeşil artı | Kapsül ya da artı → Mağaza; Mağaza kilitliyse (Faz 2R) "Yakında" balonu |
 | Yıldız kapsülü | (692, 40) 220×96 + pay | `icon_star` + sayı | Dokun → görev penceresi (META varsa); yoksa yapıya kısa parlama (JUICE #102'nin 300 ms'lik ön izlemesi) |
-| Ayarlar | (936, 36) 120×120 + 4 px pay → 128 | mavi kit düğmesi + `icon_settings` | Dokun → Ayarlar (Faz 4); Faz 2R'de Mola penceresinin ses / müzik / titreşim satırlarıyla aynı pencere, başlık `settings.title` |
+| Ayarlar | (936, 36) 120×120 + 4 px pay → 128 | mavi kit düğmesi + `icon_settings` | Dokun → Ayarlar (Faz 4); Faz 2R'de Mola penceresinin ses / müzik / titreşim satırlarıyla aynı pencere, başlık `settings.title`; satırların altında **krem ikincil düğme `settings.feedback` "Geri bildirim"** (640×128, pencerenin son öğesi; §11 "Geri bildirim") |
 | Alan şeridi | merkez x 540, y 176, 560×104 | turuncu ribbon, `town.ch<n>.title` ("Ağaç Ev") | Etkileşimsiz |
 | İlerleme çubuğu | (240, 312) 600×48 | ART §14.6; dilim sayısı = görev sayısı (7) | Değer = META görev ilerlemesi (`{n}/{max}`, `common.count`). **Faz 2R yedeği (görev sistemi yoksa):** tamamlanan bölüm / hikaye bölümündeki bölüm sayısı (ör. 3/10), dilim 10 |
 | Yapı | merkez x 540, taban y 1180; en çok 760×820 | `town_ch<n>_<yapı>` şeffaf görsel; yapılmamış kısım ozalit hayaleti + iskele, yapılan kısım tam renk (ART §7.2) | Açılan oran = ilerleme oranı; alttan üste `setCrop` (JUICE #102). Dokununca yapı 1,0 → 1,03 zıplar (işlevsiz) |
@@ -495,7 +496,7 @@ y    0 ┌───────────────────────�
        ││ ■ ■ ■ ■ ■ ■          │┃│ ▒  ▒   │ │
        ││ ■ ■ ■ ■ ■ ■          │┃│ ▒  ▒   │ │
  1488  │└──────────────────────┘┃└────────┘ │  satır 0
- 1504  │ Usta Serisi ●●●○ [mala]  🚚 Kamyonda:3│  durum şeridi h 96
+ 1520  │ Usta Serisi ●●●○ [mala]  🚚 Kamyonda:3│  durum şeridi h 80 (Faz 2R: 1520–1600, §5.8 madde 10)
  1600  ├────────────────────────────────────┤
        │ ☺🐕     ┌────┐┌────┐┌────┐┌────┐   │  Tuna+Kepçe 280×296 (16,1600)
        │ Tuna    │ 🔨 ││ 🪝 ││ 🖌 ││ ↶  │   │  güçlendirici yuvaları 172×172, x 314–1056
@@ -515,10 +516,10 @@ Durum şeridi tahta grubuna aittir (tahtayla birlikte kayar); Tuna köşesi ve g
 | Panorama | Planın tamamının küçük önizlemesi; dilimler 2 sütunluk sütunlar halinde, aktif dilim beyaz çerçeveli, tamamlananlar tam renkli, **gelecek dilimler plan renkleriyle %30 opak** (`alpha.panoramaFuture`; planları okunur; döner platform gibi ileriyi planlatan bölümler buna dayanır). **Hücre boyu (Faz 2 tur 2):** bölümün en yüksek dilimine göre `min(24, ⌊(110 − 2·pay) / satır⌋)` px, en az 12 px; bütün dilimler aynı ölçekte, kutu içinde dikeyde ortalı (8 satırlık planda 12 px kalır; Bölüm 1–5'in 3–5 satırlık planlarında 18–24 px). 24 px'in altında sembol okunmadığı için semboller dokununca açılan büyük önizlemede tam opak çizilir; `?` hücreleri panoramada da `?` etiketiyle görünür, açılınca rengini alır (K-06). Taslakta `▣▣` tamamlanan, `[▣▣]` aktif, `░░` %30 opak gelecek dilim, `░?` gizli hücreli dilim. Dokun → 1,5 s büyük önizleme **[MVP-lite]**: oyun durumunu değiştirmez, hamle harcanmaz (K-06). |
 | Hedefler | `build` için yapı ikonu + dilim sayacı ("2/4"), `clear` / `collect` sayaçları; sayaç metni `common.count` "{n}/{max}". Hedef tamamlanınca ✓ ve yeşil. |
 | Hamle sayacı | Baloo 2 800, 120 px; altında etiket `hud.moves` "Hamle" (`font.size.small`). **Az hamle uyarısı (Faz 2R, DL-2R-19):** `kalanHamle − kalanBlok ≤ 1` **ya da** `kalanHamle ≤ 2` iken kırmızı nabız (JUICE #51; `kalanBlok` = §5.9 kalan blok çipi). Eski "son 5 hamle" tetiği kalktı: Bölüm 5–10'u kusursuz oynayan oyuncu kalan 3–4 hamleyle bitirir ve uyarı görmemelidir (kusursuz B10'da fark en az 3). |
-| Usta Serisi | 4 boncuk; dolunca Altın Mala ikonu parlar ve "dokun, kullan" durumuna geçer (seçim: §5.2). Dokunma hedefi: 96 px şerit + üstte/altta 16 px pay → 128 px (§0.3). Etiket `hud.streak` "Usta Serisi"; renk körü modunda sayıyla da ("3/4", `common.count`). |
+| Usta Serisi | 4 boncuk; dolunca Altın Mala ikonu parlar ve "dokun, kullan" durumuna geçer (seçim: §5.2). Dokunma hedefi: 80 px şerit (Faz 2R, §5.8 madde 10) + üstte/altta 24 px pay → 128 px (§0.3). Etiket `hud.streak` "Usta Serisi"; renk körü modunda sayıyla da ("3/4", `common.count`). |
 | Kamyon göstergesi | Kuyrukta blok varsa görünür: kamyon ikonu + **sıradaki kuyruk bloğunun 0,35 ölçekli önizlemesi** (şekil, renk ve sembol; §3A dokusundan, Faz 2R DL-2R-22) + `truck.queue` "Kamyonda: 3" (K-26; sayı = kuyruktaki **blok** sayısı, hücre ya da parti değil); 0 iken gizli, "Kamyonda: 0" hiç yazılmaz. Önizleme FIFO'nun başındaki bloktur; blok sahaya inince sıradaki 160 ms'de kayarak gelir. Geri sekip yer bulamayan blok bu çipe uçar (K-17 adım 3). Öğretici vurgu kimliği `truck` bu göstergedir; gösterge gizliyken (N = 0) vurgu yok sayılır (§13.1). |
 | Tuna + Kepçe | Etkileşimsiz tepki karakterleri (doğruda sevinç, hatalıda yüz buruşturma, komboda dans). Dokunulursa tek bir el sallama (işlevsiz). **[MVP-lite]**: MVP'de yalnız ifade değişimi; dans ve boşta göz kırpma Sonra. |
-| Güçlendiriciler | Çekiç (8), Vinç (10), Boya Fırçası (22), Geri Al (13). Adet rozeti; 0 → "+" mini satın alma (§4'teki pencere; yalnız oyuncu dokununca açılır, bölüm duraklar). Kilitli → asma kilit + bölüm no; açılıştan önce kazanılmış adet varsa gri adet rozeti (§0.3, §4; ör. günlük ödül döngüsünün 2. gününden gelen Çekiç, Bölüm 8'e kadar); dokununca `common.unlockAt` balonu, kullanılamaz. Ön koşulu sağlanmayan yuva gri (§5.2). **Hedefsiz** yuva (Çekiç, Boya Fırçası) §0.3 "Hedefsiz yuva" kalıbındadır: gri, "+" yok, dokununca `booster.<id>.noTarget` balonu; durum önceliği kilitli > hedefsiz > adet 0. |
+| Güçlendiriciler | Çekiç (8), Vinç (10), Boya Fırçası (22), Geri Al (13). Adet rozeti; 0 → "+" mini satın alma (§4'teki pencere; yalnız oyuncu dokununca açılır, bölüm duraklar). Kilitli → asma kilit + bölüm no; açılıştan önce kazanılmış adet varsa gri adet rozeti (§0.3, §4; ör. günlük ödül döngüsünün 2. gününden gelen Çekiç, Bölüm 8'e kadar); dokununca `common.unlockAt` balonu, kullanılamaz. Ön koşulu sağlanmayan yuva gri (§5.2). **Hedefsiz** yuva (Çekiç, Vinç, Boya Fırçası) §0.3 "Hedefsiz yuva" kalıbındadır: gri, "+" yok, dokununca `booster.<id>.noTarget` balonu; durum önceliği kilitli > hedefsiz > adet 0. |
 | Harç maliyeti önizlemesi | **Şantiyeye yapışmış** harçlı blok (Y8) sürüklenirken hamle sayacının altında "−2" çipi (K-07, OBSTACLES Y8: yapışmış bloğun iptal olmayan her hamlesi 2). Sahadaki, henüz yapışmamış harçlı blokta çip yok (maliyet 1). Bırakma iptal öngörüsündeyse (§5.3) çip %40 soluklaşır (iptal = 0 hamle). |
 
 **Çıkış onayı (R-13, K-43):**
@@ -544,7 +545,7 @@ sürümü değiştiyse (K-43 madde 4) bölüm açılmaz, ana ekranda `resume.voi
 onayla ya da teklif reddiyle olur.
 
 Durumlar: **ilk yükleme** (tahta 400 ms içinde bloklar yukarıdan yerine düşer; etkileşim bu animasyon bitince açılır)
-· **kilitlenme** (K-30, Faz 2R: D1 yeniden dizme — JUICE #21a / #21c — ya da Söküm — JUICE #107; Söküm'de geri sökülen bloklar sahadaki önceki yerlerine uçar, Usta Dede satırı `tut.ctx.teardown` her Söküm'de 1,2 s) · **hamle bitti** (Kaybetme penceresi) ·
+· **kilitlenme** (K-30, Faz 2R: D1 yeniden dizme — JUICE #21a / #21c — ya da Söküm — JUICE #107; Söküm'de geri sökülen bloklar sahadaki önceki yerlerine uçar, Usta Dede satırı `tut.ctx.teardown` her Söküm'de `duration.teardownLine` 2400 ms, §13.1) · **hamle bitti** (Kaybetme penceresi) ·
 **duraklatma** (uygulama arka plana atılınca otomatik; durum kaydedilir) · **devam** (yarım kalan bölüm; yukarıda) ·
 **hata** (beklenmeyen durum: oyun kaydı alınır; §0.3 "Hata" kalıbı `error.level` "Bir şeyler takıldı. Can gitmez." +
 `error.restart` "Bölümü baştan başlat" teklif edilir, can gitmez) · **şantiye kapalı**
@@ -573,7 +574,14 @@ bölüm sürer ve şantiyeye bırakma iptaldir (0 hamle; TECH `siteClosed`). Oyu
 > gölge dokularıyla (`ghost_<şekil>_valid`) ve vurgu kalıbıyla (§13.1 madde 2) çizilir, **yeni doku gerekmez**.
 
 1. Yuvaya dokun → yuva yükselir, tahta üstünde ince açıklama şeridi (`booster.hint.<hammer|crane|brush|trowel>`;
-   Altın Mala'da Usta Serisi şeridine dokununca `booster.hint.trowel`) + "Vazgeç" (`common.cancel`, ×).
+   Altın Mala'da Usta Serisi şeridine dokununca `booster.hint.trowel`). **Şerit yalnız metindir** (tahtanın üst
+   kenarında, vinç alanını örtmeden: şerit alt kenarı vinç alanı tepesinin 16 px üstünde; sığmazsa şerit HUD'un altına,
+   y = `top.groupBottomY` + 16'ya oturur). **Vazgeç başparmak bölgesindedir (2026-10-08, DS-13; ilke 3):** seçili
+   yuvanın yüzünde kırmızı yuvarlak × (kit `red` yuvarlak düğme, 128 px, yuvanın merkezinde; adet rozeti gizlenir,
+   erişilebilir ad `common.cancel` "Vazgeç") belirir; yuvaya yeniden dokunmak vazgeçer. Altın Mala'da × durum
+   şeridindeki mala ikonunun yerine çizilir. Tahta dışındaki boş sahneye dokunmak vazgeçmez (yanlış dokunuşla seçim
+   kaybolmasın); sistem geri hareketi (`popstate`) = Vazgeç. Faz 2R ekran görüntülerindeki tahta üstü büyük krem
+   "Vazgeç" düğmesi kalkar (ekranın üst yarısında ve vinç alanının üstündeydi).
    Seçilebilir hedefler 1,2 s'de bir parlar (`highlightPulseMs`), seçilemeyenler **α 0,5** soluklaşır (yerleşmiş
    bloklar, HUD ve sahne değişmez; azaltılmış harekette de, çünkü bilgidir). Seçim kapanınca (kullanım, Vazgeç ya da ×)
    her şey %100'e döner.
@@ -583,7 +591,7 @@ bölüm sürer ve şantiyeye bırakma iptaldir (0 hamle; TECH `siteClosed`). Oyu
 | Güçlendirici | 1. dokunuş — seçilebilir | Soluk (α 0,5) / seçilemez | 2. dokunuş ve uygulama | Hedefsiz durum (§0.3) |
 | ------------ | ------------------------ | ------------------------- | ---------------------- | --------------------- |
 | Çekiç (K-36, Bölüm 8) | **Ağır Yük** (Y5; Q9, I5), **ahşap kasa**, **çimento torbası**, **zincirli blok** (vurgu yalnız zincir katmanında; blok değil zincir parlar), **şantiyedeki moloz** ve **şantiyede yapışmış harçlı blok** | **sahadaki bütün malzeme blokları**, kilitli (yerleşmiş) bloklar, kuyruktaki bloklar, duvar/geçit, saklı nesne hücreleri | Tek dokunuş: uygulanır (JUICE #61). Ağır Yük, kasa, torba kırılır; zincirde yalnız zincir kalkar; moloz ve harçlı blok sahaya iner. Soluk bir bloğa dokunma: blok 2 px titrer, Çekiç harcanmaz | K-36 kümesi boş (dilimde Bölüm 9; Bölüm 1–7'de yuva zaten kilitli) → yuva gri, "+" yok, dokununca `booster.hammer.noTarget` |
-| Vinç (K-37, Bölüm 10) | zincirsiz, ıslak olmayan saha bloğu (malzeme ya da Ağır Yük) / moloz / harçlı blok (gömülü olsa bile) | zincirli ve ıslak bloklar + küçük kilit/damla rozeti | Hedef: sahada boş yer **ya da** şantiyede yalnız **doğru** konum (K-34 dahil). Taşırken gölge kuralı: geçersiz hedefte gölge gri, bırakınca blok geri döner ve Vinç harcanmaz. Döndürme: blok üstünde 2 ok, 112 px görsel + her yanda 8 px pay → 128 px (§0.3). Ağır Yük şantiye üstünde gri | Uygulanmaz (sahada her zaman hedef var) |
+| Vinç (K-37, Bölüm 10) | zincirsiz, ıslak olmayan saha bloğu (malzeme ya da Ağır Yük) / moloz / harçlı blok (gömülü olsa bile) | zincirli ve ıslak bloklar + küçük kilit/damla rozeti | Hedef: sahada boş yer **ya da** şantiyede yalnız **doğru** konum (K-34 dahil). Taşırken gölge kuralı: geçersiz hedefte gölge gri, bırakınca blok geri döner ve Vinç harcanmaz. Döndürme: blok üstünde 2 ok, 112 px görsel + her yanda 8 px pay → 128 px (§0.3). Ağır Yük şantiye üstünde gri | Sahada zincirsiz ve ıslak olmayan blok yoksa (ör. saha boşaldı, yalnız kuyrukta blok var) → yuva gri, "+" yok, `booster.crane.noTarget` "Şu an taşınacak blok yok." (2026-10-08) |
 | Boya Fırçası (K-38, Bölüm 22, Faz 3) | **A bloğu:** sahada kilitsiz malzeme bloğu (gömülü, zincirli ve ıslak olabilir) | moloz, kuyruktaki ve şantiyedeki bloklar, Ağır Yük | A seçilince A beyaz kontur alır; **B adayları** = hücre sayısı A'ya **eşit** ve rengi A'dan **farklı** bloklar parlar, diğerleri α 0,5. B'ye dokun → renk takası (JUICE #63). Uymayan bloğa dokunma: o blok 2 px titrer, fırça harcanmaz. A'ya yeniden dokunma A'yı bırakır. **Renk seçici yoktur** (Faz 1 tarifi kalktı) | Hücre sayısı eşit ve rengi farklı iki uygun blok yok → yuva gri, "+" yok, `booster.brush.noTarget` |
 | Geri Al (K-39) | — (anında) | son eylem sürükleme değilse, Geri Al'dan sonra yeni hamle yapılmadıysa (derinlik 1), kayıp penceresi açıkken: yuva gri, dokununca "Geri alınacak hamle yok" balonu | — | — (kendi gri durumu) |
 | Altın Mala (K-33, Usta Serisi, Bölüm 1'den) | **sahadaki malzeme bloğu** (gömülü olsa bile) ve `P` kümesi boş olmayanlar | `P` kümesi boş olan saha blokları, kilitli, zincirli, ıslak, kuyruktaki ve şantiyedeki bloklar | Blok seçilince: **\|P\| = 1** → blok kendiliğinden P konumuna uçar (JUICE #17). **\|P\| ≥ 2** → P konumları şantiyede gölge dilinde gösterilir (`ghost_<şekil>_valid` düz yeşil kontur + Ø 44 ✓ rozeti, nabız 1200 ms); oyuncu birine dokunur → uçuş. Seçili blok beyaz konturlu kalır; başka bir seçilebilir bloğa dokunma seçimi değiştirir. Soluk bloğa (P boş) dokunma: blok 2 px titrer, mala harcanmaz | Uygulanmaz (mala Usta Serisi'nden gelir; P'si olan blok yoksa bütün saha blokları soluk kalır ve şerit `booster.hint.trowel` yerine 1,2 s `booster.trowel.noTarget` gösterir, mala harcanmaz) |
@@ -701,56 +709,70 @@ takılmaması için dört katman:
 Bölüm verisi saha `yard { cols: Wy, rows: Hy }` ve şantiye `site { cols: Ws, rows: Hs }` taşır. **Tahtanın satır sayısı
 H = max(Hy, Hs + eMax)**'tır (K-49; `eMax` = asansör iskelenin S6 en büyük ofseti, dilimde 0); sütun sayısı W = Wy + Ws.
 Saha ve şantiye **farklı yükseklikte** olabilir (dilimin 10 bölümünün 9'unda Hy < H). Sınırlar (code-lead yerleşim
-kısıtı, tokens `layout.adaptive`): W ≤ 8, Hy ve Hs 4–8, H ≤ 8, Ws 1–4 (product-lead aralığı Ws 2–4). Hücre
-c = `layout.grid.cellPx` = **120 px** (R2-02). (ÖNERİ DL-2R-14 kabul edilirse c bölüme göre 120–144 olur; aşağıdaki
-formüller c cinsindendir ve aynen kalır, yalnız örnek tablo yeniden hesaplanır.)
+kısıtı, tokens `layout.adaptive`): W ≤ 8, Hy ve Hs 4–8, H ≤ 8, Ws 1–4 (product-lead aralığı Ws 2–4). **Hücre c
+uyarlanırdır (D-085, DL-2R-14; token 2026-10-08'de yazıldı):** bölüm başında bir kez, cihazdan bağımsız
+`c = max(120, min(layout.adaptive.cellMaxPx 144, ⌊960 / W / 12⌋·12, ⌊1200 / (H + 2) / 12⌋·12))` (TECH §2R.1). Ölçek
+`k = c / 120`: duvar şeridi `60·k`, `touch.hitSlopPx·k` ve blok çizimi (ART §3A) k ile büyür; çerçeve, iskele, HUD,
+kit ve öğretici ölçüleri değişmez. Aşağıdaki formüller c ve duvar genişliği `wallW = 60·k` cinsindendir.
 
 **Kurallar:**
 
-1. **Yatay ortalama:** `boardW = W·c + 60` (duvar); `yardX = round((1080 − boardW) / 2)`; `wallX = yardX + Wy·c`;
-   `buildX = wallX + 60`. Vinç alanı, saha üstü hava ve durum şeridi `yardX`'ten başlar, genişlikleri `boardW`'dir.
+1. **Yatay ortalama:** `boardW = W·c + wallW`; `yardX = round((1080 − boardW) / 2)`; `wallX = yardX + Wy·c`;
+   `buildX = wallX + wallW`. Vinç alanı, saha üstü hava ve durum şeridi `yardX`'ten başlar, genişlikleri `boardW`'dir.
 2. **Dikey çapa:** tahtanın alt kenarı her boyutta `boardBottomY` (`board.boardBottomY` 1488 + EXPAND kayması).
    `boardTopY = boardBottomY − H·c` · saha tepesi `yardTopY = boardBottomY − Hy·c` · vinç alanı (y = H, H + 1)
-   `boardTopY − 2c` … `boardTopY` (= `boardTopY − 240`). Satır az olduğunda tahta **aşağıda kalır** (başparmak bölgesi,
-   bölümden bölüme aynı el konumu); üstte açılan `(8 − H)·c` px sahne (ART §7.1) ve öğretici balonunun üst yuvası
-   (§13.1) için kullanılır.
+   `boardTopY − 2c` … `boardTopY`. Satır az olduğunda tahta **aşağıda kalır** (başparmak bölgesi,
+   bölümden bölüme aynı el konumu); üstte açılan `vinç alanı tepesi − 288` px sahne (ART §7.1) ve öğretici balonunun
+   üst yuvası (§13.1) için kullanılır. **Tahta EXPAND'de yukarı çekilmez** (`board.expandShare` 0,5 kalır,
+   2026-10-08 ekran incelemesi DS-10): 0,5'te 390×844'te B1 saha üst satırının merkezi ekranın %51'inde, yani alt
+   yarıdadır (ilke 3); pay 0,25 olsaydı %47'de, yani üst yarıda kalırdı.
 3. **Bölgeler ve görünüm** (alttan üste; satır y, sütun x tahta koordinatı):
 
 | Bölge | Satır (y) | Sütun (x) | Görünüm |
 | ----- | --------- | --------- | ------- |
 | Saha ("malzeme sandığı") | 0 … Hy−1 | 0 … Wy−1 | delikli pano zemini (ART §2.4, DL-2R-18) + 20 px ahşap çerçeve **yalnız bu bölgenin çevresinde** (`adaptive.yardFramePx`, köşe 24); çerçevenin üst kenarı `yardTopY`'dedir |
 | Saha üstü hava (Hy < H iken) | Hy … H−1 | 0 … Wy−1 | **zeminsiz gök bandı:** `board.craneSky` dolgu (beyaz α 0,10, sahne arkadan görünür), ızgara, delik ve çerçeve **yok**; vinç alanıyla aynı dil. Blok buradan geçer ama bırakılamaz (K-05; iptal öngörüsü §5.3) |
-| Duvar | 0 … height−1 | sınır Wy−1 \| Wy | ART §5, 60 px şerit |
+| Duvar | 0 … height−1 | sınır Wy−1 \| Wy | ART §5, `60·k` px şerit |
 | Duvar üstü hava ve geçit açıklığı | height … H−1 ve geçit satırları | duvar şeridi | `board.craneSky` (geçit açıklığı da aynı dolgu; arkadaki sahne nesnesi açıklıkta görünmez, PL-2R-13 b) |
 | Şantiye (ozalit) | 0 … Hs+e−1 | Wy … W−1 | ozalit zemin + plan (ART §4); iskele boruları iki yanda (`siteScaffoldPx` 16) |
 | Şantiye üstü hava (Hs + e < H iken) | Hs+e … H−1 | Wy … W−1 | "plan dışı" dolgusu: `board.blueprintDeep` düz (ART §4; K-16 `outside`), ızgara ve benek yok; iskele boruları H'ye kadar uzar. **Dilimde oluşmaz** (B1–B10'da Hs = H) |
 | Vinç alanı | H, H+1 | 0 … W−1 | ART §5: `board.craneSky` bandı + alt sınırda kesik çizgi; iskele boruları buraya 40 px uzanır |
 
-4. **Duvar:** her zaman saha ile şantiye arasında, 60 px; yüksekliği bölüm verisinden (`height` ≤ H, satır). Açık
+4. **Duvar:** her zaman saha ile şantiye arasında, `60·k` px; yüksekliği bölüm verisinden (`height` ≤ H, satır). Açık
    yükseklik işareti **`(H + 2) − height`** çentik (ART §5).
-5. **"Yapı tamam!" kurdelesi (§5.1):** genişliği `max(306, 60 + Ws·c)`, yatayda duvar + şantiye bloğunun ortasında
-   (`wallX + (60 + Ws·c)/2`), dikeyde tahtanın ortası (`boardTopY + H·c/2`).
+5. **"Yapı tamam!" kurdelesi (§5.1):** genişliği `max(306, wallW + Ws·c)`, yatayda duvar + şantiye bloğunun ortasında
+   (`wallX + (wallW + Ws·c)/2`), dikeyde tahtanın ortası (`boardTopY + H·c/2`).
 6. **Panorama:** dilim başına Ws sütun; hücre boyu `min(24, ⌊98 / Hs⌋)` px (en az 12; bütün dilimler en yüksek dilimin
    Hs'sine göre, §5.1).
 7. **Dokunma payı** (`touch.hitSlopPx` 30) çerçeve içinde kalır; çerçeve dokunuş almaz.
 8. **Kenar payı:** `adaptive.minSideMarginPx` (30) **tahta kenarını** ölçer (saha sütun 0'ın sol kenarı, son şantiye
    sütununun sağ kenarı). 8 sütunluk tahtada saha çerçevesi (20 px) solda ekran kenarından 10 px, iskele borusu (16 px)
-   sağda 14 px içeride biter; 6 sütunda iki yanda 130 px'ten fazla kalır.
+   sağda 14 px içeride biter; 6 sütunda c = 144 ile iki yanda 72 px kalır.
+9. **Tahta tepsisi** (code-lead'in WP-G eklemesi, ART §7.1 "tepsi"): tahta grubunun (vinç alanı tepesi − durum şeridi
+   altı) arkasındaki koyu yuvarlak panel. Payı `min(24, yardX − 20 − 12)` px'tir: çerçevenin dışında en az 12 px ekran
+   kenarı kalır. Pay 8 px'in altına düşerse (8 sütunlu tahta: yardX 30) tepsinin **yan kenarları çizilmez**, yalnız üst
+   ve alt kenar bandı kalır; tepsi kenarı ekran kenarına hiçbir profilde 12 px'ten fazla yaklaşmaz (DS-18).
+10. **Durum şeridi** (`board.statusY` 1520, `statusH` 80; 2026-10-08): saha çerçevesinin alt kenarından (boardBottomY +
+   20 = 1508) 12 px aşağıda başlar, alt kenarı 1600'de kalır (eski 1504/96 FIT'te çerçeveyle 4 px örtüşüyordu, DS-11).
 
-**Örnekler — dilimin gerçek boyutları (LEVELS §2; FIT, `boardBottomY` 1488, c = 120):**
+**Örnekler — dilimin gerçek boyutları (LEVELS §2; FIT, `boardBottomY` 1488, c uyarlanır, 2026-10-08):**
 
-| Bölüm | Saha Wy×Hy + şantiye Ws×Hs | H | Duvar | boardW / yardX / wallX / buildX | Saha tepesi y | Tahta tepesi y | Vinç alanı tepesi y | Saha üstü hava (satır) | Çentik `(H+2) − height` | Panorama hücresi | Üstte açılan sahne |
-| ----- | -------------------------- | - | ----- | ------------------------------- | ------------- | -------------- | ------------------- | ---------------------- | ----------------------- | ---------------- | ------------------ |
-| 1, 2, 3, 5 | 4×4 + 2×5 | 5 | 4 | 780 / 150 / 630 / 690 | 1008 | 888 | 648 | 1 (y 4) | 3 | 19 | 360 |
-| 4, 9 | 4×4 + 2×6 | 6 | 4 | 780 / 150 / 630 / 690 | 1008 | 768 | 528 | 2 (y 4–5) | 4 | 16 | 240 |
-| 6 | 4×5 + 2×7 | 7 | 7 | 780 / 150 / 630 / 690 | 888 | 648 | 408 | 2 (y 5–6) | 2 | 14 | 120 |
-| 7 | 4×5 + 2×5 | 5 | 5 | 780 / 150 / 630 / 690 | 888 | 888 | 648 | 0 | 2 | 19 | 360 |
-| 8 | 6×5 + 2×6 | 6 | 5 | 1020 / 30 / 750 / 810 | 888 | 768 | 528 | 1 (y 5) | 3 | 16 | 240 |
-| 10 | 6×5 + 2×6 | 6 | 6 | 1020 / 30 / 750 / 810 | 888 | 768 | 528 | 1 (y 5) | 2 | 16 | 240 |
-| varsayılan (Faz 3) | 6×8 + 2×8 | 8 | 8 | 1020 / 30 / 750 / 810 | 528 | 528 | 288 | 0 | 2 | 12 | 0 |
+| Bölüm | Saha Wy×Hy + şantiye Ws×Hs | H | Duvar | c (k) | boardW / yardX / wallX / buildX | Saha tepesi y | Tahta tepesi y | Vinç alanı tepesi y | Saha üstü hava (satır) | Çentik `(H+2) − height` | Panorama hücresi | Üstte açılan sahne | HUD–vinç boşluğu 390×844 |
+| ----- | -------------------------- | - | ----- | ----- | ------------------------------- | ------------- | -------------- | ------------------- | ---------------------- | ----------------------- | ---------------- | ------------------ | ------------------------ |
+| 1, 2, 3, 5 | 4×4 + 2×5 | 5 | 4 | 144 (1,2) | 936 / 72 / 648 / 720 | 912 | 768 | 480 | 1 (y 4) | 3 | 19 | 192 | 424 |
+| 4, 9 | 4×4 + 2×6 | 6 | 4 | 144 (1,2) | 936 / 72 / 648 / 720 | 912 | 624 | 336 | 2 (y 4–5) | 4 | 16 | 48 | 280 |
+| 6 | 4×5 + 2×7 | 7 | 7 | 132 (1,1) | 858 / 111 / 639 / 705 | 828 | 564 | 300 | 2 (y 5–6) | 2 | 14 | 12 | 244 |
+| 7 | 4×5 + 2×5 | 5 | 5 | 144 (1,2) | 936 / 72 / 648 / 720 | 768 | 768 | 480 | 0 | 2 | 19 | 192 | 424 |
+| 8 | 6×5 + 2×6 | 6 | 5 | 120 (1,0) | 1020 / 30 / 750 / 810 | 888 | 768 | 528 | 1 (y 5) | 3 | 16 | 240 | 472 |
+| 10 | 6×5 + 2×6 | 6 | 6 | 120 (1,0) | 1020 / 30 / 750 / 810 | 888 | 768 | 528 | 1 (y 5) | 2 | 16 | 240 | 472 |
+| varsayılan (Faz 3) | 6×8 + 2×8 | 8 | 8 | 120 (1,0) | 1020 / 30 / 750 / 810 | 528 | 528 | 288 | 0 | 2 | 12 | 0 | 232 |
 
-EXPAND'de bütün y değerleri `(H_ekran − 1920) × 0,5` aşağı kayar (390×844: +208; 360×800: +240). En yüksek dilim
-tahtası Bölüm 6'dır (vinç alanı tepesi FIT'te y 408); HUD'un alt kenarı (264) ile arasında 144 px kalır.
+EXPAND'de bütün tahta grubu y değerleri `(H_ekran − 1920) × 0,5` aşağı kayar (390×844: +208; 360×800: +240); son
+sütun bu kaymayla HUD alt kenarı (264) ile vinç alanı tepesi arasındaki boşluktur. En yüksek dilim tahtası Bölüm 6'dır
+(vinç alanı tepesi FIT'te y 300; HUD alt kenarı ile arasında 36 px ≥ `minGapTopPx` 24). B4/B9 (FIT 336) ve B6 (FIT
+300) vinç alanı FIT'te öğretici balonunun üst yuvasıyla (y 280–446) kesişir; vinç alanı **yumuşak** koşuldur (§13.1),
+sert koşula eklenmez (karar 2026-10-08): balon sürüklemede α 0,35'e iner, dokunuş almaz; EXPAND'de kesişme yok.
+360×800'de B1 bloğu 144 × 360 / 1080 = **48 CSS px** (TECH §2R.1 ekran görüntüsü kapısı).
 
 ### 5.9 HUD v2, kalan blok ve tam örtü (Faz 2R, R2-01)
 
@@ -799,6 +821,12 @@ anlaması için:
    da 80 px aşağı kayar). Dilimde ek hedef yoktur (2 çip). Hamle plakası ART §14.2 panel (280×224), rakam 120 px
    `ui.ink`, altında "HAMLE" 38 px `ui.inkSoft`; az hamle uyarısında (§5.1, DL-2R-19) rakam `kit.buttonColor.red.base`
    + nabız (#51). Panorama 592×110 ozalit kuyusunda (`board.blueprint` zemin, 6 px `ui.ink` kontur, köşe 24).
+8. **Bölüm etiketi kuyuda (2026-10-08, DS-12):** oyun ekranında bölüm numarası hiçbir yerde yoktu ve 1–2 dilimli
+   planlarda panorama kuyunun %85'ini boş bırakıyordu. Kuyunun solunda (iç pay 24 px) `home.play` "Bölüm {n}"
+   (`upper`; ART §8.1 `brightTitle`, 52 px, beyaz + `ui.ink` kontur), dikeyde ortalı; panorama sağdaki alanda
+   (`label sağ kenarı + 24` … `592 − 24`) ortalanır, hücre ölçüsü §5.8 madde 6 aynen. Panoramanın genişliği bu alana
+   sığmazsa (Faz 3'te 4+ dilim) etiket gizlenir ve panorama bütün kuyuyu kullanır. Etiket dokunuş almaz; kuyuya
+   dokunma büyük önizlemeyi açar (§5.1). Ekran okuyucu: "Bölüm {n}, plan önizlemesi".
 
 ### 5.10 Alt grup v2 (Faz 2R)
 
@@ -896,6 +924,8 @@ y    0 ┌───────────────────────�
 | Döngü (1–10 tekrar, `replay`) | Bonus, mala satırı ve ★ kapsülü **yok**; yalnız altın kapsülü (kazanma tabanı) ortada (x 390), y 1180 |
 | Devam | düğme belirir (0,9 → 1,0); dokun → ana sayfa (§3 geçişi) |
 
+Düğme etiketi `common.continue` 80 px (ana sayfa "Bölüm N" ile aynı; WP-I seçimi, 2026-10-08 kabul). Kart içindeki yapı
+hayaleti ART §7.2 opak tabanlı ozalit hayaletidir (krem kartta da mavi okunur; ayrı kart tonu yok, DS-30).
 EXPAND: düğme alta çapalı; şerit, kart, Tuna, bonus ve kapsüller `(H − 1920) × 0,5` aşağı kayar. Azaltılmış hareket:
 ışın dönmez, konfeti yerine sabit bayrak dizisi, şerit ve kart 150 ms solarak (JUICE §0 kural 8). Metinler STORY §7.6
 (`win.*`); "Tekrar" düğmesi yine yok.
@@ -1169,6 +1199,7 @@ y    0 ┌───────────────────────�
  1496  │  Gizlilik  ›                        │  [Mağaza] politika bağlantısı + onay tercihlerini yeniden aç
  1648  │  Harcama limiti  ›                  │  [Mağaza] E7
  1800  │  Destek  ›  ·  Lisanslar  ›         │  e-posta / SSS · OFL (Baloo 2), ZzFX vb. [MVP]
+       │  Geri bildirim  ›                   │  settings.feedback; Faz 2R'de ana sayfa ayar penceresinde de (§3)
  1952  │  Kaydı sıfırla  ›                   │  2 adım onay [MVP]
  2104  │  Sürüm 0.1.0 · Oyuncu kimliği 7F3A…  │  caption [MVP]
        └────────────────────────────────────┘  liste dikey kaydırılır (ekrandan uzun)
@@ -1178,6 +1209,13 @@ y    0 ┌───────────────────────�
 - Web MVP'de **[Mağaza]** satırları gösterilmez; yerleri liste düzeninde ayrılmıştır.
 - "Kaydı sıfırla": 1. pencere "Tüm ilerleme silinecek." → 2. pencere "Emin misin? Geri alınamaz." + 3 s bekleyen
   "Sıfırla" düğmesi.
+- **Geri bildirim (EN-2R-20, TECH §2R.16; 2026-10-08):** satır / düğme `settings.feedback`. Dokun → analytics halka
+  tamponu JSON olarak panoya kopyalanır (kullanıcı dokunuşuyla; sunucu yok) → düğmenin üstünde 1,5 s balon
+  `settings.feedbackCopied` "Kopyalandı. Mesaja yapıştırıp gönder." + `sfx_button` + hafif haptik. Pano reddedilirse
+  pencere içinde salt okunur, metni seçili bir kutu açılır (en çok 6 satır görünür, kaydırılır;
+  `font.size.caption`, Baloo 2), üstünde `settings.feedbackManual` "Metni seçip elle kopyala.", altında `common.continue`.
+  Kırmızı yok, hata dili yok. Dokunma hedefleri ≥ 128 px. Kişisel veri içermediği metinde söylenmez (oyuncuyu
+  kaygılandırmaz); ANALYTICS kuralı geçerlidir.
 - Durumlar: **hata** (ayar kaydedilemedi → anahtar eski hâline döner, 1,5 s bilgi balonu) · **boş / kilitli / yükleniyor**
   yok.
 
@@ -1264,6 +1302,18 @@ istisna listesi gerekmez). Bölüm başına **en çok 2 adım**, balon başına 
    aralık), `hold` (yolun sonunda 600 ms basılı). Yol noktaları **tutulan hücrenin** (x, y)'sidir (path[0] = o hücrenin
    başlangıcı; GDD §14 tanımı DL-2R-01'de önerildi); eldivenin parmak ucu bu hücrenin merkezindedir ve yol bloğun parmak
    ofsetini (1,2 hücre, §5.3) hesaba katar. Noktalar arası düz parçalar 24 px yarıçapla yuvarlanır.
+   **Blok hayaleti (2026-10-08, DS-15 — WP-H sorusu "saha içi 1 hücrelik kaydırmada eldiven çapraz iniyor"):** eldivenin
+   parmak uzayındaki yolu **doğrudur ve kalır** (K-08: blok parmağın 1,2 hücre üstünde durur; aynı satırda yana çekip
+   bırakan oyuncunun bloğu saha üstü havaya kalkar ve bırakma K-07 satır 3 ile iptal olur, yani parmak gerçekten 1,2
+   satır inmelidir). Yalnız eldiven gösterilince çapraz iniş "bloğu aşağı it" gibi okunuyor. Kural: `drag` ve `hold`
+   eldiveniyle birlikte vurgulu bloğun **hayalet kopyası** (pişirilmiş blok dokusu, `drag.liftScale` 1,08, α
+   `tutorial.ghostAlpha` 0,55, gölgesiz, gloss yok) **blok uzayında** yürür: her karede hayaletin çapası, K-08 yapışkan
+   takibin eldivenin o anki parmak noktası için vereceği konumdur (oyuncunun gerçekten göreceği yer). Yolun başında
+   hayalet `tutorial.ghostLiftMs` 160 ms'de bloğun yerinden yukarı süzülür (dokunuştaki kalkış), sonunda `hideMs` 200
+   ms'de solar; gerçek blok yerinde, vurgulu kalır. **Noktalı iz hayaletin merkezini izler** (blok uzayı), eldiven
+   parmak uzayında kalır; böylece saha içi kaydırmada iz yatay, eldiven çapraz görünür ve ikisi birlikte "parmak
+   altta, blok üstte" ilkesini (§5.3) öğretir. Azaltılmış harekette hayalet yolun sonunda sabit durur (α 0,55), iz tam
+   çizilir. Çizim sırası: vurgu → hayalet → balon → eldiven. Hayalet dokunuş almaz.
    **Oynatma koşulu (DL-2R-20):** eldiven yalnız (a) path[0] hücresinde adımın vurguladığı blok hâlâ duruyorsa, (b) o
    blok o anki durumda tutulabilirse (K-09) ve (c) yol o durumda K-08 erişim kümesi R içinde kalıp iptal öngörüsü
    vermeyen bir konumda bitiyorsa oynar. Koşul tutmazsa (oyuncu bloğu başka yere koydu, yol kapandı) eldiven gösterilmez;
@@ -1310,11 +1360,17 @@ istisna listesi gerekmez). Bölüm başına **en çok 2 adım**, balon başına 
 - **Tekrar oynanış:** bölüm kaydında `won = true` ise `tutorial[]` gösterilmez (GDD K-53/6; 1–10 döngüsü, §6).
 - **Azaltılmış hareket:** eldiven yol boyunca kaymaz; yolun başında durur, yolun tamamı noktalı iz olarak sabit çizilir;
   vurgu nabzı yerine sabit parlama; balon 150 ms solarak gelir.
-- **Bağlamsal öğreticiler** (aşağıdaki tablo) aynı balonu kullanır: eldiven yok, vurgu var, 4000 ms görünür, bir kez
-  (istisna: `tut.ctx.teardown` her Söküm'de 1,2 s). **Kuyruk kuralı (K-53 madde 4, PL-2R-12):** bir adım etkinken
+- **Bağlamsal öğreticiler** (aşağıdaki tablo) aynı balonu kullanır: eldiven yok, vurgu var, 4000 ms görünür
+  (`tutorial.visibleMs`), bir kez (istisna: `tut.ctx.teardown` her Söküm'de).
+- **Kilitli dizi satırları (2026-10-08, DS-14; UX ↔ JUICE çelişkisi kapandı):** girdi kilitli bir dizinin içinde
+  açılan satırlar — `tut.ctx.teardown` (#107), `tut.ctx.truckhelp.free` (#21a), `tut.ctx.reshuffle` (#21c) —
+  `tutorial.visibleMs` (4000) yerine **`duration.teardownLine` = 2400 ms** görünür (600 ms giriş + 6 kelime × 300 ms
+  okuma). Eski "1,2 s" kaldırıldı: dizinin kendisi 600–900 ms sürdüğü için satır kilit bitmeden kayboluyordu ve ekran
+  görüntülerinde hiç yakalanmadı. Satır kilit bitince de görünür kalır; oyuncu blok tutarsa α `dragFadeAlpha` (0,35)'e
+  iner, dokunuş almaz, girdiyi engellemez. 4000 ms yalnız kuyruğa giren, kilitsiz bağlamsal satırlar içindir. **Kuyruk kuralı (K-53 madde 4, PL-2R-12):** bir adım etkinken
   (Gösterim **ya da** Gizli) gelen `tut.ctx.*` satırı kuyruğa girer ve adımın Bitiş'inden 400 ms sonra gösterilir;
-  `tut.ctx.teardown` kuyruğa girmez, hemen gösterilir (etkin adım o 1,2 s boyunca Gizli'ye geçer, sonra kaldığı
-  durumdan sürer). Kuyrukta en çok 1 satır bekler; ikincisi gelirse ilki düşer (görülmüş sayılmaz).
+  `tut.ctx.teardown` kuyruğa girmez, hemen gösterilir (etkin adım o `teardownLine` süresi boyunca Gizli'ye geçer,
+  sonra kaldığı durumdan sürer). Kuyrukta en çok 1 satır bekler; ikincisi gelirse ilki düşer (görülmüş sayılmaz).
 - Metin kimlikleri: Faz 2R dilimi (Bölüm 1–10) **mekanik bazlı** `tut.m.*` anahtarlarını kullanır (STORY §6A; bölüm
   sırası değiştiğinde anahtar değişmesin diye); 11–50 için `tut.l{bölüm}.{konu}` Faz 3'te aynı biçime çevrilir.
   Bağlamsal satırlar `tut.ctx.*`, meta satırlar `tut.meta.*`. Ekranda görünen metnin tek kaynağı `STORY.md` §6 / §6A.
@@ -1443,7 +1499,7 @@ anahtarlar `tut.m.*` biçimine çevrilir. Sunum §13.1 v2'dir (karartma yok).
 | Az hamle uyarısı ilk kez (`kalanHamle − kalanBlok ≤ 1` ya da `kalanHamle ≤ 2`; §5.1, DL-2R-19) | `moves` | `tut.ctx.lastmoves` |
 | Kamyon kuyruğu ilk kez (K-26) | `truck` | `tut.ctx.queue` |
 | İlk Kamyon Yardımı (K-30 D1) | saha | `tut.ctx.truckhelp.free` (zincir/ıslaklık kalktı ve D1 çözüldü; JUICE #21a) · `tut.ctx.reshuffle` (kaldırılacak zincir/ıslaklık yoksa ya da sonrasında hâlâ D1 ise saha yeniden dizildi; #21c). Faz 1'in `tut.ctx.truckhelp.material` (D2 B1 teslimatı) satırı kalktı (R2-05) |
-| **Her Söküm** (K-30 D2/D3; "bir kez" kuralının istisnası) | geri sökülen bloklar (inişte) | `tut.ctx.teardown` "Çıkmaz oldu, son bloğu söktük." 1,2 s; kuyruğa girmez (§13.1); JUICE #107 |
+| **Her Söküm** (K-30 D2/D3; "bir kez" kuralının istisnası) | geri sökülen bloklar (inişte) | `tut.ctx.teardown` "Çıkmaz oldu, son bloğu söktük." `duration.teardownLine` 2400 ms; kuyruğa girmez (§13.1); JUICE #107 |
 | İlk taşınamayan bloğa dokunma | blok | `tut.ctx.blocked` |
 | Bölüm sandığı ilk dolum (10) | sandık | `tut.meta.chest` |
 | Günlük ödül ilk gün (2. gün) | sağ kenar | `tut.meta.daily` |

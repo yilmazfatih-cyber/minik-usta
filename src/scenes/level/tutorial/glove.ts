@@ -97,6 +97,25 @@ export function fingerPoints(layout: Layout, path: readonly (readonly [number, n
 }
 
 /**
+ * UX §13.1 (2026-10-08, DS-15) block ghost: the glove stays in finger space (`fingerPoints`), and an α
+ * `tutorial.ghostAlpha` copy of the touched block walks in block space with it — the block's centre moved by the same
+ * cell steps as the path (no finger offset; the K-08 sticky follow puts the block there for that finger point). The
+ * dotted trail follows these points. `centre` = the block's centre at rest (design px).
+ */
+export function ghostPoints(layout: Layout, path: readonly (readonly [number, number])[], centre: Point): Point[] {
+  const g = layout.grid;
+  const p0 = path[0];
+  if (!p0) return [];
+  const c0 = g.cellRect(p0[0], p0[1]);
+  const x0 = c0.x + c0.w / 2;
+  const y0 = c0.y + c0.h / 2;
+  return path.map(([cx, cy]) => {
+    const r = g.cellRect(cx, cy);
+    return { x: centre.x + (r.x + r.w / 2 - x0), y: centre.y + (r.y + r.h / 2 - y0) };
+  });
+}
+
+/**
  * The polyline `pts` with every inner corner replaced by a circular arc of radius ≤ `radius` (shortened when a leg is
  * short), sampled every ≤ 15°. The first and last points stay.
  */

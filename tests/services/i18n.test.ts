@@ -208,18 +208,21 @@ describe('i18n files (TECH 11.5)', () => {
   });
 
   /**
-   * STORY §6: the Faz 1 level lines `tut.l1.*` … `tut.l10.*` leave i18n once the level files use the §6A `tut.m.*`
-   * keys. WP-M wrote the Faz 2R `levels/*.json` (tut.m.* only) and removed `tut.l1…l5`; each slice line stays exactly
-   * while a level file uses it (Bölüm 11–50 lines, e.g. `tut.l23.*`, are converted in Faz 3).
+   * STORY §6: the Faz 1 level lines `tut.l<n>.*` leave i18n once the level files use the §6A `tut.m.*` keys. WP-M:
+   * the Faz 2R `levels/*.json` use `tut.m.*` only, so `tut.l1…l5` and the orphan `tut.l23.light` (Bölüm 23 is a Faz 3
+   * level; its lines are converted to §6A then) were removed. A `tut.l<n>` line may only come back with a level file
+   * that uses it.
    */
-  it('STORY 6 tut.l1…tut.l10 lines stay only while a levels/*.json step uses them', () => {
+  it('STORY 6 a tut.l<n> line is in i18n only while a levels/*.json step uses it (none in Faz 2R)', () => {
     const used = new Set<string>();
     for (const f of readdirSync(join(ROOT, 'levels')).filter((n) => /^level_\d{3}\.json$/.test(n))) {
       const level = JSON.parse(read(`levels/${f}`)) as { tutorial?: { textKey: string }[] };
       for (const step of level.tutorial ?? []) used.add(step.textKey);
     }
-    const sliceLines = trKeys.filter((k) => /^tut\.l([1-9]|10)\./.test(k));
-    expect(sliceLines.filter((k) => !used.has(k))).toEqual([]);
+    expect([...used].filter((k) => /^tut\.l\d/.test(k))).toEqual([]);
+    const levelLines = trKeys.filter((k) => /^tut\.l\d+\./.test(k));
+    expect(levelLines.filter((k) => !used.has(k))).toEqual([]);
+    expect(levelLines).toEqual([]);
   });
 
   /**
@@ -229,7 +232,7 @@ describe('i18n files (TECH 11.5)', () => {
    * have yet is listed in `NOT_IN_STORY` (the code shows nothing for it, `optText`), and the list is checked against
    * STORY so it empties itself.
    */
-  const NOT_IN_STORY = ['booster.crane.noTarget'];
+  const NOT_IN_STORY: readonly string[] = [];
 
   it('TECH 2R.12 WP-L every i18n key named in src (outside core) exists in tr and en', () => {
     const namespaces = new Set(Object.keys(tr));
@@ -266,10 +269,7 @@ describe('i18n files (TECH 11.5)', () => {
 
   it('TECH 14.1 Phase 2R keys: levels 1-10 and the LEVELS 2 drafts 1-10 tutorial textKeys and teaches cards resolve in both languages', () => {
     const needed = new Set<string>();
-    const files = Array.from({ length: 10 }, (_, i) => String(i + 1).padStart(3, '0')).flatMap((nnn) => [
-      `levels/level_${nnn}.json`,
-      `tests/level/fixtures/levels-2r/level_${nnn}.json`,
-    ]);
+    const files = Array.from({ length: 10 }, (_, i) => `levels/level_${String(i + 1).padStart(3, '0')}.json`);
     for (const file of files) {
       const level = JSON.parse(read(file)) as {
         tutorial?: { textKey: string }[];

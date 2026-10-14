@@ -14,11 +14,16 @@
  * - `changeSetting()`: the settings stub every switch goes through (Pause window today, the Settings screen of UX §11
  *   later): one save write, applied at once, `settings_changed`, then the scenes' listeners (`onSettingChanged`)
  *   relabel or restyle what they show.
+ * - `feedbackText()`: the Settings "Geri bildirim" export (TECH §2R.16, EN-2R-20) of the device's analytics ring, which
+ *   every validated event also enters (`PersistentLog` under `minikusta.analytics`, kept across sessions, flushed
+ *   when the app is hidden).
  */
 import economy from '../../config/economy.json' with { type: 'json' };
+import { RULES_VERSION } from '../core/session.ts';
 import { Analytics, SessionTracker } from '../services/analytics.ts';
 import type { AnalyticsEvent, Track } from '../services/analytics.ts';
 import { systemClock, systemScheduler } from '../services/clock.ts';
+import { PersistentLog, feedbackExport } from '../services/feedback.ts';
 import { getLocale, setLocale, t } from '../services/i18n.ts';
 import {
   appVersion,
@@ -35,7 +40,17 @@ import { gameAudio, gameHaptics, systemReducedMotion } from './level/sceneServic
 let save: SaveService | null = null;
 let analytics: Analytics | null = null;
 let session: SessionTracker | null = null;
+let feedbackLog: PersistentLog | null = null;
 const pending: AnalyticsEvent[] = [];
+
+/** TECH §2R.16: the local analytics ring that survives a reload (flushed when the app goes to the background). */
+function persistentLog(): PersistentLog {
+  if (feedbackLog) return feedbackLog;
+  const log = new PersistentLog({ store: browserStore(), scheduler: systemScheduler });
+  feedbackLog = log;
+  onAppHidden(() => log.flush());
+  return log;
+}
 
 function analyticsInstance(): Analytics {
   analytics ??= new Analytics({
@@ -55,6 +70,7 @@ function analyticsInstance(): Analytics {
       };
     },
   });
+  analytics.addSink(persistentLog().push);
   return analytics;
 }
 
@@ -93,6 +109,20 @@ export function appSave(): SaveService {
   opened.attachLifecycle();
   for (const e of pending.splice(0)) analyticsInstance().track(e);
   return opened;
+}
+
+/**
+ * TECH §2R.16 / EN-2R-20: the pasteable feedback JSON of this device (funnel events only, relative times, no common
+ * parameters, ≤ 20 000 characters).
+ */
+export function feedbackText(): string {
+  analyticsInstance(); // the ring is attached with the analytics service
+  return feedbackExport(persistentLog().rows(), {
+    app: appVersion(),
+    rules: RULES_VERSION,
+    platform: detectPlatform(),
+    lang: getLocale(),
+  });
 }
 
 /** The analytics instance (debug panel: `recent()`). */

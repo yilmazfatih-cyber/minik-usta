@@ -1,7 +1,7 @@
 {
   "level": 2,
   "file": "level_002.json",
-  "levelHash": "80bda4cfc380237b",
+  "levelHash": "3c75442bb18a4e41",
   "rulesVersion": 2,
   "solverVersion": 2,
   "variant": null,
@@ -192,7 +192,7 @@
     "states": 97,
     "expanded": 97,
     "edges": 734,
-    "ms": 10,
+    "ms": 2,
     "bytes": 152003,
     "dragSessions": 65,
     "applyMoves": 68,
@@ -202,7 +202,7 @@
     "d3aUnknown": 0,
     "complete": true,
     "limit": null,
-    "totalMs": 14
+    "totalMs": 5
   },
-  "cacheKey": "8b30782f:rules2:solver2:level:var:d3a"
+  "cacheKey": "9b55896d:rules2:solver2:level:var:d3a"
 }

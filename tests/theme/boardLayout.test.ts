@@ -27,11 +27,15 @@ import { initialState } from '../fixtures/builders.ts';
 
 const geo = (wy: number, hy: number, ws: number, hs: number): BoardGeo =>
   makeGeo({ wy, hy, ws, hs, eMax: 0 });
-/** DL-2R-14 token once design-lead writes it (`layout.adaptive.cellMaxPx` 144). */
-const T144: Tokens = {
-  ...TOKENS,
-  layout: { ...TOKENS.layout, adaptive: { ...TOKENS.layout.adaptive, cellMaxPx: 144 } },
-} as Tokens;
+/**
+ * `layout.adaptive.cellMaxPx` is 144 in tokens.json since the 2026-10-08 screen review (D-085, DL-2R-14, DS-10); T120
+ * is the same tokens without it (the R2-02 "hücre 120 px korunur" floor, TECH §2R.1).
+ */
+const T120: Tokens = (() => {
+  const adaptive: Record<string, unknown> = { ...TOKENS.layout.adaptive };
+  delete adaptive['cellMaxPx'];
+  return { ...TOKENS, layout: { ...TOKENS.layout, adaptive } } as Tokens;
+})();
 
 /** LEVELS §2 sizes of levels 1–10 (UX §5.8 example table). */
 const LEVEL_SIZES = {
@@ -61,64 +65,77 @@ const G: readonly BoardGeo[] = [
 ];
 const label = (g: BoardGeo): string => `${g.wy}x${g.hy}|${g.ws}x${g.hs}`;
 
-/** UX §5.8 example table (FIT, `boardBottomY` 1488, c = 120). */
+/**
+ * UX §5.8 example table (FIT, `boardBottomY` 1488, adaptive c with `cellMaxPx` 144; 2026-10-08): c, boardW / yardX /
+ * wallX / buildX, yard top, board top, crane-area top, yard air rows, notch, panorama cell, the scene above
+ * (crane-area top − 288) and the HUD–crane gap at 390 × 844.
+ */
 const TABLE = [
   {
     name: 'B1, B2, B3, B5',
     g: LEVEL_SIZES[1],
     wall: 4,
-    x: [780, 150, 630, 690],
-    yardTop: 1008,
-    boardTop: 888,
-    craneTop: 648,
+    c: 144,
+    x: [936, 72, 648, 720],
+    yardTop: 912,
+    boardTop: 768,
+    craneTop: 480,
     air: 1,
     notch: 3,
     pano: 19,
-    scene: 360,
+    scene: 192,
+    gap390: 424,
   },
   {
     name: 'B4, B9',
     g: LEVEL_SIZES[4],
     wall: 4,
-    x: [780, 150, 630, 690],
-    yardTop: 1008,
-    boardTop: 768,
-    craneTop: 528,
+    c: 144,
+    x: [936, 72, 648, 720],
+    yardTop: 912,
+    boardTop: 624,
+    craneTop: 336,
     air: 2,
     notch: 4,
     pano: 16,
-    scene: 240,
+    scene: 48,
+    gap390: 280,
   },
   {
     name: 'B6',
     g: LEVEL_SIZES[6],
     wall: 7,
-    x: [780, 150, 630, 690],
-    yardTop: 888,
-    boardTop: 648,
-    craneTop: 408,
+    c: 132,
+    x: [858, 111, 639, 705],
+    yardTop: 828,
+    boardTop: 564,
+    craneTop: 300,
     air: 2,
     notch: 2,
     pano: 14,
-    scene: 120,
+    scene: 12,
+    gap390: 244,
   },
   {
     name: 'B7',
     g: LEVEL_SIZES[7],
     wall: 5,
-    x: [780, 150, 630, 690],
-    yardTop: 888,
-    boardTop: 888,
-    craneTop: 648,
+    c: 144,
+    x: [936, 72, 648, 720],
+    yardTop: 768,
+    boardTop: 768,
+    craneTop: 480,
     air: 0,
     notch: 2,
     pano: 19,
-    scene: 360,
+    scene: 192,
+    gap390: 424,
   },
   {
     name: 'B8',
     g: LEVEL_SIZES[8],
     wall: 5,
+    c: 120,
     x: [1020, 30, 750, 810],
     yardTop: 888,
     boardTop: 768,
@@ -127,11 +144,13 @@ const TABLE = [
     notch: 3,
     pano: 16,
     scene: 240,
+    gap390: 472,
   },
   {
     name: 'B10',
     g: LEVEL_SIZES[10],
     wall: 6,
+    c: 120,
     x: [1020, 30, 750, 810],
     yardTop: 888,
     boardTop: 768,
@@ -140,11 +159,13 @@ const TABLE = [
     notch: 2,
     pano: 16,
     scene: 240,
+    gap390: 472,
   },
   {
     name: 'default (Faz 3)',
     g: DEFAULT_GEO,
     wall: 8,
+    c: 120,
     x: [1020, 30, 750, 810],
     yardTop: 528,
     boardTop: 528,
@@ -153,6 +174,7 @@ const TABLE = [
     notch: 2,
     pano: 12,
     scene: 0,
+    gap390: 232,
   },
 ] as const;
 
@@ -165,17 +187,19 @@ const panoStyle = {
 
 describe('UX 5.8 variable board layout (K-49, TECH 2R.1)', () => {
   for (const row of TABLE) {
-    it(`UX 5.8 table ${row.name} (${label(row.g)} H${row.g.h}): x, y, yard air, notch, panorama cell, scene above`, () => {
+    it(`UX 5.8 table ${row.name} (${label(row.g)} H${row.g.h}): c, x, y, yard air, notch, panorama cell, scene above`, () => {
       const L = createLayout(TOKENS, 1920, row.g);
       const g = L.grid;
-      expect(g.cellPx).toBe(120);
+      const c = row.c;
+      expect(g.cellPx).toBe(c);
+      expect(adaptiveCellPx(TOKENS, row.g)).toBe(c);
       expect([L.board.board.w, g.yardX, g.wallX, g.buildX]).toEqual(row.x);
       expect([g.yardTopY, g.boardTopY, g.craneTopY]).toEqual([row.yardTop, row.boardTop, row.craneTop]);
-      expect(L.board.yard).toEqual({ x: g.yardX, y: row.yardTop, w: row.g.wy * 120, h: row.g.hy * 120 });
-      expect(L.board.yardAir.h / 120).toBe(row.air);
-      expect(L.board.crane).toEqual({ x: g.yardX, y: row.craneTop, w: row.x[0], h: 240 });
+      expect(L.board.yard).toEqual({ x: g.yardX, y: row.yardTop, w: row.g.wy * c, h: row.g.hy * c });
+      expect(L.board.yardAir.h / c).toBe(row.air);
+      expect(L.board.crane).toEqual({ x: g.yardX, y: row.craneTop, w: row.x[0], h: 2 * c });
       expect(row.g.h + 2 - row.wall).toBe(row.notch);
-      expect(g.wallRect(row.wall).h).toBe(row.wall * 120);
+      expect(g.wallRect(row.wall).h).toBe(row.wall * c);
       // panorama: one Ws-wide strip per segment, cell min(24, ⌊98 / Hs⌋) ≥ 12
       const seg = {
         rows: Array.from({ length: row.g.hs }, () => Array.from({ length: row.g.ws }, () => 'R')),
@@ -183,8 +207,12 @@ describe('UX 5.8 variable board layout (K-49, TECH 2R.1)', () => {
       const pg = panoramaGeometry(L.top.panorama, [seg as never], panoStyle);
       expect(pg.cell).toBe(row.pano);
       expect(pg.colW).toBe(row.g.ws * row.pano);
-      expect((8 - row.g.h) * 120).toBe(row.scene);
+      // UX §5.8 rule 2: the scene opened above = crane-area top − 288 (the default board's crane top)
+      expect(g.craneTopY - 288).toBe(row.scene);
       expect(g.craneTopY - L.top.groupBottomY).toBeGreaterThanOrEqual(TOKENS.layout.board.minGapTopPx);
+      // last column: HUD bottom → crane-area top at 390 × 844 (EXPAND +208,5; UX writes the floor)
+      const tall = createLayout(TOKENS, designHeight('expand', { width: 390, height: 844 }, TOKENS), row.g);
+      expect(Math.floor(tall.grid.craneTopY - tall.top.groupBottomY)).toBe(row.gap390);
     });
   }
 
@@ -203,14 +231,18 @@ describe('UX 5.8 variable board layout (K-49, TECH 2R.1)', () => {
     }
   });
 
-  it('UX 5.8 rule 5 the "Yapı tamam!" ribbon: max(306, 60 + Ws·c) wide over wall + site, in the middle of the board', () => {
+  it('UX 5.8 rule 5 the "Yapı tamam!" ribbon: max(306, wallW + Ws·c) wide over wall + site, in the middle of the board', () => {
     const def = createLayout(TOKENS, 1920).board.siteRibbon;
     expect([def.x, def.y, def.w, def.h]).toEqual([750, 960, 306, 96]); // the default board keeps the token rect
+    // B1 at c = 144: wallW 72 + 2 × 144 = 360 > 306
     const b1 = createLayout(TOKENS, 1920, LEVEL_SIZES[1] as BoardGeo);
-    expect(b1.board.siteRibbon.w).toBe(306);
+    expect(b1.board.siteRibbon.w).toBe(360);
     expect(b1.board.siteRibbon.x).toBe(b1.grid.wallX);
-    expect(b1.board.siteRibbon.y + 48).toBe(b1.grid.boardTopY + (5 * 120) / 2);
-    const wide = createLayout(TOKENS, 1920, geo(4, 6, 4, 6));
+    expect(b1.board.siteRibbon.y + b1.board.siteRibbon.h / 2).toBe(b1.grid.boardTopY + (5 * 144) / 2);
+    // at c = 120 the token width wins
+    const b1at120 = createLayout(T120, 1920, LEVEL_SIZES[1] as BoardGeo);
+    expect(b1at120.board.siteRibbon.w).toBe(306);
+    const wide = createLayout(TOKENS, 1920, geo(4, 6, 4, 6)); // 8 columns → c 120
     expect(wide.board.siteRibbon.w).toBe(60 + 4 * 120);
     expect(wide.board.siteRibbon.x).toBe(wide.grid.wallX);
   });
@@ -218,12 +250,13 @@ describe('UX 5.8 variable board layout (K-49, TECH 2R.1)', () => {
 
 describe('UX 5.8 adaptive cell size (DL-2R-14, TECH 2R.1)', () => {
   it('UX 5.8 cell size B1–B10: 120 without layout.adaptive.cellMaxPx (R2-02 "hücre 120 px korunur")', () => {
-    expect(TOKENS.layout.adaptive.cellMaxPx ?? null).toBeNull();
-    for (const g of Object.values(LEVEL_SIZES)) expect(adaptiveCellPx(TOKENS, g), label(g)).toBe(120);
-    expect(adaptiveCellPx(TOKENS, DEFAULT_GEO)).toBe(120);
+    expect(T120.layout.adaptive.cellMaxPx ?? null).toBeNull();
+    for (const g of Object.values(LEVEL_SIZES)) expect(adaptiveCellPx(T120, g), label(g)).toBe(120);
+    expect(adaptiveCellPx(T120, DEFAULT_GEO)).toBe(120);
   });
 
-  it('UX 5.8 cell size B1–B10 with cellMaxPx 144: B1–B5, B7, B9 → 144; B6 → 132; B8, B10, default → 120', () => {
+  it('UX 5.8 cell size B1–B10 with cellMaxPx 144 (tokens, D-085): B1–B5, B7, B9 → 144; B6 → 132; B8, B10, default → 120', () => {
+    expect(TOKENS.layout.adaptive.cellMaxPx).toBe(144);
     const want: Readonly<Record<number, number>> = {
       1: 144,
       2: 144,
@@ -237,17 +270,17 @@ describe('UX 5.8 adaptive cell size (DL-2R-14, TECH 2R.1)', () => {
       10: 120,
     };
     for (const [id, g] of Object.entries(LEVEL_SIZES))
-      expect(adaptiveCellPx(T144, g), `B${id}`).toBe(want[Number(id)]);
+      expect(adaptiveCellPx(TOKENS, g), `B${id}`).toBe(want[Number(id)]);
 
-    expect(adaptiveCellPx(T144, DEFAULT_GEO)).toBe(120);
+    expect(adaptiveCellPx(TOKENS, DEFAULT_GEO)).toBe(120);
     // TECH §2R.1 example: B1 boardW = 6 × 144 + 72 = 936, 72 px on both sides; k = 1,2 scales the wall and the slop
-    const L = createLayout(T144, 1920, LEVEL_SIZES[1] as BoardGeo);
+    const L = createLayout(TOKENS, 1920, LEVEL_SIZES[1] as BoardGeo);
     expect(L.board.board.w).toBe(936);
     expect([L.grid.yardX, 1080 - rectRight(L.board.board)]).toEqual([72, 72]);
     expect(L.grid.k).toBeCloseTo(1.2, 9);
     expect(L.grid.wallW).toBeCloseTo(72, 9);
     expect(L.touch.hitSlopPx).toBeCloseTo(TOKENS.touch.hitSlopPx * 1.2, 9);
-    for (const g of G) expect(adaptiveCellPx(T144, g) % ADAPTIVE_CELL_STEP_PX, label(g)).toBe(0);
+    for (const g of G) expect(adaptiveCellPx(TOKENS, g) % ADAPTIVE_CELL_STEP_PX, label(g)).toBe(0);
   });
 
   it('UX 5.8 360 × 800: a B1 block cell is ≥ 48 CSS px with cellMaxPx 144 (40 CSS px at 120)', () => {
@@ -255,8 +288,8 @@ describe('UX 5.8 adaptive cell size (DL-2R-14, TECH 2R.1)', () => {
     const H = designHeight('expand', vp, TOKENS);
     const css = (t: Tokens): number =>
       (createLayout(t, H, LEVEL_SIZES[1] as BoardGeo).grid.cellPx * vp.width) / 1080;
-    expect(css(T144)).toBeGreaterThanOrEqual(48);
-    expect(css(TOKENS)).toBe(40);
+    expect(css(TOKENS)).toBe(48);
+    expect(css(T120)).toBe(40);
   });
 });
 
@@ -282,8 +315,8 @@ describe('UX 5.8 board fits FIT and EXPAND for every K-49 geometry', () => {
   for (const g of G) {
     it(`UX 5.8 ${label(g)} H${g.h}: inside the side margins, under the HUD, above the status strip (c 120 and 144)`, () => {
       for (const [pname, H] of profiles) {
-        check(createLayout(TOKENS, H, g), `${pname} c120`);
-        check(createLayout(T144, H, g), `${pname} c${adaptiveCellPx(T144, g)}`);
+        check(createLayout(T120, H, g), `${pname} c120`);
+        check(createLayout(TOKENS, H, g), `${pname} c${adaptiveCellPx(TOKENS, g)}`);
       }
     });
   }
@@ -292,7 +325,7 @@ describe('UX 5.8 board fits FIT and EXPAND for every K-49 geometry', () => {
 describe('K-49 hit test round trip on every geometry (TECH 10.3, UX 5.8)', () => {
   for (const g of G) {
     it(`K-49 ${label(g)}: cellAt(cellRect) is the cell; anchorXAt inverts pieceX; regions have no foreign cells`, () => {
-      for (const t of [TOKENS, T144]) {
+      for (const t of [T120, TOKENS]) {
         const L = boardLayout(t, g, 1920).grid;
         for (let y = 0; y < g.rows; y++) {
           for (let x = 0; x < g.cols; x++) {

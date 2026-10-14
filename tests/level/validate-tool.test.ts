@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { flattenKeys, listLevelFiles } from '../../tools/lib/levels.ts';
 import { ALLOW_FILE, isAllowed, loadAllowList, parseAllowList } from '../../tools/lib/levelsAllow.ts';
 import type { Issue } from '../../src/core/level/logic.ts';
-import { fixturePath } from '../fixtures/builders.ts';
+import { LEVELS_DIR, fixturePath } from '../fixtures/builders.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const run = (...args: string[]): { code: number | null; out: string } => {
@@ -54,7 +54,7 @@ describe('levels:validate tool (TECH §8.3, §12.2)', () => {
   });
 
   it('K-45 GDD 14.1 the Faz 2R drafts of LEVELS levels 1–10 validate with the i18n key lookup (WP-M input; tut.m.* keys from WP-L)', () => {
-    const r = run('--dir', fixturePath('levels-2r'));
+    const r = run('--dir', LEVELS_DIR);
     expect(r.code, r.out).toBe(0);
     for (let n = 1; n <= 10; n++) expect(r.out).toContain(`level_${String(n).padStart(3, '0')}.json  OK`);
     expect(r.out).toContain('level_004.json  OK  mechanics: W1');

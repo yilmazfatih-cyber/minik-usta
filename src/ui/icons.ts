@@ -136,6 +136,27 @@ export function drawClose(g: Phaser.GameObjects.Graphics, d: number): void {
   g.strokePath();
 }
 
+/**
+ * UX §5.2 step 1 (2026-10-08, DS-13) "Vazgeç": the kit `red` round button with a white ×, `d` px (128 on a booster
+ * slot, smaller in place of the strip's trowel icon), centred on (0, 0): stroke ring, lip, face, cross.
+ */
+export function drawCancelX(g: Phaser.GameObjects.Graphics, d: number): void {
+  const red = TOKENS.kit.buttonColor.red;
+  const r = d / 2;
+  const lip = Math.max(4, Math.round(d * 0.06));
+  g.clear();
+  g.fillStyle(hex(red.stroke), 1).fillCircle(0, lip, r);
+  g.fillStyle(hex(red.lip), 1).fillCircle(0, lip, r - 4);
+  g.fillStyle(hex(red.stroke), 1).fillCircle(0, 0, r);
+  g.fillStyle(hex(red.base), 1).fillCircle(0, 0, r - 5);
+  g.fillStyle(hex(red.top), 0.55).fillCircle(0, -r * 0.35, r * 0.45);
+  const k = d * 0.19;
+  g.lineStyle(Math.max(6, Math.round(d * 0.13)), hex(C.inkOnDark), 1);
+  g.beginPath();
+  g.moveTo(-k, -k).lineTo(k, k).moveTo(k, -k).lineTo(-k, k);
+  g.strokePath();
+}
+
 /** "▶" of the rewarded-ad option (UX §7 "▶ Reklam izle"). */
 export function drawPlay(g: Phaser.GameObjects.Graphics, d: number, color: string): void {
   g.clear();

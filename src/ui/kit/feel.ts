@@ -12,11 +12,8 @@ export function buttonFeel(v: PressVariant): void {
   gameHaptics().play('light');
 }
 
-/**
- * A locked item was touched (JUICE #73). `sfx_locked` has no `audio.sfx` row in tokens yet (design-lead, REVIEW_LOG):
- * until then the blocked tick `sfx_blocked` stands in.
- */
+/** A locked item was touched (JUICE #73): `sfx_locked` (`audio.seq`) + a light haptic. */
 export function lockedFeel(): void {
-  gameAudio().play('sfx_blocked');
+  gameAudio().play('sfx_locked');
   gameHaptics().play('light');
 }

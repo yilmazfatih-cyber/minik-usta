@@ -24,7 +24,7 @@ import { loadLevel } from '../../src/core/level/compile.ts';
 import { isCargo } from '../../src/core/level/mechanics.ts';
 import { isCargoShape } from '../../src/core/movement.ts';
 import { SHAPES, shapeById } from '../../src/core/shapes.ts';
-import { fixturePath, level, loadFixture } from '../fixtures/builders.ts';
+import { level, fixturePath, loadFixture, loadLevelJson } from '../fixtures/builders.ts';
 import type { LevelSpec } from '../fixtures/builders.ts';
 
 const ROOT = join(import.meta.dirname, '..', '..');
@@ -697,9 +697,7 @@ describe('K-45 Faz 2R logic details', () => {
 
   it('K-30 D3a solves the LEVELS levels 1–10 drafts within 200 expansions each (TECH §2R.4)', () => {
     for (let n = 1; n <= 10; n++) {
-      const parsed = LevelSchema.parse(
-        loadFixture('levels-2r', `level_${String(n).padStart(3, '0')}`),
-      ) as LevelData;
+      const parsed = LevelSchema.parse(loadLevelJson(n)) as LevelData;
       expect(tileLevel(parsed, buildPlans(parsed).plans, undefined, 200), `level ${n}`).toBe('ok');
     }
   });

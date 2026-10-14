@@ -78,7 +78,19 @@ export type TapTarget =
   /** The × of the open level window (UX §0.3). */
   | { readonly kind: 'close' }
   /** The Golden Trowel icon of the status strip (UX §5.2; its tap target is the whole streak strip). */
-  | { readonly kind: 'trowel' };
+  | { readonly kind: 'trowel' }
+  /** A booster slot of the level screen (K-54; `hammer`, `crane`, `paintBrush`, `undo`). */
+  | { readonly kind: 'slot'; readonly id: string }
+  /** The × "Vazgeç" of the open booster / trowel pick (UX §5.2 step 1, DS-13). */
+  | { readonly kind: 'cancel' }
+  /** A piece at rest (pick modes: the block to hammer / lift / fly). */
+  | { readonly kind: 'piece'; readonly pieceId: PieceId }
+  /** Target spot `index` the open pick shows (crane / trowel ghosts). */
+  | { readonly kind: 'spot'; readonly index: number }
+  /** The home screen's settings gear (UX §3). */
+  | { readonly kind: 'settings' }
+  /** Any point in design px of the active scene (home screen icons; `y` < 0 counts from the bottom). */
+  | { readonly kind: 'design'; readonly x: number; readonly y: number };
 
 export interface TutorialInfo {
   readonly index: number;
@@ -151,6 +163,12 @@ export interface HarnessState extends HarnessStatus {
   readonly reducedMotion: boolean;
   /** Times the level scene ran `create` (TECH §10.4: level changes reuse it — home sleeps it, the next level wakes it). */
   readonly levelCreates: number;
+  /** Cell size of the level's board in design px (UX §5.8 adaptive cell; × `displayScale` = CSS px). */
+  readonly cellPx: number;
+  /** The open booster / trowel pick (`hammer`, `crane`, `trowel`) and how many target spots it shows. */
+  readonly pick: { readonly kind: string | null; readonly spots: number };
+  /** Save inventory of the boosters (META §4; WP-K). */
+  readonly boosters: Readonly<Record<string, number>>;
   /** Game objects of the active scene (containers walked) and how many of them render (TECH §10.6: ≤ 400). */
   readonly objects: { readonly total: number; readonly visible: number };
 }
@@ -255,6 +273,37 @@ export interface HarnessApi {
   introPanel(n: number): Promise<void>;
   /** Stops every scene and shows the 8-colour palette fixture (shot `19-palette`, harness only). */
   showPalette(): Promise<void>;
+  /**
+   * TECH §2R.11: `art` = the SVG rasters (default), `fallback` = the procedural art only (`assets=fallback` shots).
+   */
+  assetMode(mode: 'art' | 'fallback'): void;
+  /**
+   * TECH §2R.11 `loadAscii` (fixture boards: the Söküm of a dead end, a slot without target): registers level data for
+   * id `id` (validated like a bundled file, `levels.ts setLevelSource`) and starts it as a new attempt.
+   */
+  loadLevelData(id: number, data: unknown): Promise<HarnessState>;
+  /** The home screen (`Home`, a fresh build of it); resolves when it runs. */
+  goHome(): Promise<void>;
+  /**
+   * Screens set-up of the meta save (never the game state of an attempt): the prologue seen, levels 1…`won` won
+   * (`stars` = `won`, META §10) and META §4 boosters (`inventory`, `freeTrialsGranted`). One save write; refused while
+   * an attempt is saved.
+   */
+  seedSave(seed: {
+    readonly won: number;
+    readonly boosters?: Readonly<Record<string, number>>;
+    readonly granted?: readonly string[];
+  }): void;
+  /**
+   * The visible text objects of the active scene (containers walked): the screens tool's raw i18n key gate (DS-01:
+   * no `^[a-z]+(\.[A-Za-z0-9_]+)+$` text, no debug label on screen).
+   */
+  texts(): string[];
+  /** TECH §2R.13 timing samples (ms): `kitBake`, `levelBake`, `apply` (services/timings.ts). */
+  timings(): Partial<Record<'kitBake' | 'levelBake' | 'apply', number[]>>;
+  clearTimings(): void;
+  /** TECH §2R.13 "Bellek": every texture source of the game, width × height × 4 bytes, in MB (≤ 64). */
+  textureMB(): number;
   /** Frame sampler (perf.ts): start (or continue) recording into bucket `label`; stop; read; clear all buckets. */
   perfStart(label: string): void;
   perfStop(): void;

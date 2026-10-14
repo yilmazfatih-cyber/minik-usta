@@ -25,10 +25,14 @@ import { levelHooks } from '../core/obstacles/registry.ts';
 import { queueIds } from '../core/state.ts';
 import { appSave, changeSetting } from '../scenes/appServices.ts';
 import { DEPTH } from '../scenes/level/depth.ts';
-import { LEVEL_SCENE_KEY } from '../scenes/level/LevelScene.ts';
+import { HOME_SCENE_KEY, LEVEL_SCENE_KEY } from '../scenes/level/LevelScene.ts';
+import { setLevelSource } from '../scenes/level/levels.ts';
+import { PROLOGUE_SCENE } from '../scenes/flow/launch.ts';
+import { gameAssets } from '../scenes/AssetLoaderScene.ts';
 import type { LevelScene, LevelSceneData } from '../scenes/level/LevelScene.ts';
 import type { JuiceId } from '../scenes/level/juice/catalog.ts';
 import { tDynamic, upper } from '../services/i18n.ts';
+import { clearTimings, timingSamples } from '../services/timings.ts';
 import { createLayout, designHeight } from '../theme/layout.ts';
 import type { Layout } from '../theme/layout.ts';
 import { TOKENS } from '../theme/tokens.ts';
@@ -52,6 +56,7 @@ import { findDragOn } from './search.ts';
 import { dispatchGesture } from './synthetic.ts';
 import { applyCvd, isCvdKind } from './cvd.ts';
 import { PALETTE_SCENE_KEY, PaletteScene } from './palette.ts';
+import type { HomeScene } from '../scenes/HomeScene.ts';
 import type { IntroScene } from '../scenes/IntroScene.ts';
 
 const BOOT_SCENE_KEY = 'Boot';
@@ -241,7 +246,27 @@ export function installHarness(game: Phaser.Game): HarnessApi {
       reducedMotion: lv?.eventPlayer.reduced ?? appSave().data.settings.reduceMotion,
       levelCreates,
       objects: objectCount(),
+      cellPx: layout().grid.cellPx,
+      pick: { kind: lv?.pick.kind ?? null, spots: lv?.pick.spots.length ?? 0 },
+      boosters: { ...appSave().data.boosters.inventory },
     };
+  };
+
+  /** Visible texts of the active scene (containers walked; a hidden parent hides its children). */
+  const texts = (): string[] => {
+    const scene = game.scene.getScenes(true)[0];
+    const out: string[] = [];
+    const visit = (obj: Phaser.GameObjects.GameObject, shown: boolean): void => {
+      const o = obj as Phaser.GameObjects.GameObject & { visible?: boolean; alpha?: number };
+      const on = shown && o.visible !== false && (o.alpha ?? 1) > 0;
+      if (obj instanceof Phaser.GameObjects.Container) {
+        for (const child of obj.list) visit(child, on);
+        return;
+      }
+      if (on && obj instanceof Phaser.GameObjects.Text && obj.text.trim() !== '') out.push(obj.text);
+    };
+    for (const obj of scene?.children.list ?? []) visit(obj, true);
+    return out;
   };
 
   const running = (): LevelScene => {
@@ -329,6 +354,31 @@ export function installHarness(game: Phaser.Game): HarnessApi {
       const p = level()?.windowClosePoint ?? null;
       return p ? toClient(p) : null;
     }
+    if (target.kind === 'slot') {
+      const p = level()?.slotPoint(target.id) ?? null;
+      return p ? toClient(p) : null;
+    }
+    if (target.kind === 'cancel') {
+      const p = level()?.cancelPoint ?? null;
+      return p ? toClient(p) : null;
+    }
+    if (target.kind === 'piece') {
+      const p = level()?.piecePoint(target.pieceId) ?? null;
+      return p ? toClient(p) : null;
+    }
+    if (target.kind === 'spot') {
+      const r = level()?.pick.spots[target.index] ?? null;
+      return r ? toClient({ x: r.x + r.w / 2, y: r.y + r.h / 2 }) : null;
+    }
+    if (target.kind === 'settings') {
+      if (activeKey() !== HOME_SCENE_KEY) return null;
+      const p = (game.scene.getScene(HOME_SCENE_KEY) as HomeScene).settingsPoint;
+      return p ? toClient(p) : null;
+    }
+    if (target.kind === 'design') {
+      const H = layout().H;
+      return toClient({ x: target.x, y: target.y < 0 ? H + target.y : target.y });
+    }
     return textPoint(target.key, target.params);
   };
 
@@ -404,6 +454,52 @@ export function installHarness(game: Phaser.Game): HarnessApi {
       game.scene.start(PALETTE_SCENE_KEY);
       await waitFor(() => activeKey() === PALETTE_SCENE_KEY, DEFAULT_WAIT_MS, 'the palette');
       await waitGameMs(200);
+    },
+    assetMode(mode: 'art' | 'fallback'): void {
+      gameAssets(game).setMode(mode);
+    },
+    async loadLevelData(id: number, data: unknown): Promise<HarnessState> {
+      setLevelSource(id, data);
+      return api.loadLevel(id);
+    },
+    async goHome(): Promise<void> {
+      await waitFor(bootDone, DEFAULT_WAIT_MS, 'the boot');
+      for (const sc of game.scene.getScenes(false)) {
+        const key = sc.sys.settings.key;
+        if (key !== HOME_SCENE_KEY && game.scene.isActive(key)) game.scene.stop(key);
+      }
+      if (game.scene.isActive(HOME_SCENE_KEY)) game.scene.stop(HOME_SCENE_KEY);
+      game.scene.start(HOME_SCENE_KEY, {});
+      await waitFor(() => activeKey() === HOME_SCENE_KEY, DEFAULT_WAIT_MS, 'the home screen');
+      await waitGameMs(300);
+    },
+    texts,
+    timings: () => timingSamples(),
+    clearTimings: () => clearTimings(),
+    textureMB(): number {
+      let bytes = 0;
+      const tm = game.textures as unknown as { list: Record<string, Phaser.Textures.Texture> };
+      for (const [key, tex] of Object.entries(tm.list)) {
+        if (key === '__DEFAULT' || key === '__MISSING' || key === '__WHITE' || key === '__NORMAL') continue;
+        for (const src of tex.source) bytes += src.width * src.height * 4;
+      }
+      return Math.round((bytes / 1024 / 1024) * 10) / 10;
+    },
+    seedSave(seed): void {
+      const save = appSave();
+      if (save.data.inLevel) throw new Error('harness: seedSave while an attempt is saved');
+      save.commit((d) => {
+        for (let i = 1; i <= seed.won; i++) d.progress.levels[String(i)] = { won: true, attempts: 1 };
+        d.progress.highestLevel = Math.max(d.progress.highestLevel, seed.won);
+        d.stars = Math.max(d.stars, seed.won);
+        if (!d.town.seenScenes.includes(PROLOGUE_SCENE)) d.town.seenScenes.push(PROLOGUE_SCENE);
+        const inv = d.boosters.inventory as Record<string, number>;
+        for (const [id, n] of Object.entries(seed.boosters ?? {})) inv[id] = n;
+        for (const id of seed.granted ?? []) {
+          const b = id as (typeof d.boosters.freeTrialsGranted)[number];
+          if (!d.boosters.freeTrialsGranted.includes(b)) d.boosters.freeTrialsGranted.push(b);
+        }
+      });
     },
     perfStart: (label: string) => sampler.start(label),
     perfStop: () => sampler.stop(),

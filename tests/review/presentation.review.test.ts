@@ -33,6 +33,11 @@
  * left this file. The K-53 tests (presence, queue rule, Söküm line, dock, glove condition, K-43 resume with the Faz 2R
  * drafts) are in tests/scenes/tutorial.test.ts.
  *
+ * WP-M (Faz 2R levels 1–10, 2026-10-08): the level-bound tests walk the new levels/*.json and their solver goldens
+ * (tests/golden/level_NNN.hand.json). Faz 2R boards are 4 × 4 | 2 × 5 … 6 × 5 | 2 × 6 (site columns 4–5 or 6–7, crane
+ * row y = H), full cover (no decoys: every level is winnable, so the former "decoys never win" it.fails pass), the only
+ * gaps are level 4 (W1, y 0 size 2) and level 9 (W3, y 0 size 1). The rail-on-air cases moved to builder boards.
+ *
  * Round 4 (very bottom, after the Faz 2 tur 3 fixes #0–#2): the saved K-43 tutorial position (`inLevel.tutorial`,
  * `TutorialResume` / `restore` / `accepts`) driven exactly as `LevelScene` saves and resumes it — three kill points per
  * position of every level 1–5 ✓ sequence (after the cues, while the last move's cues play, mid-drag after a drag
@@ -48,7 +53,7 @@ import economy from '../../config/economy.json' with { type: 'json' };
 import type { CompiledLevel } from '../../src/core/level/compile.ts';
 import { levelHooks } from '../../src/core/obstacles/registry.ts';
 import { computeFall } from '../../src/core/gravity.ts';
-import { FREE, tryBeginDrag } from '../../src/core/movement.ts';
+import { FREE, railMode, tryBeginDrag } from '../../src/core/movement.ts';
 import { ArraySink } from '../../src/core/moves.ts';
 import { GameSession, RULES_VERSION, levelHash } from '../../src/core/session.ts';
 import type { StreakBonus } from '../../src/core/session.ts';
@@ -96,13 +101,36 @@ import { winRewards } from '../../src/ui/rewards.ts';
 import { exitLines, lossLines } from '../../src/ui/windowLines.ts';
 import { compiledLevel } from '../fixtures/builders.ts';
 import type { LevelSpec } from '../fixtures/builders.ts';
-import { handMoves, levelFile } from '../core/moves.fixtures.ts';
+import { LEVELS_1_10, handMoves, levelFile } from '../core/moves.fixtures.ts';
+import type { SliceLevel } from '../core/moves.fixtures.ts';
 
 // --- helpers ------------------------------------------------------------------------------------------------------------
 
 const N = (ix: number, iy: number): DragNode => ({ ix, iy, mode: FREE });
 const drag = (pieceId: PieceId, ix: number, iy: number): Move => ({ kind: 'drag', pieceId, to: N(ix, iy) });
 const kinds = (cues: readonly MoveCue[]): string[] => cues.map((c) => String(c.kind));
+/**
+ * Level 1 (4 × 4 | 2 × 5, crane row y 5): b (`piece:1`, D2_0 W at (1,2)) released over column 4 falls onto (4,0)–(4,1),
+ * the two Y cells of the plan's bottom rows `YW` / `YW` → K-17 colour bounce.
+ */
+const L1_WRONG: Move = { kind: 'drag', pieceId: 1, to: { ix: 4, iy: 5, mode: FREE } };
+/**
+ * W1 rail over air (the Faz 2 level 3 case; the Faz 2R slice has floor gaps only): default 6 × 8 | 2 × 8 board, a
+ * height-8 wall with a static gap at y 2 (size 2). a (`O4_0` W) goes over the wall onto rows 0–1; f (`O4_0` W at (4,2))
+ * slides through the gap onto the rail at (6,2) — before a it hangs over the empty (6,0)…(7,1) (K-34 support).
+ */
+const RAIL_OVER_AIR = (): CompiledLevel =>
+  compiledLevel({
+    moves: 9,
+    wall: { height: 8, gaps: [{ type: 'static', y: 2, size: 2 }] },
+    plan: ['WW', 'WW', 'WW', 'WW'],
+    pieces: [
+      ['O4_0', 'W', 0, 0],
+      ['O4_0', 'W', 4, 2],
+    ],
+  });
+const RAIL_NODE: DragNode = { ix: 6, iy: 2, mode: railMode(0) };
+const RAIL_F: Move = { kind: 'drag', pieceId: 1, to: RAIL_NODE };
 const BONUS_MAX = economy.levelRewards.bonusMaxMovesCounted;
 
 interface Planned {
@@ -125,8 +153,8 @@ function commitAndPlan(game: GameSession, move: Move, reduced = false): Planned 
   return { events: sink.events, cues: planMove(sink.events, ctx, BONUS_MAX).cues };
 }
 
-/** Every move of a LEVELS §2 hand solution, planned. */
-function planHand(id: 1 | 2 | 3 | 4 | 5, reduced = false): Planned[] {
+/** Every move of a LEVELS §2 canonical solution (tests/golden, WP-M), planned. */
+function planHand(id: SliceLevel, reduced = false): Planned[] {
   const game = GameSession.start(levelFile(id));
   return handMoves(id).map((m) => commitAndPlan(game, m, reduced));
 }
@@ -370,10 +398,17 @@ describe('review: JUICE 0 rule 10 / K-35 cue order at the level end (K-28, K-29,
     expect(cues.find((c) => c.kind === 57)?.lock).toBe(true);
   });
 
-  it('JUICE 0 rule 3 along the level 1–5 hand solutions only #18, #19 and the level end (#55–#57) lock the board', () => {
-    for (const id of [1, 2, 3, 4, 5] as const)
+  it('JUICE 0 rule 3 along the level 1–10 canonical solutions only #18, #19 and the level end (#94 yardClear, #55–#57) lock the board', () => {
+    const locked = new Set<string>();
+    for (const id of LEVELS_1_10)
       for (const { cues } of planHand(id))
-        for (const c of cues) if (c.lock) expect([18, 19, 55, 56, 57]).toContain(c.kind);
+        for (const c of cues)
+          if (c.lock) {
+            locked.add(String(c.kind));
+            // JUICE #94 "Bütün bloklar yerinde" is the level end's first beat: #18 → #94 → #55 (K-48)
+            expect([18, 19, 'yardClear', 55, 56, 57]).toContain(c.kind);
+          }
+    expect([...locked].sort()).toEqual(['18', '19', '55', '56', 'yardClear']);
   });
 
   it('JUICE 0 rule 3 segment slide (#18) and the level 5 truck (#19) each lock the board ≤ 900 ms', () => {
@@ -394,12 +429,12 @@ describe('review: JUICE 0 rule 10 / K-35 cue order at the level end (K-28, K-29,
 });
 
 describe('review: JUICE handlers on real cues (rules 5, 7; rows #19, #51, #56)', () => {
-  /** Every board cue of the level 1–5 hand solutions, a K-17 bounce and a truck into an empty column. */
+  /** Every board cue of the level 1–5 canonical solutions, a K-17 bounce and a truck into an empty column. */
   function boardCues(reduced: boolean): JuiceCue[] {
     const planned: Planned[] = [];
     for (const id of [1, 2, 3, 4, 5] as const) planned.push(...planHand(id, reduced));
     const l1 = GameSession.start(levelFile(1));
-    planned.push(commitAndPlan(l1, drag(1, 6, 8), reduced)); // W onto the Y row: K-17 bounce
+    planned.push(commitAndPlan(l1, L1_WRONG, reduced)); // W onto the Y cells: K-17 bounce
     planned.push(commitAndPlan(GameSession.start(compiledLevel(EMPTY_COLUMN_TRUCK)), drag(0, 6, 8), reduced));
     const out: JuiceCue[] = [];
     for (const p of planned)
@@ -434,29 +469,25 @@ describe('review: JUICE handlers on real cues (rules 5, 7; rows #19, #51, #56)',
     const plans = planHand(5);
     const truck = plans.flatMap((p) => p.cues).find((c) => c.kind === 19);
     const jc = truck ? juiceCue(truck, false) : null;
-    expect(jc?.drops?.length).toBe(3);
+    expect(jc?.drops?.length).toBe(4); // level 5 batch 1: k1_0 … k1_3 (LEVELS §2)
     const rec = recorder();
     if (jc) rec.play(jc);
     expect(rec.calls.filter((c) => c.name === 'haptic').map((c) => c.args[0])).toEqual(['light']);
-    expect(rec.calls.filter((c) => c.name === 'sound' && c.args[0] === 'sfx_land')).toHaveLength(3);
+    expect(rec.calls.filter((c) => c.name === 'sound' && c.args[0] === 'sfx_land')).toHaveLength(4);
   });
 
-  // WP-M ile yeniden üretilecek: the Faz 2 levels keep decoys, K-48 (3) never lets them win
-  it.fails(
-    'JUICE #56 Bonus İnşaat: one coin per counted move (≤ 10, META 3.1), light haptic every 3rd coin',
-    () => {
-      const last = planHand(1).at(-1);
-      const bonus = last?.cues.find((c) => c.kind === 56);
-      const left = bonus?.n ?? 0;
-      expect(left).toBeGreaterThan(0);
-      const counted = Math.min(left, BONUS_MAX);
-      const rec = recorder();
-      const jc = bonus ? juiceCue(bonus, false) : null;
-      if (jc) rec.play(jc);
-      expect(rec.calls.filter((c) => c.name === 'sound' && c.args[0] === 'sfx_coin')).toHaveLength(counted);
-      expect(rec.calls.filter((c) => c.name === 'haptic')).toHaveLength(Math.floor(counted / 3));
-    },
-  );
+  it('JUICE #56 Bonus İnşaat: one coin per counted move (≤ 10, META 3.1), light haptic every 3rd coin', () => {
+    const last = planHand(1).at(-1);
+    const bonus = last?.cues.find((c) => c.kind === 56);
+    const left = bonus?.n ?? 0;
+    expect(left).toBe(6); // level 1: 11 moves, canonical 5
+    const counted = Math.min(left, BONUS_MAX);
+    const rec = recorder();
+    const jc = bonus ? juiceCue(bonus, false) : null;
+    if (jc) rec.play(jc);
+    expect(rec.calls.filter((c) => c.name === 'sound' && c.args[0] === 'sfx_coin')).toHaveLength(counted);
+    expect(rec.calls.filter((c) => c.name === 'haptic')).toHaveLength(Math.floor(counted / 3));
+  });
 
   it('JUICE #51 sfx_lastmoves + haptic only on the move that brings the counter to 5', () => {
     const game = GameSession.start(compiledLevel({ ...OFFER_LEVEL, moves: 7 }));
@@ -503,14 +534,16 @@ describe('review: JUICE handlers on real cues (rules 5, 7; rows #19, #51, #56)',
 describe('review: K-33 worked examples through the cue plan (#15, #16, streak reset)', () => {
   it('K-33 example 1: correct, correct, yard move, correct, correct → beads 1, 2, (none), 3, 4 + trowel (#16)', () => {
     const game = GameSession.start(levelFile(5));
-    const [m1, m2, m3, m4] = handMoves(5);
-    if (!m1 || !m2 || !m3 || !m4) throw new Error('level 5 hand solution');
+    // level 5 canonical: d shift, then a, b, c, d ✓ (LEVELS §2 Bölüm 5)
+    const [dig, m1, m2, m3, m4] = handMoves(5);
+    if (!dig || !m1 || !m2 || !m3 || !m4) throw new Error('level 5 hand solution');
+    play(game, [dig]);
     const beads = (p: Planned): number[] => p.cues.filter((c) => c.kind === 15).map((c) => c.n ?? 0);
     const trowel = (p: Planned): number[] => p.cues.filter((c) => c.kind === 16).map((c) => c.n ?? 0);
     const resets = (p: Planned): number => p.cues.filter((c) => c.kind === 'streakReset').length;
     const a = commitAndPlan(game, m1);
     const b = commitAndPlan(game, m2);
-    const yard = commitAndPlan(game, drag(0, 2, 7)); // D2_90 R (4,7) → (2,7): K-10 yard move, c unchanged
+    const yard = commitAndPlan(game, drag(3, 0, 2)); // d D2_90 W (2,2) → (0,2): K-10 yard move, c unchanged
     const c = commitAndPlan(game, m3);
     const d = commitAndPlan(game, m4);
     expect([beads(a), beads(b), beads(yard), beads(c), beads(d)]).toEqual([[1], [2], [], [3], [4]]);
@@ -526,7 +559,7 @@ describe('review: K-33 worked examples through the cue plan (#15, #16, streak re
     if (!m1 || !m2) throw new Error('level 1 hand solution');
     commitAndPlan(game, m1);
     commitAndPlan(game, m2);
-    const wrong = commitAndPlan(game, drag(4, 6, 8)); // D2_90 W lands on row 3, outside the plan
+    const wrong = commitAndPlan(game, drag(3, 4, 5)); // d D2_90 Y lands on row 2 = WW: colour
     const k = kinds(wrong.cues);
     expect(k).toContain('13');
     expect(k).toContain('streakReset');
@@ -539,39 +572,36 @@ describe('review: K-33 worked examples through the cue plan (#15, #16, streak re
 describe('review: GDD 14.1/3 tutorial done events', () => {
   const TROWEL_BONUS = (): StreakBonus => ({ moves: 0, trowels: 1 });
 
-  // Faz 2R K-33: the cell trowel is gone (legacyTrowel)
-  it.fails(
-    'GDD 14.1/3 a Golden Trowel fill is not placementCorrect nor turnEnd (drag moves only), but counts for segmentDone',
-    () => {
-      const lvl = compiledLevel({ moves: 5, plan: ['W.'], pieces: [['B1_0', 'Y', 0, 0]] });
-      const game = GameSession.start(lvl, { streakTier: 1 }, { streakBonus: TROWEL_BONUS });
-      const sink = new ArraySink();
-      expect(game.commit({ kind: 'trowel', seg: 0, x: 0, y: 0 }, sink).status).toBe('applied');
-      expect(moveMatches({ event: 'placementCorrect', count: 1 }, sink.events, game.state)).toBe(false);
-      expect(moveMatches({ event: 'turnEnd', count: 1 }, sink.events, game.state)).toBe(false);
-      expect(moveMatches({ event: 'landed', count: 1 }, sink.events, game.state)).toBe(false);
-      expect(moveMatches({ event: 'segmentDone', count: 1 }, sink.events, game.state)).toBe(true);
-    },
-  );
+  // Faz 2R K-33: the Golden Trowel flies a yard block to its place (`goldTrowel`; the Faz 2 cell fill is `legacyTrowel`)
+  it('GDD 14.1/3 a Golden Trowel placement is not placementCorrect nor turnEnd (drag moves only), but counts for segmentDone', () => {
+    const lvl = compiledLevel({ moves: 5, plan: ['WW'], pieces: [['D2_90', 'W', 0, 0]] });
+    const game = GameSession.start(lvl, { streakTier: 1 }, { streakBonus: TROWEL_BONUS });
+    const sink = new ArraySink();
+    expect(game.commit({ kind: 'goldTrowel', pieceId: 0, x: 6, y: 0 }, sink).status).toBe('applied');
+    expect(moveMatches({ event: 'placementCorrect', count: 1 }, sink.events, game.state)).toBe(false);
+    expect(moveMatches({ event: 'turnEnd', count: 1 }, sink.events, game.state)).toBe(false);
+    expect(moveMatches({ event: 'landed', count: 1 }, sink.events, game.state)).toBe(false);
+    expect(moveMatches({ event: 'segmentDone', count: 1 }, sink.events, game.state)).toBe(true);
+  });
 
   it('GDD 14.1/3 landed = a free-mode block dropped on the site stopped (correct or wrong); not a yard move, not a rail park', () => {
     const l1 = GameSession.start(levelFile(1));
-    const wrong = commitAndPlan(l1, drag(1, 6, 8)).events; // W onto the Y row: lands, then bounces (K-17)
+    const wrong = commitAndPlan(l1, L1_WRONG).events; // W onto the Y cells: lands, then bounces (K-17)
     expect(wrong.some((e) => e.t === 'placementWrong')).toBe(true);
     expect(moveMatches({ event: 'landed', count: 1 }, wrong, l1.state)).toBe(true);
     expect(moveMatches({ event: 'turnEnd', count: 1 }, wrong, l1.state)).toBe(true);
-    const yard = commitAndPlan(l1, drag(3, 1, 6)).events; // D2_0 Y (0,6) → (1,6): K-10 yard move
+    const yard = commitAndPlan(l1, drag(3, 2, 2)).events; // d D2_90 Y (2,1) → (2,2): K-10 yard move
     expect(moveMatches({ event: 'yardMove', count: 1 }, yard, l1.state)).toBe(true);
     expect(moveMatches({ event: 'turnEnd', count: 1 }, yard, l1.state)).toBe(true);
     expect(moveMatches({ event: 'landed', count: 1 }, yard, l1.state)).toBe(false);
-    const l3 = GameSession.start(levelFile(3));
-    const [r1, r2] = handMoves(3);
-    if (!r1 || !r2) throw new Error('level 3 hand solution');
-    l3.commit(r1);
-    const rail = commitAndPlan(l3, r2).events; // W1 rail park (K-12): no fall
+    const l4 = GameSession.start(levelFile(4));
+    const [r1, r2, r3] = handMoves(4);
+    if (!r1 || !r2 || !r3) throw new Error('level 4 hand solution');
+    play(l4, [r1, r2]);
+    const rail = commitAndPlan(l4, r3).events; // a O4 W through gap 0 onto the rail (W1, K-12): no fall
     expect(rail.some((e) => e.t === 'pieceMoved' && e.entry === 'gap')).toBe(true);
-    expect(moveMatches({ event: 'placementCorrect', count: 1 }, rail, l3.state)).toBe(true);
-    expect(moveMatches({ event: 'landed', count: 1 }, rail, l3.state)).toBe(false);
+    expect(moveMatches({ event: 'placementCorrect', count: 1 }, rail, l4.state)).toBe(true);
+    expect(moveMatches({ event: 'landed', count: 1 }, rail, l4.state)).toBe(false);
   });
 });
 
@@ -792,33 +822,29 @@ describe('review: K-43 worked example and resume (GDD K-43, META 5, STORY 7.5)',
     expect(p.events.some((e) => e.name === 'life_lost')).toBe(false);
   });
 
-  // WP-M ile yeniden üretilecek: the Faz 2 levels keep decoys, K-48 (3) never lets them win
-  it.fails(
-    'ANALYTICS level_end.wrongPlacements counts the whole attempt, also the moves before a K-43 resume (fixed: Faz 2 tur 1 #19)',
-    () => {
-      const store = new MemoryStore();
-      const p = proc(store);
-      const lvl = levelFile(1);
-      const a = LevelAttempt.begin(p.deps, lvl, { preBoosters: [], streakTier: 0 });
-      const game = GameSession.start(lvl);
-      const ev = scenePlay(a, game, drag(1, 6, 8), lvl); // W onto the Y row → K-17 bounce
-      expect(ev.some((e) => e.t === 'placementWrong')).toBe(true);
+  it('ANALYTICS level_end.wrongPlacements counts the whole attempt, also the moves before a K-43 resume (fixed: Faz 2 tur 1 #19)', () => {
+    const store = new MemoryStore();
+    const p = proc(store);
+    const lvl = levelFile(1);
+    const a = LevelAttempt.begin(p.deps, lvl, { preBoosters: [], streakTier: 0 });
+    const game = GameSession.start(lvl);
+    const ev = scenePlay(a, game, L1_WRONG, lvl); // W onto the Y cells → K-17 bounce
+    expect(ev.some((e) => e.t === 'placementWrong')).toBe(true);
 
-      const q = proc(store, 1_200_000); // killed and opened again: the same attempt goes on (K-43 item 3)
-      const decision = q.save.resumeOnLaunch(identity(lvl));
-      if (decision.kind !== 'resume') throw new Error(decision.kind);
-      // the scene replays the log into a sink and hands its events to the resumed attempt (LevelScene.startLevel)
-      const replayed = new ArraySink();
-      const again = GameSession.replay(lvl, decision.inLevel.actions as SessionAction[], {}, replayed);
-      const inLevel = q.save.data.inLevel;
-      if (!inLevel) throw new Error('no inLevel');
-      const b = LevelAttempt.resumed(q.deps, inLevel, replayed.events);
-      for (const m of handMoves(1)) scenePlay(b, again, m, lvl);
-      expect(again.outcome).toBe('won');
-      // ANALYTICS §2 level_end.wrongPlacements: the attempt's wrong placements (resume = the same attempt)
-      expect(levelEnd(q.events).wrongPlacements).toBe(1);
-    },
-  );
+    const q = proc(store, 1_200_000); // killed and opened again: the same attempt goes on (K-43 item 3)
+    const decision = q.save.resumeOnLaunch(identity(lvl));
+    if (decision.kind !== 'resume') throw new Error(decision.kind);
+    // the scene replays the log into a sink and hands its events to the resumed attempt (LevelScene.startLevel)
+    const replayed = new ArraySink();
+    const again = GameSession.replay(lvl, decision.inLevel.actions as SessionAction[], {}, replayed);
+    const inLevel = q.save.data.inLevel;
+    if (!inLevel) throw new Error('no inLevel');
+    const b = LevelAttempt.resumed(q.deps, inLevel, replayed.events);
+    for (const m of handMoves(1)) scenePlay(b, again, m, lvl);
+    expect(again.outcome).toBe('won');
+    // ANALYTICS §2 level_end.wrongPlacements: the attempt's wrong placements (resume = the same attempt)
+    expect(levelEnd(q.events).wrongPlacements).toBe(1);
+  });
 });
 
 // --- window models ------------------------------------------------------------------------------------------------------
@@ -833,11 +859,13 @@ describe('review: window models (K-15, UX 7)', () => {
 
   it('K-15 / UX 7 "Kalan" counts every segment and drops by the cells a correct placement fills', () => {
     const game = GameSession.start(levelFile(5));
-    expect(remainingPlanCells(game.state)).toBe(16); // two segments of 2 × 4, no "."
-    const [first] = handMoves(5);
-    if (!first) throw new Error('level 5 hand solution');
-    game.commit(first); // D2_90 G → (6,0)-(7,0)
-    expect(remainingPlanCells(game.state)).toBe(14);
+    expect(remainingPlanCells(game.state)).toBe(20); // two segments of 2 × 5, no "."
+    const [dig, first] = handMoves(5);
+    if (!dig || !first) throw new Error('level 5 hand solution');
+    game.commit(dig); // d shifts in the yard: nothing filled
+    expect(remainingPlanCells(game.state)).toBe(20);
+    game.commit(first); // a O4_0 R → (4,0)–(5,1)
+    expect(remainingPlanCells(game.state)).toBe(16);
   });
 });
 
@@ -948,14 +976,14 @@ describe('review: TECH 12.2 test:rules --phase 2 (rule coverage of the Phase 2 s
 // Round 2 — the code the Faz 2 tur 1 fixes touched (#0–#4, #12, #13, #15, #19) and the Phase 2 rules round 1 left open
 // =========================================================================================================================
 
-const layoutOf = (width: number, height: number): Layout =>
-  createLayout(TOKENS, designHeight('expand', { width, height }, TOKENS));
+const layoutOf = (width: number, height: number, geo?: CompiledLevel['geo']): Layout =>
+  createLayout(TOKENS, designHeight('expand', { width, height }, TOKENS), geo);
 const sortedXY = (cells: readonly { readonly x: number; readonly y: number }[]): string[] =>
   cells.map((c) => `${c.x},${c.y}`).sort();
 const play = (game: GameSession, moves: readonly Move[]): void => {
   for (const m of moves) expect(game.commit(m).status).toBe('applied');
 };
-const handMove = (id: 1 | 2 | 3 | 4 | 5, i: number): Move => {
+const handMove = (id: SliceLevel, i: number): Move => {
   const m = handMoves(id)[i];
   if (!m) throw new Error(`level ${id} hand move ${i}`);
   return m;
@@ -975,8 +1003,9 @@ function lookAt(
 /** Plan character of global site cell (x, y) in segment `seg` from the level DATA (rows top → bottom); null = outside. */
 function planChar(lvl: CompiledLevel, seg: number, x: number, y: number): string | null {
   const rows = lvl.data.build.segments[seg]?.rows ?? [];
-  if (x < 6 || x > 7 || y < 0 || y >= rows.length) return null;
-  return rows[rows.length - 1 - y]?.[x - 6] ?? null;
+  const { siteX, ws } = lvl.geo;
+  if (x < siteX || x >= siteX + ws || y < 0 || y >= rows.length) return null;
+  return rows[rows.length - 1 - y]?.[x - siteX] ?? null;
 }
 
 describe('review round 2: UX 5.4 fall shadow look (K-18, K-34 hook 2; fixed: Faz 2 tur 1 #0–#2)', () => {
@@ -1033,63 +1062,64 @@ describe('review round 2: UX 5.4 fall shadow look (K-18, K-34 hook 2; fixed: Faz
     expect([h.outline, h.badge, h.supportCells, h.mismatchCells]).toEqual(['neutral', null, [], []]);
   });
 
-  it('UX 5.4 "Gölge yalnız birincil nedeni gösterir": level 2 c (C3_180 Y) at x = 6 after A is colour + support → "!" and the 45° hatch on (7,2), (6,3) only, no support hatch', () => {
+  it('UX 5.4 "Gölge yalnız birincil nedeni gösterir": level 2 c (C3_180 Y) over column 4 after a is colour + support → "!" and the 45° hatch on (5,2), (4,3) only, no support hatch', () => {
     const game = GameSession.start(levelFile(2));
-    play(game, [handMove(2, 0)]);
-    const { fall, look } = lookAt(game, 2, N(6, 8));
-    expect(fall.verdict.reasons).toEqual(['color', 'support']); // LEVELS Bölüm 2: "`color` (birincil) + `support`"
+    play(game, [handMove(2, 0)]); // a O4_0 G fills rows 0–1
+    const { fall, look } = lookAt(game, 2, N(4, 5));
+    // c lands with its cells on (5,2) W, (4,3) W and (5,3) Y; (4,3) hangs over the empty (4,2)
+    expect(fall.landing).toEqual({ ix: 4, iy: 2 });
+    expect(fall.verdict.reasons).toEqual(['color', 'support']);
     expect(look.badge).toBe('warn');
-    expect(sortedXY(look.mismatchCells)).toEqual(['6,3', '7,2']);
+    expect(sortedXY(look.mismatchCells)).toEqual(['4,3', '5,2']);
     expect(look.supportCells).toEqual([]);
   });
 
-  // Faz 2R K-34 hook 2: `debris` is never produced (S4 rule changed)
-  it.fails(
-    'UX 5.4 window / off-plan / debris rows: the 45° hatch covers the `.` cell, the cells above the plan, every debris cell — and nothing else',
-    () => {
-      const win = GameSession.start(
-        compiledLevel({
-          moves: 9,
-          plan: ['W.', 'WW'],
-          pieces: [
-            ['D2_90', 'W', 0, 0],
-            ['D2_90', 'W', 2, 0],
-          ],
-        }),
-      );
-      play(win, [drag(0, 6, 8)]);
-      const w = lookAt(win, 1, N(6, 8));
-      expect([w.fall.verdict.reasons[0], w.look.badge, sortedXY(w.look.mismatchCells)]).toEqual([
-        'window',
-        'warn',
-        ['7,1'],
-      ]);
-      const off = GameSession.start(compiledLevel({ moves: 9, plan: ['WW'], pieces: [['D2_0', 'W', 0, 0]] }));
-      const o = lookAt(off, 0, N(6, 8));
-      expect([o.fall.verdict.reasons[0], o.look.badge, sortedXY(o.look.mismatchCells)]).toEqual([
-        'outside',
-        'warn',
-        ['6,1'],
-      ]);
-      const deb = GameSession.start(
-        compiledLevel({
-          moves: 9,
-          plan: ['WW', 'WW'],
-          pieces: [['B1_0', 'W', 0, 0]],
-          debris: [['B1_0', 'W', 6, 0]],
-        }),
-      );
-      const debris = 1;
-      expect(tryBeginDrag(deb.state, debris).ok).toBe(true);
-      const d = lookAt(deb, debris, N(7, 8));
-      // UX §5.4 moloz: "gölgenin bütün hücrelerinde 45° tarama" (a W debris block over a W cell is still wrong, K-16 (2))
-      expect([d.fall.verdict.reasons[0], d.look.badge, sortedXY(d.look.mismatchCells)]).toEqual([
-        'debris',
-        'warn',
-        ['7,0'],
-      ]);
-    },
-  );
+  // Faz 2R S4: debris is an ordinary coloured material block that is only wrong at its start (OBSTACLES S4); K-16 has no
+  // `debris` reason any more — a debris release is judged like any block (here: colour)
+  it('UX 5.4 window / off-plan / debris rows: the 45° hatch covers the `.` cell, the cells above the plan, the debris cells on the wrong colour — and nothing else', () => {
+    const win = GameSession.start(
+      compiledLevel({
+        moves: 9,
+        plan: ['W.', 'WW'],
+        pieces: [
+          ['D2_90', 'W', 0, 0],
+          ['D2_90', 'W', 2, 0],
+        ],
+      }),
+    );
+    play(win, [drag(0, 6, 8)]);
+    const w = lookAt(win, 1, N(6, 8));
+    expect([w.fall.verdict.reasons[0], w.look.badge, sortedXY(w.look.mismatchCells)]).toEqual([
+      'window',
+      'warn',
+      ['7,1'],
+    ]);
+    const off = GameSession.start(compiledLevel({ moves: 9, plan: ['WW'], pieces: [['D2_0', 'W', 0, 0]] }));
+    const o = lookAt(off, 0, N(6, 8));
+    expect([o.fall.verdict.reasons[0], o.look.badge, sortedXY(o.look.mismatchCells)]).toEqual([
+      'outside',
+      'warn',
+      ['6,1'],
+    ]);
+    // OBSTACLES S4 example: plan from the bottom RR, WW; the debris D2_90 W at (6,0) sits on the R row
+    const deb = GameSession.start(
+      compiledLevel({
+        moves: 9,
+        plan: ['WW', 'RR'],
+        pieces: [['D2_90', 'R', 0, 0]],
+        debris: [['D2_90', 'W', 6, 0]],
+      }),
+    );
+    const debris = 1;
+    expect(tryBeginDrag(deb.state, debris).ok).toBe(true);
+    const d = lookAt(deb, debris, N(6, 8));
+    expect(d.fall.landing).toEqual({ ix: 6, iy: 0 });
+    expect([d.fall.verdict.reasons[0], d.look.badge, sortedXY(d.look.mismatchCells)]).toEqual([
+      'color',
+      'warn',
+      ['6,0', '7,0'],
+    ]);
+  });
 
   it('K-18 / E-20 a landing on an unrevealed `?` cell is neutral on an EASY level too: no badge, no 45° hatch (no hidden colour leaks)', () => {
     const game = GameSession.start(
@@ -1111,17 +1141,24 @@ describe('review round 2: UX 5.4 fall shadow look (K-18, K-34 hook 2; fixed: Faz
     expect([look.outline, look.badge, look.pulse, look.mismatchCells]).toEqual(['neutral', null, false, []]);
   });
 
-  it('K-12 / UX 5.4 "Ray": level 3 f on the rail before a → no ghost body, wrong outline with "↓" and the hatch on (6,0)…(7,1); after a → ✓ on the block', () => {
-    const game = GameSession.start(levelFile(3));
-    const f = handMove(3, 1);
-    if (f.kind !== 'drag') throw new Error('drag');
-    const before = lookAt(game, f.pieceId, f.to);
+  it('K-12 / UX 5.4 "Ray": f on a gap-2 rail before a → no ghost body, wrong outline with "↓" and the hatch on (6,0)…(7,1); after a → ✓ on the block; level 4 a on its floor rail → ✓', () => {
+    // the Faz 2R slice has floor gaps only (levels 4 and 9, y 0): the rail-over-air case is a builder board
+    const game = GameSession.start(RAIL_OVER_AIR());
+    const before = lookAt(game, 1, RAIL_NODE);
     expect(before.fall.mode).toBe('rail');
     expect([before.look.body, before.look.outline, before.look.badge]).toEqual([false, 'invalid', 'support']);
     expect(sortedXY(before.look.supportCells)).toEqual(['6,0', '6,1', '7,0', '7,1']);
-    play(game, [handMove(3, 0)]);
-    const after = lookAt(game, f.pieceId, f.to).look;
+    play(game, [drag(0, 6, 8)]);
+    const after = lookAt(game, 1, RAIL_NODE).look;
     expect([after.body, after.outline, after.badge, after.pulse]).toEqual([false, 'valid', 'ok', false]);
+    // level 4: a (O4_0 W) through gap 0 onto the floor rail after the e and c shifts (canonical moves 1–3)
+    const l4 = GameSession.start(levelFile(4));
+    play(l4, [handMove(4, 0), handMove(4, 1)]);
+    const a = handMove(4, 2);
+    if (a.kind !== 'drag') throw new Error('drag');
+    const l4a = lookAt(l4, a.pieceId, a.to);
+    expect(l4a.fall.mode).toBe('rail');
+    expect([l4a.look.body, l4a.look.outline, l4a.look.badge]).toEqual([false, 'valid', 'ok']);
   });
 
   it('E-27 / K-07 row 5 / UX 5.4 "Şantiye kapalı": no shadow over a closed site, the ↩ cancel preview instead (also rows 3 and 4); none at the start node (row 1) and none for a real release', () => {
@@ -1158,9 +1195,9 @@ describe('review round 2: UX 5.4 fall shadow look (K-18, K-34 hook 2; fixed: Faz
     expect([straddle.row, cancelPreview(straddle)]).toEqual([4, true]);
   });
 
-  it('UX 5.4 / K-34 hook 2 on every site release of every level 1–5 hand-solution state: the badge, the 45° cells and the support cells match an independent plan oracle (primary reason only)', () => {
+  it('UX 5.4 / K-34 hook 2 on every site release of every level 1–10 canonical-solution state: the badge, the 45° cells and the support cells match an independent plan oracle (primary reason only)', () => {
     const seen = new Set<string>();
-    for (const id of [1, 2, 3, 4, 5] as const) {
+    for (const id of LEVELS_1_10) {
       const lvl = levelFile(id);
       const game = GameSession.start(lvl);
       for (const next of [...handMoves(id), null]) {
@@ -1191,7 +1228,16 @@ describe('review round 2: UX 5.4 fall shadow look (K-18, K-34 hook 2; fixed: Faz
                     ? { reason: 'color', cells: colour }
                     : null;
             expect(look.body).toBe(fall.mode === 'free');
-            if (cellReason) {
+            if (lvl.difficulty === 'hard' || lvl.difficulty === 'superhard') {
+              // GDD K-18 / UX §5.4 Zor: the shadow shows the position only (level 10)
+              seen.add('neutral');
+              expect([look.outline, look.badge, look.mismatchCells, look.supportCells]).toEqual([
+                'neutral',
+                null,
+                [],
+                [],
+              ]);
+            } else if (cellReason) {
               seen.add(cellReason.reason);
               expect(fall.verdict.reasons[0]).toBe(cellReason.reason);
               expect([look.outline, look.badge]).toEqual(['invalid', 'warn']);
@@ -1217,8 +1263,9 @@ describe('review round 2: UX 5.4 fall shadow look (K-18, K-34 hook 2; fixed: Faz
         if (next) play(game, [next]);
       }
     }
-    // the `.` row is covered by the window test above: no level 1–5 landing reaches level 4's (7,2) before it is closed in
-    expect([...seen].sort()).toEqual(['color', 'ok', 'outside', 'support']);
+    // Faz 2R plans are exactly Hs × Ws with no `.` (K-15, K-47): no landing is on a window (the builder boards above
+    // cover it); `outside` = a vertical block landing on a full column sticks out into the crane rows (y ≥ Hs = H)
+    expect([...seen].sort()).toEqual(['color', 'neutral', 'ok', 'outside', 'support']);
   });
 });
 
@@ -1248,9 +1295,9 @@ function tipHost(): { seen: Set<string>; tips: ContextTips } {
 
 describe('review round 2: contextual lines (GDD K-34 hook 4, LEVELS 0, TECH 8.2, UX 13.2; fixed: Faz 2 tur 1 #13)', () => {
   it('UX 13.2 triggers: the first wrong placement by primary reason (colour / window / off-plan / K-34 support), none for debris; streak 3/4; last 5 moves only when crossing 5; the truck queue', () => {
-    expect(topicsOf(GameSession.start(levelFile(1)), drag(1, 6, 8))).toEqual(['bounce.color']);
-    const l3 = GameSession.start(levelFile(3));
-    expect(topicsOf(l3, handMove(3, 1))).toEqual(['support']); // f on the rail before a
+    expect(topicsOf(GameSession.start(levelFile(1)), L1_WRONG)).toEqual(['bounce.color']);
+    const rail = GameSession.start(RAIL_OVER_AIR());
+    expect(topicsOf(rail, RAIL_F)).toEqual(['support']); // f on the rail before a
     const win = GameSession.start(
       compiledLevel({
         moves: 9,
@@ -1299,9 +1346,43 @@ describe('review round 2: contextual lines (GDD K-34 hook 4, LEVELS 0, TECH 8.2,
       [4, []],
     ]);
 
-    const l5 = GameSession.start(levelFile(5));
-    const queued = handMoves(5).map((m) => topicsOf(l5, m));
-    expect(queued.some((t) => t.includes('queue'))).toBe(true); // LEVELS Bölüm 5: "Kamyonda: 1" (K-26)
+    // UX 13.2 `tut.ctx.queue` (K-26): a truck block that finds no room. Faz 2R levels 5, 7 and 10 never queue on their
+    // canonical solutions (LEVELS §2; level 10 only when the load is left elsewhere), so a 3 × 4 | 2 × 4 builder board:
+    // a carried D2_0 Y hangs at (1,2), the truck's O4 G has no room and waits (tests/scenes/juice.test.ts, K-26)
+    const queue = GameSession.start(
+      compiledLevel({
+        yard: { cols: 3, rows: 4 },
+        site: { cols: 2, rows: 4 },
+        wall: { height: 4 },
+        plan: [
+          ['WW', 'WW', 'WW', 'WW'],
+          ['GG', 'GG', 'YY', 'YY'],
+        ],
+        pieces: [
+          ['D2_0', 'W', 0, 2],
+          ['D2_0', 'W', 0, 0],
+          ['D2_0', 'W', 2, 2],
+          ['D2_0', 'W', 2, 0],
+          ['D2_0', 'Y', 1, 2],
+        ],
+        batches: [
+          {
+            forSegment: 1,
+            pieces: [
+              ['O4_0', 'G', 0, 4],
+              ['D2_0', 'Y', 2, 4],
+            ],
+          },
+        ],
+      }),
+    );
+    const N4 = (pieceId: number, ix: number): Move => ({
+      kind: 'drag',
+      pieceId,
+      to: { ix, iy: 4, mode: FREE },
+    });
+    const queued = [N4(0, 3), N4(1, 3), N4(2, 4), N4(3, 4)].map((m) => topicsOf(queue, m));
+    expect(queued.map((t) => t.includes('queue'))).toEqual([false, false, false, true]); // "Kamyonda: 1"
   });
 
   it('GDD K-34 hook 4: with no tutorial step on screen the first support bounce shows the line at once and marks it; the next one shows nothing', () => {
@@ -1352,7 +1433,7 @@ describe('review round 2: contextual lines (GDD K-34 hook 4, LEVELS 0, TECH 8.2,
         ids: topics.flatMap((t) => [...CTX_HIGHLIGHT[t], ...ctxMoveHighlight(t, sink.events, game.state)]),
       };
     };
-    const color = lit(GameSession.start(levelFile(1)), drag(1, 6, 8)); // W onto the Y row
+    const color = lit(GameSession.start(levelFile(1)), L1_WRONG); // W onto the Y cells
     expect(color.topics).toEqual(['bounce.color']);
     expect(color.ids).toContain(pidHighlight(1));
     expect(color.ids.filter((i) => i.startsWith('cell:')).length).toBeGreaterThan(0);
@@ -1380,7 +1461,7 @@ describe('review round 2: contextual lines (GDD K-34 hook 4, LEVELS 0, TECH 8.2,
     expect(off.ids[0]).toBe(pidHighlight(0));
     expect(off.ids.filter((i) => i.startsWith('cell:')).length).toBeGreaterThan(0);
 
-    const support = lit(GameSession.start(levelFile(3)), handMove(3, 1)); // f on the rail before a
+    const support = lit(GameSession.start(RAIL_OVER_AIR()), RAIL_F); // f on the rail before a
     expect(support.topics).toEqual(['support']);
     expect(support.ids).toContain('front');
     expect(support.ids.filter((i) => i.startsWith('cell:')).length).toBeGreaterThan(0);
@@ -1391,7 +1472,7 @@ describe('review round 2: contextual lines (GDD K-34 hook 4, LEVELS 0, TECH 8.2,
     tips.update(0, FREE_GATE, TOKENS.duration.hint, () => true);
     expect(tips.highlight).toEqual([pidHighlight(3)]);
     const l1 = GameSession.start(levelFile(1));
-    const layout = layoutOf(390, 844);
+    const layout = layoutOf(390, 844, l1.lvl.geo);
     const [rect] = highlightRects(pidHighlight(3), {
       layout,
       state: l1.state,
@@ -1417,7 +1498,7 @@ function dragRig(game: GameSession) {
   };
   const log: (string | number)[][] = [];
   const clock = { now: 0 };
-  const layout = layoutOf(390, 844);
+  const layout = layoutOf(390, 844, game.lvl.geo);
   const view = { pose: { ax: 0, ay: 0, scale: 1, alpha: 1 }, render: () => undefined };
   const host: DragHost = {
     boardState: () => game.state,
@@ -1448,8 +1529,8 @@ function dragRig(game: GameSession) {
 }
 
 describe('review round 2: DragController (K-07 tap / drag, K-08 finger offset, TECH 4.6; fixed: Faz 2 tur 1 #12, #15)', () => {
-  // level 1 a = D2_90 Y at (4,7): free above (crane area)
-  const A = { id: 0, x: 4, y: 7 };
+  // level 1 a = D2_0 Y at (0,2), grabbed at its anchor cell: free above (yard air row 4, crane rows 5–6)
+  const A = { id: 0, x: 0, y: 2 };
 
   it('K-07 / UX 5.3 a press released before drag.startThresholdPx and drag.holdMs is a tap: nothing is lifted or released', () => {
     const rig = dragRig(GameSession.start(levelFile(1)));
@@ -1483,11 +1564,11 @@ describe('review round 2: DragController (K-07 tap / drag, K-08 finger offset, T
     rig.fire('pointerdown', 1, c.x, c.y); // grabbed cell (0,0) of a, at its centre
     rig.fire('pointermove', 1, c.x, c.y - TOKENS.drag.startThresholdPx);
     rig.clock.now = TOKENS.duration.fingerOffset + 10;
-    const to = rig.centre(3, 8);
+    const to = rig.centre(3, 4);
     rig.fire('pointermove', 1, to.x, to.y);
     const last = rig.log.filter((l) => l[0] === 'moved').at(-1);
     expect(last?.[1]).toBeCloseTo(3, 6);
-    expect(last?.[2]).toBeCloseTo(8 + TOKENS.drag.fingerOffsetCells, 6);
+    expect(last?.[2]).toBeCloseTo(4 + TOKENS.drag.fingerOffsetCells, 6);
   });
 
   it('K-07 / TECH 4.6 a system-cancelled touch (wasCanceled) mid-drag aborts: no release, nothing committed (fixed: Faz 2 tur 1 #15)', () => {
@@ -1496,7 +1577,7 @@ describe('review round 2: DragController (K-07 tap / drag, K-08 finger offset, T
     const rig = dragRig(game);
     const c = rig.centre(A.x, A.y);
     rig.fire('pointerdown', 1, c.x, c.y);
-    const to = rig.centre(6, 8);
+    const to = rig.centre(4, 5); // over the site, crane row
     rig.fire('pointermove', 1, to.x, to.y);
     rig.fire('pointerup', 1, to.x, to.y, true);
     expect(rig.names()).toContain('aborted');
@@ -1509,7 +1590,7 @@ describe('review round 2: DragController (K-07 tap / drag, K-08 finger offset, T
     const c = dragRig(GameSession.start(levelFile(1))).centre(A.x, A.y);
     const two = dragRig(GameSession.start(levelFile(1)));
     two.fire('pointerdown', 1, c.x, c.y);
-    const other = two.centre(5, 7);
+    const other = two.centre(2, 1); // d D2_90 Y
     two.fire('pointerdown', 2, other.x, other.y);
     two.fire('pointermove', 2, other.x, other.y - 200);
     two.fire('pointerup', 2, other.x, other.y - 200);
@@ -1522,10 +1603,10 @@ describe('review round 2: DragController (K-07 tap / drag, K-08 finger offset, T
 // --- JUICE W1 / K-34 cues ------------------------------------------------------------------------------------------------
 
 describe('review round 2: JUICE #22 / #23 (W1, K-12) and #83 / #84 (K-34 hooks 1 and 3)', () => {
-  it('JUICE #23 level 3 f parks on the rail: #23 (clamps, sfx_clamp, light haptic) and no fall cues (#10 / #11); #22 plays sfx_gap_rail + light haptic, the light flow only without reduced motion', () => {
-    const game = GameSession.start(levelFile(3));
-    play(game, [handMove(3, 0)]);
-    const { cues } = commitAndPlan(game, handMove(3, 1));
+  it('JUICE #23 level 4 a parks on the rail: #23 (clamps, sfx_clamp, light haptic) and no fall cues (#10 / #11); #22 plays sfx_gap_rail + light haptic, the light flow only without reduced motion', () => {
+    const game = GameSession.start(levelFile(4));
+    play(game, [handMove(4, 0), handMove(4, 1)]); // e and c shift (canonical moves 1–2)
+    const { cues } = commitAndPlan(game, handMove(4, 2)); // a O4_0 W through gap 0
     expect(kinds(cues)).toContain('23');
     expect(kinds(cues)).not.toContain('10');
     expect(kinds(cues)).not.toContain('11');
@@ -1623,63 +1704,56 @@ describe('review round 2: FTUE route and the minimal home (UX 2.1, 2.2, 6; TECH 
 // --- K-43 resume: the same attempt ---------------------------------------------------------------------------------------
 
 describe('review round 2: K-43 a killed and resumed attempt is the same attempt (fixed: Faz 2 tur 1 #19 / #21)', () => {
-  // WP-M ile yeniden üretilecek: the Faz 2 levels keep decoys, K-48 (3) never lets them win
-  it.fails(
-    'K-43 item 3 / ANALYTICS 2 level_end of a killed + resumed level 1 attempt equals the uninterrupted one (all fields but durationMs); no second level_start',
-    () => {
-      const lvl = levelFile(1);
-      const moves: Move[] = [drag(1, 6, 8), ...handMoves(1)]; // a K-17 colour bounce, then the hand solution
-      const strip = (e: AnalyticsEventOf<'level_end'>) => ({ ...e, durationMs: 0 });
+  it('K-43 item 3 / ANALYTICS 2 level_end of a killed + resumed level 1 attempt equals the uninterrupted one (all fields but durationMs); no second level_start', () => {
+    const lvl = levelFile(1);
+    const moves: Move[] = [L1_WRONG, ...handMoves(1)]; // a K-17 colour bounce, then the canonical solution
+    const strip = (e: AnalyticsEventOf<'level_end'>) => ({ ...e, durationMs: 0 });
 
-      const one = proc();
-      const a = LevelAttempt.begin(one.deps, lvl, { preBoosters: [], streakTier: 0 });
-      const g = GameSession.start(lvl);
-      for (const m of moves) scenePlay(a, g, m, lvl);
-      expect(g.outcome).toBe('won');
+    const one = proc();
+    const a = LevelAttempt.begin(one.deps, lvl, { preBoosters: [], streakTier: 0 });
+    const g = GameSession.start(lvl);
+    for (const m of moves) scenePlay(a, g, m, lvl);
+    expect(g.outcome).toBe('won');
 
-      const store = new MemoryStore();
-      const first = proc(store);
-      const b = LevelAttempt.begin(first.deps, lvl, { preBoosters: [], streakTier: 0 });
-      const h = GameSession.start(lvl);
-      for (const m of moves.slice(0, 2)) scenePlay(b, h, m, lvl);
-      const again = proc(store, 1_500_000);
-      const decision = again.save.resumeOnLaunch(identity(lvl));
-      if (decision.kind !== 'resume') throw new Error(decision.kind);
-      const replayed = new ArraySink();
-      const r = GameSession.replay(lvl, decision.inLevel.actions as SessionAction[], {}, replayed);
-      const inLevel = again.save.data.inLevel;
-      if (!inLevel) throw new Error('no inLevel');
-      const c = LevelAttempt.resumed(again.deps, inLevel, replayed.events);
-      for (const m of moves.slice(2)) scenePlay(c, r, m, lvl);
-      expect(r.outcome).toBe('won');
+    const store = new MemoryStore();
+    const first = proc(store);
+    const b = LevelAttempt.begin(first.deps, lvl, { preBoosters: [], streakTier: 0 });
+    const h = GameSession.start(lvl);
+    for (const m of moves.slice(0, 2)) scenePlay(b, h, m, lvl);
+    const again = proc(store, 1_500_000);
+    const decision = again.save.resumeOnLaunch(identity(lvl));
+    if (decision.kind !== 'resume') throw new Error(decision.kind);
+    const replayed = new ArraySink();
+    const r = GameSession.replay(lvl, decision.inLevel.actions as SessionAction[], {}, replayed);
+    const inLevel = again.save.data.inLevel;
+    if (!inLevel) throw new Error('no inLevel');
+    const c = LevelAttempt.resumed(again.deps, inLevel, replayed.events);
+    for (const m of moves.slice(2)) scenePlay(c, r, m, lvl);
+    expect(r.outcome).toBe('won');
 
-      expect(strip(levelEnd(again.events))).toEqual(strip(levelEnd(one.events)));
-      expect(again.events.filter((e) => e.name === 'level_start')).toEqual([]);
-      expect([...first.events, ...again.events].filter((e) => e.name === 'level_start')).toHaveLength(1);
-    },
-  );
+    expect(strip(levelEnd(again.events))).toEqual(strip(levelEnd(one.events)));
+    expect(again.events.filter((e) => e.name === 'level_start')).toEqual([]);
+    expect([...first.events, ...again.events].filter((e) => e.name === 'level_start')).toHaveLength(1);
+  });
 
-  it.fails(
-    'FINDING ANALYTICS level_end.wrongPlacements counts one K-17 wrong placement of a mortar block (Y8 stick: placementWrong + mortarStuck) twice',
-    () => {
-      const p = proc();
-      const lvl = compiledLevel({
-        moves: 9,
-        plan: ['WW', 'YY'],
-        pieces: [['B1_0', 'W', 0, 0, ['mortar']]],
-      });
-      const stick = { placement: { onPlacement: () => ({ kind: 'stick' as const }) } };
-      const a = LevelAttempt.begin(p.deps, lvl, { preBoosters: [], streakTier: 0 });
-      const game = GameSession.start(lvl, {}, { hooks: stick });
-      const ev = scenePlay(a, game, drag(0, 6, 8), lvl); // W onto the Y row 0 → wrong, sticks (K-17 "iniş yerinde yapışır")
-      expect(ev.filter((e) => e.t === 'placementWrong')).toHaveLength(1);
-      expect(ev.filter((e) => e.t === 'mortarStuck')).toHaveLength(1);
-      expect(hdr(game.state, H.wrongCount)).toBe(1); // the core counts one wrong placement
-      game.exit();
-      a.loss(game, 'quit');
-      expect(levelEnd(p.events).wrongPlacements).toBe(1);
-    },
-  );
+  it('ANALYTICS level_end.wrongPlacements counts one K-17 wrong placement of a mortar block (Y8 stick: placementWrong + mortarStuck) once (fixed: WP-M, was counted twice)', () => {
+    const p = proc();
+    const lvl = compiledLevel({
+      moves: 9,
+      plan: ['WW', 'YY'],
+      pieces: [['B1_0', 'W', 0, 0, ['mortar']]],
+    });
+    const stick = { placement: { onPlacement: () => ({ kind: 'stick' as const }) } };
+    const a = LevelAttempt.begin(p.deps, lvl, { preBoosters: [], streakTier: 0 });
+    const game = GameSession.start(lvl, {}, { hooks: stick });
+    const ev = scenePlay(a, game, drag(0, 6, 8), lvl); // W onto the Y row 0 → wrong, sticks (K-17 "iniş yerinde yapışır")
+    expect(ev.filter((e) => e.t === 'placementWrong')).toHaveLength(1);
+    expect(ev.filter((e) => e.t === 'mortarStuck')).toHaveLength(1);
+    expect(hdr(game.state, H.wrongCount)).toBe(1); // the core counts one wrong placement
+    game.exit();
+    a.loss(game, 'quit');
+    expect(levelEnd(p.events).wrongPlacements).toBe(1);
+  });
 });
 
 // --- the rule-coverage gate is a gate --------------------------------------------------------------------------------------

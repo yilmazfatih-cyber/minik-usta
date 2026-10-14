@@ -204,6 +204,8 @@ interface RasterJob {
   readonly h: number;
   /** ART §7.2 blueprint ghost of the structure instead of the image itself. */
   readonly ghost?: {
+    /** ART §7.2 (2026-10-08, DS-03 / DS-30): the silhouette is first painted opaque in this colour. */
+    readonly underlay: string;
     readonly fill: string;
     readonly fillAlpha: number;
     readonly linePx: number;
@@ -262,18 +264,25 @@ async function rasterInPage(arg: { jobs: RasterJob[]; quality: number }): Promis
         s.globalCompositeOperation = 'source-in';
         s.fillStyle = '#FFFFFF';
         s.fillRect(0, 0, job.w, job.h);
-        // fill: the silhouette in the blueprint colour
+        // fill: the silhouette opaque in the plan underlay, then the blueprint colour at fillAlpha over it (DS-03:
+        // the ghost reads the same ozalit blue on a tree crown, the sky or the cream win card)
         const fill = document.createElement('canvas');
         fill.width = job.w;
         fill.height = job.h;
         const f = fill.getContext('2d');
         if (!f) throw new Error('no 2d context');
-        f.drawImage(sil, 0, 0);
-        f.globalCompositeOperation = 'source-in';
-        f.fillStyle = g.fill;
-        f.fillRect(0, 0, job.w, job.h);
-        ctx.globalAlpha = g.fillAlpha;
-        ctx.drawImage(fill, 0, 0);
+        for (const [colour, alpha] of [
+          [g.underlay, 1],
+          [g.fill, g.fillAlpha],
+        ] as const) {
+          f.globalCompositeOperation = 'copy';
+          f.drawImage(sil, 0, 0);
+          f.globalCompositeOperation = 'source-in';
+          f.fillStyle = colour;
+          f.fillRect(0, 0, job.w, job.h);
+          ctx.globalAlpha = alpha;
+          ctx.drawImage(fill, 0, 0);
+        }
         ctx.globalAlpha = 1;
         // contour: the silhouette grown by linePx minus itself, dashed by a diagonal stripe pattern
         const ring = document.createElement('canvas');
@@ -406,7 +415,14 @@ async function build(sources: readonly SvgSource[]): Promise<{ manifest: Manifes
           svg: src.text,
           w: def.raster.w,
           h: def.raster.h,
-          ghost: { fill: b.blueprint, fillAlpha: 0.35, linePx: 4, lineAlpha: 0.9, dash: [16, 12] },
+          ghost: {
+            underlay: b.planUnderlay,
+            fill: b.blueprint,
+            fillAlpha: 0.35,
+            linePx: 4,
+            lineAlpha: 0.9,
+            dash: [16, 12],
+          },
         });
       }
     }

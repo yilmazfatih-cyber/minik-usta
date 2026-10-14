@@ -144,6 +144,8 @@ export function edgeRows(gdd: string): Map<string, { rules: string; text: string
 }
 
 const BRIDGE_OR_LEAGUE = /Sallanan Köprü|Köprü|Usta Ligi|\bLig\b/;
+/** GDD §13 rows the Faz 2R rules retired: "(Faz 2R: geçersiz — …)"; the id is kept (never reused) but needs no test. */
+export const RETIRED_EDGE = /\(Faz 2R: geçersiz\b/;
 
 /** Every rule id with its phase, read from the documents. */
 export function ruleIds(docs: { gdd: string; tech: string; obstacles: string }): RuleId[] {
@@ -169,6 +171,7 @@ export function ruleIds(docs: { gdd: string; tech: string; obstacles: string }):
   }
 
   for (const [id, row] of edgeRows(docs.gdd)) {
+    if (RETIRED_EDGE.test(row.text)) continue;
     if (BRIDGE_OR_LEAGUE.test(row.text) || /\bMETA\b/.test(row.rules)) {
       out.push({ id, kind: 'E', phase: 4 });
       continue;

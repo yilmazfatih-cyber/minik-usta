@@ -15,6 +15,9 @@
     "brush": {
       "noTarget": "No matching pair to swap."
     },
+    "crane": {
+      "noTarget": "No block to move right now."
+    },
     "hammer": {
       "noTarget": "Nothing to smash here."
     },
@@ -333,6 +336,9 @@
     }
   },
   "settings": {
+    "feedback": "Feedback",
+    "feedbackCopied": "Copied. Paste it into a message.",
+    "feedbackManual": "Select the text and copy it.",
     "haptics": "Vibration",
     "music": "Music",
     "sound": "Sound",
@@ -400,9 +406,6 @@
       "truckhelp": {
         "free": "Truck helped. Blocks are free!"
       }
-    },
-    "l23": {
-      "light": "Low gravity! Blocks fall slowly."
     },
     "m": {
       "carry": "This one's for the next floor.",

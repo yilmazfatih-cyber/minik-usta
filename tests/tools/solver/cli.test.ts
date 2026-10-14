@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { SolveReport } from '../../../tools/solver/solveLevel.ts';
-import { fixturePath } from '../../fixtures/builders.ts';
+import { LEVELS_DIR, fixturePath } from '../../fixtures/builders.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const OUT = mkdtempSync(join(tmpdir(), 'minik-usta-solve-'));
@@ -22,7 +22,7 @@ afterAll(() => rmSync(OUT, { recursive: true, force: true }));
 
 describe('levels:solve CLI', () => {
   it('K-45/9 levels:solve --json solves the chosen levels with workers, writes the artifacts and reuses them', () => {
-    const args = ['--dir', fixturePath('levels-2r'), '--level', '2,3', '--out', OUT, '--json', '--jobs', '2'];
+    const args = ['--dir', LEVELS_DIR, '--level', '2,3', '--out', OUT, '--json', '--jobs', '2'];
     const first = run(...args, '--no-cache');
     expect(first.code, first.err).toBe(0);
     const reports = JSON.parse(first.out) as SolveReport[];
@@ -39,17 +39,7 @@ describe('levels:solve CLI', () => {
   }, 60_000);
 
   it('K-45/9 levels:solve prints a readable block, the summary table and exits 0 without errors', () => {
-    const r = run(
-      '--dir',
-      fixturePath('levels-2r'),
-      '--level',
-      '3',
-      '--out',
-      OUT,
-      '--no-cache',
-      '--jobs',
-      '1',
-    );
+    const r = run('--dir', LEVELS_DIR, '--level', '3', '--out', OUT, '--no-cache', '--jobs', '1');
     expect(r.code).toBe(0);
     expect(r.out).toContain('level_003.json  OK  solved  4x4|2x5 H5  easy');
     expect(r.out).toContain('min 5 = N 4 + minShifts 1');
@@ -73,7 +63,7 @@ describe('levels:solve CLI', () => {
   });
 
   it('K-45 levels:check = validate + solve (+ bot when present) on the Faz 2R drafts 2 and 3', () => {
-    const r = run('--check', '--dir', fixturePath('levels-2r'), '--level', '2,3', '--no-i18n', '--out', OUT);
+    const r = run('--check', '--dir', LEVELS_DIR, '--level', '2,3', '--no-i18n', '--out', OUT);
     expect(r.code, r.out).toBe(0);
     expect(r.out).toContain('levels:check 2/3 solve');
     expect(r.out).toMatch(/levels:check 3\/3 bot/);

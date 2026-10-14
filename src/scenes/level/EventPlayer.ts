@@ -590,7 +590,7 @@ export class EventPlayer implements JuiceStage {
           this.burst('grayDust', SMASH_PARTS, c, { w: box.w, h: box.h, at: time });
           this.burst('dust', SMASH_DUST, { x: c.x, y: box.y + box.h }, { w: box.w, at: time });
         }
-        this.sound('sfx_bump', { at: time });
+        this.sound('sfx_hammer', { at: time }); // JUICE #61 (`audio.seq`, 2026-10-08)
         this.haptic('heavy', time);
         return;
       }
@@ -1557,8 +1557,7 @@ export class EventPlayer implements JuiceStage {
           },
         );
       }
-      // `sfx_teardown` waits for ASSET_LIST §13 (tokens.ts PENDING_TOKEN_KEYS); the bounce pop stands in
-      this.sound('sfx_bounce', { at });
+      this.sound('sfx_teardown', { at }); // JUICE #107: one reversed pop per block
     });
     this.haptic('light', start0);
   }

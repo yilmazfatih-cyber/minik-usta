@@ -1,6 +1,7 @@
 # Hikaye ve karakterler — Minik Usta
 
-Sahip: design-lead · Sürüm: **Faz 2R (2026-10-07)** — öğretici metinleri ≤ 6 kelime, mekanik bazlı `tut.m.*` (§6A), ana
+Sahip: design-lead · Sürüm: **Faz 2R (2026-10-07; ekran incelemesi ekleri 2026-10-08: `booster.crane.noTarget`,
+`settings.feedback` / `.feedbackCopied` / `.feedbackManual`, kilitli dizi satırı süresi `duration.teardownLine`)** — öğretici metinleri ≤ 6 kelime, mekanik bazlı `tut.m.*` (§6A), ana
 sayfa ve HUD v2 anahtarları (§7.7); **çapraz inceleme kapanışı** (aynı gün: bütün `tut.ctx.*` / `tut.meta.*` TR ve EN
 ≤ 6 kelime, yeni `tut.m.park` / `carry` / `carryNow`, `tut.ctx.teardown`, `booster.*.noTarget`, Faz 2R kurallarına göre
 `tut.m.heavy` / `hammer` / `gap`, `booster.hint.trowel` / `brush`, `win.clear`, `lose.blocksLeft`); önceki: Faz 1 revizyonu (2026-10-04; R-07, R-08, R-09, R-14, R-15, R-19, R-24); Faz 2
@@ -464,7 +465,7 @@ hangi adımda çıktığı LEVELS §2 `tutorial[]` verisindedir (Faz 2R: yalnız
 | `tut.ctx.reshuffle` | Sıkıştık! Kamyon sahayı yeniden diziyor. | Stuck! The truck reshuffles the yard. | K-30 D1 (zincir/ıslaklık yok ya da kalktıktan sonra hâlâ D1) |
 | `tut.ctx.truckhelp.material` | ~~Malzeme eksikti. Kamyon getirdi!~~ | ~~We were short on material. The truck brought more!~~ | **Faz 2R'de kaldırıldı** (R2-05, K-30: Kamyon Yardımı blok yaratmaz); i18n'den code-lead siler |
 | `tut.ctx.truckhelp.free` | Kamyon yardım etti, bloklar serbest. Devam! | Truck helped. Blocks are free! | K-30 D1 (yalnız zincir/ıslaklık kalkıp D1 çözüldüyse) |
-| `tut.ctx.teardown` | Çıkmaz oldu, son bloğu söktük. | Dead end, so we undid that. | K-30 Söküm (her Söküm'de 1,2 s; "bir kez" kuralının istisnası; UX §13.1, JUICE #107) |
+| `tut.ctx.teardown` | Çıkmaz oldu, son bloğu söktük. | Dead end, so we undid that. | K-30 Söküm (her Söküm'de `duration.teardownLine` 2,4 s; "bir kez" kuralının istisnası; UX §13.1, JUICE #107) |
 | `tut.ctx.blocked` | Bu blok şimdi kımıldamaz. Çevresine bak. | It can't move yet. Look around. | K-09 |
 | `tut.ctx.resume` | Tahta bıraktığın gibi duruyor, evlat. | Just as you left it, kiddo. | K-43 (R-13); başlık `resume.title`'ı tekrarlamaz (§7.5) |
 | `tut.meta.bridge` | {n} bölüm art arda: köprüyü geç! | Win {n} straight, cross the bridge! | META §6 (`{n}` = `events.json → wobblyBridge.planks`) |
@@ -763,6 +764,7 @@ Faz 2 dikey diliminin (TECH §14.1 #12) bütün görünen metinleri §7.3, §7.5
 | `booster.hammer.noTarget` | Burada kırılacak yük yok. | Nothing to smash here. |
 | `booster.brush.noTarget` | Renk takası için eş blok yok. | No matching pair to swap. |
 | `booster.trowel.noTarget` | Şu an yerleşecek blok yok. | No block fits right now. |
+| `booster.crane.noTarget` | Şu an taşınacak blok yok. | No block to move right now. |
 | `pause.title` | Mola | Paused |
 | `pause.exit` | Bölümden çık | Leave level |
 | `settings.sound` | Ses | Sound |
@@ -795,8 +797,9 @@ Kullanım ve sayılar (D-017; sayılar config'ten, metne sabit yazılmaz):
   önce sahadaki bloğu seçer, sonra P konumu) ve `.hammer` (K-36, Bölüm 8) dilimde; `.crane` Bölüm 10; `.brush` (K-38,
   iki bloğun renk takası) Faz 3. İlk Altın Mala seçiminde Usta Dede balonu `tut.ctx.goldtrowel` ayrıca çıkar; şerit her
   seçimde görünür.
-- `booster.<hammer|brush>.noTarget`: hedefsiz yuvaya dokununca yuvanın üstünde 1,2 s balon (UX §0.3, JUICE #108;
-  BUSINESS E12: bu durumda "+" ve satın alma yok). `booster.trowel.noTarget`: mala seçimi açıldığında `P`'si olan saha
+- `booster.<hammer|crane|brush>.noTarget`: hedefsiz yuvaya dokununca yuvanın üstünde 1,2 s balon (UX §0.3, JUICE #108;
+  BUSINESS E12: bu durumda "+" ve satın alma yok). Vinç (2026-10-08): sahada zincirsiz ve ıslak olmayan blok yoksa
+  (ör. saha boşaldı, kalan bloklar kuyrukta); metin `booster.trowel.noTarget` ile aynı kalıpta ("Şu an … blok yok."). `booster.trowel.noTarget`: mala seçimi açıldığında `P`'si olan saha
   bloğu yoksa şeridin metni (UX §5.2). Hepsi ≤ 6 kelime, renk adı yok; Ağır Yük'e "yük" denir.
 - `pause.*`, `settings.*`, `common.on` / `.off`: Duraklat penceresi (UX §5.1) başlık `pause.title` (devam açılışında
   `resume.title`), birincil `common.continue`, üç anahtar satırı, alt satırda `pause.exit` (→ çıkış onayı). Ayarlar
@@ -834,6 +837,9 @@ kelimedir; renk adı yok.
 | `hud.blocks` | blok | blocks |
 | `hud.livesFull` | Dolu | Full |
 | `settings.title` | Ayarlar | Settings |
+| `settings.feedback` | Geri bildirim | Feedback |
+| `settings.feedbackCopied` | Kopyalandı. Mesaja yapıştırıp gönder. | Copied. Paste it into a message. |
+| `settings.feedbackManual` | Metni seçip elle kopyala. | Select the text and copy it. |
 | `win.clear` | Bütün bloklar yerinde! | Every block in place! |
 | `lose.blocksLeft` | Kalan: {n} blok | Blocks left: {n} |
 | `common.notEnoughCoins` | Altın yetmiyor | Not enough coins |
@@ -849,6 +855,10 @@ Kullanım:
 - `hud.livesFull`: can kapsülünde can tam iken geri sayımın yerine (UX §3).
 - `settings.title`: ana sayfadaki ayar dişlisinin açtığı pencerenin başlığı (Faz 2R'de ses / müzik / titreşim satırları;
   UX §3).
+- `settings.feedback` / `.feedbackCopied` / `.feedbackManual` (EN-2R-20, TECH §2R.16; UX §11 "Geri bildirim"):
+  ayar penceresindeki krem ikincil düğmenin etiketi; kopyalama başarılıysa düğmenin üstünde 1,5 s balon
+  `feedbackCopied`; pano reddedilirse açılan salt okunur metin kutusunun üstündeki satır `feedbackManual`. Metinler
+  kişisel veri istemez ve suçlamaz; "gönder" kime gönderileceğini söylemez (dağıtım kanalı test grubuna göre değişir).
 - `win.clear`: K-48 sağlanınca (son doğru yerleşim ya da E-27'de son Çekiç vuruşu) 600 ms görünen altın şerit (UX §5.9
   madde 5, JUICE #94). TR ve EN aynı şeyi söyler: bütün **malzeme blokları** yerinde; sahada Ağır Yük, kasa ya da torba
   kalabileceği için "saha temiz" denmez (PL-2R-07).

@@ -1,5 +1,5 @@
 /**
- * Levels 1–10 in the Faz 2R format. WP-B accepted the LEVELS §2 drafts (tests/level/fixtures/levels-2r: "a level
+ * Levels 1–10 in the Faz 2R format. WP-B accepted the LEVELS §2 drafts (the former tests/level/fixtures/levels-2r copy: "a level
  * written in the new format validates"); since WP-M the checks run on the real levels/level_001…010.json that
  * product-lead wrote from the solver round (LEVELS §2.11) and that replaced the drafts of Bölüm 4, 5, 7 and 10. They pin
  * that the validator accepts the levels, that each level matches its LEVELS §2 summary row and that the GDD
@@ -21,7 +21,9 @@ const ROOT = join(import.meta.dirname, '..', '..');
 const LEVELS = readFileSync(join(ROOT, 'docs', 'LEVELS.md'), 'utf8');
 /** levels/level_NNN.json (a fresh copy: the counter-example tests change it). */
 const draft = (n: number): LevelInput =>
-  JSON.parse(readFileSync(join(ROOT, 'levels', `level_${String(n).padStart(3, '0')}.json`), 'utf8')) as LevelInput;
+  JSON.parse(
+    readFileSync(join(ROOT, 'levels', `level_${String(n).padStart(3, '0')}.json`), 'utf8'),
+  ) as LevelInput;
 const IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const codes = (issues: readonly Issue[]): string[] => [...new Set(issues.map((i) => i.code))].sort();
 
