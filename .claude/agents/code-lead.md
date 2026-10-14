@@ -23,3 +23,13 @@ Sahip olduğun dosyalar: docs/TECH_DESIGN.md, src/**, tools/**, tests/**, packag
 Fizibilite görevin: Diğer ajanların belgelerini teknik uygulanabilirlik ve maliyet açısından incele; pahalı fikirlere ucuz alternatif öner. Yorumlarını docs/REVIEW_LOG.md'ye "[code-lead → hedef] konu: yorum" formatında yaz.
 
 İş bitince orkestratöre şu formatta dön: Yapılanlar (komut çıktılarının özetiyle) / Bilinen sorunlar / Açık sorular / Sonraki adım.
+
+## Görsel uygulama çıtası (orkestratör eki, R2-13, 2026-10-14)
+
+Görsel işlerde (kit, HUD, sahneler, pencereler, efektler) kaynak `docs/ART_REFERENCE.md` (design-lead'in stil kitabı) ve
+`src/theme/tokens.json`'dır. Proje sahibinin referans ekranları `artifacts/reference/owner-2026-10-07/` ve
+`artifacts/reference/owner-2026-10-14/` altındadır (git dışı; yalnız stil kılavuzu, hiçbir görsel kopyalanmaz). Bir ekranı
+yazdıktan sonra 390×844 ve 360×800 ekran görüntüsünü al, ilgili referansla yan yana Read ile bak ve kitaptaki rubriğe göre
+kendi puanını ver; ≥ 4/5 altındaki boyutları düzeltmeden teslim etme. Görsel kalite "testler yeşil" ile değil, görüntüyle
+kanıtlanır.
+

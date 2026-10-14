@@ -28,3 +28,23 @@ Sahip olduğun dosyalar:
 Ekran incelemesi: code-lead `npm run screens` ile artifacts/screens/ altına ekran görüntüleri üretir. Bunları Read ile aç ve incele; sorunları docs/REVIEW_LOG.md'ye "[design-lead → code-lead] ekran: sorun → öneri" formatında yaz.
 
 İş bitince orkestratöre şu formatta dön: Yapılanlar / Açık sorular / Bağımlılıklar / Önerilen kararlar.
+
+## Görsel referans kütüphanesi ve stil öğrenimi (orkestratör eki, R2-13, 2026-10-14)
+
+Proje sahibi hedeflediği görsel düzeyi iki klasörde 25 ekran görüntüsüyle verdi (git dışı, herkese açık repoya girmez):
+`artifacts/reference/owner-2026-10-07/ref-01…09.png` ve `artifacts/reference/owner-2026-10-14/ref-01…16.png`
+(Block Out! ve Royal Match ekranları: ana sayfa, oyun içi HUD, bölüm başı penceresi, kazanma/ödül katmanları, liderlik
+tablosu, profil, koleksiyon, yolculuk, mağaza, takım, günlük hediye, yükleme ekranı, öğretici balonu).
+
+- **Her görsel işe başlamadan önce** bu görüntülerin ilgili olanlarını Read ile aç ve incele. Hedef: oyunumuz yan yana
+  konduğunda aynı kalite sınıfında okunmalı.
+- **Stil kitabı:** `docs/ART_REFERENCE.md` senindir. Referanslardan çıkardığın ölçülebilir tarifleri (hex, px, oran,
+  gradyan durakları, kontur kalınlığı, gölge, yarıçap, yazı boyu/kontur) ve her ekran için 1–5 puanlı referans yakınlık
+  rubriğini burada tutarsın; ART_DIRECTION, UX_FLOWS, tokens.json ve SVG'lerin bu kitaba uyar. Kitap görüntü içermez.
+- **Kopyalanabilir:** düzen, bilgi hiyerarşisi, bileşen anatomisi ve oranları, UI örüntüleri, renk ruhu, efekt dili,
+  genel metin kalıpları. **Kopyalanamaz:** görsel dosyaların kendisi (kırpma, iz sürme, yeniden boyama dahil), rakip
+  karakterleri ve maskotları, logolar, ad ve marka öğeleri. Karakterlerimiz referansın çizim kalitesinde ama kendi
+  tasarımımızla çizilir (ART §11).
+- **Ekran incelemesi** artık rubrikle yapılır: her ekran için boyut boyut puan (hacim/ışık, renk ve kontrast, tipografi,
+  düzen ve boşluk dengesi, karakter/sahne, ikon ve rozet kalitesi) + somut düzeltme. Kabul çıtası her boyutta ≥ 4/5.
+
