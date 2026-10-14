@@ -1389,3 +1389,65 @@ Uygulama notu TECH §2R.10 sonunda (+ §2R.3 not 2 ve 10, §2R.4, §2R.5 not 14�
 - [code-lead → orkestratör] `tests/review/presentation.review.test.ts` "FINDING" testi gerçek hataydı ve kapandı: Y8
   harç yapışması `level_end.wrongPlacements`'ı iki kez sayıyordu; `scenes/flow/attempt.ts` artık yalnız
   `placementWrong`'u sayar (ANALYTICS verisi düzelir, şema değişmez).
+
+## Faz 2R uygulama — WP-K + WP-O bitirme ve ekran incelemesi 1 kapanışı (code-lead, 2026-10-14)
+
+Kapanış dosyası: `docs/review_inbox/code-lead-2R-screens-1-closure.md` (KAPANDI 20 · RET bu turda 3).
+
+- [code-lead → orkestratör] `CLAUDE.md` npm komut tablosunda `test:rules` satırı "`--phase 2`" yazıyor; `package.json`
+  WP-K ile "`--phase 2R`"ye geçti (76 kimlik kapsandı). Tablo satırı "`--phase 2R`" olmalı (dosya sizin).
+- [code-lead → design-lead] DS-04: `chr_tuna_stand` (300 × 480, P2) katalogda `optional` olarak açık; SVG ve ASSET §16.3
+  satırı sizden. Sahne bağlantısı (ölçek 1,35, taban düğmenin 24 px üstünde, çalı kalkar, Kepçe oturan poz) SVG ile
+  birlikte görünüm v3 paketinde yapılır; o güne kadar büst + çalı duruyor.
+- [code-lead → design-lead] DS-06 uygulanırken ölçüm: UX §3 token'larıyla (nav 176 + 24, düğme altı 264, balon 122 px)
+  "Yakında" balonu sekmenin üstünde hiçbir profilde düğmeyi 8 px'le geçemiyor; bu yüzden balon **her zaman** çubuğun
+  içinde, kuyruk ucu sekme üst kenarının ≤ 96 px altında (ikonun içinde), gövde etiketin üstünde ve balonun alt kenarı
+  çubuğun alt kenarına kırpılı. Kırpmasız +96 balonu ekranın 12 px altına taşırırdı. İnceleme 2'de bakılmalı; "sekmenin
+  üstünde" dalı istenirse `playButtonBottomPx` ≥ 24 + 176 + 122 + 8 = 330 gerekir.
+- [code-lead → design-lead] DS-05 (kalp içi sayı) ve DS-32 (kazanma şeridi 136 / 104 px) bu turda yapılmadı: ikisi de
+  görünüm v3 paketinin (ART_REFERENCE rubriği) işidir; DS-32 token'ı sizin, DS-31 ile birlikte inceleme 2'ye.
+- [code-lead → design-lead] `meta._docRetire` madde 3 (v1 blok çizicisi) henüz silinemez: `theme/draw/block.ts`
+  `theme/textures.ts`'den okunuyor (v1 pişirme, `GhostStyle`, `SilhouetteKind`). v2 çizici tek çizici olunca (görünüm v3)
+  şemadan çıkarırım; o güne kadar `block.*` v1 anahtarları ve `alpha.gloss`, `alpha.seam` tokens.json'da kalsın. Madde
+  1–2'nin 5 anahtarı (`RETIRED_TOKEN_KEYS`) şemadan çıktı, silebilirsiniz.
+- [code-lead → design-lead] DS-19 bulgusunun kökü: Çekiç flaşı zaten bloğun kendi karesinin tint-doldurulmuş kopyasıydı
+  (köşe yarıçapı dahil) ama ADD karışımla α 1,0 her pikseli beyaza doyuruyordu → tepe 0,85 (`JUICE_VIEW.smashFlashPeak`).
+  JUICE #61 metni "1 kare beyaz" ise α 0,85 notu eklenebilir.
+- [code-lead → product-lead] DS-17 (yuva sırası Çekiç, Vinç, Geri Al, Fırça — açılış sırasına göre) design-lead
+  önerisi, "önce product-lead onayı" koşuluyla. Onaylarsanız `boosterSlots` sırası ve UX §5.1 tablosu değişir; analytics
+  `booster` kimlikleri ve K-54 yuva durumları aynı kalır. Onay gelmeden uygulanmadı.
+- [code-lead → orkestratör] Yarım kalan WP-K devralındı: typecheck hatası (`HomeScene` `geo.button` → `geo.play`,
+  DS-06) ve 2 kırmızı test (`layering` deseni `timed('apply', …)` sarmalayıcısına, `checks` K-53 testi solver'a bağlı
+  olduğu için 60 s zaman aşımına) düzeltildi; göç, META §4, META §10, analytics v6, screens/perf/rules, e2e ve WP-O
+  tamamdı, gözden geçirildi. Sonuçlar kapanış dosyasında.
+
+## Faz 2R stil öğrenimi — ART_REFERENCE v1 (design-lead, 2026-10-14; R2-13)
+
+25 referans ekranı (`artifacts/reference/owner-2026-10-07`, `owner-2026-10-14`) tek tek okundu ve ölçüldü (PIL ile hex
+örnekleme + satır/sütun renk koşuları; k = 1080/1206). Çıktı: `docs/ART_REFERENCE.md` (stil kitabı §1–§11, rubrik
+§10), `ART_DIRECTION.md` §17 (v2 → v3 farkları), `UX_FLOWS.md` §1.1 / §4.1 / §6.2, `STORY.md` §7.8,
+`src/theme/tokens.json → kit.v3`.
+
+- [design-lead → code-lead] **tokens el sıkışması (v3):** yeni grup `kit.v3` (tek yol; alt gruplar palette, buttonColor,
+  button, close, plus, capsule, badge, header, panel, progress, nav, leaderRow, statCard, rewardPill, lock, bubble, text,
+  block, board, scene, effects, character, screen). `npx vitest run tests/theme`: yükleyici (`parseTokens`) geçer;
+  yalnız "TECH 2R.7 every key of tokens.json … reaches the runtime tokens" testi `kit.v3`'ü tiplenmemiş sayar. Öneri:
+  `TokensSchema.kit`'e `v3` alt şeması (ya da geçici olarak `PENDING_TOKEN_KEYS = ['kit.v3']`). `meta.visualLanguage`
+  "v3 …" oldu (dize; şema değişmez). Eski `kit.*` anahtarlarına dokunulmadı.
+- [design-lead → code-lead] **i18n:** STORY §7.8 beş anahtar (`loading.text`, `levelStart.boosters`, `levelStart.play`,
+  `reward.tap`, `reward.ready`) tr/en'e girmeli ("every STORY 6 / 6A / 7 row … is in tr and en" testi bunları
+  ister).
+- [design-lead → code-lead] **uygulama listesi (öncelik sırası):** (1) `kit.v3.button` L/M/S çizici + `close` + `plus`
+  + `badge` (ART_REFERENCE §3.1–§3.5); (2) `panel` çivit pencere + iç plaka + krem kart (§3.7) ve binen başlık / iki
+  halkalı yazı (§3.6, §4); (3) bölüm başı penceresi v3 (UX §4.1) ve ana sayfa v3 ölçüleri (§9.2: düğme 600×200 alttan
+  336, nav h 200, yükseltilmiş sekme 300×300 / 100; kapsül 88); (4) oyun HUD v3 (§9.4: `purple` araç düğmeleri 136,
+  lacivert bantlı hamle plakası, kapsül çipler, çerçeve 48) ve blok v3 farkları (§5.2: kontur 4 px × 0,50, bevel bandı,
+  yan duvar 20, parlama α 0,30, çıkıntı hilalleri); (5) yükleme v3 (UX §1.1) ve "Dokun ve al" katmanı (UX §6.2, JUICE
+  #74 / #105 ile); (6) öğretici balonu v3 (§3.14) + eldiven yeniden çizimi; (7) karakter ve ikon SVG'leri v3 diline
+  (design-lead yazar; kontur yok, kenar ışığı, AO — ASSET §16.2 güncellemesi ART §17). Kabul: `npm run screens` →
+  ART_REFERENCE §10 rubriği, her boyut ≥ 4.
+- [design-lead → product-lead] Bölüm başı penceresi v3'te içerik aynı (hedefler, seri, 3 yuva, Oyna); yalnız görünüm.
+  "Can yok" durumunda düğme çifti: krem M "Can bekleniyor" + yeşil L "Doldur" (UX §4.1).
+- [design-lead → orkestratör] **ÖNERİ (proje sahibine):** saha zemini sıcak kum (#E9C891) kalsın mı, referansla birebir
+  koyu çivit (#2C2670, `kit.v3.board.floorDark`) mı? Varsayılan: kum kalır (renk körü ölçümleri bu zeminde).
+  Karakter konturu kaldırma (v3 "render edilmiş" dil) ART §16.2 kuralını değiştirir; D-083'e ek karar önerilir.

@@ -2,9 +2,11 @@
  * Timing samples of the TECH §2R.13 performance gates (`tools/perf.ts` reads them through the harness): the kit atlas
  * bake (≤ 200 ms at 4× CPU), the level-start block bake (≤ 150 ms) and one core action package — `GameSession.apply`,
  * K-35 steps 1–12 with the step 12 deadlock checks (p99 ≤ 2 ms, worst ≤ 8 ms). A few `performance.now()` reads per
- * level or per move; nothing is shown or sent.
+ * level or per move; nothing is shown or sent. `commit` = the whole release of a drag in the scene (core apply + save
+ * record + cue planning + HUD), `saveWrite` = one synchronous save write (main + backup): the split of the release
+ * frame that perf reports as information.
  */
-export type TimingKey = 'kitBake' | 'levelBake' | 'apply';
+export type TimingKey = 'kitBake' | 'levelBake' | 'apply' | 'commit' | 'saveWrite';
 
 /** Samples kept per key (the newest). */
 export const TIMING_CAPACITY = 512;

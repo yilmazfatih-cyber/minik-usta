@@ -6,6 +6,9 @@
  * src/i18n/tr.json / en.json — putting them in the game dictionaries would ship debug strings in every production
  * bundle (the dictionaries are bundled; the panel is not, verify-dist R-20).
  */
+/** DOM id of the panel's root element (`src/debug/panel.ts`); `tools/screens.ts` gates on its absence (DS-20). */
+export const DEBUG_ROOT_ID = 'mu-debug';
+
 export const LABEL = {
   toggle: 'DBG',
   close: 'Hide',

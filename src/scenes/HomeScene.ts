@@ -42,7 +42,7 @@ import { buttonFeel, lockedFeel } from '../ui/kit/feel.ts';
 import { HintBubble } from '../ui/kit/HintBubble.ts';
 import { IconBinder } from '../ui/kit/icons.ts';
 import { KitButton } from '../ui/kit/KitButton.ts';
-import { BASE_H, homeLayout } from '../ui/kit/layout.ts';
+import { BASE_H, homeLayout, lockedTabBalloon } from '../ui/kit/layout.ts';
 import type { HomeLayout } from '../ui/kit/layout.ts';
 import { NavBar } from '../ui/kit/NavBar.ts';
 import { ProgressBar } from '../ui/kit/ProgressBar.ts';
@@ -110,11 +110,6 @@ const FEEDBACK_W = 640;
 const FEEDBACK_H = 128;
 const FEEDBACK_ROW_PAD = 24;
 const FEEDBACK_COPIED_MS = 1500;
-
-/** DS-06: the "Yakında" balloon keeps this gap above the "Bölüm N" button, else it drops into the nav bar. */
-const BALLOON_BUTTON_GAP_PX = 8;
-/** DS-06: inside the nav bar the balloon's tail points up at the tab icon from just under its top. */
-const NAV_BALLOON_DROP_PX = 96;
 
 /** Height of a one-line HintBubble with its tail (ui/kit/HintBubble: body line × 1,3 + pads + tail). */
 function comingSoonBalloonH(): number {
@@ -569,10 +564,9 @@ export class HomeScene extends Phaser.Scene {
     if (!locked) return;
     nav.shakeLock(id, this.reduced);
     // DS-06: above the tab only when the balloon clears the "Bölüm N" button (top ≥ button bottom + 8); else it sits
-    // inside the bar, over the tab's label, so the button's text is never covered
-    const b = this.geo.button;
-    const fits = at.y - comingSoonBalloonH() >= b.y + b.h + BALLOON_BUTTON_GAP_PX;
-    this.comingSoon(fits ? at : { x: at.x, y: at.y + NAV_BALLOON_DROP_PX }, fits ? 'down' : 'up');
+    // inside the bar, over the tab's label, so the button's text is never covered (`lockedTabBalloon`)
+    const p = lockedTabBalloon(this.geo.play, this.geo.nav, at, comingSoonBalloonH());
+    this.comingSoon(p.at, p.dir);
   }
 
   /** Centre of the top bar's settings gear in design px (harness: the settings window shots). */

@@ -118,6 +118,11 @@ export interface HarnessStatus {
   readonly window: string | null;
   /** The board takes a grab now: attempt running, no window, no pending or locked cues. */
   readonly interactive: boolean;
+  /** Game clock (ms): the sum of Phaser's smoothed frame deltas since the page loaded (`waitGameMs` pace diagnostics). */
+  readonly gameMs: number;
+  /** Phaser's loop is running (not paused by a hidden document) and the document is visible (stall diagnostics). */
+  readonly loopRunning: boolean;
+  readonly docHidden: boolean;
 }
 
 export interface HarnessState extends HarnessStatus {
@@ -309,6 +314,18 @@ export interface HarnessApi {
   perfStop(): void;
   perfStats(label: string): PerfStats | null;
   perfReset(): void;
+  /**
+   * Phaser `TimeStep.smoothStep` on / off (perf.ts). Off: game time follows wall time — a frame slower than `fps.min`
+   * (200 ms) counts its real delta instead of the last sane one, so on a software GPU at 4× CPU (frames of seconds) the
+   * scenes step like on a device with sane frames and a gesture's lift rest takes one frame, not sixteen. Screens keep
+   * it on (transient balloons are shot while game time crawls).
+   */
+  setSmoothStep(on: boolean): void;
+  /**
+   * TECH §2R.4 / §2R.13 "Adım 12" gate: `GameSession.apply` durations (ms) of the hand goldens of `levels`, replayed on
+   * the pure core (no scene, no save) in a fresh session per replay, cycling the levels until ≥ `minActions` actions.
+   */
+  applyBench(levels: readonly number[], minActions: number): Promise<number[]>;
 }
 
 declare global {

@@ -1,6 +1,6 @@
 # Sanat yönü — Minik Usta
 
-Sahip: design-lead · Sürüm: **Faz 2R (2026-10-07) — görsel dil v2; ekran incelemesi 1 ekleri 2026-10-08 (§7 EXPAND kenar germe, §7.1 tahta tepsisi, §7.2 opak tabanlı hayalet, §11.1 D-087 oran tablosu, §2.4 v2 saha çerçevesi tokenları)** (R2-07 görsel çıta, R2-08 ücretsiz üretim yolu,
+Sahip: design-lead · Sürüm: **v3 stil öğrenimi (2026-10-14, R2-13): `docs/ART_REFERENCE.md` stil kitabı + §17 v2 → v3 farkları + `kit.v3` tokenları; önceki: Faz 2R (2026-10-07) — görsel dil v2; ekran incelemesi 1 ekleri 2026-10-08 (§7 EXPAND kenar germe, §7.1 tahta tepsisi, §7.2 opak tabanlı hayalet, §11.1 D-087 oran tablosu, §2.4 v2 saha çerçevesi tokenları)** (R2-07 görsel çıta, R2-08 ücretsiz üretim yolu,
 R2-02 değişken boyut); **Faz 2R çapraz inceleme kapanışı** (aynı gün: R2-08 güncellemesi — görseller elle yazılmış SVG,
 yapay zekâ yok; R2-12 sahip referansları — studlu oyuncak tuğla, çivit arayüz zemini; Ağır Yük ve moloz yeniden tarif;
 `docs/review_inbox/design-lead-2R-closure.md`); önceki: Faz 1 revizyonu (2026-10-04; R-01, R-04, R-05, R-24), Faz 2 boşluğu 2 (2026-10-06) ·
@@ -9,6 +9,9 @@ renkler `check.*`, salt kontrol)
 
 > Bu belgedeki tüm ölçüler **1080×1920 tasarım çözünürlüğünde piksel** (px) olarak verilir. 390 pt genişlikte bir
 > telefonda 1 pt ≈ 2,77 px; 375 pt'de 1 pt ≈ 2,88 px. "Hücre" (c) = 120 px (bkz. `UX_FLOWS.md` §0).
+>
+> **v3 (2026-10-14):** görsel hedef `docs/ART_REFERENCE.md`'dir (R2-13); farklar §17. Aşağıdaki v2 tarifleri kod geçene kadar
+> geçerlidir.
 >
 > **Faz 2R okuma sırası:** §1 (görsel sütunlar) → §2.5 (blok tonları v2) → §3A (blok çizim şartnamesi v2) → §14 (UI
 > kiti v2) → §15 (efektler v2) → §7 (arka planlar v2) → §8.1 (yazı stili v2) → §16 (araştırma kaynakları). §3'teki v1
@@ -1249,3 +1252,46 @@ kasaba arsasında ozalitten inşa); Block Blast'ın koyu lacivert 8×8 tahtası,
 yok (bizde çivit sahne üstünde sıcak kum/ahşap saha + ozalit şantiye, iki bölgeli tahta, plan dili; R2-12). Proje
 sahibinin referans oyunundan alınmayanlar: hücre başına 2×2 küçük çıkıntı, yön oklu bloklar, buz blokları, oyuncak
 güçlendiriciler, mor/pembe paneller ve bütün karakter, logo ve simgeler (§11.8).
+
+---
+
+## 17. v3 — ART_REFERENCE'a göre farklar (2026-10-14, R2-13)
+
+Proje sahibinin 25 referans ekranından ölçülen stil kitabı `docs/ART_REFERENCE.md`'dir (R2-13; tek kaynak: hex, px,
+em). Bu bölüm **v2 → v3 farklarını** listeler; v2 tarifleri (§3A, §7, §8.1, §14, §15) kod geçene kadar yerinde kalır,
+sonra v3 satırları onların yerini alır. Token: `kit.v3.*` (eski `kit.*` silinmedi; `meta._docRetire` sırasıyla kalkar).
+Kabul: her ekran ART_REFERENCE §10 rubriğinde her boyutta ≥ 4/5.
+
+| Konu | v2 (Faz 2R, 2026-10-07) | v3 (ART_REFERENCE) | Kaynak |
+| ---- | ----------------------- | ------------------ | ------ |
+| Arayüz zemini | çivit gradyan #3B2C85 → #1F1850 + 120 px ozalit ızgarası α 0,04 / 0,07 | **#1A173C taban + (0,5 W, 0,26 H) r 0,6 W radyal #2B2661 parlama + kenar vinyeti × 0,85**; ızgara α 0,02; meta ekranı düz #302488 + üstte başlık şeridi #4E3BDB → #4333BB | REF §2.1, §7.2 |
+| Pencere | ahşap çerçeveli krem panel (6 px #5A3A1E kontur + 14 px ahşap + krem gövde) | **çivit pencere**: kontur #221380 7 → açık kenar #3A27B0 16 → oluk #27198A 8 → bevel #3C2AAD 22 → gövde #4A3AC7 → #523ED5, alt dudak #3726A2 40 + #261883 22, köşe 64; içerik **lavanta iç plaka** (#8C7DFE) ya da **krem kart** (#F5EBC1 + ışın yelpazesi); karartma #05030D α 0,85 | REF §3.7 |
+| Pencere başlığı | turuncu kuyruklu ribbon, panel üstüne 52 px taşar | **binen başlık**: ribbon yok, 112 px iki halkalı yazı panel üst kenarına biner (merkez = kenar − 20); kazanma ve alan adı için ribbon kalır (altın §2.4) | REF §3.6 |
+| Kapat × | kırmızı kit düğmesi (kare) | **Ø 120 kırmızı daire**, panel sağ üst köşesine (−60, +50) biner; halka #A30101 12, dudak #7C0000, yüz #FE3232, krem glyph 26 × 66 + #8E1233 kontur 6 | REF §3.2 |
+| Düğme | 6 px kontur + 14 px dudak + gradyan yüz + beyaz α 0,55 parlama bandı; tek boy tarifi | **3 boy (L 560 × 212, M 360 × 136, S 240 × 100)**; kontur 6 / 5 / 4, **iç plaka** 30 / 20 / 14 içeride, üst bevel bandı 38 / 24 / 16 + açık çizgi, dudak 40 / 28 / 20 (≈ %19 h); yeşil #5CE83A → #2BCA0A → #19B205, dudak #02630F, kontur #0A5A12; yeni varyantlar `greenSoft` (krem yazılı uzun CTA) ve `purple` (HUD aracı #5B48F7) | REF §3.1, §2.3 |
+| Düğme yazısı | beyaz + 0,16 em kontur + 0,07 em gölge | beyaz + **0,06 em** kontur (en az 4 px) + 0,04 em gölge; greenSoft'ta krem #FBF8D1 | REF §4 |
+| Başlık yazısı | "Parlak başlık" tek kontur | **`titleTwoRing`** (beyaz + #5A47EF 0,10 em + #3325A2 0,045 em + #211865 gölge) ve **`titleGold`** (#FFE96A → #FFD119 → #FFAD00, #B8430A 0,06 em) | REF §4 |
+| Kapsül | h 96, #141E34 α 0,78, beyaz α 0,22 iç çizgi, ikon 112 | **h 88 (ana sayfa) / 60 (HUD)**, #23164D α 0,85, **koyu iç halka** #0E0C2C α 0,7 (çukur), ikon Ø 80 (20 taşar), artı Ø 56; HUD sayaçları lavanta #A09AFC, zaman krem #FFF6E3 | REF §3.4 |
+| Rozet | 60 × 60 kare, beyaz halka | **72 × 72** (HUD 68), köşeye **merkezi köşede** biner, #9C0B00 kontur 7, #F04A3C → #C8140F, beyaz halka yok, üst bevel α 0,22 | REF §3.5 |
+| Alt gezinme | h 176, #3A2E7A → #241C52, seçili 200 × 212 karo 24 px taşar, mavi | **h 200**, #533FE9 → #4E3CDB, üst kenar koyu + açık çift çizgi; **seçili sekme 300 × 300, 100 px taşar**, lavanta-mor (#6A5CFF → #5747E8, kontur #2C1E94 12); seçili olmayanda etiket yok; yükselen = seçili sekme (orta değil) | REF §3.9 |
+| İlerleme | h 48, iz #3B2A1A, altın dolgu | **meta h 84**: turuncu #F79900 kontur 8, iz #06436D, yeşil #7FC21A → #4E9300 dolgu, krem "1/6"; kompakt 48 altın kalır; dikey iz (yolculuk) 72 / 40 cyan | REF §3.8 |
+| Blok | kontur 6 px × 0,42; yan duvar 12 px × 0,68; parlama elipsi α 0,50 rx 0,22 w; tek çıkıntı | kontur **4 px × 0,50**; **üst bevel bandı** yastığın üst 0,20 h'si × 1,28 → α 0; yan duvar **20 px × 0,74**; parlama α 0,30 rx 0,18 w (mat plastik); çıkıntıda üst-sol hilal 6 px × 1,25 α 0,7 + alt hilal 8 px × 0,80; `insetPx` 4. Palet, sembol, tek çıkıntı **değişmez** (D-083) | REF §5 |
+| Tahta | tepsi α 0,55 koyu + 4 px #5546A8 kontur, köşe 48 | **çerçeve 48** (dar profilde 24): yüz #5247B8 → #3F35A0, dış kenar #221B66 8 (alt 24), iç çizgi #2E2778 4, köşe 40 / 20; saha-duvar-şantiye içeride v2 görünümleriyle; `floorDark` #2C2670 varyantı kapalı (ÖNERİ, proje sahibine) | REF §5.3 |
+| Karakter | 2–3 duraklı gradyan + **6 px #3B2A1A kontur**, sol üst parlama | **kontur yok**; radyal 4 duraklı gradyan (× 1,35 / imza / × 0,78 / × 0,62), kenar ışığı gök renginde 8 px α 0,45, ortam gölgesi × 0,7 α 0,4, temas gölgesi 3 elips, iki parlamalı göz (iris %58, bebek %45, parlama %28 + %12), spekülar beyaz α 0,35; malzeme (plastik / kumaş / kürk) yüzeyden okunur; SVG ≤ 28 KB | REF §6 |
+| İkon ve yapı SVG'si | 6–8 px #3B2A1A kontur | **4 px tonun koyusu (× 0,45)** kontur, 3 ton + spekülar + alt dudak; siyah-kahve tek kontur rengi kalkar | REF §6.2, §10 |
+| Arka plan | tek SVG + bulut katmanı | **8 derinlik katmanı** (gök 4 durak, uzak %40 gök karışımı, orta, yakın + yansıma, karakter, ön plan, vinyet, sis); ana sayfa göğü #3B1DB1 → #C7ADFF; yükleme göğü #1B49A4 → bulut #F0D7D6 + 18 ışın | REF §7 |
+| Öğretici balonu | beyaz + 6 px `ui.ink` kontur, kuyruk 24 | **krem #FFF6D2 + iki halkalı mavi kontur** (8 px #2E9BF0 + 6 px #0B3A6E), kuyruksuz, metin #1D4F8F 48 px; Dede portresi kalır; vurgu cyan #24CCFF; karartma yok (D-082) | REF §3.14, §9.9 |
+| Eldiven | `ui_tutorial_glove` v2 | ten 3 durak #FEC999 → #D98A5E, kontur #C0755A 5, manşet beyaz + turuncu reflektör bandı | REF §3.14 |
+| Ödül anı | kazanma kapsülleri + yıldız uçuşu | **"Dokun ve al" katmanı**: karartma → `titleGold` → nesne 240 px + glow (α 0,55, r 1,6×) → sayı 72 → `reward.tap` 72 (nabız 1,04); dokununca kapsüle uçuş | REF §8, UX §6.2 |
+| Yeni ekranlar | — | yükleme v3 (UX §1.1), bölüm başı penceresi v3 (UX §4.1), ödül katmanı (UX §6.2); Faz 4 şablon notları REF §9.10 | REF §9 |
+
+**Değişmeyenler (bilinçli):** blok paleti ve sembol kuralı (§2.1, §2.2, D-083), hücre başına tek çıkıntı (§3A.5),
+sıcak saha zemini (§7.4 — `floorDark` ÖNERİ), Usta Dede portreli balon, R2-10 karartmasız öğretici, "Yetişkine saygı"
+sütunu (§1-7), özgünlük listesi §11.8 (ART_REFERENCE §11 ile genişledi).
+
+**§16.2 SVG kural güncellemesi (v3):** karakterde kontur yok, kenar ışığı + ortam gölgesi + temas gölgesi zorunlu;
+`radialGradient` 4 durak serbest; ikon / yapı konturu 4 px tonun koyusu (`#3B2A1A` yalnız krem zeminde kalan
+metin-yakın öğelerde); karakter dosya sınırı 28 KB. `filter`, `mask`, `image` yasağı aynen.
+
+**Okuma sırası (v3):** ART_REFERENCE §1 → §2 → §3 → §4 → §5 → §6 → §9 → §10; bu belgede §17 → §3A (değişmeyen blok
+geometrisi) → §11 (karakter tanımları) → §9 (ikon dili).

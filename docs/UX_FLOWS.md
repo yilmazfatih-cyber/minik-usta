@@ -1,6 +1,6 @@
 # UX akışları — Minik Usta
 
-Sahip: design-lead · Sürüm: **Faz 2R (2026-10-07; ekran incelemesi 1 ekleri 2026-10-08: §5.8 uyarlanır hücre tablosu c 144/132/120, durum şeridi 1520/80, tepsi kuralı; §5.2 Vazgeç başparmak bölgesinde, Vinç hedefsiz; §5.9 kuyuda bölüm etiketi; §13.1 kilitli dizi satırı `teardownLine` ve eldiven + blok hayaleti; §11 Geri bildirim; `review_inbox/design-lead-2R-screens-1.md`)** — ana sayfa v2 (§3, R2-09), değişken boyut yerleşimi (§5.8, R2-02), kalan blok ve tam örtü (§5.9, R2-01), kazanma v2 (§6.1), hafif öğretici (§13, R2-10); **Faz 2R çapraz inceleme kapanışı** (aynı gün; `docs/review_inbox/design-lead-2R-closure.md`: H/Hy/Hs yerleşimi, güçlendirici akışları K-33/K-36/K-38, hedefsiz yuva, Söküm, kalan blok formülü, öğretici tablosu = LEVELS §2); önceki: Faz 1 revizyonu (2026-10-04; R-01…R-24), Faz 2 boşlukları 1 ve 3 (2026-10-06) · Kaynak:
+Sahip: design-lead · Sürüm: **v3 stil öğrenimi (2026-10-14, R2-13): §1.1 yükleme v3, §4.1 bölüm başı penceresi v3, §6.2 "Dokun ve al" ödül katmanı — ölçüler `docs/ART_REFERENCE.md` §9; önceki: Faz 2R (2026-10-07; ekran incelemesi 1 ekleri 2026-10-08: §5.8 uyarlanır hücre tablosu c 144/132/120, durum şeridi 1520/80, tepsi kuralı; §5.2 Vazgeç başparmak bölgesinde, Vinç hedefsiz; §5.9 kuyuda bölüm etiketi; §13.1 kilitli dizi satırı `teardownLine` ve eldiven + blok hayaleti; §11 Geri bildirim; `review_inbox/design-lead-2R-screens-1.md`)** — ana sayfa v2 (§3, R2-09), değişken boyut yerleşimi (§5.8, R2-02), kalan blok ve tam örtü (§5.9, R2-01), kazanma v2 (§6.1), hafif öğretici (§13, R2-10); **Faz 2R çapraz inceleme kapanışı** (aynı gün; `docs/review_inbox/design-lead-2R-closure.md`: H/Hy/Hs yerleşimi, güçlendirici akışları K-33/K-36/K-38, hedefsiz yuva, Söküm, kalan blok formülü, öğretici tablosu = LEVELS §2); önceki: Faz 1 revizyonu (2026-10-04; R-01…R-24), Faz 2 boşlukları 1 ve 3 (2026-10-06) · Kaynak:
 `docs/BRIEF.md` §4, §8, §10, §11 · Görsel tarifler: `docs/ART_DIRECTION.md` · Animasyonlar: `docs/JUICE.md` · Metinler:
 `docs/STORY.md` · Ölçüler: `src/theme/tokens.json` · Sayılar (fiyat, ödül, tavan): `config/economy.json`,
 `config/events.json` — bu belgedeki sayılar **örnektir**, ekran değeri her zaman config'ten okunur.
@@ -171,6 +171,39 @@ Durumlar:
 - **Ses:** ses kilidi açılmadan istenen sesler **atılır**, kuyruğa alınmaz (TECH §11.6); açılış sesleri süstür.
 
 ---
+
+### 1.1 Yükleme ekranı v3 (ART_REFERENCE §9.1, §7.4; 2026-10-14)
+
+v3 görünümü §1'deki düzenin yerine geçer (vinç kolu çubuğu kalkar; durumlar, süreler ve R-13 kuralları §1'deki gibi).
+Ölçüler `kit.v3.screen.loading`, renkler `kit.v3.palette.load*`.
+
+```
+y    0 ┌────────────────────────────────────┐   gök #1B49A4 (0) → #2B5FB6 (0,30) → #7AA3D8 (0,46) → bulut #F0D7D6 (0,61) → #D9BFC8 (1)
+       │  ✦      ▣            ✦     ▣       │   (540, 420) merkezli 18 ışın beyaz α 0,10, 0,02 tur/s; 12 kıvılcım
+  240  │   ▣   ┌──────────────────────┐  ▣  │   LOGO 640×360, merkez (540, 420): logo_emblem + app.title 3B harf
+       │       │   [amblem]  Lift &   │     │   (harf başına blok rengi, 12 px ekstrüzyon ×0,6, kontur #4F1E9C 6)
+  600  │  ▣    └──────────────────────┘   ▣ │   8 uçuşan tuğla 96–200 px, halka r 420–520, ±30°, 3 s ±8 px salınım
+  700  │            ☺ Tuna (sıçrıyor)       │   KARAKTER GRUBU 840×720, merkez (540, 1060):
+       │     🐕 Kepçe          👴 Dede        │   Tuna 1,0 orta · Kepçe 0,8 sol · Usta Dede 0,9 sağ arka (ART_REFERENCE §6.3)
+ 1420  │  ☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁   │   bulut bandı 0,68 H'den aşağı, 3 katman (#FFFFFF / #F4E3E8 / #E6D2DD)
+ 1700  │            Yükleniyor               │   loading.text, `plain` 64 (beyaz + #111 0,07 em)
+ 1770  │          ▬▬▬▬▬▬▬▬░░░░░              │   çubuk 400×12 (iz #0A1F4A α 0,4, dolgu beyaz α 0,9) = yükleme yüzdesi
+ 1840  │           Sürüm 0.1.0               │   app.version 34 ui.inkSoft
+ 1920  └────────────────────────────────────┘
+```
+
+| Öğe | Konum / boyut | Not |
+| --- | ------------- | --- |
+| Gök + ışın + bulut | tam ekran | ART_REFERENCE §7.4; EXPAND'de gök gradyanı H'ye ölçeklenir, bulut bandı alta çapalı |
+| Logo | 640×360, merkez (540, 420) | amblem `logo_emblem` solda 300×300, sağında `app.title` 3B harf (ART_REFERENCE §9.1; harf biçimi ve tuğla-harf motifi kopyalanmaz, §11) |
+| Uçuşan tuğlalar | 8 adet, halka r 420–520 | v3 blok (ART_REFERENCE §5.2), sembolsüz; açılar 20°, 70°, 110°, 160°, 200°, 250°, 290°, 340°; uzaktakiler 0,7 ölçek α 0,85 |
+| Karakter grubu | 840×720, merkez (540, 1060) | `chr_tuna_cheer` + `chr_kepce_bust` + `chr_dede_bust` (**[MVP-lite]** durağan; sıçrama pozu Sonra) |
+| Yükleme metni | (540, 1700), 64 px | `loading.text` "Yükleniyor" (STORY §7.8); 3 nokta döngüsü yok, çubuk gösterir |
+| Çubuk | 400×12, (340, 1770) | dolgu = yükleme yüzdesi; en az 1,5 s görünür (§1) |
+| Sürüm | (540, 1840) | §1 aynen |
+
+Durumlar §1 ile aynıdır (hata paneli y 1600 → v3 pencere, ART_REFERENCE §3.7; "Tekrar dene" L yeşil). Azaltılmış
+harekette ışın dönmez, tuğlalar sabit.
 
 ## 2. İlk oturum (FTUE)
 
@@ -470,6 +503,44 @@ Can penceresi) · **yükleniyor** (yok; bölüm verisi yereldir) · **hata** (b�
 hazırlanamadı" + Ana ekran; analytics olayı).
 
 ---
+
+### 4.1 Bölüm başı penceresi v3 (ART_REFERENCE §9.3; 2026-10-14)
+
+§4'teki içerik ve durumlar aynen; yalnız görünüm ve ölçüler v3'tür (`kit.v3.screen.levelStart`, `kit.v3.panel`,
+`kit.v3.button.L`). Referans: proje sahibinin "Güçlendiricileri Seç / Oyna" penceresi (R2-13); düzen ve anatomi
+alınır, görseller alınmaz (ART_REFERENCE §11).
+
+```
+y  564 ┌────────────────────────────────────┐   karartma #05030D α 0,85
+       │          ✦ Bölüm 12 ✦   [ZOR]  (×) │   BAŞLIK titleTwoRing 112, merkez (540, 564): panel üst kenarına biner;
+  584  │ ╔════════════════════════════════╗ │   zorluk hapı 200×72 başlığın sağında; × Ø 120 merkez (980, 634)
+       │ ║ ┌────────────────────────────┐ ║ │   PANEL 1000×1040, x 40–1040, y 584–1624 (alttan 296; ART_REFERENCE §3.7)
+  684  │ ║ │ ┌────┐ Tezgâh      [▦×6]   │ ║ │   İÇ PLAKA 880×560 (#8C7DFE), x 100–980, y 684–1244
+       │ ║ │ │yapı│            [✦×5]   │ ║ │   HEDEF SATIRI y 716–876: yapı 160×160 (x 140) + ad 44 + ek hedef çipleri 120
+  892  │ ║ │ Galibiyet serisi ▰▰▱ (2)   │ ║ │   SERİ SATIRI y 892–972, 760×80 (Bölüm 15+; yokken hedef satırı 40 aşağı)
+ 1016  │ ║ │    Güçlendiricileri seç    │ ║ │   levelStart.boosters, 56 beyaz + #352496 0,06 em
+ 1052  │ ║ │  ┌────┐  ┌────┐  ┌────┐    │ ║ │   3 KARE 184, aralık 48, x 252 / 484 / 716, y 1052–1236 (blue dörtlü)
+       │ ║ │  │ 🧪 │3 │ 🪣 │1 │ ▤↑ │🔒  │ ║ │   rozet 72 sağ alt köşeye biner; seçili: 8 px #24CCFF ışıma + ✓ 40
+ 1244  │ ║ └────────────────────────────┘ ║ │
+ 1332  │ ║    ┌──────────────────────┐    ║ │
+       │ ║    │         Oyna         │    ║ │   OYNA L 560×212, x 260–820, y 1332–1544 (levelStart.play; yeşil, tek birincil)
+ 1544  │ ║    └──────────────────────┘    ║ │
+ 1624  │ ╚════════════════════════════════╝ │   panel alt kenarı = H − 296
+```
+
+| Öğe | v2 (§4) | v3 |
+| --- | ------- | -- |
+| Panel | krem ahşap 960×1280, y 344–1624 | çivit pencere 1000×1040, y 584–1624 (ART_REFERENCE §3.7); EXPAND'de alt kenar H − 296 |
+| Başlık | "BÖLÜM 12" h1 88 panel içinde | `home.play` "Bölüm {n}" yazıldığı gibi, `titleTwoRing` 112, panel üst kenarına biner; zorluk hapı yanında |
+| Kapat | 144 px hedef köşede | Ø 120 kırmızı daire (hedef 144), köşeye biner (ART_REFERENCE §3.2) |
+| Hedefler + seri | panel gövdesinde | lavanta iç plaka içinde, iki satır |
+| Güçlendirici yuvaları | 200×200 krem kit | 184 kare `blue` dörtlü, rozet 72, kilitli yuva küçük altın kilit 48×56 + "Bölüm N" 34 (ART_REFERENCE §3.13) |
+| Oyna | 640×176 | L 560×212, panel altından 80 px yukarıda |
+| Giriş | #70 | pencere 0,9 → 1,0 + karartma 200 ms; başlık 60 px yukarıdan düşer (#106 biçimi, ribbon yok) |
+
+Durumlar (§4 aynen): kilitli yuva, adet 0 ("+" → mini satın alma; Faz 2R'de gri `common.notEnoughCoins`), seçilemez
+yuva, can yok ("Oyna" yerine krem M "Can bekleniyor 12:40" + L yeşil "Doldur"), hata. Bölüm 1–2'de pencere açılmaz
+(§3). Ekran okuyucu: "Bölüm {n} penceresi; güçlendirici seç; Oyna".
 
 ## 5. Oyun ekranı
 
@@ -931,6 +1002,29 @@ EXPAND: düğme alta çapalı; şerit, kart, Tuna, bonus ve kapsüller `(H − 1
 (`win.*`); "Tekrar" düğmesi yine yok.
 
 ---
+
+### 6.2 Ödül katmanı — "Dokun ve al" (ART_REFERENCE §8, §9.6; 2026-10-14)
+
+Sandık (§3.1), günlük hediye (§3.1) ve etkinlik ödülü (Faz 4) tek kalıpla verilir; kazanma ekranının kendi ödül
+kapsülleri (§6.1) değişmez. Ölçüler `kit.v3.screen.reward`, `kit.v3.effects`.
+
+```
+y    0 ┌────────────────────────────────────┐   karartma #05030D α 0,85 (200 ms); arkadaki ekran durur
+  420  │          Bölüm sandığı             │   BAŞLIK titleGold 112, ≤ 2 satır (chest.title / daily.title / etkinlik adı)
+  880  │              ✦ [▣] ✦               │   NESNE 240 px, merkez (540, 880): 0 → 1,15 → 1,0 (350 ms Back.easeOut) + glow #FFE7A3 α 0,55 r 384
+ 1040  │               ×3                   │   SAYI bigNumber 72 (common.times / common.coins), nesnenin 40 px altında; #105 ile sayar
+ 1540  │           Dokun ve al              │   reward.tap `plain` 72, 400 ms sonra belirir, 1,0 ↔ 1,04 nabız 1,2 s
+ 1920  └────────────────────────────────────┘   dokunma hedefi = bütün ekran
+```
+
+- Birden çok kalem varsa (sandık: 3 kalem) nesneler 240 px yerine 180 px ve yan yana (aralık 60), her biri 120 ms
+  arayla belirir; sayılar her nesnenin altında.
+- Dokununca: nesneler üst çubuk kapsüllerine uçar (JUICE #74; altın için #56 sikke dalgası), kapsül 1,0 → 1,08,
+  karartma 200 ms söner. Dokunmadan 6 s geçerse kendiliğinden kapanır (ödül yine verilmiştir; TECH §11.1 atomik
+  kayıt pencere açılmadan önce yazılır).
+- Azaltılmış hareket: nesne 150 ms solarak gelir, glow sabit, nabız yok.
+- Durumlar: **birden çok ödül penceresi** (sandık + günlük) art arda, araya ana sayfa girmez · **hata** yok (yerel
+  veri) · **kilitli** yok.
 
 ## 7. Kaybetme
 

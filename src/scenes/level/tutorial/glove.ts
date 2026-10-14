@@ -102,7 +102,11 @@ export function fingerPoints(layout: Layout, path: readonly (readonly [number, n
  * cell steps as the path (no finger offset; the K-08 sticky follow puts the block there for that finger point). The
  * dotted trail follows these points. `centre` = the block's centre at rest (design px).
  */
-export function ghostPoints(layout: Layout, path: readonly (readonly [number, number])[], centre: Point): Point[] {
+export function ghostPoints(
+  layout: Layout,
+  path: readonly (readonly [number, number])[],
+  centre: Point,
+): Point[] {
   const g = layout.grid;
   const p0 = path[0];
   if (!p0) return [];

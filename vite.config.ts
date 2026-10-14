@@ -11,6 +11,8 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 2000,
     outDir: mode === 'harness' ? 'artifacts/harness' : 'dist',
     emptyOutDir: true,
+    // the harness build maps page errors back to the source (tools/lib/harnessClient.ts records the stack); never dist/
+    sourcemap: mode === 'harness',
   },
   test: {
     include: ['tests/**/*.test.ts'],

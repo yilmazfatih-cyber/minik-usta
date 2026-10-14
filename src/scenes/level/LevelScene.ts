@@ -459,6 +459,11 @@ export class LevelScene extends Phaser.Scene {
       this.windows.clear();
       this.overlay.destroy();
       this.player.reset();
+      // a restart of the running scene (`scene.start` while active: the debug panel's level select, the harness's
+      // `loadLevel`; the home screen sleeps and wakes it instead) destroys the display list, this lazily filled pool
+      // included — the references go with it, else the next yard preview calls `setTexture` on a dead image inside
+      // the input step and that uncaught throw stops Phaser's loop for good (no frame comes again)
+      this.yardPreview.length = 0;
       this.loadToken += 1;
     });
 
@@ -1015,7 +1020,11 @@ export class LevelScene extends Phaser.Scene {
     if (!pose || !f.has(name)) return null;
     const shape = shapeByIndex(pieceShape(s, id));
     const ref = f.ref(name);
-    return { key: ref.key, frame: ref.frame, rect: this.layoutNow.grid.pieceRect(pose.ax, pose.ay, shape.w, shape.h) };
+    return {
+      key: ref.key,
+      frame: ref.frame,
+      rect: this.layoutNow.grid.pieceRect(pose.ax, pose.ay, shape.w, shape.h),
+    };
   }
 
   /** UX §13.2: the panorama arrow of a `panorama` highlight (Bölüm 5 → next segment, Bölüm 2 → bottom → top row). */
@@ -1358,7 +1367,8 @@ export class LevelScene extends Phaser.Scene {
     this.player.dragEnded(id);
     if (!this.session) return;
     const move = { kind: 'drag', pieceId: id, to: node } as const;
-    const res = this.applyAction(move, () => this.settleDraggedView(id));
+    // perf information: the release frame's own cost (apply + save + cue plan + HUD), next to `apply` and `saveWrite`
+    const res = timed('commit', () => this.applyAction(move, () => this.settleDraggedView(id)));
     if (res && res.status !== 'applied') this.player.play(8, { piece: id, flag: res.reason === 'sameSpot' });
   }
 

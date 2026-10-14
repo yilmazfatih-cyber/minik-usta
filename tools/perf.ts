@@ -12,8 +12,16 @@
  *    `window.__levelInteractive` (Level 1 takes input after the untouched 3-panel intro, UX §2.1): 0 taps on that path
  *    (≤ 3 allowed; the intro's "Geç" or 3 panel taps only shorten it).
  * 3. Timings (services/timings.ts through the harness, 4×): the level-start block bake, the kit atlas bake (in the cold
- *    FTUE run, before the first screen), one core action package (`GameSession.apply`, K-35 steps 1–12 with the D1 /
- *    D2 / D3a checks — an upper bound of step 12), and the texture memory of the game.
+ *    FTUE run, before the first screen), the texture memory of the game, and the action package gate of TECH §2R.4:
+ *    `GameSession.apply` (K-35 steps 1–12 with the D1 / D2 / D3a checks — an upper bound of step 12) over ≥ 2 000
+ *    actions of the level 1–10 goldens replayed on the pure core in the page (`applyBench`, after a 200-action warm-up:
+ *    a JIT-cold first call is not the package's cost); the scene's own per-move samples are reported as information.
+ *
+ * Software GPU note (SwiftShader, the sandbox): rAF frames take 0,6 s at 1× and seconds at 4×. Phaser then feeds the
+ * scenes the last sane delta (`fps.min` 5), so game time crawls at 16,7 ms per frame and one gesture's 257 ms lift rest
+ * is 16 frames. The gameplay runs therefore switch `TimeStep.smoothStep` off (`setSmoothStep(false)`: game time = wall
+ * time, as on a device whose frames are sane); the CPU-side numbers (handlers + update + render per frame) are the
+ * same code paths. The FTUE runs keep Phaser's defaults.
  *
  * Gates (TECH §10.7 item 6, §2R.13; on the CPU side at 4×; exit 1 when one fails or a gated value is missing — a
  * broken sampler or a run without frames never passes): mean CPU-side FPS ≥ 50 for `drag`, `win` and `home`
@@ -25,8 +33,17 @@
  * (`taskset`) so the software GPU cannot steal the measured main thread's CPU; on the 4-core sandbox it changed the
  * CPU-side numbers by less than the run-to-run spread and halved the frame rate, so it is off by default.
  *
+ * Gesture pace: `clock` sends the 60 Hz touch moves at their times (a digitizer); on a slow frame pace (rAF p50 over
+ * `SLOW_FRAME_MS` in a 2 s idle probe, i.e. the software GPU) a whole gesture would land in one frame and that frame's
+ * "touch handlers" would read ~40 input events — nothing a device at 60 Hz does — so the run switches to `ack` (one
+ * move per rendered frame, one input event per frame). The pace and the probe are in the report (`--pace` forces one).
+ *
+ * FTUE: the gated path is the untouched intro (its 3 panels auto-advance, `duration.ftuePanelAuto`); the one-tap "Geç"
+ * path (`common.skip` as soon as the intro shows) is measured too and reported as information.
+ *
  * Options: `--rates 4,1`, `--levels 1,2,3,4,5`, `--renderer webgl|canvas` (`canvas` = `--disable-3d-apis`, Phaser's
- * Canvas fallback, a control run without SwiftShader), `--skip-ftue`, `--ftue-only`, `--isolate-gpu`. Report: artifacts/perf/report.json.
+ * Canvas fallback, a control run without SwiftShader), `--pace auto|clock|ack`, `--skip-ftue`, `--ftue-only`,
+ * `--isolate-gpu`. Report: artifacts/perf/report.json.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -49,6 +66,7 @@ import {
   planDrag,
   state,
   status,
+  tap,
   waitInteractive,
   waitLog,
   waitWindow,
@@ -68,6 +86,14 @@ const GATE_KIT_BAKE_MS = 200;
 const GATE_APPLY_P99_MS = 2;
 const GATE_APPLY_MAX_MS = 8;
 const GATE_TEXTURE_MB = 64;
+/** Frame pace (rAF interval p50 of a 2 s idle probe) over which the gesture pace becomes `ack` (software GPU). */
+const SLOW_FRAME_MS = 50;
+const PACE_PROBE_MS = 2000;
+type Pace = 'clock' | 'ack';
+/** TECH §2R.4 action package gate: levels whose goldens are replayed, warm-up actions, measured actions. */
+const APPLY_LEVELS: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const APPLY_WARMUP = 200;
+const APPLY_ACTIONS = 2000;
 /** Home screen idle sample (UX §3 v2: art, nav, the button's pulse). */
 const HOME_SAMPLE_MS = 4000;
 const INPUT_FRAMES = 1;
@@ -140,6 +166,9 @@ interface RateResult {
   readonly rate: number;
   readonly renderer: string;
   readonly isolation: string;
+  /** Gesture pace of the run and the idle probe's rAF interval p50 (ms) that chose it. */
+  readonly pace: Pace;
+  readonly framePaceMs: number | null;
   readonly drag: PerfStats | null;
   /** Level and move whose drag window holds the drag bucket's longest CPU frame (diagnostics). */
   readonly dragWorstAt: string | null;
@@ -148,12 +177,30 @@ interface RateResult {
   readonly levels: { readonly id: number; readonly moves: number; readonly won: boolean }[];
   /** TECH §2R.13 timings of the run (ms) and the texture memory after it (MB). */
   readonly levelBakeMaxMs: number | null;
+  /** `applyBench` (pure core, ≥ 2 000 actions after a warm-up): the gated numbers. */
   readonly applyP99Ms: number | null;
   readonly applyMaxMs: number | null;
   readonly applySamples: number;
+  /** The scene's own `timed('apply')` samples of the played levels (information: few samples, JIT-cold first calls). */
+  readonly applySceneP99Ms: number | null;
+  readonly applySceneMaxMs: number | null;
+  readonly applySceneSamples: number;
+  /** The release frame's split (information): the scene's whole commit and one synchronous save write, p50 / max ms. */
+  readonly commitP50Ms: number | null;
+  readonly commitMaxMs: number | null;
+  readonly saveWriteP50Ms: number | null;
+  readonly saveWriteMaxMs: number | null;
   readonly textureMB: number | null;
   readonly heapMB: number | null;
   readonly consoleErrors: readonly string[];
+  /** A level that did not play to its end (the run goes on to the report; its gates fail on the missing values). */
+  readonly error: string | null;
+  /** The page's loop state at that failure (a stalled game clock: `loopRunning` false = Phaser paused the loop). */
+  readonly stall: {
+    readonly gameMs: number;
+    readonly loopRunning: boolean;
+    readonly docHidden: boolean;
+  } | null;
 }
 
 interface FtueResult {
@@ -173,6 +220,8 @@ interface FtueResult {
   /** Kit atlas bake of the cold start (ms, at the run's CPU rate). */
   readonly kitBakeMs: number | null;
   readonly consoleErrors: readonly string[];
+  /** `untouched` = the gated path (the intro auto-advances); `skip` = "Geç" tapped as soon as the intro shows (info). */
+  readonly path: 'untouched' | 'skip';
 }
 
 /** p-quantile (0…1) of `xs` (nearest rank), null when empty. */
@@ -204,7 +253,11 @@ async function noteDragWorst(gp: GamePage, at: string): Promise<void> {
   }
 }
 
-async function playLevelMeasured(gp: GamePage, id: number): Promise<{ moves: number; won: boolean }> {
+async function playLevelMeasured(
+  gp: GamePage,
+  id: number,
+  pace: Pace,
+): Promise<{ moves: number; won: boolean }> {
   await loadLevel(gp.page, id);
   const moves = await golden(gp.page, id);
   for (let i = 0; i < moves.length; i++) {
@@ -215,7 +268,7 @@ async function playLevelMeasured(gp: GamePage, id: number): Promise<{ moves: num
     const plan = await planDrag(gp.page, move);
     const last = i === moves.length - 1;
     await perfStart(gp.page, 'drag');
-    await gp.touch.gesture(plan, false, 'clock');
+    await gp.touch.gesture(plan, false, pace);
     if (last) await perfStart(gp.page, 'win');
     await gp.touch.release();
     if (!last) await perfStop(gp.page);
@@ -240,6 +293,7 @@ async function gameplayRun(
   renderer: string,
   isolate: boolean,
   levels: readonly number[],
+  paceArg: 'auto' | Pace,
 ): Promise<RateResult> {
   const profile = PROFILES[0];
   if (!profile) throw new Error('no profile');
@@ -248,15 +302,41 @@ async function gameplayRun(
     let isolation = 'off';
     if (isolate) isolation = isolateGpu(chromiumProcesses(await userDataDirOf(browser)));
     await gp.page.evaluate(() => window.__harness!.perfReset());
+    // game time = wall time on the software GPU's slow frames (see the header); the FTUE runs keep the default
+    await gp.page.evaluate(() => window.__harness!.setSmoothStep(false));
     dragWorst.cpuMs = 0;
     dragWorst.at = null;
     await gp.cdp.send('Emulation.setCPUThrottlingRate', { rate });
+    // the frame pace at this rate decides the gesture pace (see the header): one input event per frame on a slow one
+    await perfStart(gp.page, 'probe');
+    await sleep(PACE_PROBE_MS);
+    await perfStop(gp.page);
+    const framePaceMs = (await perfStats(gp.page, 'probe'))?.intervalP50 ?? null;
+    const pace: Pace =
+      paceArg !== 'auto' ? paceArg : framePaceMs !== null && framePaceMs > SLOW_FRAME_MS ? 'ack' : 'clock';
+    process.stdout.write(`  frame pace p50 ${framePaceMs} ms → gesture pace ${pace}\n`);
     await gp.page.evaluate(() => window.__harness!.clearTimings());
     const played: { id: number; moves: number; won: boolean }[] = [];
+    let error: string | null = null;
+    let stall: RateResult['stall'] = null;
     for (const id of levels) {
-      const r = await playLevelMeasured(gp, id);
-      played.push({ id, ...r });
-      process.stdout.write(`  ${rate}× level ${id}: ${r.moves} moves, ${r.won ? 'won' : 'NOT WON'}\n`);
+      try {
+        const r = await playLevelMeasured(gp, id, pace);
+        played.push({ id, ...r });
+        process.stdout.write(`  ${rate}× level ${id}: ${r.moves} moves, ${r.won ? 'won' : 'NOT WON'}\n`);
+      } catch (e) {
+        // the level is reported, not thrown: the page's errors and loop state are the diagnosis (TECH §2R.11)
+        error = `level ${id}: ${e instanceof Error ? (e.message.split('\n')[0] ?? String(e)) : String(e)}`;
+        const s = await status(gp.page).catch(() => null);
+        stall = s ? { gameMs: s.gameMs, loopRunning: s.loopRunning, docHidden: s.docHidden } : null;
+        process.stdout.write(`  ${rate}× ${error}\n`);
+        if (stall)
+          process.stdout.write(
+            `     game clock ${stall.gameMs} ms, loop ${stall.loopRunning ? 'running' : 'PAUSED'}, document ${stall.docHidden ? 'HIDDEN' : 'visible'}\n`,
+          );
+        for (const c of gp.errors) process.stdout.write(`     page error: ${c}\n`);
+        break;
+      }
     }
     // UX §3 home screen v2 (art, nav, the button pulse), idle
     await gp.page.evaluate(() => window.__harness!.goHome());
@@ -266,14 +346,27 @@ async function gameplayRun(
     await perfStop(gp.page);
     const timings = await gp.page.evaluate(() => window.__harness!.timings());
     const textureMB = await gp.page.evaluate(() => window.__harness!.textureMB());
+    // TECH §2R.4 step 12 gate at this CPU rate: a warm-up pass, then ≥ 2 000 actions on the pure core
+    await gp.page.evaluate(([l, n]) => window.__harness!.applyBench(l, n), [
+      APPLY_LEVELS,
+      APPLY_WARMUP,
+    ] as const);
+    const apply = await gp.page.evaluate(([l, n]) => window.__harness!.applyBench(l, n), [
+      APPLY_LEVELS,
+      APPLY_ACTIONS,
+    ] as const);
     await gp.cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
-    const apply = timings.apply ?? [];
+    const applyScene = timings.apply ?? [];
+    const commit = timings.commit ?? [];
+    const saveWrite = timings.saveWrite ?? [];
     const bakes = timings.levelBake ?? [];
     const heap = (await gp.cdp.send('Runtime.getHeapUsage')) as { usedSize: number };
     return {
       rate,
       renderer,
       isolation,
+      pace,
+      framePaceMs,
       drag: await perfStats(gp.page, 'drag'),
       dragWorstAt: dragWorst.at,
       win: await perfStats(gp.page, 'win'),
@@ -283,16 +376,31 @@ async function gameplayRun(
       applyP99Ms: quantile(apply, 0.99),
       applyMaxMs: apply.length > 0 ? Math.max(...apply) : null,
       applySamples: apply.length,
+      applySceneP99Ms: quantile(applyScene, 0.99),
+      applySceneMaxMs: applyScene.length > 0 ? Math.max(...applyScene) : null,
+      applySceneSamples: applyScene.length,
+      commitP50Ms: quantile(commit, 0.5),
+      commitMaxMs: commit.length > 0 ? Math.max(...commit) : null,
+      saveWriteP50Ms: quantile(saveWrite, 0.5),
+      saveWriteMaxMs: saveWrite.length > 0 ? Math.max(...saveWrite) : null,
       textureMB,
       heapMB: Math.round((heap.usedSize / 1024 / 1024) * 10) / 10,
       consoleErrors: gp.errors,
+      error,
+      stall,
     };
   } finally {
     await gp.close();
   }
 }
 
-async function ftueRun(browser: Browser, url: string, rate: number, network: boolean): Promise<FtueResult> {
+async function ftueRun(
+  browser: Browser,
+  url: string,
+  rate: number,
+  network: boolean,
+  skip = false,
+): Promise<FtueResult> {
   const profile = PROFILES[0];
   if (!profile) throw new Error('no profile');
   const gp = await openGame(browser, {
@@ -304,6 +412,13 @@ async function ftueRun(browser: Browser, url: string, rate: number, network: boo
     waitReady: false,
   });
   try {
+    let taps = 0;
+    if (skip) {
+      // the one-tap path: "Geç" (`common.skip`) as soon as the intro's first panel shows
+      await gp.page.waitForFunction(() => window.__introShown !== undefined, null, { timeout: 120_000, polling: 50 });
+      await tap(gp, { kind: 'text', key: 'common.skip' });
+      taps = 1;
+    }
     await gp.page.waitForFunction(() => window.__levelInteractive !== undefined, null, {
       timeout: 120_000,
       polling: 50,
@@ -346,9 +461,10 @@ async function ftueRun(browser: Browser, url: string, rate: number, network: boo
       domContentLoadedMs: r.dcl === null ? null : Math.round(r.dcl),
       loadMs: r.load === null ? null : Math.round(r.load),
       transferKB: Math.round(r.transfer / 1024),
-      taps: 0,
+      taps,
       kitBakeMs: r.kitBake,
       consoleErrors: gp.errors,
+      path: skip ? 'skip' : 'untouched',
     };
   } finally {
     await gp.close();
@@ -381,6 +497,8 @@ async function main(): Promise<number> {
   const rates = flag('--ftue-only') ? [] : (arg('--rates') ?? '4,1').split(',').map(Number);
   const levels = (arg('--levels') ?? '1,10').split(',').map(Number);
   const renderer = arg('--renderer') ?? 'webgl';
+  const paceArg = (arg('--pace') ?? 'auto') as 'auto' | Pace;
+  if (!['auto', 'clock', 'ack'].includes(paceArg)) throw new Error(`unknown --pace ${paceArg}`);
   const isolate = flag('--isolate-gpu') && hasTaskset();
   const server = await startHarnessServer();
   const launch = (): Promise<Browser> =>
@@ -396,20 +514,23 @@ async function main(): Promise<number> {
       process.stdout.write(`gameplay ${rate}× CPU (${renderer})\n`);
       const browser = await launch();
       try {
-        runs.push(await gameplayRun(browser, server.url, rate, renderer, isolate, levels));
+        runs.push(await gameplayRun(browser, server.url, rate, renderer, isolate, levels, paceArg));
       } finally {
         await browser.close();
       }
     }
     if (!flag('--skip-ftue')) {
-      for (const [rate, network] of [
-        [4, true],
-        [1, false],
+      for (const [rate, network, skip] of [
+        [4, true, false],
+        [4, true, true],
+        [1, false, false],
       ] as const) {
-        process.stdout.write(`FTUE ${rate}× CPU, network ${network ? 'Fast 4G' : 'none'}\n`);
+        process.stdout.write(
+          `FTUE ${rate}× CPU, network ${network ? 'Fast 4G' : 'none'}, ${skip ? '"Geç" tapped' : 'untouched intro'}\n`,
+        );
         const browser = await launch();
         try {
-          ftue.push(await ftueRun(browser, server.url, rate, network));
+          ftue.push(await ftueRun(browser, server.url, rate, network, skip));
         } finally {
           await browser.close();
         }
@@ -420,7 +541,7 @@ async function main(): Promise<number> {
   }
 
   const gated = runs.find((r) => r.rate === 4);
-  const ftueGated = ftue.find((f) => f.rate === 4);
+  const ftueGated = ftue.find((f) => f.rate === 4 && f.path === 'untouched');
   const gameplayGated = rates.includes(4);
   const ftueRan = !flag('--skip-ftue');
   /** A gate that applies to this run: null value = FAIL (no frames or a broken sampler never passes). */
@@ -479,19 +600,27 @@ async function main(): Promise<number> {
   writeFileSync(join(OUT, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
 
   for (const r of runs) {
-    process.stdout.write(`\n${r.rate}× CPU, ${r.renderer}, isolation: ${r.isolation}, heap ${r.heapMB} MB\n`);
+    process.stdout.write(
+      `\n${r.rate}× CPU, ${r.renderer}, isolation: ${r.isolation}, heap ${r.heapMB} MB, gesture pace ${r.pace} (frame p50 ${r.framePaceMs} ms)\n`,
+    );
     process.stdout.write(
       `${row('drag', r.drag)}\n${worstRow(r.drag, r.dragWorstAt)}${row('win', r.win)}\n${row('home', r.home)}\n`,
     );
     process.stdout.write(
       `  timings: level bake max ${r.levelBakeMaxMs} ms, action package p99 ${r.applyP99Ms} / max ${r.applyMaxMs} ms ` +
-        `(${r.applySamples}), textures ${r.textureMB} MB\n`,
+        `(${r.applySamples} core actions; in scene p99 ${r.applySceneP99Ms} / max ${r.applySceneMaxMs} ms of ` +
+        `${r.applySceneSamples}), textures ${r.textureMB} MB\n` +
+        `  release split (info): commit p50 ${r.commitP50Ms} / max ${r.commitMaxMs} ms, save write p50 ${r.saveWriteP50Ms} / max ${r.saveWriteMaxMs} ms\n`,
     );
+    if (r.error)
+      process.stdout.write(
+        `  FAIL ${r.error}${r.stall ? ` (game clock ${r.stall.gameMs} ms, loop ${r.stall.loopRunning ? 'running' : 'paused'}, document ${r.stall.docHidden ? 'hidden' : 'visible'})` : ''}\n`,
+      );
     for (const c of r.consoleErrors) process.stdout.write(`  console error: ${c}\n`);
   }
   for (const f of ftue) {
     process.stdout.write(
-      `\nFTUE ${f.rate}× CPU, network ${f.network}: level 1 interactive at ${f.levelInteractiveMs} ms ` +
+      `\nFTUE ${f.rate}× CPU, network ${f.network}, ${f.path === 'skip' ? '"Geç" tapped (info)' : 'untouched intro (gated)'}: level 1 interactive at ${f.levelInteractiveMs} ms ` +
         `(intro at ${f.introShownMs} ms, level screen at ${f.levelShownMs} ms, DOMContentLoaded ${f.domContentLoadedMs} ms, load ${f.loadMs} ms, ` +
         `${f.transferKB} KB; page ${f.fps} fps after; ${f.taps} taps; kit bake ${f.kitBakeMs} ms)\n`,
     );
@@ -518,7 +647,8 @@ async function main(): Promise<number> {
       `report: ${join(OUT, 'report.json')}\n`,
   );
   const failed = Object.values(pass).some((v) => v === false);
-  const errors = [...runs, ...ftue].some((r) => r.consoleErrors.length > 0);
+  const errors =
+    [...runs, ...ftue].some((r) => r.consoleErrors.length > 0) || runs.some((r) => r.error !== null);
   return failed || errors ? 1 : 0;
 }
 

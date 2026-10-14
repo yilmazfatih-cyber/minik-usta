@@ -575,10 +575,11 @@ export class EventPlayer implements JuiceStage {
         return;
       }
       case 'smash': {
-        // JUICE #61 (Faz 2R): the hammer hits the Ağır Yük — one white frame, it breaks into dust and fades
+        // JUICE #61 (Faz 2R): the hammer hits the Ağır Yük — one white frame (DS-19: the silhouette's additive copy
+        // at `smashFlashPeak`, corner radius kept), it breaks into dust and fades
         if (!e || e.t !== 'cargoSmashed' || cue.piece === null) return;
         const box = this.pieceBox(cue.piece);
-        this.pieceFlash(cue.piece, time, WHITE, 1, Math.min(cue.ms, D.blockedShake), false);
+        this.pieceFlash(cue.piece, time, WHITE, V.smashFlashPeak, Math.min(cue.ms, D.blockedShake), false);
         this.pieceTrack(
           cue.piece,
           time,

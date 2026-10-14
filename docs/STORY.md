@@ -1,6 +1,6 @@
 # Hikaye ve karakterler — Minik Usta
 
-Sahip: design-lead · Sürüm: **Faz 2R (2026-10-07; ekran incelemesi ekleri 2026-10-08: `booster.crane.noTarget`,
+Sahip: design-lead · Sürüm: **v3 stil öğrenimi (2026-10-14, R2-13): §7.8 yükleme / bölüm başı / "Dokun ve al" metinleri; önceki: Faz 2R (2026-10-07; ekran incelemesi ekleri 2026-10-08: `booster.crane.noTarget`,
 `settings.feedback` / `.feedbackCopied` / `.feedbackManual`, kilitli dizi satırı süresi `duration.teardownLine`)** — öğretici metinleri ≤ 6 kelime, mekanik bazlı `tut.m.*` (§6A), ana
 sayfa ve HUD v2 anahtarları (§7.7); **çapraz inceleme kapanışı** (aynı gün: bütün `tut.ctx.*` / `tut.meta.*` TR ve EN
 ≤ 6 kelime, yeni `tut.m.park` / `carry` / `carryNow`, `tut.ctx.teardown`, `booster.*.noTarget`, Faz 2R kurallarına göre
@@ -870,3 +870,27 @@ Kullanım:
 - `chest.preview`: ana sayfadaki bölüm sandığı ikonuna dolmadan dokununca açılan önizleme penceresinin satırı (UX §3.1);
   `{n}` = sandığa kalan bölüm; ek bağlanmaz (§0-9).
 
+
+### 7.8 v3 ekran metinleri — yükleme, bölüm başı penceresi, ödül katmanı (ART_REFERENCE §9; 2026-10-14)
+
+Yeni ekranlar UX §1.1 (yükleme v3), §4.1 (bölüm başı penceresi v3), §6.2 ("Dokun ve al"). Metinler TR ve EN'de
+**≤ 6 kelime**; yazıldığı gibi (büyük harf yok, ART §8.1).
+
+| Kimlik | TR | EN |
+| ------ | -- | -- |
+| `loading.text` | Yükleniyor | Loading |
+| `levelStart.boosters` | Güçlendiricileri seç | Choose your boosters |
+| `levelStart.play` | Oyna | Play |
+| `reward.tap` | Dokun ve al | Tap to collect |
+| `reward.ready` | Ödülün hazır | Your reward is ready |
+
+Kullanım:
+
+- `loading.text`: yükleme ekranı metni (UX §1.1), `plain` stili 64 px; sonuna üç nokta **yazılmaz** (ilerleme çubuğu
+  var).
+- `levelStart.boosters`: bölüm başı penceresi iç plakasındaki etiket (UX §4.1), 56 px; ":" ya da "!" yok.
+- `levelStart.play`: pencerenin tek birincil düğmesi (L yeşil). Ana sayfadaki düğme `home.play` "Bölüm {n}" kalır;
+  pencere başlığı da `home.play`'dir (yeni anahtar açılmaz).
+- `reward.tap`: ödül katmanının alt metni (UX §6.2); bütün ekran dokunma hedefidir, bu yüzden "düğmeye" denmez.
+- `reward.ready`: ödül katmanının başlığı, kalem adı olmayan ödüllerde (etkinlik, telafi); sandıkta `chest.title`,
+  günlük hediyede `daily.title` kullanılır.

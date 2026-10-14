@@ -83,7 +83,9 @@ export interface TutorialViewHost {
    * UX §13.1 (DS-15): the baked frame and the resting rect (design px) of the highlighted block covering board cell
    * `cell` (a `drag` / `hold` path's first point); null without one.
    */
-  ghost?(cell: readonly [number, number]): { readonly key: string; readonly frame?: string; readonly rect: Rect } | null;
+  ghost?(
+    cell: readonly [number, number],
+  ): { readonly key: string; readonly frame?: string; readonly rect: Rect } | null;
   portrait(): TextureRef;
 }
 

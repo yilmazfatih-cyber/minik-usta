@@ -30,7 +30,9 @@ export function openManualCopy(
   texts: ManualCopyTexts,
   onClose: () => void,
 ): () => void {
-  const font = [TOKENS.font.family, ...TOKENS.font.fallback].map((f) => (f.includes(' ') ? `"${f}"` : f)).join(', ');
+  const font = [TOKENS.font.family, ...TOKENS.font.fallback]
+    .map((f) => (f.includes(' ') ? `"${f}"` : f))
+    .join(', ');
   const layer = doc.createElement('div');
   layer.setAttribute('role', 'dialog');
   layer.setAttribute('aria-modal', 'true');

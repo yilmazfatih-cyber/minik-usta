@@ -97,7 +97,7 @@ describe('scene layering (TECH 1.1–1.4)', () => {
     expect(scene).toMatch(
       /const move = \{ kind: 'drag', pieceId: id, to: node \} as const;\s+const res = this\.applyAction\(move/,
     );
-    expect(scene).toMatch(/const res = game\.apply\(action\);/);
+    expect(scene).toMatch(/const res = timed\('apply', \(\) => game\.apply\(action\)\);/); // TECH §2R.13 step 12 gate
     expect(scene).toMatch(/computeFall\(s, session\.pieceId, node, \{ rules: this\.hooks\.fall \}\)/);
     const drag = readFileSync(join(ROOT, 'src/scenes/level/DragController.ts'), 'utf8');
     expect(drag).toMatch(/tryBeginDrag\(s, id, host\.dragRules\(\)\)/);

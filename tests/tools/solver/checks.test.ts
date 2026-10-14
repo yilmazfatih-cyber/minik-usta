@@ -49,10 +49,11 @@ describe('K-53 tutorial hand path (L-35 tut_hand_invalid)', () => {
     ).not.toContain('tut_hand_invalid');
   });
 
+  // eight solver runs (≈ 3 s of search on an idle machine, TECH §2R.5 table): a solver-bound test, not a 5 s one
   it('K-53 every drag / hold hand of the drafts 1–7 and 9 is valid on the canonical solution', () => {
     for (const n of [1, 2, 3, 4, 5, 6, 7, 9])
       expect(codes(solve(draft(n))), `level ${n}`).not.toContain('tut_hand_invalid');
-  });
+  }, 60_000);
 
   it('K-53 hand path[0] must be a cell of a highlighted block', () => {
     const r = solve(

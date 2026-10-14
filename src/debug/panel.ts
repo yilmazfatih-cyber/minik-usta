@@ -25,7 +25,7 @@ import { availableLevels } from '../scenes/level/levels.ts';
 import { EventLog, formatEntry } from './eventLog.ts';
 import { FRAME_BUDGET_MS, FrameStats } from './frameStats.ts';
 import { GoldenReplay } from './goldenReplay.ts';
-import { LABEL } from './labels.ts';
+import { DEBUG_ROOT_ID, LABEL } from './labels.ts';
 import { applyGravityOverride } from './levelOverride.ts';
 import { BUILD_GRAVITIES, NO_DEBUG_RULES, ruleSwitches, rulesActive, sessionHooks } from './rules.ts';
 import type { BuildGravity, DebugRules } from './rules.ts';
@@ -33,7 +33,7 @@ import { SceneBridge } from './sceneBridge.ts';
 import { installSessionTap } from './sessionTap.ts';
 import type { SessionTap } from './sessionTap.ts';
 
-const ROOT_ID = 'mu-debug';
+const ROOT_ID = DEBUG_ROOT_ID;
 /** The FPS figure and graph are redrawn at this rate (the meter itself samples every frame). */
 const STATS_REFRESH_MS = 250;
 const GRAPH_W = 240;

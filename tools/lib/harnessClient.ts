@@ -200,7 +200,7 @@ export async function attachGame(page: Page, context: BrowserContext): Promise<G
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(msg.text());
   });
-  page.on('pageerror', (err) => errors.push(String(err)));
+  page.on('pageerror', (err) => errors.push(err.stack ?? String(err)));
   const cdp = await context.newCDPSession(page);
   return { page, context, cdp, touch: new TouchDriver(cdp, page), errors, close: () => context.close() };
 }

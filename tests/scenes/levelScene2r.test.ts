@@ -63,6 +63,26 @@ function fakeWindow(): BackGuardHost & { pushed: unknown[]; fire(type: string): 
   };
 }
 
+describe('TECH 10.4 / 12.3 level scene restart (scene.start while active)', () => {
+  it('TECH 12.3 a forced restart drops the yard preview pool on SHUTDOWN: a dead image in setTexture inside the input step stopped the loop', () => {
+    const scene = src('scenes/level/LevelScene.ts');
+    const shutdown = scene.slice(
+      scene.indexOf('this.events.once(Phaser.Scenes.Events.SHUTDOWN'),
+      scene.indexOf('this.loadToken += 1;'),
+    );
+    expect(shutdown).toMatch(/this\.yardPreview\.length = 0;/);
+    // the yard preview is the scene's only lazily filled pool of game objects held in a class field; a new one needs
+    // the same shutdown line (PieceLayer, ShadowView, TutorialView … are built again in create())
+    const pools = [...scene.matchAll(/private readonly (\w+): Phaser\.GameObjects\.\w+\[\] = \[\];/g)].map(
+      (m) => m[1],
+    );
+    expect(pools).toEqual(['yardPreview']);
+    // the two restart callers: the debug panel's level select and the harness's loadLevel
+    expect(src('debug/sceneBridge.ts')).toMatch(/scene\.start\(LEVEL_SCENE_KEY, \{ levelId: id \}/);
+    expect(src('harness/index.ts')).toMatch(/game\.scene\.start\(LEVEL_SCENE_KEY, \{ levelId: id \}/);
+  });
+});
+
 describe('UX 5.8 web back guard (TECH 2R.1, DL-2R-16)', () => {
   it('UX 5.8 popstate opens pause instead of leaving: one guard entry after the first activating input, re-pushed on back', () => {
     const win = fakeWindow();

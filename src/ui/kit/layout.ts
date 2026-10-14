@@ -52,6 +52,36 @@ export interface HomeLayout {
   readonly navTabs: readonly Rect[];
 }
 
+/** DS-06: the "Yakında" balloon keeps this gap between its top and the "Bölüm N" button's bottom. */
+export const BALLOON_BUTTON_GAP_PX = 8;
+/** DS-06: inside the nav bar the balloon hangs from this far under the tab point, its tail up at the tab icon. */
+export const NAV_BALLOON_DROP_PX = 96;
+
+export interface BalloonPlacement {
+  readonly at: { readonly x: number; readonly y: number };
+  readonly dir: 'down' | 'up';
+}
+
+/**
+ * DS-06: where a locked tab's "Yakında" balloon (height `balloonH`, tail included) opens. Above the tab (`dir: 'down'`,
+ * tail tip at the tab point = the cell's top edge) only when its top clears the play button's bottom edge by
+ * `BALLOON_BUTTON_GAP_PX`; else it drops into the nav bar (`dir: 'up'`: the tail tip `NAV_BALLOON_DROP_PX` under the
+ * tab point, inside the icon, the body over the tab's label) so the button's text is never covered. The drop is clamped
+ * so the balloon ends at the bar's bottom edge at the latest (HintBubble clamps x only; with the UX §3 tokens the bar
+ * is 176 px and the balloon 122 px, so the clamp is what keeps it on screen).
+ */
+export function lockedTabBalloon(
+  play: Rect,
+  nav: Rect,
+  tab: { readonly x: number; readonly y: number },
+  balloonH: number,
+): BalloonPlacement {
+  const fits = tab.y - balloonH >= play.y + play.h + BALLOON_BUTTON_GAP_PX;
+  if (fits) return { at: tab, dir: 'down' };
+  const y = Math.min(tab.y + NAV_BALLOON_DROP_PX, nav.y + nav.h - balloonH);
+  return { at: { x: tab.x, y }, dir: 'up' };
+}
+
 /** Tag overhang (UX §3 "düğmenin sol üstüne 24 px taşar"). */
 export const TAG_OVERHANG_PX = 24;
 /** `home.moreSoon` band height and gap above the button (UX §3 "küçük şerit 480 × 80"). */

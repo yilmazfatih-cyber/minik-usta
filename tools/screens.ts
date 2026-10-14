@@ -39,6 +39,7 @@ import { levelHooks } from '../src/core/obstacles/registry.ts';
 import { GameSession } from '../src/core/session.ts';
 import { createInitialState } from '../src/core/state.ts';
 import type { DragMove, DragPlanOptions } from '../src/harness/api.ts';
+import { DEBUG_ROOT_ID, LABEL } from '../src/debug/labels.ts';
 import { CVD_KINDS, isCvdKind } from '../src/harness/cvd.ts';
 import type { CvdKind } from '../src/harness/cvd.ts';
 import {
@@ -73,7 +74,7 @@ const ART_MS = 2500;
 const MAX_SPEND_MOVES = 40;
 /** DS-01: a visible text that is an i18n key (the key shown instead of its text), and the debug toggle (DS-20). */
 const RAW_KEY = /^[a-z]+(\.[A-Za-z0-9_]+)+$/;
-const DEBUG_LABEL = 'DBG';
+const DEBUG_LABEL = LABEL.toggle;
 /** TECH §2R.13 "Hücre": the level 1 block on 360 × 800, CSS px. */
 const GATE_CELL_CSS = 48;
 /** Söküm fixture id (outside the slice ids; `loadLevelData`). */
@@ -622,11 +623,14 @@ async function runScenario(
       async (name) => {
         await page.screenshot({ path: join(dir, `${name}.png`) });
         shots.push(name);
-        // DS-01 / DS-20: no raw i18n key and no debug label on screen
+        // DS-01 / DS-20: no raw i18n key and no debug label on screen (the Phaser texts), and no debug panel in
+        // the DOM (it is a `import.meta.env.DEV` import; the harness build is a build, so it must be absent)
         for (const text of await page.evaluate(() => window.__harness!.texts())) {
           const line = text.trim();
-          if (RAW_KEY.test(line) || line === DEBUG_LABEL) textIssues.push(`${name}: "${line}"`);
+          if (RAW_KEY.test(line) || line.startsWith(DEBUG_LABEL)) textIssues.push(`${name}: "${line}"`);
         }
+        if (await page.evaluate((id) => document.getElementById(id) !== null, DEBUG_ROOT_ID))
+          textIssues.push(`${name}: debug panel #${DEBUG_ROOT_ID} in the DOM (DS-20)`);
       },
       notes,
     );

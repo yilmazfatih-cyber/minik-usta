@@ -22,11 +22,13 @@ import { scaleMode } from '../config/display.ts';
 import { toAscii } from '../core/ascii.ts';
 import { hashHex } from '../core/hash.ts';
 import { levelHooks } from '../core/obstacles/registry.ts';
+import type { CompiledLevel } from '../core/level/compile.ts';
+import { GameSession } from '../core/session.ts';
 import { queueIds } from '../core/state.ts';
 import { appSave, changeSetting } from '../scenes/appServices.ts';
 import { DEPTH } from '../scenes/level/depth.ts';
 import { HOME_SCENE_KEY, LEVEL_SCENE_KEY } from '../scenes/level/LevelScene.ts';
-import { setLevelSource } from '../scenes/level/levels.ts';
+import { loadLevelById, setLevelSource } from '../scenes/level/levels.ts';
 import { PROLOGUE_SCENE } from '../scenes/flow/launch.ts';
 import { gameAssets } from '../scenes/AssetLoaderScene.ts';
 import type { LevelScene, LevelSceneData } from '../scenes/level/LevelScene.ts';
@@ -63,14 +65,20 @@ const BOOT_SCENE_KEY = 'Boot';
 const INTRO_SCENE_KEY = 'Intro';
 const DEFAULT_WAIT_MS = 20_000;
 
+/** A poll runs at least this often (wall ms) even when no frame comes: a stopped loop still reaches its timeout. */
+const POLL_MS = 1000;
+
 const round2 = (v: number): number => Math.round(v * 100) / 100;
 const nextFrame = (): Promise<number> => new Promise((resolve) => requestAnimationFrame(resolve));
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+/** Resolves at the next frame, or after `POLL_MS` when the frame does not come (rAF paused, a frozen loop). */
+const nextPoll = (): Promise<unknown> => Promise.race([nextFrame(), sleep(POLL_MS)]);
 
 async function waitFor(pred: () => boolean, timeoutMs: number, what: string): Promise<void> {
   const end = performance.now() + timeoutMs;
   while (!pred()) {
     if (performance.now() > end) throw new Error(`harness: timed out waiting for ${what}`);
-    await nextFrame();
+    await nextPoll();
   }
 }
 
@@ -94,9 +102,27 @@ export function installHarness(game: Phaser.Game): HarnessApi {
   game.events.on(Phaser.Core.Events.POST_STEP, () => {
     gameClock += game.loop.delta;
   });
+  /**
+   * Game time has no wall budget of its own: on a slow frame pace Phaser swaps a long frame's delta for the last sane
+   * one (`fps.min` 5 → every frame over 200 ms counts ≤ 200 ms, on a software GPU 16,7 ms per 600 ms … 8 s frame), so
+   * 257 ms of game time can be 16 frames = minutes of wall time at 4× CPU (TECH §10.7 item 7). The wait fails only when
+   * the clock stops advancing for `DEFAULT_WAIT_MS × 6` — a frozen loop, not a slow one.
+   */
   const waitGameMs = async (ms: number): Promise<void> => {
     const start = gameClock;
-    await waitFor(() => gameClock - start >= ms, DEFAULT_WAIT_MS * 6, `${ms} ms of game time`);
+    let last = gameClock;
+    let lastAt = performance.now();
+    while (gameClock - start < ms) {
+      if (gameClock !== last) {
+        last = gameClock;
+        lastAt = performance.now();
+      } else if (performance.now() - lastAt > DEFAULT_WAIT_MS * 6) {
+        throw new Error(
+          `harness: the game clock stopped for ${DEFAULT_WAIT_MS * 6} ms while waiting for ${ms} ms of game time (${round2(gameClock - start)} ms advanced)`,
+        );
+      }
+      await nextPoll();
+    }
   };
 
   const activeKey = (): string | null => game.scene.getScenes(true)[0]?.sys.settings.key ?? null;
@@ -189,6 +215,9 @@ export function installHarness(game: Phaser.Game): HarnessApi {
       logLength: session ? session.log.length : 0,
       window: lv?.openWindow ?? null,
       interactive: interactive(lv),
+      gameMs: round2(gameClock),
+      loopRunning: game.loop.running,
+      docHidden: document.hidden,
     };
   };
 
@@ -505,6 +534,29 @@ export function installHarness(game: Phaser.Game): HarnessApi {
     perfStop: () => sampler.stop(),
     perfStats: (label: string) => sampler.stats(label),
     perfReset: () => sampler.reset(),
+    setSmoothStep(on: boolean): void {
+      game.loop.smoothStep = on;
+    },
+    async applyBench(levels: readonly number[], minActions: number): Promise<number[]> {
+      const loaded: { lvl: CompiledLevel; moves: readonly DragMove[] }[] = [];
+      for (const id of levels) {
+        const r = await loadLevelById(id);
+        if (!r.ok) throw new Error(`harness: applyBench: level ${id} does not load (${r.stage})`);
+        loaded.push({ lvl: r.level, moves: goldenMoves(id) });
+      }
+      const out: number[] = [];
+      while (out.length < minActions) {
+        for (const { lvl, moves } of loaded) {
+          const g = GameSession.start(lvl, { preBoosters: [], streakTier: 0 }, { hooks: levelHooks(lvl) });
+          for (const m of moves) {
+            const t0 = performance.now();
+            g.apply({ kind: 'drag', pieceId: m.pieceId, to: m.to });
+            out.push(performance.now() - t0);
+          }
+        }
+      }
+      return out;
+    },
   };
 
   window.__harness = api;

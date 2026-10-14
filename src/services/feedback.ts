@@ -148,7 +148,14 @@ export function feedbackExport(
   const text = (): string => {
     const t0 = kept[0]?.[0] ?? 0;
     const events = kept.map(([at, name, ...values]) => [Math.max(0, Math.round(at - t0)), name, ...values]);
-    return JSON.stringify({ v: 1, app: meta.app, rules: meta.rules, platform: meta.platform, lang: meta.lang, events });
+    return JSON.stringify({
+      v: 1,
+      app: meta.app,
+      rules: meta.rules,
+      platform: meta.platform,
+      lang: meta.lang,
+      events,
+    });
   };
   let out = text();
   while (out.length > maxChars && kept.length > 0) {

@@ -1493,6 +1493,46 @@ kalır; yalnız `required` dalları silinir.
   - `[kural] (Faz 2R)` etiketli N-notları da okunur.
   - `package.json` WP-K'de `--phase 2R`'ye geçer.
 
+**Uygulama notu (WP-K + WP-O, 2026-10-14; kapanış `docs/review_inbox/code-lead-2R-screens-1-closure.md`):**
+
+1. **Göç ve meta (§2R.10).** `SAVE_VERSION` 2 / `RULES_VERSION` 2, `MIGRATIONS[1]` şekli korur; okunamayan Faz 2 `inLevel`
+   göçte (`voidUnreadableAttempt`), okunan ama `rulesVersion` 1 olan deneme açılışta (K-43/4) cezasız iptal. META §4
+   ücretsiz denemeler `pendingFreeTrials` → `beginAttempt({ freeTrials })` aynı yazımda, `freeTrialsGranted` ile bir kez;
+   uygulanan `hammer | crane | paint | undo` `recordAction`'da aynı yazımda −1. META §10: yıldız yalnız ilk kazanmada
+   (`attempt.ts win()` `first = !rec.won`), kazanılmış bölüm `mode = replay` ve `sliceWinRewards` (yalnız taban altın).
+2. **Analytics v6 (§2R.16).** Gönderim noktaları tablodaki gibi; `booster_used.target`, `deadlock_teardown` (Geri Al geri
+   alırsa yeni olay yok, `level_end` sayaçları düşer), `tutorial_step.shows/msToDone`, `nav_tap`, `exitFree = movesSpent 0`,
+   `blocksLeft`. ANALYTICS §2 ↔ kod iki yönlü eşitlik testleri yeşil (30 olay). WP-O: `services/feedback.ts`
+   (`PersistentLog` `minikusta.analytics` son 500 olay, 1 s birleştirme, gizlenince yazım; `feedbackExport` 9 huni olayı,
+   ortak parametre yok, göreli `tMs`, ≤ 20 000 karakter; `copyFeedback` → `copied | manual`), `ui/manualCopy.ts` salt
+   okunur seçili kutu; Ayarlar penceresinin son öğesi krem 640 × 128.
+3. **Araçlar (§2R.11).** `tools/screens.ts` Faz 2R seti (ana sayfa 7, `level-01…10` + 2 yedek, öğretici 4, kazanma 2,
+   güçlendirici 8, Söküm 2, pencereler 5; kısa profillerde Bölüm 1–5); kapılar: ham i18n anahtarı (DS-01), `DBG` metni ve
+   `#mu-debug` DOM kökü (DS-20), 360 × 800'de Bölüm 1 hücresi ≥ 48 CSS px; `teardown-line` karesi #107'nin +600 ms'inde
+   (DS-14). `tools/perf.ts` kapıları §2R.13 tablosundaki gibi (CPU tarafı 4×: sürükleme / kazanma / ana sayfa ≥ 50 FPS,
+   p95 ≤ 25 ms, FTUE ≤ 10 s ve ≤ 3 dokunuş, pişirme ≤ 150 / 200 ms, adım 12 p99 ≤ 2 ms ve en kötü ≤ 8 ms, doku ≤ 64 MB).
+   `test:rules --phase 2R` `package.json`'da (76 kimlik; `CLAUDE.md` tablosu orkestratörün). e2e duman testi
+   (`tests/e2e/smoke.spec.ts`) Faz 2R bölümleri ve fikstürleriyle.
+4. **Ekran incelemesi 1 (code-lead maddeleri).** DS-03/30 opak tabanlı hayalet (`tools/assets.ts`), DS-04 `chr_tuna_stand`
+   isteğe bağlı katalog satırı, DS-06 `lockedTabBalloon` (balon gezinme çubuğunun içinde ve ekranda; kırpma), DS-12
+   `panoramaWellSplit` "BÖLÜM n", DS-13 Vazgeç = yuvada × / şeritte × + `hintStripY`, DS-14 `TEARDOWN_LINE_MS`, DS-15
+   `ghostPoints` + hayalet blok, DS-16 `boardTray` payı, DS-18 pasif mala α 0,55, DS-19 `smashFlashPeak` 0,85, DS-20
+   kapıları, DS-34 `rayAlpha` son değer. Ertelenen (görünüm v3): DS-05, DS-32, `_docRetire` madde 3 (v1 blok çizicisi
+   `textures.ts`'den okunuyor); DS-17 product-lead onayına bağlı.
+5. **`npm run perf` düzeltmeleri (ilk tam koşu).** (a) Ürün hatası: `LevelScene` çalışırken `scene.start` ile yeniden
+   başlatılınca (hata ayıklama paneli bölüm seçimi, harness `loadLevel`) tembel `yardPreview` havuzu ölü görüntü tutuyor,
+   ilk kaydırmada girdi adımı içinde `TypeError` fırlatıp Phaser'ın rAF zincirini durduruyordu (oyun donar; ana sayfa
+   yolu uyut/uyandır olduğu için oyuncu görmez) → SHUTDOWN'da havuz boşaltılır, test "TECH 12.3 a forced restart …".
+   (b) Harness `waitGameMs` = durma dedektörü (saat 120 s ilerlemezse), yoklama rAF ∥ 1 s zamanlayıcı; `status()`
+   `gameMs / loopRunning / docHidden`. (c) SwiftShader'da rAF 1,6 fps (1×) ve Phaser'ın "son makul delta" kuralı oyun
+   zamanını %2,7'ye düşürdüğü için perf koşuları `TimeStep.smoothStep`'i kapatır (`setSmoothStep(false)`; screens açık
+   tutar). (d) §2R.4 adım 12 kapısı `applyBench` ile ≥ 2 000 eylem (200 ısınma) saf çekirdekte o CPU oranında; sahne
+   `timed('apply')` örnekleri bilgi. (e) Bölüm hatası rapora girer (sayfa hatası yığını, saat/döngü durumu); harness
+   derlemesi kaynak haritalı; `harnessClient` `pageerror` yığınını saklar. (f) 'clock' hızında bütün 60 Hz dokunuş
+   hareketleri SwiftShader'ın 700 ms'lik tek karesine yığılır: kare başına "touch handlers" gerçek cihazdakinin ~40
+   katı okunur — CPU-tarafı sürükleme sayıları bu sanal ortamda üst sınırdır (yorum aşağıda).
+6. **Kapı sonuçları (bu tur):** __TECH_GATES__
+
 ### 2R.12 İş paketleri (son hali; paralel yazılabilir)
 
 Süreler ajan iş günüdür (g; 5 g = 1 hafta), tampon hariç. Paketler ayrık dosya alanlarına bölündü; aynı dosyaya iki

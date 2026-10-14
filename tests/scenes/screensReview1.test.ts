@@ -21,9 +21,11 @@ import {
   TEARDOWN_LINE_MS,
 } from '../../src/scenes/level/tutorial/contextTips.ts';
 import { fingerPoints, ghostPoints } from '../../src/scenes/level/tutorial/glove.ts';
-import { VIEW } from '../../src/scenes/level/viewConstants.ts';
+import { JUICE_VIEW, VIEW } from '../../src/scenes/level/viewConstants.ts';
 import { boardTray, createLayout } from '../../src/theme/layout.ts';
 import { TOKENS } from '../../src/theme/tokens.ts';
+import { DEBUG_ROOT_ID, LABEL } from '../../src/debug/labels.ts';
+import { BALLOON_BUTTON_GAP_PX, homeLayout, lockedTabBalloon } from '../../src/ui/kit/layout.ts';
 import { WELL_LABEL_PAD_PX, panoramaWellSplit } from '../../src/ui/Panorama.ts';
 import { levelFile } from '../core/moves.fixtures.ts';
 
@@ -54,7 +56,9 @@ describe('design-lead screens review 1 — code-lead findings', () => {
       expect(t.y).toBe(L.board.crane.y - 24);
     }
     // the scene draws the side edges only when `sides` (no rounded edge 2 CSS px from the screen edge any more)
-    expect(src('src/scenes/level/LevelScene.ts')).toMatch(/const r = boardTray\(L, TOKENS\);[\s\S]{0,300}if \(r\.sides\)/);
+    expect(src('src/scenes/level/LevelScene.ts')).toMatch(
+      /const r = boardTray\(L, TOKENS\);[\s\S]{0,300}if \(r\.sides\)/,
+    );
   });
 
   it('UX 5.9 item 8 level label in the panorama well (DS-12): left of the strip, hidden when the plan needs the room', () => {
@@ -96,8 +100,12 @@ describe('design-lead screens review 1 — code-lead findings', () => {
     expect(slots).toMatch(/const CANCEL_PX = 128;/);
     expect(slots).toMatch(/v\.cancel\.setVisible\(on\);/);
     expect(slots).toMatch(/const showCount = !v\.raised &&/); // the count badge hides on the selected slot
-    expect(src('src/ui/StatusStrip.ts')).toMatch(/this\.cancel\.setVisible\(on\);\s+this\.trowel\.setVisible\(!on\);/);
-    expect(src('src/ui/icons.ts')).toMatch(/export function drawCancelX[\s\S]{0,200}TOKENS\.kit\.buttonColor\.red/);
+    expect(src('src/ui/StatusStrip.ts')).toMatch(
+      /this\.cancel\.setVisible\(on\);\s+this\.trowel\.setVisible\(!on\);/,
+    );
+    expect(src('src/ui/icons.ts')).toMatch(
+      /export function drawCancelX[\s\S]{0,200}TOKENS\.kit\.buttonColor\.red/,
+    );
   });
 
   it('UX 13.1 tutorial block ghost (DS-15): the glove walks in finger space, the ghost in block space with the same cell steps', () => {
@@ -149,8 +157,70 @@ describe('design-lead screens review 1 — code-lead findings', () => {
 
   it('ART 7.2 ozalit ghost (DS-03 / DS-30): the silhouette opaque in planUnderlay, then blueprint 35 % and the dashed contour', () => {
     const tool = src('tools/assets.ts');
-    expect(tool).toMatch(/underlay: b\.planUnderlay,\s+fill: b\.blueprint,\s+fillAlpha: 0\.35,\s+linePx: 4,\s+lineAlpha: 0\.9/);
+    expect(tool).toMatch(
+      /underlay: b\.planUnderlay,\s+fill: b\.blueprint,\s+fillAlpha: 0\.35,\s+linePx: 4,\s+lineAlpha: 0\.9/,
+    );
     expect(tool).toMatch(/\[g\.underlay, 1\],\s+\[g\.fill, g\.fillAlpha\],/);
     expect(TOKENS.color.board.planUnderlay).toBe('#BCCADD');
+  });
+  it('UX 3 locked tab balloon (DS-06): never over the "Bölüm N" button — above the tab only with an 8 px clearance, else inside the nav bar and on screen', () => {
+    const bb = TOKENS.kit.bubble;
+    const balloonH = Math.ceil(TOKENS.font.size.body * 1.3) + 2 * bb.padYPx + bb.tailPx; // HomeScene comingSoonBalloonH
+    const span = (p: ReturnType<typeof lockedTabBalloon>): [number, number] =>
+      p.dir === 'down' ? [p.at.y - balloonH, p.at.y] : [p.at.y, p.at.y + balloonH];
+    for (const H of [1920, 2336, 2400]) {
+      const geo = homeLayout(TOKENS, H);
+      const tab = geo.navTabs[1] as { x: number; y: number; w: number };
+      const at = { x: tab.x + tab.w / 2, y: tab.y }; // NavBar: the cell's top edge
+      const p = lockedTabBalloon(geo.play, geo.nav, at, balloonH);
+      const [top, bottom] = span(p);
+      // with the UX §3 tokens the bar is 64 px under the button: the balloon cannot clear it, it drops into the bar
+      expect(p.dir).toBe('up');
+      expect(top).toBeGreaterThanOrEqual(geo.play.y + geo.play.h + BALLOON_BUTTON_GAP_PX);
+      expect(top).toBeGreaterThanOrEqual(geo.nav.y);
+      expect(bottom).toBeLessThanOrEqual(geo.nav.y + geo.nav.h); // on screen, in the bar (over the tab's label)
+      expect(p.at.x).toBe(at.x);
+    }
+    // a bar far enough under the button: the balloon stays above the tab with its tail down
+    const play = { x: 180, y: 1000, w: 720, h: 176 };
+    const nav = { x: 0, y: 1500, w: 1080, h: 176 };
+    expect(lockedTabBalloon(play, nav, { x: 540, y: 1500 }, balloonH)).toEqual({
+      at: { x: 540, y: 1500 },
+      dir: 'down',
+    });
+    expect(lockedTabBalloon(play, nav, { x: 540, y: 1200 }, balloonH).dir).toBe('up');
+    const home = src('src/scenes/HomeScene.ts');
+    expect(home).toMatch(/lockedTabBalloon\(this\.geo\.play, this\.geo\.nav, at, comingSoonBalloonH\(\)\)/);
+  });
+
+  it('JUICE 61 hammer flash (DS-19): the baked cargo silhouette as an additive white copy at 0,85 — the piece frame itself, corner radius kept', () => {
+    expect(JUICE_VIEW.smashFlashPeak).toBe(0.85);
+    const player = src('src/scenes/level/EventPlayer.ts');
+    expect(player).toMatch(
+      /this\.pieceFlash\(cue\.piece, time, WHITE, V\.smashFlashPeak, Math\.min\(cue\.ms, D\.blockedShake\), false\)/,
+    );
+    expect(player).toMatch(/const add = color === WHITE;/); // a white flash is additive (ADD), not a painted square
+    // the flash overlay is the piece's own frame, tint-filled: the silhouette and its rounded corners are the frame's
+    const view = src('src/scenes/level/PieceView.ts');
+    expect(view).toMatch(
+      /o\.setTint\(color\)\.setTintMode\(Phaser\.TintModes\.FILL\);\s+o\.setBlendMode\(add \? Phaser\.BlendModes\.ADD : Phaser\.BlendModes\.NORMAL\);/,
+    );
+    expect(view).toMatch(/the same frame tint-filled/);
+  });
+
+  it('DS-20 the debug badge reaches neither a review shot nor the store build: DEV-only import, screens text + DOM gate, verify-dist marker', () => {
+    expect(src('src/main.ts')).toMatch(
+      /if \(import\.meta\.env\.DEV\) \{[\s\S]{0,700}import\('\.\/debug\/debug\.ts'\)/,
+    );
+    expect(src('src/debug/panel.ts')).toMatch(/const ROOT_ID = DEBUG_ROOT_ID;/);
+    const screens = src('tools/screens.ts');
+    expect(screens).toMatch(/const DEBUG_LABEL = LABEL\.toggle;/);
+    expect(screens).toMatch(/line\.startsWith\(DEBUG_LABEL\)/); // "DBG 60" (the toggle carries the fps)
+    expect(screens).toMatch(/document\.getElementById\(id\) !== null, DEBUG_ROOT_ID/);
+    expect(DEBUG_ROOT_ID).toBe('mu-debug');
+    // tools/verify-dist.ts recognises the panel by one of its own labels (never a generic word like "debug")
+    const marker = /Drop the running attempt/;
+    expect(src('tools/verify-dist.ts')).toMatch(marker);
+    expect(LABEL.restartTitle).toMatch(marker);
   });
 });

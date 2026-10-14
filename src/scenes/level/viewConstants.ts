@@ -111,6 +111,11 @@ export const JUICE_VIEW = Object.freeze({
   trowelSweepMs: 200,
   /** #61 hammer (Faz 2R): the Ağır Yük shrinks to this scale while it fades out. */
   smashScale: 0.6,
+  /**
+   * #61 "1 kare beyaz" (DS-19): the flash is the baked `cargo_q9` / `cargo_i5` silhouette's additive white copy at this
+   * alpha (the overlay is the piece's own frame, so its corner radius stays; not a flat square).
+   */
+  smashFlashPeak: 0.85,
   /** #94 "Bütün bloklar yerinde": the gold band's width (share of the yard) and its peak alpha. */
   yardClearBandRatio: 0.35,
   yardClearAlpha: 0.5,

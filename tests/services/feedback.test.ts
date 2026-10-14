@@ -89,7 +89,13 @@ describe('ANALYTICS feedback export (TECH 2R.16, WP-O)', () => {
     const a = service();
     // a long play: every event kind, a few hundred funnel events
     a.track({ name: 'app_open' });
-    a.track({ name: 'event_join', event: 'bridge', eventInstanceId: 'inst-SECRET', botSimVersion: '1', seedHash: 'h' });
+    a.track({
+      name: 'event_join',
+      event: 'bridge',
+      eventInstanceId: 'inst-SECRET',
+      botSimVersion: '1',
+      seedHash: 'h',
+    });
     a.track({ name: 'star_spent', task: 'ch1_t1' });
     for (let i = 0; i < 400; i++) {
       a.clock.advance(61_000);
@@ -114,7 +120,9 @@ describe('ANALYTICS feedback export (TECH 2R.16, WP-O)', () => {
     expect(out.events.at(-1)?.[1]).toBe('nav_tap');
     // every value is a table type of its event (int / bool / enum), in table order; no common parameter, no id
     for (const [, name, ...values] of out.events) {
-      const specs = Object.values(ANALYTICS_EVENTS[name as keyof typeof ANALYTICS_EVENTS]) as { kind: string }[];
+      const specs = Object.values(ANALYTICS_EVENTS[name as keyof typeof ANALYTICS_EVENTS]) as {
+        kind: string;
+      }[];
       expect(values).toHaveLength(specs.length);
       values.forEach((v, i) => {
         const kind = specs[i]?.kind;
@@ -147,11 +155,13 @@ describe('ANALYTICS feedback export (TECH 2R.16, WP-O)', () => {
     const home = readFileSync(new URL('../../src/scenes/HomeScene.ts', import.meta.url), 'utf8');
     expect(home).toMatch(/const FEEDBACK_W = 640;\s+const FEEDBACK_H = 128;/);
     expect(home).toMatch(/const FEEDBACK_COPIED_MS = 1500;/);
-    expect(home).toMatch(/color: 'cream',\s+w: FEEDBACK_W,\s+h: FEEDBACK_H,\s+label: t\('settings\.feedback'\)/);
+    expect(home).toMatch(
+      /color: 'cream',\s+w: FEEDBACK_W,\s+h: FEEDBACK_H,\s+label: t\('settings\.feedback'\)/,
+    );
     expect(home).toMatch(/t\('settings\.feedbackCopied'\)/);
     expect(home).toMatch(/hint: t\('settings\.feedbackManual'\), close: t\('common\.continue'\)/);
     // the button is the last row of the settings window (after the three switches)
-    const rows = home.slice(home.indexOf('private openSettings'), home.indexOf('options: [{ id: \'ok\''));
+    const rows = home.slice(home.indexOf('private openSettings'), home.indexOf("options: [{ id: 'ok'"));
     expect(rows.indexOf("kind: 'custom'")).toBeGreaterThan(rows.indexOf('TOGGLES.map'));
   });
 });

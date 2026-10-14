@@ -302,7 +302,9 @@ export class BoosterBar {
     const caption = s.add
       .text(0, r.h / 2 + CAPTION_GAP_PX, '', kitTextStyle('counter', TOKENS.font.size.caption))
       .setOrigin(0.5, 0);
-    const cancel = addBakedGraphics(s).setPosition(0, -lip / 2).setVisible(false);
+    const cancel = addBakedGraphics(s)
+      .setPosition(0, -lip / 2)
+      .setVisible(false);
     drawCancelX(cancel, CANCEL_PX);
     const root = s.add
       .container(0, 0, [face, icon, badge, count, lock, caption, cancel])
