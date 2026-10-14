@@ -14,8 +14,9 @@ const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 export default defineConfig({
   testDir: '.',
   testMatch: '*.spec.ts',
-  // headless Chromium renders WebGL with SwiftShader (a few frames per second): the golden levels take minutes
-  timeout: 300_000,
+  // headless Chromium renders WebGL with SwiftShader (≈ 1,6 frames / s): a golden level played by touch takes 5–10
+  // minutes even with the coarse `E2E_DRAG` plan (smoke.spec.ts)
+  timeout: 900_000,
   workers: 1,
   reporter: 'list',
   outputDir: `${ROOT}artifacts/e2e`,

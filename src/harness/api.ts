@@ -8,6 +8,14 @@
  * the game's 1080-wide units and stay inside the harness.
  */
 import type { DragNode, PieceId, SessionAction } from '../core/types.ts';
+import type { TimingKey } from '../services/timings.ts';
+
+/**
+ * A cue kind of the EventPlayer's plan (`scenes/level/juice/plan.ts` `CueKind`: a JUICE id or an internal kind such as
+ * `'teardown'`). Declared here as `number | string` so this file stays free of scene imports: tools/ type-check without
+ * `vite/client` and must not reach `import.meta.env` through the scene graph.
+ */
+export type CueKey = number | string;
 
 export interface ClientPoint {
   readonly x: number;
@@ -129,6 +137,7 @@ export interface HarnessState extends HarnessStatus {
   readonly renderer: 'webgl' | 'canvas' | 'headless' | 'unknown';
   /** Design height H (EXPAND, D-015) and CSS px per design px. */
   readonly designHeight: number;
+  /** CSS px per design px of the canvas (`1 / ScaleManager.displayScale.x`), unrounded (the cell gate). */
   readonly displayScale: number;
   readonly movesLeft: number | null;
   /** The attempt's action log (`start` first, TECH §6.1 / §11.1). */
@@ -260,10 +269,14 @@ export interface HarnessApi {
    * last sane delta), so game time can run far slower than wall time: gestures rest in game time, not wall time.
    */
   waitGameMs(ms: number): Promise<void>;
-  /** Times the level's EventPlayer started a JUICE cue `id` (screens: shoot inside an effect, review Faz 2 tur 2 #6). */
-  cueCount(id: number): number;
-  /** Resolves once JUICE cue `id` has started more than `after` times. */
-  waitCue(id: number, after: number): Promise<void>;
+  /**
+   * Times the level's EventPlayer started a cue `id` (screens: shoot inside an effect, review Faz 2 tur 2 #6). `id` is
+   * the plan's cue kind: a JUICE number, or an internal kind such as `'teardown'` (JUICE #107 Söküm is planned under
+   * that string kind, never under 107).
+   */
+  cueCount(id: CueKey): number;
+  /** Resolves once cue `id` has started more than `after` times. */
+  waitCue(id: CueKey, after: number): Promise<void>;
   /** "Animasyonları azalt" through the settings stub (`changeSetting`, JUICE §0 rule 8). */
   setReducedMotion(on: boolean): void;
   /**
@@ -304,8 +317,8 @@ export interface HarnessApi {
    * no `^[a-z]+(\.[A-Za-z0-9_]+)+$` text, no debug label on screen).
    */
   texts(): string[];
-  /** TECH §2R.13 timing samples (ms): `kitBake`, `levelBake`, `apply` (services/timings.ts). */
-  timings(): Partial<Record<'kitBake' | 'levelBake' | 'apply', number[]>>;
+  /** TECH §2R.13 timing samples (ms): `kitBake`, `levelBake`, `apply`, `commit`, `saveWrite` (services/timings.ts). */
+  timings(): Partial<Record<TimingKey, number[]>>;
   clearTimings(): void;
   /** TECH §2R.13 "Bellek": every texture source of the game, width × height × 4 bytes, in MB (≤ 64). */
   textureMB(): number;

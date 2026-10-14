@@ -21,6 +21,9 @@ import {
   TEARDOWN_LINE_MS,
 } from '../../src/scenes/level/tutorial/contextTips.ts';
 import { fingerPoints, ghostPoints } from '../../src/scenes/level/tutorial/glove.ts';
+import { planMove } from '../../src/scenes/level/juice/plan.ts';
+import type { PlanContext } from '../../src/scenes/level/juice/plan.ts';
+import type { GameEvent } from '../../src/core/types.ts';
 import { JUICE_VIEW, VIEW } from '../../src/scenes/level/viewConstants.ts';
 import { boardTray, createLayout } from '../../src/theme/layout.ts';
 import { TOKENS } from '../../src/theme/tokens.ts';
@@ -153,6 +156,32 @@ describe('design-lead screens review 1 — code-lead findings', () => {
       tips.update(ms, open, TOKENS.tutorial.visibleMs);
       expect(tips.showing).toBeNull();
     }
+  });
+
+  it("DS-14 the Söküm (JUICE #107) is planned under the cue kind 'teardown', never 107: the screens tool waits on that kind", () => {
+    const teardown: GameEvent = {
+      seq: 0,
+      step: 12,
+      t: 'teardown',
+      toTurn: 1,
+      cause: 'tiling',
+      pieces: [{ pieceId: 1, from: { zone: 'site', x: 6, y: 2, seg: 0 }, to: { zone: 'yard', x: 1, y: 0 } }],
+    };
+    const ctx: PlanContext = {
+      reduced: true,
+      gravity: 'normal',
+      queuedBefore: [],
+      movesBefore: 9,
+      pieceHeight: () => 1,
+    };
+    const kinds = planMove([teardown], ctx, 10).cues.map((c) => c.kind);
+    expect(kinds).toContain('teardown');
+    expect(kinds).not.toContain(107);
+    // the first full run waited on `cueCount(107)`, which is 0 forever: the scenario timed out after the Söküm had played
+    expect(src('tools/screens.ts')).toMatch(/const CUE_TEARDOWN = 'teardown' as const;/);
+    expect(src('src/harness/api.ts')).toMatch(/cueCount\(id: CueKey\): number;/);
+    // tools/ type-check without vite/client: the harness API must not reach the scene graph (import.meta.env)
+    expect(src('src/harness/api.ts')).not.toMatch(/from '\.\.\/scenes\//);
   });
 
   it('ART 7.2 ozalit ghost (DS-03 / DS-30): the silhouette opaque in planUnderlay, then blueprint 35 % and the dashed contour', () => {

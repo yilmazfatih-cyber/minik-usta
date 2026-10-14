@@ -79,8 +79,11 @@ const DEBUG_LABEL = LABEL.toggle;
 const GATE_CELL_CSS = 48;
 /** Söküm fixture id (outside the slice ids; `loadLevelData`). */
 const TEARDOWN_LEVEL_ID = 90;
-/** JUICE #107 Söküm cue; the shot is 600 ms into it (DS-14). */
-const CUE_TEARDOWN = 107;
+/**
+ * JUICE #107 Söküm: the plan schedules it under the internal cue kind `'teardown'` (juice/plan.ts step 12), never under
+ * the number 107 — waiting on 107 never resolves. The shot is 600 ms into it (DS-14).
+ */
+const CUE_TEARDOWN = 'teardown' as const;
 
 type Shoot = (name: string) => Promise<void>;
 
@@ -668,7 +671,8 @@ function cellGate(results: readonly Result[]): string | null {
   const note = r?.notes.find((n) => n.startsWith('level-01 cell'));
   const css = note ? Number(/= ([\d.]+) CSS px/.exec(note)?.[1]) : null;
   if (css === null) return null;
-  return css >= GATE_CELL_CSS ? null : `360x800 level 1 cell ${css} CSS px < ${GATE_CELL_CSS}`;
+  // the note is printed with one decimal; 144 design px × 1/3 is 47.999…, so the gate allows a rounding epsilon
+  return css + 0.05 >= GATE_CELL_CSS ? null : `360x800 level 1 cell ${css} CSS px < ${GATE_CELL_CSS}`;
 }
 
 async function main(): Promise<number> {

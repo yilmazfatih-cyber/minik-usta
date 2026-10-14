@@ -292,6 +292,23 @@ const RibbonQuad = hexes(['top', 'base', 'dark', 'stroke']);
 export const KIT_BUTTON_COLORS = ['green', 'orange', 'blue', 'cream', 'red', 'grey'] as const;
 export const KIT_RIBBON_COLORS = ['orange', 'gold', 'blue'] as const;
 
+/**
+ * ART_REFERENCE v1 (R2-13, 2026-10-14): the `kit.v3` group measured from the owner's reference screens. The visual v3
+ * package reads it sub-group by sub-group and tightens each one into a fixed shape as it lands; until then the whole
+ * tree is typed loosely: `_doc*` keys are stripped, leaves are numbers, strings (#RRGGBB or names), booleans or lists
+ * of those, and any other value is a boot error.
+ */
+const KitV3Leaf = z.union([num, str, z.boolean(), z.array(z.union([num, str, z.boolean()]))]);
+type KitV3Leaf = z.infer<typeof KitV3Leaf>;
+export type KitV3Group = { readonly [key: string]: KitV3Leaf | KitV3Group };
+const stripDocKeys = (value: unknown): unknown =>
+  !value || typeof value !== 'object' || Array.isArray(value)
+    ? value
+    : Object.fromEntries(Object.entries(value).filter(([k]) => !k.startsWith('_doc')));
+const KitV3Group: z.ZodMiniType<KitV3Group, unknown> = z.lazy(() =>
+  z.pipe(z.transform(stripDocKeys), z.record(z.string(), z.union([KitV3Leaf, KitV3Group]))),
+);
+
 const Kit = z.object({
   button: nums([
     'strokePx',
@@ -410,6 +427,8 @@ const Kit = z.object({
     /** ART §15.4: blend of the rays over the plaza; `rayAlpha` is the final α (no code offset). */
     blend: z.enum(['add', 'normal']),
   }),
+  /** ART_REFERENCE v1 measurements (R2-13); see `KitV3Group`. */
+  v3: KitV3Group,
 });
 
 /** UX §13.1 light tutorial (`tutorial.*`, R2-10, K-53). */

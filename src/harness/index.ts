@@ -32,7 +32,7 @@ import { loadLevelById, setLevelSource } from '../scenes/level/levels.ts';
 import { PROLOGUE_SCENE } from '../scenes/flow/launch.ts';
 import { gameAssets } from '../scenes/AssetLoaderScene.ts';
 import type { LevelScene, LevelSceneData } from '../scenes/level/LevelScene.ts';
-import type { JuiceId } from '../scenes/level/juice/catalog.ts';
+import type { CueKind } from '../scenes/level/juice/plan.ts';
 import { tDynamic, upper } from '../services/i18n.ts';
 import { clearTimings, timingSamples } from '../services/timings.ts';
 import { createLayout, designHeight } from '../theme/layout.ts';
@@ -40,6 +40,7 @@ import type { Layout } from '../theme/layout.ts';
 import { TOKENS } from '../theme/tokens.ts';
 import type {
   ClientPoint,
+  CueKey,
   DragKind,
   DragMove,
   DragPlanOptions,
@@ -247,7 +248,9 @@ export function installHarness(game: Phaser.Game): HarnessApi {
       ...status(),
       renderer: rendererName(),
       designHeight: layout().H,
-      displayScale: round2(1 / game.scale.displayScale.x),
+      // unrounded: tools/screens.ts turns the level 1 cell into CSS px with it (TECH §2R.13 "Hücre", 144 / 3 = 48.0 on
+      // 360 × 800; two decimals made that 47.5)
+      displayScale: 1 / game.scale.displayScale.x,
       movesLeft: session?.movesLeft ?? null,
       log,
       ascii: s ? toAscii(s) : null,
@@ -448,14 +451,14 @@ export function installHarness(game: Phaser.Game): HarnessApi {
     planDrag,
     tapPoint,
     waitGameMs,
-    cueCount(id: number): number {
-      return level()?.eventPlayer.cueRuns.get(id as JuiceId) ?? 0;
+    cueCount(id: CueKey): number {
+      return level()?.eventPlayer.cueRuns.get(id as CueKind) ?? 0;
     },
-    async waitCue(id: number, after: number): Promise<void> {
+    async waitCue(id: CueKey, after: number): Promise<void> {
       await waitFor(
-        () => (level()?.eventPlayer.cueRuns.get(id as JuiceId) ?? 0) > after,
+        () => (level()?.eventPlayer.cueRuns.get(id as CueKind) ?? 0) > after,
         DEFAULT_WAIT_MS * 6,
-        `JUICE cue #${id}`,
+        typeof id === 'number' ? `JUICE cue #${id}` : `cue '${id}'`,
       );
     },
     setReducedMotion(on: boolean): void {

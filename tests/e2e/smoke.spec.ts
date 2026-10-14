@@ -24,7 +24,7 @@ import { trowelsOf } from '../../src/core/combo.ts';
 import { loadLevel as compileLevel } from '../../src/core/level/compile.ts';
 import { levelHooks } from '../../src/core/obstacles/registry.ts';
 import { GameSession } from '../../src/core/session.ts';
-import type { DragMove } from '../../src/harness/api.ts';
+import type { DragMove, DragPlanOptions } from '../../src/harness/api.ts';
 import {
   attachGame,
   golden,
@@ -62,6 +62,13 @@ async function open(page: Page): Promise<void> {
 }
 
 const gameMs = (page: Page, ms: number) => page.evaluate((t) => window.__harness!.waitGameMs(t), ms);
+/**
+ * Gesture plan of the smoke run: the same coarse plan as `npm run screens` (8 cells / s, a touch move every 100 ms,
+ * 250 ms rest before the release). The harness paces one touch move per rendered frame and the software GPU renders
+ * ~1,6 frames / s, so the 60 Hz default plan turns one drag into half a minute; the input path (CDP touch → Phaser →
+ * DragController → core) is the same.
+ */
+const E2E_DRAG: DragPlanOptions = { speedCellsPerSec: 8, frameMs: 100, endHoldMs: 250 };
 
 test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
   test('load: the first launch boots into the intro without errors', async ({ page, context }) => {
@@ -85,7 +92,7 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
       page.evaluate((k) => window.__harness!.tapPoint({ kind: 'text', key: k }), key);
     expect(await title('win.title')).toBeNull();
     const moves = await golden(page, 1);
-    await playMoves(gp, moves);
+    await playMoves(gp, moves, E2E_DRAG);
     await waitWindow(page, 'win', 120_000);
     expect(await title('win.title')).not.toBeNull();
     const s = await state(page);
@@ -104,7 +111,7 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
     await open(page);
     await loadLevel(page, 2);
     const moves = await golden(page, 2);
-    await playMoves(gp, moves.slice(0, 2));
+    await playMoves(gp, moves.slice(0, 2), E2E_DRAG);
     await waitInteractive(page);
     const before = await state(page);
     expect(before.savedAttempt).toMatchObject({ levelId: 2, actions: 3 });
@@ -118,7 +125,7 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
     expect(after.ascii).toBe(before.ascii);
     await tap(gp, { kind: 'text', key: 'common.continue' });
     await waitInteractive(page);
-    await playMoves(gp, moves.slice(2));
+    await playMoves(gp, moves.slice(2), E2E_DRAG);
     await waitWindow(page, 'win', 120_000);
     expect((await state(page)).outcome).toBe('won');
     expect(gp.errors).toEqual([]);
@@ -132,7 +139,7 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
     await open(page);
     await loadLevel(page, 2);
     const moves = await golden(page, 2);
-    await playMoves(gp, moves.slice(0, 1));
+    await playMoves(gp, moves.slice(0, 1), E2E_DRAG);
     await waitInteractive(page);
     const lives = (await state(page)).lives;
     for (const stay of [{ kind: 'text', key: 'exit.stay' } as const, { kind: 'close' } as const]) {
@@ -159,13 +166,13 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
     if (!first) throw new Error('level 2 golden is empty');
     await waitInteractive(page);
     const before = await state(page);
-    await gp.touch.gesture(await planDrag(page, first), false);
+    await gp.touch.gesture(await planDrag(page, first, E2E_DRAG), false);
     await gp.cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
     await waitInteractive(page);
     const after = await status(page);
     expect([after.logLength, after.movesMade]).toEqual([before.logLength, 0]);
     expect((await state(page)).hash).toBe(before.hash);
-    await playMoves(gp, [first]);
+    await playMoves(gp, [first], E2E_DRAG);
     expect((await status(page)).logLength).toBe(before.logLength + 1);
     expect(gp.errors).toEqual([]);
   });
@@ -177,7 +184,7 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
     const gp = await attachGame(page, context);
     await open(page);
     await loadLevel(page, 1);
-    await playMoves(gp, await golden(page, 1));
+    await playMoves(gp, await golden(page, 1), E2E_DRAG);
     await waitWindow(page, 'win', 120_000);
     const creates = (await state(page)).levelCreates;
     await tap(gp, { kind: 'text', key: 'common.continue' });
@@ -199,7 +206,7 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
     await waitInteractive(page, 1);
     expect((await state(page)).tutorial).toMatchObject({ index: 0, textKey: 'tut.m.lift' });
     const moves = await golden(page, 1);
-    await playMoves(gp, moves.slice(0, 1));
+    await playMoves(gp, moves.slice(0, 1), E2E_DRAG);
     await waitInteractive(page);
     const before = await state(page);
     expect(before.tutorial).toMatchObject({ index: 1, textKey: 'tut.m.useall' });
@@ -211,7 +218,7 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
     const after = await state(page);
     expect(after.log).toEqual(before.log);
     expect(stepOf(after.tutorial)).toEqual(stepOf(before.tutorial));
-    await playMoves(gp, moves.slice(1));
+    await playMoves(gp, moves.slice(1), E2E_DRAG);
     await waitWindow(page, 'win', 120_000);
     expect(gp.errors).toEqual([]);
   });
@@ -294,7 +301,7 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
       if (trowelsOf(g.state) > 0) k = i;
     }
     expect(k).toBeGreaterThanOrEqual(0);
-    await playMoves(gp, moves.slice(0, k + 1));
+    await playMoves(gp, moves.slice(0, k + 1), E2E_DRAG);
     await waitInteractive(page, 5);
     const before = (await state(page)).contextTip;
     expect(before.showing === 'goldtrowel' || before.queued.includes('goldtrowel')).toBe(true);
@@ -358,9 +365,9 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
       { pieceId: 0, to: { ix: 4, iy: 0, mode: 0 } },
       { pieceId: 1, to: { ix: 4, iy: 2, mode: 0 } },
     ];
-    await playMoves(gp, moves.slice(0, 1));
+    await playMoves(gp, moves.slice(0, 1), E2E_DRAG);
     await waitInteractive(page, 90);
-    await playMove(gp, moves[1] as DragMove);
+    await playMove(gp, moves[1] as DragMove, E2E_DRAG);
     await page.waitForFunction(() => window.__harness!.state().contextTip.showing === 'teardown', null, {
       timeout: 30_000,
     });

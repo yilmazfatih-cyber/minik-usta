@@ -415,7 +415,10 @@ async function ftueRun(
     let taps = 0;
     if (skip) {
       // the one-tap path: "Geç" (`common.skip`) as soon as the intro's first panel shows
-      await gp.page.waitForFunction(() => window.__introShown !== undefined, null, { timeout: 120_000, polling: 50 });
+      await gp.page.waitForFunction(() => window.__introShown !== undefined, null, {
+        timeout: 120_000,
+        polling: 50,
+      });
       await tap(gp, { kind: 'text', key: 'common.skip' });
       taps = 1;
     }

@@ -11,11 +11,32 @@ dosyalarım (`src/**` tokens.json hariç, `tools/**`, `tests/**`, `docs/TECH_DES
 
 ## Yarım kalan WP-K + WP-O'nun durumu (devralınan çalışma ağacı)
 
-Devralınan ağaçta `npm run typecheck` kırmızıydı (`HomeScene.ts(573)` `this.geo.button`: `HomeLayout`'ta böyle bir alan
-yok; doğrusu `play`) ve `npx vitest run` 2 kırmızıydı: `layering.test` (sahne artık `timed('apply', () => game.apply(action))`
-ile sarıyor — TECH §2R.13 adım 12 kapısının ölçümü; test deseni güncellendi) ve `checks.test` "K-53 every drag / hold
-hand …" (8 solver koşusu 5 000 ms varsayılan zaman aşımını dolu makinede aşıyor; solver'a bağlı test 60 s aldı).
-Prettier 8 dosyada kırmızıydı (biçim). Geri kalanı gözden geçirildi ve tamam bulundu:
+İki devralma oldu. **Birinci oturum (b81be89'a kadar):** `npm run typecheck` kırmızıydı (`HomeScene.ts(573)`
+`this.geo.button`: `HomeLayout`'ta böyle bir alan yok; doğrusu `play`, DS-06 yardımcısı `lockedTabBalloon`'a taşındı) ve
+`npx vitest run` 2 kırmızıydı: `layering.test` (sahne `timed('apply', …)` ile sarıyor) ve `checks.test` "K-53 every drag /
+hold hand …" (solver'a bağlı, 60 s zaman aşımı). **İkinci oturum (bu kapanış, b81be89 sonrası):** `typecheck` yine
+kırmızıydı — `tools/perf.ts(360–361)` `timings.commit` / `timings.saveWrite`: harness `timings()` tipi yalnız
+`kitBake | levelBake | apply` sayıyordu, `services/timings.ts` `TimingKey`'e bağlandı (`commit`, `saveWrite` dahil);
+Prettier `tools/perf.ts`'te kırmızıydı. `vitest` 4 kırmızıydı ve kapatıldı: (1) "TECH 2R.7 every key of tokens.json …"
+— design-lead'in yeni `kit.v3` grubu (R2-13 stil öğrenimi) tiplenmemişti → `TokensSchema.kit.v3 = KitV3Group`
+(özyinelemeli gevşek ağaç: `_doc*` atılır, yapraklar sayı / dize / boolean / liste; görünüm v3 paketi alt grupları
+tüketirken sabit şekle daraltır), `PENDING_TOKEN_KEYS` boş kaldı; (2) "TECH 2R.12 WP-L every STORY 6 / 6A / 7 row …" —
+STORY §7.8'in beş anahtarı (`loading.text`, `levelStart.boosters`, `levelStart.play`, `reward.tap`, `reward.ready`)
+tr/en'e birebir girdi; (3) "K-51 the drafts 1–7 and 9 …" 8 solver koşusu 5 s varsayılanı aşıyordu → 120 s;
+(4) `layering` "… commits drags through GameSession.apply" deseni: sürükleme bırakma artık `timed('commit', …)` ile
+sarılı (perf raporunun "release split" bilgisi), desen güncellendi. **Araç hatası (ilk tam `screens` koşusunda bulundu):**
+`tools/screens.ts` Söküm karesini `waitCue(107)` ile bekliyordu; JUICE #107 planda sayı değil `'teardown'` iç ipucu
+türüyle kayıtlıdır (`juice/plan.ts` adım 12), `cueRuns.get(107)` hep 0 → `teardown` senaryosu Söküm oynadıktan sonra
+zaman aşımına düşüyordu (kare `_failed-teardown.png`: blok sahaya dönmüş). Harness `cueCount` / `waitCue` artık
+`CueKind` (sayı ya da iç tür) alır, araç `'teardown'` bekler; test "DS-14 the Söküm (JUICE #107) is planned under the
+cue kind 'teardown' …" (plan + araç kaynağı). **İkinci araç bulgusu (hücre kapısı):** harness `state().displayScale`
+iki ondalığa yuvarlanıyordu (360 × 800'de 1/3 → 0,33), araç 144 × 0,33 = 47,5 CSS px yazıp ≥ 48 kapısını düşürüyordu;
+gerçek hücre tam 48,0 (390 × 844'te de 51,8 yerine 52,0). Ölçek yuvarlamasız, kapıda 0,05 px tolerans — yerleşim
+değişmedi. **Üçüncü bulgu (typecheck):** `tsconfig.tools.json` `vite/client` tipsiz derlenir; harness `api.ts`'e
+eklediğim `juice/plan.ts` tip ithali araç projesini sahne grafiği üzerinden `services/platform.ts`'in `import.meta.env`'ine
+ulaştırıp "Property 'env' does not exist on type 'ImportMeta'" veriyordu → `api.ts` sahne dosyası ithal etmez
+(`CueKey = number | string`, test "… the harness API must not reach the scene graph"). Geri kalanı gözden geçirildi ve
+tamam bulundu:
 
 - **Kayıt göçü (TECH §2R.10):** `SAVE_VERSION` 2, `RULES_VERSION` 2, `MIGRATIONS[1]` aynı şekil; okunamayan Faz 2
   `inLevel` göçte cezasız iptal (`voidUnreadableAttempt`), okunan ama `rulesVersion` 1 olan deneme açılışta K-43/4 ile

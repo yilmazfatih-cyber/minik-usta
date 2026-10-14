@@ -95,7 +95,8 @@ describe('scene layering (TECH 1.1–1.4)', () => {
   it('TECH 1.4 / 2R.15 the level scene commits drags through GameSession.apply (one package) and asks the core for the shadow', () => {
     const scene = readFileSync(join(ROOT, 'src/scenes/level/LevelScene.ts'), 'utf8');
     expect(scene).toMatch(
-      /const move = \{ kind: 'drag', pieceId: id, to: node \} as const;\s+const res = this\.applyAction\(move/,
+      // the release is one package; `timed('commit')` wraps it for the perf report's release split (information)
+      /const move = \{ kind: 'drag', pieceId: id, to: node \} as const;\s+(\/\/[^\n]*\n\s*)?const res = timed\('commit', \(\) => this\.applyAction\(move/,
     );
     expect(scene).toMatch(/const res = timed\('apply', \(\) => game\.apply\(action\)\);/); // TECH §2R.13 step 12 gate
     expect(scene).toMatch(/computeFall\(s, session\.pieceId, node, \{ rules: this\.hooks\.fall \}\)/);

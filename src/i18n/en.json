@@ -165,11 +165,18 @@
     },
     "title": "Builder League"
   },
+  "levelStart": {
+    "boosters": "Choose your boosters",
+    "play": "Play"
+  },
   "lives": {
     "ad": "Watch an ad · +1 life (today {n}/{max})",
     "full": "Full lives ({max})",
     "title": "Refill lives",
     "wait": "Wait"
+  },
+  "loading": {
+    "text": "Loading"
   },
   "lose": {
     "ad": "Watch an ad · +{n} moves",
@@ -334,6 +341,10 @@
       "bridge": "Your place on the bridge is safe.",
       "title": "The game was updated"
     }
+  },
+  "reward": {
+    "tap": "Tap to collect",
+    "ready": "Your reward is ready"
   },
   "settings": {
     "feedback": "Feedback",

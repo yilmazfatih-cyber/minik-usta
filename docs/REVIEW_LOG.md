@@ -1434,9 +1434,16 @@ Kapanış dosyası: `docs/review_inbox/code-lead-2R-screens-1-closure.md` (KAPAN
   yalnız "TECH 2R.7 every key of tokens.json … reaches the runtime tokens" testi `kit.v3`'ü tiplenmemiş sayar. Öneri:
   `TokensSchema.kit`'e `v3` alt şeması (ya da geçici olarak `PENDING_TOKEN_KEYS = ['kit.v3']`). `meta.visualLanguage`
   "v3 …" oldu (dize; şema değişmez). Eski `kit.*` anahtarlarına dokunulmadı.
+  → KAPANDI (code-lead, 2026-10-14): `TokensSchema.kit.v3` = `KitV3Group` (`src/theme/tokens.ts`): özyinelemeli gevşek
+  ağaç — `_doc*` anahtarları atılır, yapraklar sayı / dize / boolean / bunların listesi, başka değer açılış hatası;
+  `PENDING_TOKEN_KEYS` boş kaldı, "TECH 2R.7 every key …" testi yeşil. Görünüm v3 paketi her alt grubu tüketirken
+  sabit şekle (`z.object`) daraltır; `kit.v3` değerleri `TOKENS.kit.v3.<grup>.<anahtar>` ile şimdiden okunabilir.
 - [design-lead → code-lead] **i18n:** STORY §7.8 beş anahtar (`loading.text`, `levelStart.boosters`, `levelStart.play`,
   `reward.tap`, `reward.ready`) tr/en'e girmeli ("every STORY 6 / 6A / 7 row … is in tr and en" testi bunları
   ister).
+  → KAPANDI (code-lead, 2026-10-14): beş anahtar STORY §7.8 metinleriyle birebir `tr.json` / `en.json`'da (`loading`,
+  `levelStart`, `reward` grupları); "D-017 every text is verbatim …" ve WP-L testleri yeşil. Henüz okuyan ekran yok
+  (yükleme v3, bölüm başı v3, ödül katmanı görünüm v3 paketinde).
 - [design-lead → code-lead] **uygulama listesi (öncelik sırası):** (1) `kit.v3.button` L/M/S çizici + `close` + `plus`
   + `badge` (ART_REFERENCE §3.1–§3.5); (2) `panel` çivit pencere + iç plaka + krem kart (§3.7) ve binen başlık / iki
   halkalı yazı (§3.6, §4); (3) bölüm başı penceresi v3 (UX §4.1) ve ana sayfa v3 ölçüleri (§9.2: düğme 600×200 alttan
@@ -1446,6 +1453,10 @@ Kapanış dosyası: `docs/review_inbox/code-lead-2R-screens-1-closure.md` (KAPAN
   #74 / #105 ile); (6) öğretici balonu v3 (§3.14) + eldiven yeniden çizimi; (7) karakter ve ikon SVG'leri v3 diline
   (design-lead yazar; kontur yok, kenar ışığı, AO — ASSET §16.2 güncellemesi ART §17). Kabul: `npm run screens` →
   ART_REFERENCE §10 rubriği, her boyut ≥ 4.
+  → AÇIK (code-lead, 2026-10-14): görünüm v3 paketinin iş listesi olarak alındı; bu turun kapsamı dışında (WP-K + WP-O
+  bitirme ve ekran incelemesi 1 kapanışı, "yalnız doğru içerik"). Sıra aynen (1)–(6); (7) SVG'ler design-lead'den
+  geldikçe katalog satırları açılır. Ön koşul tamam: `kit.v3` tipli, STORY §7.8 anahtarları i18n'de, `npm run screens`
+  seti ve kapıları çalışıyor (rubrik puanlama bu set üzerinden yapılacak).
 - [design-lead → product-lead] Bölüm başı penceresi v3'te içerik aynı (hedefler, seri, 3 yuva, Oyna); yalnız görünüm.
   "Can yok" durumunda düğme çifti: krem M "Can bekleniyor" + yeşil L "Doldur" (UX §4.1).
 - [design-lead → orkestratör] **ÖNERİ (proje sahibine):** saha zemini sıcak kum (#E9C891) kalsın mı, referansla birebir

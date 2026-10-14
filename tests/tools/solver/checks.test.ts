@@ -181,8 +181,9 @@ describe('K-51 puzzle requirements', () => {
   });
 
   it('K-51 the drafts 1–7 and 9 meet K-51 and K-52 with no error and no warning', () => {
+    // 8 solver runs (the goldens' levels, no cache): well over the 5 s default on a busy machine
     for (const n of [1, 2, 3, 4, 5, 6, 7, 9]) expect(solve(draft(n)).issues, `level ${n}`).toEqual([]);
-  });
+  }, 120_000);
 });
 
 describe('K-52 move budget and K-46 YAO', () => {

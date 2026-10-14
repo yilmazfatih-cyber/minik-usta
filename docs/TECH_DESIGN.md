@@ -1509,7 +1509,8 @@ kalır; yalnız `required` dalları silinir.
 3. **Araçlar (§2R.11).** `tools/screens.ts` Faz 2R seti (ana sayfa 7, `level-01…10` + 2 yedek, öğretici 4, kazanma 2,
    güçlendirici 8, Söküm 2, pencereler 5; kısa profillerde Bölüm 1–5); kapılar: ham i18n anahtarı (DS-01), `DBG` metni ve
    `#mu-debug` DOM kökü (DS-20), 360 × 800'de Bölüm 1 hücresi ≥ 48 CSS px; `teardown-line` karesi #107'nin +600 ms'inde
-   (DS-14). `tools/perf.ts` kapıları §2R.13 tablosundaki gibi (CPU tarafı 4×: sürükleme / kazanma / ana sayfa ≥ 50 FPS,
+   (DS-14; Söküm planda `'teardown'` iç ipucu türüyle kayıtlıdır, harness `cueCount` / `waitCue` `CueKind` alır — ilk
+   tam koşuda `waitCue(107)` hiç dönmüyordu, test "DS-14 the Söküm (JUICE #107) is planned under the cue kind …"). `tools/perf.ts` kapıları §2R.13 tablosundaki gibi (CPU tarafı 4×: sürükleme / kazanma / ana sayfa ≥ 50 FPS,
    p95 ≤ 25 ms, FTUE ≤ 10 s ve ≤ 3 dokunuş, pişirme ≤ 150 / 200 ms, adım 12 p99 ≤ 2 ms ve en kötü ≤ 8 ms, doku ≤ 64 MB).
    `test:rules --phase 2R` `package.json`'da (76 kimlik; `CLAUDE.md` tablosu orkestratörün). e2e duman testi
    (`tests/e2e/smoke.spec.ts`) Faz 2R bölümleri ve fikstürleriyle.
