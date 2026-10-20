@@ -1508,9 +1508,13 @@ kalır; yalnız `required` dalları silinir.
    okunur seçili kutu; Ayarlar penceresinin son öğesi krem 640 × 128.
 3. **Araçlar (§2R.11).** `tools/screens.ts` Faz 2R seti (ana sayfa 7, `level-01…10` + 2 yedek, öğretici 4, kazanma 2,
    güçlendirici 8, Söküm 2, pencereler 5; kısa profillerde Bölüm 1–5); kapılar: ham i18n anahtarı (DS-01), `DBG` metni ve
-   `#mu-debug` DOM kökü (DS-20), 360 × 800'de Bölüm 1 hücresi ≥ 48 CSS px; `teardown-line` karesi #107'nin +600 ms'inde
-   (DS-14; Söküm planda `'teardown'` iç ipucu türüyle kayıtlıdır, harness `cueCount` / `waitCue` `CueKind` alır — ilk
-   tam koşuda `waitCue(107)` hiç dönmüyordu, test "DS-14 the Söküm (JUICE #107) is planned under the cue kind …"). `tools/perf.ts` kapıları §2R.13 tablosundaki gibi (CPU tarafı 4×: sürükleme / kazanma / ana sayfa ≥ 50 FPS,
+   `#mu-debug` DOM kökü (DS-20), 360 × 800'de Bölüm 1 hücresi ≥ 48 CSS px; `teardown-line` karesi #107'nin +600 ms'inde,
+   senaryo tam hareketle (DS-14; azaltılmış harekette Söküm `reducedFade` 150 ms'de biter ve kare oturmuş tahta olur —
+   ilk tam koşuda iki profilde de `teardown-line` = `teardown-after` çıktı; Söküm planda `'teardown'` iç ipucu türüyle
+   kayıtlıdır, harness `cueCount` / `waitCue` `CueKind` alır — ilk tam koşuda `waitCue(107)` hiç dönmüyordu, test "DS-14
+   the Söküm (JUICE #107) is planned under the cue kind …"). e2e duman testinde kazanma beklemesi `WIN_WAIT_MS` 300 s:
+   azaltılmış harekette de kazanma dizisi oyun zamanında koşar ve yazılım GPU'sunda oyun zamanı kare başına 16,7 ms
+   ilerler; eldiven iddiası `tutorialHand.hidden === false` beklemesinden sonra (kenar karesinde α 0). `tools/perf.ts` kapıları §2R.13 tablosundaki gibi (CPU tarafı 4×: sürükleme / kazanma / ana sayfa ≥ 50 FPS,
    p95 ≤ 25 ms, FTUE ≤ 10 s ve ≤ 3 dokunuş, pişirme ≤ 150 / 200 ms, adım 12 p99 ≤ 2 ms ve en kötü ≤ 8 ms, doku ≤ 64 MB).
    `test:rules --phase 2R` `package.json`'da (76 kimlik; `CLAUDE.md` tablosu orkestratörün). e2e duman testi
    (`tests/e2e/smoke.spec.ts`) Faz 2R bölümleri ve fikstürleriyle.
@@ -1532,7 +1536,7 @@ kalır; yalnız `required` dalları silinir.
    derlemesi kaynak haritalı; `harnessClient` `pageerror` yığınını saklar. (f) 'clock' hızında bütün 60 Hz dokunuş
    hareketleri SwiftShader'ın 700 ms'lik tek karesine yığılır: kare başına "touch handlers" gerçek cihazdakinin ~40
    katı okunur — CPU-tarafı sürükleme sayıları bu sanal ortamda üst sınırdır (yorum aşağıda).
-6. **Kapı sonuçları (bu tur):** __TECH_GATES__
+6. **Kapı sonuçları (bu tur):** `npm run check` yeşil (vitest 102 / 2023, rules 76 kimlik); `npm run build` yeşil (ilk yük 588,4 / 620 KB); `npm run levels:check` yeşil (10 / 10, 0 warn); e2e 11 / 11 (38 dk); `screens` 90 kare, 0 hata, kapılar temiz, hücre 48,0 CSS px; `perf` (SwiftShader, CPU tarafı 4×) 7 PASS / 6 FAIL — sürükleme 59,1 fps ve p95 12,8 ms, ana sayfa 60 fps, girdi ≤ 1 kare, adım 12 en kötü 7,3 ms, doku 54,9 MB geçti; kazanma 38,8 fps (açılış karesi 157 ms), ilk bırakma karesi 170,7 ms (JIT-soğuk commit), FTUE 13,1 s (giriş 5,4 s + yazılım GPU karesi), pişirme 699 / 684 ms, adım 12 p99 3,0 ms düştü; 1×'te bütün değerler kapı altında (bölüm pişirme 158 ms hariç). Öneriler §2R.14'e eklendi.
 
 ### 2R.12 İş paketleri (son hali; paralel yazılabilir)
 
@@ -1637,6 +1641,23 @@ süresince Faz 2R kuralları `--phase 2` kapısının dışındadır; WP-K'de ka
   izin verirse 144'e kadar büyür" olarak okunsun. Kod hazır (§2R.1); token design-lead'in.
 - **P-2R-7 (orkestratöre):** Faz 2R iki paralel code-lead oturumuyla yürütülsün (çekirdek + araç / görünüm + meta).
   Tek şeritte ≈ 7,1 hf, iki şeritte ≈ 3,8 hf; ek ücret yok, paketler ayrık dosya alanlarındadır (§2R.12, §14.0).
+- **P-2R-8 (perf kapıları, 2026-10-14 koşusu; code-lead → product-lead / design-lead / orkestratör):** `npm run perf`
+  SwiftShader'da 4× CPU'da 6 kapıyı düşürüyor, 1×'te hepsi geçiyor (§2R.11 madde 6). Kökler ve ucuz öneriler, öncelik
+  sırasıyla: (a) **Kazanma katmanının açılış karesi** 157 ms (1×'te 39 ms = gerçek cihazda da bir kare düşer):
+  `WinScreen` metinleri, ışın ve kapsülleri bölüm başında pişirme geçişinin arkasında kurulup gizli tutulsun (TECH §10.7
+  madde 6 ilkesi; görünüm v3 paketinde kazanma v3 ile birlikte, sahibi code-lead). (b) **Oturumun ilk bırakma karesi**
+  170,7 ms (dokunma işleyicileri 129 ms; 1×'te 20,9 ms): JIT-soğuk commit + ilk kayıt yazımı — bölüm başında klonlanmış
+  durumda bir kuru `apply` ısınması ve kayıt yazımının bir sonraki kareye ertelenmesi (`services/save` yazımı zaten tek
+  yazımdır; erteleme K-43 "bırakışta yazılır" kuralını bozmaz: aynı makro görev zinciri). (c) **FTUE 13,1 s (4× + Fast
+  4G)**: yük + açılış 3,9 s, giriş panelleri 5,4 s (`duration.ftuePanelAuto` 1800 × 3, design-lead token'ı), bölüm
+  ekranına geçiş 3,8 s (fade + pişirme 699 ms + yazılım GPU karesi). 1× ağsız 7,9 s. Karar isteği: kapı "1× + Fast 4G ≤
+  10 s" olarak mı okunsun, yoksa `ftuePanelAuto` 1800 → 1400 (toplam −1,2 s) mi? (d) **Pişirmeler** 699 / 684 ms (1×'te
+  158 / 150; kapı 150 / 200): kanvas 2B rasterı SwiftShader'da tamamen CPU'da; cihazda düşer ama 1× değeri de sınırda —
+  §2R.13 önlemi "renk başına tembel pişirme" (yalnız bölümde geçen renkler, ilk kullanımda) WP-F'in devamı olarak
+  görünüm v3 paketine. (e) **Adım 12 p99** 3,0 ms (max 7,3 ≤ 8; 1×'te 0,4 / 4,8): 2 000 eylemlik koşuda p99'u Bölüm 8 /
+  10'un derin D3a aramaları ve GC duraklamaları belirliyor; `d3aMaxExpansions` tablo bakışıyla sınırlı, kapı 4×'te 1 ms
+  aşılıyor — Faz 3 bölümleriyle yeniden ölçülecek, şimdilik açık. Bu beş madde bu paketin (araçlar) kapsamı dışında;
+  kapılar tasarım çıtası olarak kalır, SwiftShader değerleri üst sınırdır (§2R.11 madde 5f).
 
 ### 2R.15 Sunum kancaları (DL-2R-15; K-09, K-26, K-34 kanca 5, K-44, K-54)
 

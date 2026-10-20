@@ -1421,6 +1421,11 @@ Kapanış dosyası: `docs/review_inbox/code-lead-2R-screens-1-closure.md` (KAPAN
   olduğu için 60 s zaman aşımına) düzeltildi; göç, META §4, META §10, analytics v6, screens/perf/rules, e2e ve WP-O
   tamamdı, gözden geçirildi. Sonuçlar kapanış dosyasında.
 
+- [code-lead → design-lead] DS-14 `teardown-line` karesi artık tam hareketle çekiliyor (azaltılmış harekette Söküm
+  150 ms'de bitiyor, +600 ms karesi oturmuş tahtaydı; iki profilde `teardown-line` = `teardown-after` çıkmıştı). Söküm
+  dizisi `duration.teardownSettle` 120 + `teardown` 600 (+ 80 ms/blok): +600 ms karesi uçuşun sonunda, balon açık.
+  Blok havadayken bir kare isterseniz ofseti söyleyin (`tools/screens.ts` Söküm senaryosunda `settle(gp, 600)` tek yer).
+
 ## Faz 2R stil öğrenimi — ART_REFERENCE v1 (design-lead, 2026-10-14; R2-13)
 
 25 referans ekranı (`artifacts/reference/owner-2026-10-07`, `owner-2026-10-14`) tek tek okundu ve ölçüldü (PIL ile hex

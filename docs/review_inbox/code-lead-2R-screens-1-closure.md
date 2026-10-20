@@ -35,8 +35,21 @@ gerçek hücre tam 48,0 (390 × 844'te de 51,8 yerine 52,0). Ölçek yuvarlamas�
 değişmedi. **Üçüncü bulgu (typecheck):** `tsconfig.tools.json` `vite/client` tipsiz derlenir; harness `api.ts`'e
 eklediğim `juice/plan.ts` tip ithali araç projesini sahne grafiği üzerinden `services/platform.ts`'in `import.meta.env`'ine
 ulaştırıp "Property 'env' does not exist on type 'ImportMeta'" veriyordu → `api.ts` sahne dosyası ithal etmez
-(`CueKey = number | string`, test "… the harness API must not reach the scene graph"). Geri kalanı gözden geçirildi ve
-tamam bulundu:
+(`CueKey = number | string`, test "… the harness API must not reach the scene graph"). **Üçüncü oturum**
+(2026-10-14, bu kapanışın son hali): devralınan ağaçta `npm run check`, `npm run build`, `npm run levels:check` zaten
+yeşildi (görev notundaki `HomeScene.ts(573)` hatası ikinci oturumda kapanmıştı); açık kalan üç şey e2e'nin 2 kırmızısı,
+bayat perf raporu (10:52, `applyBench` öncesi) ve kapı sonuçlarının bu belgeye yazılmamış olmasıydı. (1) e2e "UX 13.1
+… the drag glove plays": iddia `tutorial.phase === 'shown'` olur olmaz okunuyordu; eldiven `shown` kenarından itibaren
+160 ms'de belirir ve kenar karesinde α 0'dır (`TutorialView.gloveAlpha`), harness `hidden: true` veriyordu → test
+`tutorialHand.hidden === false` olana kadar bekler, sonra türün `drag` olduğunu ister (ürün davranışı doğru, test
+zamanlaması yanlıştı). (2) e2e "K-43 level 2 … then the golden wins": kazanma penceresi 120 s duvar bütçesini aşıyordu
+— azaltılmış harekette de dilim kilidi + kamyon + kazanma girişi OYUN zamanında koşar ve SwiftShader'da oyun zamanı
+0,6 s'lik kareye 16,7 ms ilerler (TECH §10.7 madde 7) → dört kazanma beklemesi ortak `WIN_WAIT_MS` 300 s (screens ile
+aynı). (3) `tools/screens.ts` Söküm senaryosu: azaltılmış harekette Söküm `reducedFade` 150 ms'de biter, "+600 ms"
+karesi oturmuş tahtadır — iki profilde de `teardown-line.png` ile `teardown-after.png` bayt bayt aynıydı → senaryo tam
+hareketle koşar (DS-15 hayalet karesi gibi); dizi 120 ms oturma + 600 ms uçuş (+ 80 ms/blok) olduğu için +600 ms karesi
+uçuşun sonunda, balon açık (design-lead ofseti değiştirmek isterse `settle(gp, 600)` tek yer). Geri kalanı gözden
+geçirildi ve tamam bulundu:
 
 - **Kayıt göçü (TECH §2R.10):** `SAVE_VERSION` 2, `RULES_VERSION` 2, `MIGRATIONS[1]` aynı şekil; okunamayan Faz 2
   `inLevel` göçte cezasız iptal (`voidUnreadableAttempt`), okunan ama `rulesVersion` 1 olan deneme açılışta K-43/4 ile
@@ -114,8 +127,9 @@ tamam bulundu:
   yalnız metin, alt kenarı vinç alanı tepesinin 16 px üstünde (`hintStripY`); krem `TextButton` "Vazgeç" silindi.
   `screens` `flow-hammer-pick` ve `flow-trowel-pick` × ile iptali doğrular. Test "UX 5.2 step 1 …")
 - [DS-14] → KAPANDI (`TEARDOWN_LINE_MS = duration.teardownLine` 2400; kilitli dizi satırları teardown / truckhelp.free /
-  reshuffle bu süreyle, kuyruklu satırlar 4000; `tools/screens.ts` `teardown-line` karesi Söküm'ün (#107) +600 ms'inde ve
-  `tut.ctx.teardown` görünür değilse hata. Test "UX 13.1 locked-sequence lines (DS-14)")
+  reshuffle bu süreyle, kuyruklu satırlar 4000; `tools/screens.ts` `teardown-line` karesi Söküm'ün (#107) +600 ms'inde
+  **tam hareketle** (azaltılmış harekette Söküm 150 ms'de bittiği için kare oturmuş tahtaydı) ve `tut.ctx.teardown`
+  görünür değilse hata. Test "UX 13.1 locked-sequence lines (DS-14)")
 - [DS-15] → KAPANDI (`tutorial/glove.ts` `ghostPoints`: eldiven parmak uzayında, bloğun α 0,55 hayaleti blok uzayında
   — saha içi 1 hücrelik kaydırma düz, çapraz değil; hayalet yol başında 160 ms'de kalkar; noktalı iz hayaleti izler.
   Bölüm 1 izi vinç alanından geçer. Ekran `tutorial-l01-ghost-motion` (hareket açık). Test "UX 13.1 tutorial block
@@ -149,9 +163,9 @@ tamam bulundu:
 
 (aşağıdaki değerler bu turun koşularıdır; ayrıntı TECH §2R.11 uygulama notu)
 
-- `npm run check`: __CHECK__
-- `npm run build`: __BUILD__
-- `npm run levels:check`: __LEVELS__
-- `npm run perf`: __PERF__
-- `npm run screens`: __SCREENS__
-- e2e (`npx playwright test -c tests/e2e/playwright.config.ts`): __E2E__
+- `npm run check`: YEŞİL — typecheck (3 tsconfig) · eslint · prettier · vitest 102 dosya / 2023 test (100 s) · `test:rules --phase 2R` 76 kimlik (K 46, engel 5, E 22, N 3)
+- `npm run build`: YEŞİL — `assets:check` 33 SVG, indirme 257,7 / 900 KB, doku 15,1 / 64 MB · vite 266 modül · `verify-dist` ilk yük 588,4 / 620 KB gzip, v2 görsel 257,7 / 1024 KB, 63 dosya, hata ayıklama / harness kodu yok (R-20)
+- `npm run levels:check`: YEŞİL — validate + solve: 10 bölüm çözüldü, 0 error, 0 warning; YAO 3/4 … 10/10, K-52 bandı tutuyor; bot (WP-N, Faz 3) yok, atlandı
+- `npm run perf`: SARI (çıkış 1; yazılım GPU'su SwiftShader, CPU tarafı 4×): **PASS 7** — sürükleme ortalama 59,1 fps ≥ 50, sürükleme p95 12,8 ms ≤ 25, ana sayfa 60 fps, FTUE 0 dokunuş ≤ 3, adım 12 en kötü 7,3 ms ≤ 8, doku 54,9 MB ≤ 64, girdi gecikmesi p95 / max 1 kare (1404 örnek); **FAIL 6** — kazanma ortalama 38,8 fps (p95 93,2 ms; kazanma katmanının açılış karesi 157 ms, 1×'te 39 ms), sürüklemede > 50 ms kare 10 (en uzunu 170,7 ms Bölüm 1 ilk bırakma: dokunma işleyicileri 129 ms = oturumun ilk commit'i, JIT-soğuk; 1×'te en kötü 20,9 ms), FTUE 13,1 s > 10 s (giriş 3,9 s'de, üç panel 5,4 s otomatik ilerleme = tasarım token'ı, bölüm ekranı 13,1 s'de; "Geç" yolu 10,6 s; 1× ağsız 7,9 s), bölüm pişirme 699 ms > 150 (1×'te 158), kit pişirme 684 ms > 200 (1×'te 150), adım 12 p99 3,0 ms > 2 (1×'te 0,4). 1× koşusunda bütün ölçütler kapı değerlerinin altında (bölüm pişirme 158 hariç, +8 ms). Rapor `artifacts/perf/report.json`; yorum ve öneriler "Bilinen sorunlar" bölümünde
+- `npm run screens`: YEŞİL — 90 kare (390×844 ve 360×800 40'ar; 390×763 ve 360×740 5'er), 0 senaryo hatası, 0 konsol hatası, ham i18n anahtarı 0, `DBG` / `#mu-debug` 0 (DS-01, DS-20), hücre kapısı 360×800 Bölüm 1 = 48,0 CSS px (390×844 52,0); `teardown-line` ≠ `teardown-after` (tam hareket). Koşu `node tools/screens.ts --profile <ad>` ile profil çiftleri paralel (harness derlemesi bir kez; aynı senaryo ve kapılar), duvar süresi ≈ 100 dk; `npm run screens` aynı seti sırayla çeker
+- e2e (`npx playwright test -c tests/e2e/playwright.config.ts`): YEŞİL — 11 / 11 geçti, 38,3 dk (Bölüm 1 golden 6,4 dk, Bölüm 2 devam + kazanma 5,5 dk, Bölüm 5 Mala 5,3 dk); bu turda düzeltilen iki test dahil

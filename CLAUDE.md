@@ -71,7 +71,7 @@
 | `npm run screens`         | Playwright ekran görüntüleri (390×844, 360×800, kısa profiller) → `artifacts/screens/` | Hazır |
 | `npm run perf`            | 4× CPU yavaşlatmalı performans + FTUE kapıları → `artifacts/perf/` | Hazır |
 | `npm run build:harness`   | Playwright kancalı test derlemesi → `artifacts/harness/` (üretime girmez) | Hazır |
-| `npm run test:rules`      | K-xx kural kapsamı denetimi (`--phase 2`)                   | Hazır |
+| `npm run test:rules`      | K-xx kural kapsamı denetimi (`--phase 2R`)                  | Hazır |
 
 Playwright önceden kurulu Chromium'u kullanır (`/opt/pw-browsers/chromium`); `playwright install` çalıştırılmaz.
 

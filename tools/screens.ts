@@ -4,7 +4,7 @@
  * `design-lead-2R-screens-1.md` DS-01, DS-14, DS-20).
  *
  * Every scenario starts in a fresh browser context on the harness build served by `vite preview --mode harness`, with
- * reduced motion on (still frames, JUICE §0 rule 8; one tutorial shot runs with full motion for the DS-15 ghost) and a
+ * reduced motion on (still frames, JUICE §0 rule 8; the DS-15 ghost shot and the Söküm run with full motion) and a
  * seeded save where it needs one (prologue seen, levels won so far, META §4 boosters). It reaches its screens only
  * through the game's own input path: taps and drags are CDP touch gestures (tools/lib/harnessClient.ts) planned by
  * `window.__harness` from core queries; nothing writes the game state. Fixture boards (the Söküm dead end) go through
@@ -18,7 +18,7 @@
  * - win: `win-v2`, `win-v2-loop` (META §10 replay: base coins only, no star);
  * - boosters: `flow-hammer-pick` (× on the slot, DS-13), `flow-hammer-hit`, `flow-hammer-after`, `booster-no-target`,
  *   `flow-crane-pick`, `flow-crane-spots`, `flow-crane-after`, `flow-trowel-pick` (× in the strip);
- * - Söküm: `teardown-line` (+600 ms of #107, DS-14) and `teardown-after`;
+ * - Söküm (full motion): `teardown-line` (+600 ms of #107, the blocks on their way back, DS-14) and `teardown-after`;
  * - level 2 windows: `pause`, `exit-m0`, `lose-1-offer` (`lose.blocksLeft`), `lose-2-life`, `resume-strip`.
  * The short views 390 × 763 and 360 × 740 (`SHORT_PROFILES`) get the level 1–5 starts (tutorial bubble placement).
  *
@@ -494,6 +494,9 @@ const SCENARIOS: readonly Scenario[] = [
     id: 'teardown',
     shots: ['teardown-line', 'teardown-after'],
     seed: { won: 1 },
+    // full motion: with reduced motion the Söküm is instant and "+600 ms into it" is the settled board (the first full
+    // run shot two identical frames); here the blocks are on their way back and the line is up (DS-14)
+    reducedMotion: false,
     run: async (gp, shoot) => {
       const fx = teardownFixture();
       await gp.page.evaluate(([id, data]) => window.__harness!.loadLevelData(id, data), [

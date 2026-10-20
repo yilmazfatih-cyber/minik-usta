@@ -69,6 +69,13 @@ const gameMs = (page: Page, ms: number) => page.evaluate((t) => window.__harness
  * DragController → core) is the same.
  */
 const E2E_DRAG: DragPlanOptions = { speedCellsPerSec: 8, frameMs: 100, endHoldMs: 250 };
+/**
+ * Wall budget for the win window after the winning release. Its cues (segment lock, truck, the win v2 entry) run in
+ * GAME time even with reduced motion, and on the software GPU Phaser's "last sane delta" rule makes game time crawl
+ * (≈ 16,7 ms per 0,6 s frame, TECH §10.7 item 7): a few seconds of cues are minutes of wall time. The level 2 win ran
+ * over a 120 s budget on the first full run (K-43 test).
+ */
+const WIN_WAIT_MS = 300_000;
 
 test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
   test('load: the first launch boots into the intro without errors', async ({ page, context }) => {
@@ -93,7 +100,7 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
     expect(await title('win.title')).toBeNull();
     const moves = await golden(page, 1);
     await playMoves(gp, moves, E2E_DRAG);
-    await waitWindow(page, 'win', 120_000);
+    await waitWindow(page, 'win', WIN_WAIT_MS);
     expect(await title('win.title')).not.toBeNull();
     const s = await state(page);
     expect(s.outcome).toBe('won');
@@ -126,7 +133,7 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
     await tap(gp, { kind: 'text', key: 'common.continue' });
     await waitInteractive(page);
     await playMoves(gp, moves.slice(2), E2E_DRAG);
-    await waitWindow(page, 'win', 120_000);
+    await waitWindow(page, 'win', WIN_WAIT_MS);
     expect((await state(page)).outcome).toBe('won');
     expect(gp.errors).toEqual([]);
   });
@@ -185,7 +192,7 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
     await open(page);
     await loadLevel(page, 1);
     await playMoves(gp, await golden(page, 1), E2E_DRAG);
-    await waitWindow(page, 'win', 120_000);
+    await waitWindow(page, 'win', WIN_WAIT_MS);
     const creates = (await state(page)).levelCreates;
     await tap(gp, { kind: 'text', key: 'common.continue' });
     await page.waitForFunction(() => window.__harness!.status().scene === 'Home', null, { timeout: 60_000 });
@@ -219,7 +226,7 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
     expect(after.log).toEqual(before.log);
     expect(stepOf(after.tutorial)).toEqual(stepOf(before.tutorial));
     await playMoves(gp, moves.slice(1), E2E_DRAG);
-    await waitWindow(page, 'win', 120_000);
+    await waitWindow(page, 'win', WIN_WAIT_MS);
     expect(gp.errors).toEqual([]);
   });
 
@@ -232,6 +239,11 @@ test.describe('scene smoke (TECH 12.4, Faz 2R)', () => {
     await loadLevel(page, 1);
     await waitInteractive(page, 1);
     await page.waitForFunction(() => window.__harness!.state().tutorial?.phase === 'shown', null, {
+      timeout: 60_000,
+    });
+    // the glove fades in over 160 ms from the step's `shown` edge (α 0 on the edge frame itself): wait for it to be
+    // on screen, then it must be the step's drag glove (the first full run read the edge frame: `hidden: true`)
+    await page.waitForFunction(() => window.__harness!.state().tutorialHand?.hidden === false, null, {
       timeout: 60_000,
     });
     expect((await state(page)).tutorialHand).toEqual({ kind: 'drag', hidden: false });
