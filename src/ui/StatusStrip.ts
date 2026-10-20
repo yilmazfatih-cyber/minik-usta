@@ -4,8 +4,8 @@
  * chip (K-26; hidden at 0, "Kamyonda: 0" is never written). A dumb view: the EventPlayer drives JUICE #15 (bead pop),
  * #16 (trowel glow), #20 / #88 (chip bump) through the setters. Graphics are redrawn only when a value changes.
  *
- * Faz 2R (UX §5.10, ART §14.5): the strip is a dark counter capsule (`kit.capsule.fill` α 0,78, inner white line)
- * with white text; the beads are gold / white α 0,25.
+ * v3 (ART_REFERENCE §3.4): the strip is the dark HUD capsule (`kit.v3.capsule.hudFill` α 0,85, dark inner ring)
+ * with cream text; the beads are gold / white α 0,25.
  *
  * Touch: the trowel icon is a 128 px target (`touch.minTargetPx`, UX §0.3 "görsel + pay"); being interactive, it
  * keeps the board's drag controller out (DragController ignores presses over HUD objects).
@@ -15,11 +15,12 @@ import { t } from '../services/i18n.ts';
 import type { Rect } from '../theme/layout.ts';
 import { TOKENS } from '../theme/tokens.ts';
 import { hex, textStyle } from './text.ts';
+import { kitTextStyle } from './kit/text.ts';
 import { addBakedGraphics } from './BakedGraphics.ts';
 import { drawCancelX } from './icons.ts';
 
 const C = TOKENS.color.ui;
-const CP = TOKENS.kit.capsule;
+const CP = TOKENS.kit.v3.capsule;
 /** UX §5.10: an empty bead is white α 0,25. */
 const BEAD_EMPTY_ALPHA = 0.25;
 /** UX §5.1: 4 beads (K-33 `COMBO_FOR_TROWEL`). */
@@ -62,7 +63,7 @@ export class StatusStrip {
   constructor(scene: Phaser.Scene, depth: number) {
     this.panel = addBakedGraphics(scene).setDepth(depth);
     this.label = scene.add
-      .text(0, 0, t('hud.streak'), textStyle('small', C.inkOnDark))
+      .text(0, 0, t('hud.streak'), kitTextStyle('counterCream', 34))
       .setOrigin(0, 0.5)
       .setDepth(depth + 1);
     for (let i = 0; i < STREAK_BEADS; i++) this.beads.push(addBakedGraphics(scene).setDepth(depth + 1));
@@ -75,7 +76,7 @@ export class StatusStrip {
       .setVisible(false);
     drawCancelX(this.cancel, CANCEL_PX);
     this.trowelCount = scene.add
-      .text(0, 0, '', textStyle('small', C.inkOnDark))
+      .text(0, 0, '', kitTextStyle('counterCream', 34))
       .setOrigin(0, 0.5)
       .setDepth(depth + 2);
     this.countText = scene.add
@@ -127,9 +128,11 @@ export class StatusStrip {
     this.trowelZone.setPosition(x0 + leftW / 2, y).setSize(leftW, zoneH, true);
     const g = this.panel.clear();
     const r = rect.h / 2;
-    g.fillStyle(hex(CP.fill), CP.fillAlpha).fillRoundedRect(x0, rect.y, leftW, rect.h, r);
-    g.lineStyle(CP.innerStrokePx, hex(CP.innerStroke), CP.innerStrokeAlpha);
+    // ART_REFERENCE §3.4 HUD capsule: dark hollow pill with the dark inner ring and a faint top line
+    g.fillStyle(hex(CP.hudFill), CP.fillAlpha).fillRoundedRect(x0, rect.y, leftW, rect.h, r);
+    g.lineStyle(CP.innerRingPx, hex(CP.innerRing), CP.innerRingAlpha);
     g.strokeRoundedRect(x0 + 3, rect.y + 3, leftW - 6, rect.h - 6, r - 3);
+    g.fillStyle(0xffffff, CP.topLineAlpha).fillRect(x0 + r, rect.y + 3, leftW - 2 * r, 2);
     this.chipX = rect.x + rect.w;
     this.drawChip();
     const s = this.streak;

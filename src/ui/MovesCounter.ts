@@ -1,28 +1,27 @@
 /**
- * Moves counter (UX_FLOWS §5.1 "Hamle sayacı": `layout.top.moves` 280 × 224, Baloo 2 800 at `font.size.display`, label
- * `hud.moves` at `font.size.small`; JUICE #50, #51, #53). A dumb view: the EventPlayer drives every animation through
- * the setters (`rollTo`, `setDanger`, `setBump` …); the number shown is the one the EventPlayer last set, which trails
- * the core state until the move's cues reach step 4 (JUICE §0 rule 10).
- *
- * The panel is drawn once per layout (no per-frame Graphics, TECH §10.6); the last-moves pulse only scales the
- * container.
- *
- * Faz 2R (UX §5.9 item 7, ART §14.2): the plate is the kit panel (`ui_panel`, 9-sliced; wooden frame, cream body),
- * the digit 120 px `ui.ink`, "HAMLE" 38 px `ui.inkSoft` under it; the low-moves warning paints the digit
- * `kit.buttonColor.red.base` and pulses (#51). Without the kit (tests) the v1 Graphics panel stays.
+ * Moves counter v3 (ART_REFERENCE §9.4 "hamle plakası" 300 × 136: navy top band with "HAMLE" in cream 34 and two gold
+ * lines, cream plate with the number in the `bigNumber` look 96; UX_FLOWS §5.1 `layout.top.moves`; JUICE #50, #51,
+ * #53). A dumb view: the EventPlayer drives every animation through the setters (`rollTo`, `setDanger`, `setBump` …);
+ * the number shown is the one the EventPlayer last set, which trails the core state until the move's cues reach
+ * step 4 (JUICE §0 rule 10). The plate is the baked `ui_moves_plate` frame (no per-frame Graphics, TECH §10.6); the
+ * low-moves warning paints the digit red and pulses (#51). Without the kit (tests) a plain Graphics plate stays.
  */
 import type Phaser from 'phaser';
 import { t, upper } from '../services/i18n.ts';
 import type { Rect } from '../theme/layout.ts';
 import { TOKENS } from '../theme/tokens.ts';
-import { hex, textStyle } from './text.ts';
+import { hex } from './text.ts';
 import { addBakedGraphics } from './BakedGraphics.ts';
 import { KIT } from '../theme/textures.ts';
 import type { GoalsKit } from './GoalsPanel.ts';
+import { addKitText, kitTextStyle } from './kit/text.ts';
 
-const C = TOKENS.color.ui;
-/** UX §5.9 item 7: the warning digit colour. */
-const DANGER = TOKENS.kit.buttonColor.red.base;
+const HV = TOKENS.kit.v3.screen.hud;
+const PAL = TOKENS.kit.v3.palette;
+/** UX §5.9 item 7 / ART_REFERENCE §2.4: the warning digit colour. */
+const DANGER = TOKENS.kit.v3.badge.top;
+/** "HAMLE" band label (ART_REFERENCE §9.4: krem 34). */
+const LABEL_PX = 34;
 
 export class MovesCounter {
   private readonly root: Phaser.GameObjects.Container;
@@ -40,18 +39,16 @@ export class MovesCounter {
   private bump = 1;
   private readonly scene: Phaser.Scene;
   private readonly kit: Pick<GoalsKit, 'ref' | 'slice'> | null;
-  private plate: Phaser.GameObjects.NineSlice | null = null;
+  private plate: Phaser.GameObjects.Image | null = null;
 
   constructor(scene: Phaser.Scene, depth: number, kit: Pick<GoalsKit, 'ref' | 'slice'> | null = null) {
     this.scene = scene;
     this.kit = kit;
     this.panel = addBakedGraphics(scene);
     this.danger = addBakedGraphics(scene).setVisible(false);
-    this.cur = scene.add.text(0, 0, '', textStyle('display', C.ink)).setOrigin(0.5, 0.5);
-    this.next = scene.add.text(0, 0, '', textStyle('display', C.ink)).setOrigin(0.5, 0.5).setVisible(false);
-    this.label = scene.add
-      .text(0, 0, upper(t('hud.moves')), textStyle('small', C.inkSoft))
-      .setOrigin(0.5, 0.5);
+    this.cur = addKitText(scene, 0, 0, '', 'bigNumber', HV.movesFontPx);
+    this.next = addKitText(scene, 0, 0, '', 'bigNumber', HV.movesFontPx).setVisible(false);
+    this.label = addKitText(scene, 0, 0, upper(t('hud.moves')), 'counterCream', LABEL_PX);
     this.root = scene.add
       .container(0, 0, [this.panel, this.danger, this.cur, this.next, this.label])
       .setDepth(depth);
@@ -61,37 +58,30 @@ export class MovesCounter {
     this.rect = rect;
     const w = rect.w;
     const h = rect.h;
-    const r = TOKENS.radius.panel;
-    const lip = TOKENS.shadow.panelLipPx;
     this.root.setPosition(rect.x + w / 2, rect.y + h / 2);
     const g = this.panel.clear();
     const kit = this.kit;
     if (kit) {
       this.plate?.destroy();
-      const ref = kit.ref(KIT.panel);
-      const sl = kit.slice(KIT.panel);
+      const ref = kit.ref(KIT.movesPlate);
       this.plate = this.scene.add
-        .nineslice(0, 0, ref.key, ref.frame, w, h, sl?.left, sl?.right, sl?.top, sl?.bottom)
-        .setOrigin(0.5, 0.5);
+        .image(0, 0, ref.key, ref.frame)
+        .setOrigin(0.5, HV.movesH / 2 / ref.h)
+        .setDisplaySize(w, (ref.h * w) / ref.w);
       this.root.addAt(this.plate, 0);
     } else {
-      g.fillStyle(hex(C.panelShadow), 1).fillRoundedRect(-w / 2, -h / 2 + lip, w, h - lip, r);
-      g.fillStyle(hex(C.panel), 1).fillRoundedRect(-w / 2, -h / 2, w, h - lip, r);
-      g.lineStyle(TOKENS.stroke.iconPx, hex(C.panelEdge), 1).strokeRoundedRect(-w / 2, -h / 2, w, h - lip, r);
+      g.fillStyle(hex(PAL.navy), 1).fillRoundedRect(-w / 2, -h / 2, w, h, 24);
+      g.fillStyle(hex(HV.movesCream), 1).fillRoundedRect(-w / 2 + 4, -h / 2 + 4, w - 8, h - 8, 20);
+      g.fillStyle(hex(HV.movesBand), 1).fillRect(-w / 2 + 4, -h / 2 + 4, w - 8, HV.movesBandH);
     }
     this.danger.clear();
-    if (!kit)
-      this.danger
-        .lineStyle(TOKENS.stroke.iconPx, hex(C.danger), 1)
-        .strokeRoundedRect(-w / 2, -h / 2, w, h - lip, r);
-    // the kit plate's frame (outline + wood + inner line) is the border; v1: the lip
-    const P = TOKENS.kit.panel;
-    const border = kit ? P.outlinePx + P.framePx + P.innerLinePx : 0;
-    const body = (kit ? h - 2 * border : h - lip) - 0;
-    this.valueY = -h / 2 + border + body * (kit ? 0.4 : 0.42);
+    this.danger.lineStyle(6, hex(DANGER), 1).strokeRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, h - 4, 22);
+    // the number in the middle of the cream plate under the band; the label in the band
+    const band = HV.movesBandH;
+    this.valueY = -h / 2 + 4 + band + (h - 8 - band) / 2 + 2;
     this.cur.setPosition(0, this.valueY);
     this.next.setPosition(0, this.valueY);
-    this.label.setPosition(0, -h / 2 + border + body * (kit ? 0.8 : 0.82));
+    this.label.setPosition(0, -h / 2 + 4 + band / 2 - 2);
   }
 
   /** New language: the `hud.moves` label. */
@@ -125,9 +115,11 @@ export class MovesCounter {
   setDanger(on: boolean, pulse: boolean, now: number): void {
     if (on !== this.dangerOn) {
       this.dangerOn = on;
-      const color = on ? DANGER : C.ink;
-      this.cur.setColor(color);
-      this.next.setColor(color);
+      const style = on
+        ? kitTextStyle('bigNumber', HV.movesFontPx, TOKENS.kit.v3.badge.stroke, undefined, DANGER)
+        : kitTextStyle('bigNumber', HV.movesFontPx);
+      this.cur.setStyle(style);
+      this.next.setStyle(style);
       this.danger.setVisible(on);
     }
     if (pulse && !this.pulseOn) this.pulseStart = now;

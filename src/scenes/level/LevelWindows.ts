@@ -1,34 +1,40 @@
 /**
  * The level screen's windows (UX_FLOWS §5.1 Pause + exit confirm, §7 out of moves window 1 / life lost window 2, §6
- * win screen, §7 "Altın yetmez" → fake store; STORY §7.3, §7.5, §7.6; D-022, D-024). This class only builds and shows
- * them — every decision (offer number, prices, exit kind, rewards) is made before by core / ui models and passed in;
- * every button calls back into the scene. One window at a time; opening another closes the current one at once.
+ * win screen, §7 "Altın yetmez" → fake store; ART_REFERENCE §9.5 pause / exit, §9.7 lose; STORY §7.3, §7.5, §7.6;
+ * D-022, D-024). This class only builds and shows them — every decision (offer number, prices, exit kind, rewards) is
+ * made before by core / ui models and passed in; every button calls back into the scene. One window at a time; opening
+ * another closes the current one at once.
  *
- * Animations (JUICE P0): #70 open, #71 close, #52 the out-of-moves window (dim, slide up, options 40 ms apart), #87 the
- * resume variants, #58 the heart, #69 every button. While a window is open the board takes no input (the dim swallows
- * touches; LevelScene.boardState also checks `open`).
+ * v3 anatomy (ui/Popup): indigo window, mounted two-ring title (gold for "Hamleler bitti!"), × at the corner, cream
+ * text card, lavender toggle plate; the primary action is the lowest button (L green), the secondary above it (M cream)
+ * — UX §0.2. Animations (JUICE P0): #70 open, #71 close, #52 the out-of-moves window (dim, slide up, options 40 ms
+ * apart), #87 the resume variants, #58 the heart, #69 / #97 every button. While a window is open the board takes no
+ * input (the dim swallows touches; LevelScene.boardState also checks `open`).
  */
 import type Phaser from 'phaser';
-import { getLocale, t, upper } from '../../services/i18n.ts';
+import { getLocale, t } from '../../services/i18n.ts';
 import type { I18nKey } from '../../services/i18n.ts';
 import type { Layout } from '../../theme/layout.ts';
 import { TOKENS } from '../../theme/tokens.ts';
+import { KIT } from '../../theme/textures.ts';
 import { drawHeart } from '../../ui/icons.ts';
 import type { OfferModel } from '../../ui/offer.ts';
-import type { OptionButton } from '../../ui/OptionButton.ts';
 import { Popup } from '../../ui/Popup.ts';
 import type { PopupOption, PopupRow, PopupSpec } from '../../ui/Popup.ts';
 import { realMoneyText } from '../../ui/price.ts';
 import type { WinRewards } from '../../ui/rewards.ts';
-import { hex, textStyle } from '../../ui/text.ts';
 import { UI } from '../../ui/uiConstants.ts';
 import { WinScreen } from '../../ui/WinScreen.ts';
+import { addBakedGraphics } from '../../ui/BakedGraphics.ts';
+import { gameAssets } from '../AssetLoaderScene.ts';
+import { kitRef, kitSlice } from '../../ui/kit/atlas.ts';
+import { IconBinder } from '../../ui/kit/icons.ts';
+import type { KitButton } from '../../ui/kit/KitButton.ts';
+import type { PressVariant } from '../../ui/kit/KitButton.ts';
+import { addKitText } from '../../ui/kit/text.ts';
 import { DEPTH } from './depth.ts';
 import type { EventPlayer } from './EventPlayer.ts';
 import { juiceMs } from './juice/catalog.ts';
-import { addBakedGraphics } from '../../ui/BakedGraphics.ts';
-
-const C = TOKENS.color.ui;
 
 export type WindowKind = 'pause' | 'exit' | 'offer' | 'loss' | 'win' | 'store';
 
@@ -52,15 +58,21 @@ interface Open {
   readonly reopen: () => void;
 }
 
+/** ART_REFERENCE §9.7: the out-of-moves preview card 880 × 300 ("Kalan: n blok" in it). */
+const LOSE_PREVIEW_H = TOKENS.kit.v3.screen.lose.previewH;
+
 export class LevelWindows {
   private readonly scene: Phaser.Scene;
   private readonly host: WindowsHost;
+  private readonly icons: IconBinder;
   private current: Open | null = null;
   private closing: (Popup | WinScreen)[] = [];
 
   constructor(scene: Phaser.Scene, host: WindowsHost) {
     this.scene = scene;
     this.host = host;
+    const assets = gameAssets(scene.game);
+    this.icons = new IconBinder((id) => assets.icon(id));
   }
 
   get open(): WindowKind | null {
@@ -84,11 +96,8 @@ export class LevelWindows {
     readonly onExit: () => void;
   }): void {
     const build = (animate: boolean): void => {
-      const rows: PopupRow[] = [
-        { kind: 'title', text: upper(t(opts.resume ? 'resume.title' : 'pause.title')) },
-      ];
-      if (opts.resumeTip)
-        rows.push({ kind: 'text', text: t('tut.ctx.resume'), role: 'body', color: C.inkSoft });
+      const rows: PopupRow[] = [{ kind: 'title', text: t(opts.resume ? 'resume.title' : 'pause.title') }];
+      if (opts.resumeTip) rows.push({ kind: 'text', text: t('tut.ctx.resume'), size: 40 });
       const toggles: [PauseToggle, I18nKey][] = [
         ['sound', 'settings.sound'],
         ['music', 'settings.music'],
@@ -96,15 +105,18 @@ export class LevelWindows {
       ];
       for (const [id, key] of toggles)
         rows.push({ kind: 'toggle', id, label: t(key), on: opts.settings()[id] });
+      // ART_REFERENCE §9.5: "Bölümden çık" M cream above, "Devam" L green lowest; the × continues too
       const spec: PopupSpec = {
         rows,
+        close: true,
         options: [
-          { id: 'exit', label: t('pause.exit'), tone: 'neutral' },
-          { id: 'continue', label: t('common.continue'), tone: 'primary' },
+          { id: 'exit', label: t('pause.exit'), tone: 'neutral', size: 'M' },
+          { id: 'continue', label: t('common.continue'), tone: 'primary', size: 'L' },
         ],
       };
       const popup = this.popup(spec, {
         option: (id) => (id === 'exit' ? opts.onExit() : opts.onContinue()),
+        close: opts.onContinue,
         toggle: (id) => popup.setToggle(id, opts.onToggle(id as PauseToggle)),
       });
       this.set('pause', popup, () => build(false));
@@ -116,7 +128,7 @@ export class LevelWindows {
     build(true);
   }
 
-  /** UX §5.1 exit confirm: lines from ui/windowLines `exitLines`; equal pair "Kal" (green) / "Çık" (cream). */
+  /** UX §5.1 exit confirm: lines from ui/windowLines `exitLines` in a cream card; "Kal" L green lowest, "Çık" M cream. */
   openExit(opts: {
     readonly lines: readonly I18nKey[];
     readonly onStay: () => void;
@@ -124,17 +136,17 @@ export class LevelWindows {
   }): void {
     const build = (animate: boolean): void => {
       const rows: PopupRow[] = [
-        { kind: 'title', text: upper(t('exit.title')) },
-        ...opts.lines.map((k): PopupRow => ({ kind: 'text', text: t(k) })),
+        { kind: 'title', text: t('exit.title') },
+        ...opts.lines.map((k): PopupRow => ({ kind: 'text', text: t(k), size: 44 })),
       ];
       const popup = this.popup(
         {
           rows,
-          arrange: 'pair',
           close: true,
+          panelW: TOKENS.kit.v3.screen.pause.confirmPanelW,
           options: [
-            { id: 'stay', label: upper(t('exit.stay')), tone: 'primary' },
-            { id: 'leave', label: upper(t('exit.leave')), tone: 'neutral' },
+            { id: 'leave', label: t('exit.leave'), tone: 'neutral', size: 'M' },
+            { id: 'stay', label: t('exit.stay'), tone: 'primary', size: 'L' },
           ],
         },
         { option: (id) => (id === 'stay' ? opts.onStay() : opts.onLeave()), close: opts.onStay },
@@ -146,8 +158,9 @@ export class LevelWindows {
   }
 
   /**
-   * UX §7 window 1 "Hamleler bitti!" (D-024): equal options in the order coins / ad / no; × = no. `entry`: `offer` =
-   * JUICE #52 after #57; `resume` = K-43 (a) reopened at launch (#87 offer variant); `none` = rebuilt in place.
+   * UX §7 window 1 "Hamleler bitti!" (D-024; ART_REFERENCE §9.7): gold title, the preview card, "Teklif 1/3" in
+   * lavender, three equal 920 × 152 options in the order coins (orange) / ad (cream) / no (cream); × = no. `entry`:
+   * `offer` = JUICE #52 after #57; `resume` = K-43 (a) reopened at launch (#87 offer variant); `none` = rebuilt.
    */
   openOffer(opts: {
     readonly model: OfferModel;
@@ -189,16 +202,16 @@ export class LevelWindows {
       }
       options.push({ id: 'decline', label: t('lose.decline'), tone: 'neutral' });
       const rows: PopupRow[] = [
-        { kind: 'title', text: upper(t('lose.title')) },
+        { kind: 'title', text: t('lose.title'), gold: true },
         {
           kind: 'custom',
-          h: UI.loseInfoH,
-          build: (scene, w) => infoBox(scene, w, t('lose.blocksLeft', { n: opts.remaining })),
+          h: LOSE_PREVIEW_H,
+          build: (scene, w) => this.previewCard(scene, w, t('lose.blocksLeft', { n: opts.remaining })),
         },
-        { kind: 'text', text: t(m.counterKey, { n: m.n, max: m.max }), role: 'small', color: C.inkSoft },
+        { kind: 'text', text: t(m.counterKey, { n: m.n, max: m.max }), look: 'plain', size: 34 },
       ];
       const popup = this.popup(
-        { rows, options, close: true },
+        { rows, options, close: true, icons: this.icons },
         {
           option: (id) => (id === 'coins' ? opts.onCoins() : id === 'ad' ? opts.onAd() : opts.onDecline()),
           close: opts.onDecline,
@@ -211,7 +224,7 @@ export class LevelWindows {
     build(opts.entry);
   }
 
-  /** UX §7 window 2 (life lost): the heart greys out (#58), `lose.life` (+ `lose.streak`), retry (primary) / home. */
+  /** UX §7 window 2 (life lost): the heart greys out (#58), `lose.life` (+ `lose.streak`), retry L green / home M. */
   openLoss(opts: {
     readonly lines: readonly I18nKey[];
     readonly lifeLost: boolean;
@@ -230,19 +243,14 @@ export class LevelWindows {
             return [heart];
           },
         },
-        ...opts.lines.map((k, i): PopupRow => ({
-          kind: 'text',
-          text: t(k),
-          role: i === 0 ? 'h2' : 'body',
-          color: C.ink,
-        })),
+        ...opts.lines.map((k, i): PopupRow => ({ kind: 'text', text: t(k), size: i === 0 ? 48 : 40 })),
       ];
       const popup = this.popup(
         {
           rows,
           options: [
-            { id: 'home', label: t('common.home'), tone: 'text' },
-            { id: 'retry', label: t('lose.retry'), tone: 'primary' },
+            { id: 'home', label: t('common.home'), tone: 'neutral', size: 'M' },
+            { id: 'retry', label: t('lose.retry'), tone: 'primary', size: 'L' },
           ],
         },
         { option: (id) => (id === 'retry' ? opts.onRetry() : opts.onHome()) },
@@ -260,14 +268,7 @@ export class LevelWindows {
   /** UX §6 win screen (Phase 2: rows + "Devam" under the board). */
   openWin(opts: { readonly rewards: WinRewards; readonly onContinue: () => void }): void {
     const build = (animate: boolean): void => {
-      const view = new WinScreen(
-        this.scene,
-        this.host.layout(),
-        opts.rewards,
-        DEPTH.windows,
-        opts.onContinue,
-        (b, v) => this.press(b, v),
-      );
+      const view = new WinScreen(this.scene, this.host.layout(), opts.rewards, DEPTH.windows, opts.onContinue);
       this.set('win', view, () => build(false));
       if (animate) this.host.player.play(70, { window: view.target });
     };
@@ -285,8 +286,9 @@ export class LevelWindows {
       const popup = this.popup(
         {
           // `shop.covers` / `shop.testBuy` (STORY §7.5) are not in i18n yet: the header repeats the offer's own line
-          rows: [{ kind: 'text', text: t('lose.buygold', { n: opts.missing }), role: 'h2' }],
+          rows: [{ kind: 'text', text: t('lose.buygold', { n: opts.missing }) }],
           close: true,
+          icons: this.icons,
           options: [
             {
               id: 'buy',
@@ -354,16 +356,19 @@ export class LevelWindows {
     this.current = { kind, view, reopen };
   }
 
-  private press(b: OptionButton, variant: 'press' | 'release'): void {
+  private press(b: KitButton, variant: PressVariant): void {
     this.host.player.play(69, { button: b, variant });
   }
-}
 
-/** UX §7 window 1 info box: inset panel with the neutral "Kalan: n hücre" line (no pressure text, R-15). */
-function infoBox(scene: Phaser.Scene, w: number, text: string): Phaser.GameObjects.GameObject[] {
-  const h = UI.loseInfoH;
-  const g = addBakedGraphics(scene);
-  g.fillStyle(hex(C.panelInset), 1).fillRoundedRect(-w / 2, 0, w, h, TOKENS.radius.panelArt);
-  const label = scene.add.text(0, h / 2, text, textStyle('h2', C.ink)).setOrigin(0.5, 0.5);
-  return [g, label];
+  /** UX §7 window 1 preview card (ART_REFERENCE §9.7): cream card with the neutral "Kalan: n blok" line (R-15). */
+  private previewCard(scene: Phaser.Scene, w: number, text: string): Phaser.GameObjects.GameObject[] {
+    const h = LOSE_PREVIEW_H;
+    const cr = kitRef(scene.game, KIT.card);
+    const cs = kitSlice(KIT.card);
+    const card = scene.add
+      .nineslice(0, 0, cr.key, cr.frame, w, h, cs?.left, cs?.right, cs?.top, cs?.bottom)
+      .setOrigin(0.5, 0);
+    const label = addKitText(scene, 0, h / 2, text, 'cardText', TOKENS.kit.v3.text.cardText.fontPx);
+    return [card, label];
+  }
 }

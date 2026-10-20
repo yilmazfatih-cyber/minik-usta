@@ -44,6 +44,11 @@ export interface Viewport {
 
 /** Booster slots on the level screen (UX §5.1: hammer, crane, brush, undo). */
 export const BOOSTER_SLOTS = 4;
+/** HUD v3 row 1 side margin and the gap between the level capsule and the goal chips (ART_REFERENCE §9.4). */
+export const HUD_MARGIN_X = 24;
+export const HUD_ROW_GAP = 24;
+/** HUD v3 panorama well width (row 2, left of the moves plate; mirrors the pause tool's 48 px margin). */
+export const PANORAMA_WELL_W = 300;
 /** Bottom navigation tabs on the home screen (UX §3: shop, league, home, team, album). */
 export const NAV_TABS = 5;
 
@@ -295,11 +300,18 @@ export interface Layout {
   /** `(H − 1920) × board.expandShare`; 0 in FIT. */
   readonly boardShift: number;
   readonly grid: BoardGeometry;
+  /**
+   * HUD v3 (ART_REFERENCE §9.4, `kit.v3.screen.hud`): row 1 (y 24, h 60) = the "Bölüm N" capsule left + the goal
+   * chips right; row 2 (y 112, h 136) = the panorama well left, the moves plate in the middle, the pause tool button
+   * right. The group's bottom stays `layout.top.groupBottomY` (264): the board budget and the tutorial dock are unchanged.
+   */
   readonly top: {
     readonly pause: Rect;
     readonly panorama: Rect;
     readonly goals: Rect;
     readonly moves: Rect;
+    /** "Bölüm N" capsule (row 1, left). */
+    readonly levelCapsule: Rect;
     /** Home screen top bar band (full width). */
     readonly topBar: Rect;
     readonly groupBottomY: number;
@@ -363,11 +375,13 @@ export function createLayout(tokens: Tokens, H: number, geo: BoardGeo = DEFAULT_
   const { grid, ...board } = boardLayout(tokens, geo, H);
   const slop = touch.hitSlopPx * grid.k;
 
+  // ART_REFERENCE §9.4: 4 × 160 booster squares, gap 32, x 304 …, bottom 120; the Tuna + Kepçe corner 240 × 260
+  const hv = tokens.kit.v3.screen.hud;
   const boosters = Array.from({ length: BOOSTER_SLOTS }, (_, i) => ({
-    x: bt.boosterX + i * (bt.boosterSize + bt.boosterGap),
-    y: fromBottom(bt.boosterBottomPx, bt.boosterSize),
-    w: bt.boosterSize,
-    h: bt.boosterSize,
+    x: hv.boosterX + i * (hv.boosterPx + hv.boosterGapPx),
+    y: fromBottom(hv.boosterBottomPx, hv.boosterPx),
+    w: hv.boosterPx,
+    h: hv.boosterPx,
   }));
   const nav = { x: 0, y: fromBottom(bt.navBottomPx, bt.navH), w: W, h: bt.navH };
   const tabW = W / NAV_TABS;
@@ -382,10 +396,16 @@ export function createLayout(tokens: Tokens, H: number, geo: BoardGeo = DEFAULT_
     boardShift,
     grid,
     top: {
-      pause: { x: t.pauseX, y: t.pauseY, w: t.pauseSize, h: t.pauseSize },
-      panorama: { x: t.panoramaX, y: t.panoramaY, w: t.panoramaW, h: t.panoramaH },
-      goals: { x: t.goalsX, y: t.goalsY, w: t.goalsW, h: t.goalsH },
-      moves: { x: t.movesX, y: t.movesY, w: t.movesW, h: t.movesH },
+      pause: { x: hv.toolRightX, y: hv.row2Y, w: hv.toolPx, h: hv.toolPx },
+      panorama: { x: hv.toolLeftX, y: hv.row2Y, w: PANORAMA_WELL_W, h: hv.movesH },
+      goals: {
+        x: HUD_MARGIN_X + hv.levelCapsuleW + HUD_ROW_GAP,
+        y: hv.row1Y,
+        w: W - 2 * HUD_MARGIN_X - hv.levelCapsuleW - HUD_ROW_GAP,
+        h: hv.row1H,
+      },
+      moves: { x: (W - hv.movesW) / 2, y: hv.row2Y, w: hv.movesW, h: hv.movesH },
+      levelCapsule: { x: HUD_MARGIN_X, y: hv.row1Y, w: hv.levelCapsuleW, h: hv.row1H },
       topBar: { x: 0, y: t.topBarY, w: W, h: t.topBarH },
       groupBottomY: t.groupBottomY,
     },
@@ -393,9 +413,9 @@ export function createLayout(tokens: Tokens, H: number, geo: BoardGeo = DEFAULT_
     bottom: {
       character: {
         x: bt.characterX,
-        y: fromBottom(bt.characterBottomPx, bt.characterH),
-        w: bt.characterW,
-        h: bt.characterH,
+        y: fromBottom(bt.characterBottomPx, hv.cornerH),
+        w: hv.cornerW,
+        h: hv.cornerH,
       },
       boosters,
       nav,

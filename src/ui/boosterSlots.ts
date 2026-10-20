@@ -8,11 +8,11 @@
  *   inventory + the unlock's `freeTrials` not granted yet (META §4). The inventory itself already moved: the free trials
  *   are granted when the attempt begins (`LevelAttempt.begin`) and an applied booster leaves it in the same write as its
  *   log entry (`SaveService.recordAction`; `attemptBoosters` gives exactly those back on a void).
- * - `BoosterBar` only draws the models: green kit button (ready / empty), grey (locked, no target), the 112 px icon, the
- *   red square count badge (`ui_badge`, R2-12) or the green "+" of an empty slot, the lock + "Bölüm N" caption of a
- *   locked slot (`home.play`, `font.size.caption`). A tap reports the slot; the scene decides (K-54: a locked slot shows
- *   `common.unlockAt`, a slot without target shakes and shows `booster.<id>.noTarget`, #108; `empty` would open the
- *   mini purchase window — Faz 4, no `offer_shown` here).
+ * - `BoosterBar` only draws the models (ART_REFERENCE §9.4 "güçlendirici çubuğu": 160 px green squares, grey when
+ *   locked / without target, the 100 px icon, the red 68 px count badge (`ui_badge_hud`) riding the lower-right
+ *   corner or the green "+" of an empty slot, the small gold lock + "Bölüm N" caption (34 px) of a locked slot). A tap
+ *   reports the slot; the scene decides (K-54: a locked slot shows `common.unlockAt`, a slot without target shakes and
+ *   shows `booster.<id>.noTarget`, #108; `empty` would open the mini purchase window — Faz 4, no `offer_shown` here).
  */
 import Phaser from 'phaser';
 import { IN_LEVEL_BOOSTERS, boosterUnlock, pendingFreeTrials } from '../meta/boosters.ts';
@@ -26,7 +26,9 @@ import { hitArea } from '../theme/layout.ts';
 import { TOKENS } from '../theme/tokens.ts';
 import { KIT } from '../theme/textures.ts';
 import type { FrameRef } from '../theme/textures.ts';
-import type { ButtonState, KitButtonColor, Slices } from '../theme/draw/kit.ts';
+import type { Slices } from '../theme/draw/kit.ts';
+import { buttonV3PlateRect } from '../theme/draw/kitV3.ts';
+import type { ButtonV3State, KitV3ButtonColor } from '../theme/draw/kitV3.ts';
 import { addBakedGraphics } from './BakedGraphics.ts';
 import { drawCancelX } from './icons.ts';
 import { kitTextStyle } from './kit/text.ts';
@@ -111,8 +113,11 @@ export function boosterSlotModels(input: {
   });
 }
 
-/** Kit look of a slot state (ART §14.1: green active, grey pasif / kilitli). */
-export function slotLook(state: SlotState): { readonly color: KitButtonColor; readonly state: ButtonState } {
+/** Kit look of a slot state (ART_REFERENCE §2.3: green active, grey pasif / kilitli). */
+export function slotLook(state: SlotState): {
+  readonly color: KitV3ButtonColor;
+  readonly state: ButtonV3State;
+} {
   return state === 'ready' || state === 'empty'
     ? { color: 'green', state: 'normal' }
     : { color: 'grey', state: 'disabled' };
@@ -121,17 +126,18 @@ export function slotLook(state: SlotState): { readonly color: KitButtonColor; re
 /** Kit frames the bar needs (ui/kit/atlas.ts). */
 export interface SlotKit {
   button(
-    color: KitButtonColor,
+    color: KitV3ButtonColor,
     h: number,
-    state: ButtonState,
+    state: ButtonV3State,
   ): { readonly ref: FrameRef; readonly slices: Slices };
   ref(name: string): FrameRef;
   icon(id: string): { readonly key: string; readonly frame?: string };
 }
 
-const ICON_PX = 112;
-const LOCK_PX = 48;
-const BADGE = TOKENS.kit.badge;
+const ICON_PX = 100;
+const LOCK = TOKENS.kit.v3.lock;
+const BADGE = TOKENS.kit.v3.badge;
+const BADGE_PX = TOKENS.kit.v3.screen.hud.boosterBadgePx;
 
 interface SlotView {
   readonly root: Phaser.GameObjects.Container;
@@ -198,6 +204,7 @@ export class BoosterBar {
       const look = slotLook(m.state);
       const f = this.kit.button(look.color, v.rect.h, look.state);
       v.face.setTexture(f.ref.key, f.ref.frame);
+      v.face.setOrigin(0.5, v.rect.h / 2 / f.ref.h);
       v.icon.setAlpha(m.state === 'locked' || m.state === 'noTarget' ? 0.55 : 1);
       const showCount = !v.raised && (m.state === 'ready' || (m.state !== 'locked' && m.count > 0));
       v.badge.setVisible(showCount || m.state === 'empty');
@@ -238,7 +245,7 @@ export class BoosterBar {
   /** The selected slot's × (harness, tests): its centre, or null when no slot is selected. */
   cancelPoint(): { x: number; y: number } | null {
     const v = this.views.find((x) => x.raised);
-    return v ? { x: v.root.x, y: v.root.y - TOKENS.kit.button.lipPx / 2 } : null;
+    return v ? { x: v.root.x, y: v.root.y - TOKENS.kit.v3.button.pressedDropPx } : null;
   }
 
   /** JUICE #108: 2 px left-right ×3 over `duration.blockedShake` (reduced motion: none). */
@@ -284,27 +291,27 @@ export class BoosterBar {
         f.slices.top,
         f.slices.bottom,
       )
-      .setOrigin(0.5, 0.5);
+      .setOrigin(0.5, r.h / 2 / f.ref.h);
+    const plate = buttonV3PlateRect({ color: 'green', w: r.w, h: r.h, square: true }, TOKENS);
+    const cy = -r.h / 2 + plate.y + plate.h / 2;
     const ic = this.kit.icon(SLOT_ICON[id]);
-    const lip = TOKENS.kit.button.lipPx;
-    const icon = s.add.image(0, -lip / 2, ic.key, ic.frame).setDisplaySize(ICON_PX, ICON_PX);
-    const bref = this.kit.ref(KIT.badge);
-    const bx = r.w / 2 - BADGE.diameterPx / 2 + 8;
-    const by = r.h / 2 - BADGE.diameterPx / 2 + 4;
-    const badge = s.add.image(bx, by, bref.key, bref.frame);
+    const icon = s.add.image(0, cy, ic.key, ic.frame).setDisplaySize(ICON_PX, ICON_PX);
+    // ART_REFERENCE §3.5: the badge's centre rides the square's lower-right corner
+    const bref = this.kit.ref(KIT.badgeHud);
+    const bx = r.w / 2 - 6;
+    const by = r.h / 2 - 10;
+    const badge = s.add.image(bx, by, bref.key, bref.frame).setOrigin(0.5, BADGE_PX / 2 / bref.h);
     const count = s.add
-      .text(bx, by, '', kitTextStyle('brightTitle', BADGE.fontPx, BADGE.stroke))
+      .text(bx, by, '', kitTextStyle('button', BADGE.fontPx - 6, BADGE.textStroke))
       .setOrigin(0.5, 0.55);
-    const lk = this.kit.icon('icon_lock');
+    const lk = this.kit.ref(KIT.lockSmall);
     const lock = s.add
-      .image(r.w / 2 - LOCK_PX / 2 - 6, -r.h / 2 + LOCK_PX / 2 + 6, lk.key, lk.frame)
-      .setDisplaySize(LOCK_PX, LOCK_PX);
+      .image(r.w / 2 - LOCK.smallW / 2 - 4, -r.h / 2 + LOCK.smallH / 2 + 2, lk.key, lk.frame)
+      .setDisplaySize(LOCK.smallW, (LOCK.smallW * lk.h) / lk.w);
     const caption = s.add
-      .text(0, r.h / 2 + CAPTION_GAP_PX, '', kitTextStyle('counter', TOKENS.font.size.caption))
+      .text(0, r.h / 2 + CAPTION_GAP_PX, '', kitTextStyle('counterCream', TOKENS.font.size.caption))
       .setOrigin(0.5, 0);
-    const cancel = addBakedGraphics(s)
-      .setPosition(0, -lip / 2)
-      .setVisible(false);
+    const cancel = addBakedGraphics(s).setPosition(0, cy).setVisible(false);
     drawCancelX(cancel, CANCEL_PX);
     const root = s.add
       .container(0, 0, [face, icon, badge, count, lock, caption, cancel])
@@ -331,8 +338,8 @@ export class BoosterBar {
 
 /** UX §5.2 step 1 "yuva yükselir". */
 const SLOT_RAISE_PX = 16;
-/** UX §5.2 step 1 (DS-13): the × "Vazgeç" on the selected slot, 128 px. */
-const CANCEL_PX = 128;
+/** UX §5.2 step 1 (DS-13): the × "Vazgeç" on the selected slot, 120 px (ART_REFERENCE §3.2). */
+const CANCEL_PX = 120;
 /** JUICE #108 shake (2 px, 3 cycles). */
 const SHAKE_PX = 2;
 const SHAKE_CYCLES = 3;

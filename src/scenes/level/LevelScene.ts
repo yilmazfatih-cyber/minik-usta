@@ -61,11 +61,12 @@ import { COLOR_CODES } from '../../core/types.ts';
 import type { DragNode, GameEvent, Move, PieceId, SessionAction } from '../../core/types.ts';
 import { systemClock } from '../../services/clock.ts';
 import { timed } from '../../services/timings.ts';
-import { t, upper } from '../../services/i18n.ts';
+import { t } from '../../services/i18n.ts';
 import type { DeepReadonly, Settings } from '../../services/save.ts';
-import { boardTray, createLayout, designHeight } from '../../theme/layout.ts';
+import { TRAY_PAD_MAX_PX, boardTray, createLayout, designHeight } from '../../theme/layout.ts';
 import type { Layout, Rect } from '../../theme/layout.ts';
 import { gameBackgroundSpec } from '../../theme/draw/scene.ts';
+import { drawSceneGlowV3 } from '../../theme/draw/kitV3.ts';
 import { YARD_PREVIEW_FRAME, uploadCanvasArt } from '../../theme/textures.ts';
 import type { ShapeDef } from '../../core/shapes.ts';
 import { TOKENS } from '../../theme/tokens.ts';
@@ -74,13 +75,14 @@ import type { BoosterSlotId } from '../../ui/boosterSlots.ts';
 import { addBakedGraphics } from '../../ui/BakedGraphics.ts';
 import { optText } from '../../ui/GoalsPanel.ts';
 import { ensureKitAtlas, kitButtonRef, kitRef, kitSlice } from '../../ui/kit/atlas.ts';
+import { Capsule } from '../../ui/kit/Capsule.ts';
 import { HintBubble } from '../../ui/kit/HintBubble.ts';
-import { kitTextStyle } from '../../ui/kit/text.ts';
+import { IconBinder } from '../../ui/kit/icons.ts';
 import { GoalsPanel } from '../../ui/GoalsPanel.ts';
 import { MovesCounter } from '../../ui/MovesCounter.ts';
 import { offerModel } from '../../ui/offer.ts';
 import type { OfferModel } from '../../ui/offer.ts';
-import { Panorama, panoramaWellSplit } from '../../ui/Panorama.ts';
+import { Panorama } from '../../ui/Panorama.ts';
 import type { PanoramaArrowPair } from '../../ui/Panorama.ts';
 import { PauseButton } from '../../ui/PauseButton.ts';
 import { hex } from '../../ui/text.ts';
@@ -163,20 +165,18 @@ export interface HomeSceneData {
 
 /** A frame longer than this (tab switch, debugger) advances the animation clock by this much only. */
 const MAX_FRAME_MS = 250;
-/** Baked scene gradients (ART §7.1 scene, UX §5.10 bottom band). */
-const BG_KEY = 'lv_scene_gradient';
+/** Baked scene grounds (ART_REFERENCE §7.2 glow + vignette, UX §5.10 bottom band). */
+const BG_KEY = 'lv_scene_glow_v3';
 const BAND_KEY = 'lv_bottom_band';
 const GRADIENT_PX = 256;
+/** The glow is baked at a quarter of the design size and stretched (a radial gradient scales cleanly). */
+const GLOW_BAKE_W = 270;
 /** UX §5.10: the band covers the bottom 330 px. */
 const BAND_PX = 330;
-/** Board tray (R2-12 "tahta çerçeveli"; rect: theme/layout `boardTray`, UX §5.8 rule 9): radius, line, fill alpha. */
-const TRAY_RADIUS_PX = 40;
-const TRAY_LINE_PX = 6;
-const TRAY_ALPHA = 0.55;
-/** UX §5.9 item 7: the panorama's blueprint well radius. */
-const WELL_RADIUS_PX = 24;
-/** UX §5.9 item 8 (DS-12): the level label in the well, ART §8.1 "Parlak başlık" 52 px. */
-const LEVEL_LABEL_PX = 52;
+/** UX §5.9 item 7: the panorama's well — a dark HUD capsule-like plate (ART_REFERENCE §3.4), radius 28. */
+const WELL_RADIUS_PX = 28;
+/** Panorama inset inside its well (px). */
+const WELL_PAD_PX = 12;
 const PANORAMA_STYLE = {
   padPx: VIEW.panoramaPadPx,
   gapCells: VIEW.panoramaGapCells,
@@ -184,9 +184,9 @@ const PANORAMA_STYLE = {
   maxCellPx: VIEW.panoramaMaxCellPx,
   minCellPx: VIEW.panoramaMinCellPx,
 } as const;
-/** UX §5.10 corner: Tuna bust (256 × 320 viewBox) and Kepçe (320 × 220) display widths inside 280 × 296. */
-const TUNA_W = 200;
-const KEPCE_W = 170;
+/** ART_REFERENCE §9.4 corner 240 × 260: Tuna bust (256 × 320 viewBox) and Kepçe (320 × 220) display widths. */
+const TUNA_W = 176;
+const KEPCE_W = 150;
 /** K-34 hook 5 pulse look (presentation; JUICE has no row yet): scale peak and one pulse's duration. */
 const HINT_PULSE_PEAK = 1.06;
 const HINT_PULSE_MS = 600;
@@ -242,14 +242,15 @@ export class LevelScene extends Phaser.Scene {
   private tutSavedActions = -1;
   private overlayKey = '';
   private attempt: LevelAttempt | null = null;
-  /** ART §7.1 indigo scene: gradient image (a small baked canvas, stretched), blueprint lines, board tray, bottom band. */
+  /** ART_REFERENCE §7.2 scene: glow image (a small baked canvas, stretched), faint grid, board frame, bottom band. */
   private bg!: Phaser.GameObjects.Image;
   private bgLines!: Phaser.GameObjects.Graphics;
   private tray!: Phaser.GameObjects.Graphics;
   private band!: Phaser.GameObjects.Image;
   private panoWell!: Phaser.GameObjects.Graphics;
-  /** UX §5.9 item 8 (DS-12): "BÖLÜM {n}" at the left of the panorama well (hidden when the panorama needs the room). */
-  private levelLabel!: Phaser.GameObjects.Text;
+  /** ART_REFERENCE §9.4 row 1: the "Bölüm {n}" HUD capsule (`layout.top.levelCapsule`). */
+  private levelCapsule: Capsule | null = null;
+  private hudIcons!: IconBinder;
   /** UX §5.10 Tuna + Kepçe corner. */
   private tuna!: Phaser.GameObjects.Image;
   private kepce!: Phaser.GameObjects.Image;
@@ -654,7 +655,6 @@ export class LevelScene extends Phaser.Scene {
     this.player.reset();
     this.pieces.clear();
     this.board.clear();
-    this.levelLabel.setVisible(false);
     this.session = null;
     this.lvl = null;
     this.attempt = null;
@@ -892,35 +892,32 @@ export class LevelScene extends Phaser.Scene {
       .setDisplaySize(KEPCE_W, KEPCE_W * 0.6875);
   }
 
-  /** The scene's two procedural gradients, baked once per game (a few hundred bytes; stretched). */
+  /** The scene's two procedural grounds, baked once per game (a small canvas each; stretched). */
   private makeBackground(): void {
-    const sc = TOKENS.color.scene;
-    const grad = (key: string, stops: readonly (readonly [number, string])[]): void => {
-      if (this.textures.exists(key)) return;
-      uploadCanvasArt(this.textures, key, {
+    if (!this.textures.exists(BG_KEY)) {
+      const h = Math.round((GLOW_BAKE_W * TOKENS.meta.scale.expandMaxHeight) / DESIGN_WIDTH);
+      uploadCanvasArt(this.textures, BG_KEY, {
+        w: GLOW_BAKE_W,
+        h,
+        draw: (ctx) => drawSceneGlowV3(ctx, { w: GLOW_BAKE_W, h }, TOKENS),
+      });
+    }
+    if (!this.textures.exists(BAND_KEY)) {
+      const ink = TOKENS.kit.v3.palette.gameBase;
+      const n = hex(ink);
+      const rgba = (a: number): string => `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+      uploadCanvasArt(this.textures, BAND_KEY, {
         w: 4,
         h: GRADIENT_PX,
         draw: (ctx) => {
           const g = ctx.createLinearGradient(0, 0, 0, GRADIENT_PX);
-          for (const [at, color] of stops) g.addColorStop(at, color);
+          g.addColorStop(0, rgba(0));
+          g.addColorStop(1, rgba(TOKENS.layout.hud.bottomBandAlpha));
           ctx.fillStyle = g;
           ctx.fillRect(0, 0, 4, GRADIENT_PX);
         },
       });
-    };
-    const ink = TOKENS.color.ui.ink;
-    const rgba = (hexStr: string, a: number): string => {
-      const n = hex(hexStr);
-      return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
-    };
-    grad(BG_KEY, [
-      [0, sc.gameTop],
-      [1, sc.gameBottom],
-    ]);
-    grad(BAND_KEY, [
-      [0, rgba(ink, 0)],
-      [1, rgba(ink, TOKENS.layout.hud.bottomBandAlpha)],
-    ]);
+    }
     this.bg = this.add.image(0, 0, BG_KEY).setOrigin(0, 0).setDepth(DEPTH.background);
     this.bgLines = addBakedGraphics(this).setDepth(DEPTH.background + 1);
     this.tray = addBakedGraphics(this).setDepth(DEPTH.background + 2);
@@ -929,52 +926,76 @@ export class LevelScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setDepth(DEPTH.background + 3);
     this.panoWell = addBakedGraphics(this).setDepth(DEPTH.hud - 1);
-    this.levelLabel = this.add
-      .text(0, 0, '', kitTextStyle('brightTitle', LEVEL_LABEL_PX, TOKENS.color.ui.ink))
-      .setOrigin(0, 0.5)
-      .setDepth(DEPTH.hud)
-      .setVisible(false);
+    const assets = gameAssets(this.game);
+    this.hudIcons = new IconBinder((id) => assets.icon(id));
   }
 
   /**
-   * ART §7.1 / R2-12 indigo scene (every level; the chapter sky is the home screen's): vertical gradient `scene.gameTop`
-   * → `gameBottom`, faint 120 px blueprint lines, a tray behind the board group (the board sits framed on the indigo,
-   * like the owner's references), the UX §5.10 bottom band (`ui.ink` α 0 → `hud.bottomBandAlpha` over the bottom 330 px)
-   * and the panorama's blueprint well (UX §5.9 item 7: `board.blueprint`, 6 px `ui.ink`, radius 24).
+   * ART_REFERENCE §7.2 scene (every level; the chapter sky is the home screen's): `gameBase` + radial `gameGlow` +
+   * vignette, a faint 120 px grid (α `gridAlpha`), the §5.3 board frame around the board group (48 px purple frame;
+   * DS-16: a full-width band on the 8-column boards), the UX §5.10 bottom band and the panorama's dark well (row 2).
    */
   private paintBackground(): void {
     const L = this.layoutNow;
     const W = DESIGN_WIDTH;
     this.bg.setDisplaySize(W, L.H);
-    this.cameras.main.setBackgroundColor(TOKENS.color.scene.gameBottom);
+    this.cameras.main.setBackgroundColor(TOKENS.kit.v3.palette.gameBase);
     const spec = gameBackgroundSpec(TOKENS, W, L.H);
     const lines = this.bgLines.clear();
+    const gridAlpha = TOKENS.kit.v3.scene.gridAlpha;
     for (const l of spec.lines) {
-      lines.fillStyle(hex(spec.line), l.alpha);
+      lines.fillStyle(hex(spec.line), gridAlpha * (l.px > 2 ? 1.5 : 1));
       if (l.axis === 'v') lines.fillRect(l.at - l.px / 2, 0, l.px, L.H);
       else lines.fillRect(0, l.at - l.px / 2, W, l.px);
     }
-    // the tray holds the board group: the board, its yard frame and the status strip under it (UX §5.1, §5.8 rule 9)
+    // ART_REFERENCE §5.3: the purple frame holds the board group (board, yard frame, status strip; UX §5.8 rule 9)
     const r = boardTray(L, TOKENS);
+    const B = TOKENS.kit.v3.board;
     const tray = this.tray.clear();
-    tray.fillStyle(hex(TOKENS.color.scene.gameBottom), TRAY_ALPHA);
-    tray.lineStyle(TRAY_LINE_PX, hex(TOKENS.kit.nav.edge), 1);
+    const frame = Math.max(B.frameMinPx, Math.min(B.framePx, r.pad));
     if (r.sides) {
-      tray.fillRoundedRect(r.x, r.y, r.w, r.h, TRAY_RADIUS_PX);
-      tray.strokeRoundedRect(r.x, r.y, r.w, r.h, TRAY_RADIUS_PX);
+      const x = r.x - frame + r.pad;
+      const y = r.y - frame + TRAY_PAD_MAX_PX;
+      const w = r.w + 2 * (frame - r.pad);
+      const h = r.h + 2 * (frame - TRAY_PAD_MAX_PX) + B.edgeBottomPx;
+      const ro = B.radiusOuterPx;
+      tray.fillStyle(0x000000, 0.3).fillRoundedRect(x, y + 12, w, h, ro);
+      tray.fillStyle(hex(B.edge), 1).fillRoundedRect(x, y, w, h, ro);
+      tray.fillGradientStyle(hex(B.frameTop), hex(B.frameTop), hex(B.frameBottom), hex(B.frameBottom), 1);
+      tray.fillRoundedRect(x + B.edgePx, y + B.edgePx, w - 2 * B.edgePx, h - B.edgePx - B.edgeBottomPx, ro - B.edgePx);
+      tray.lineStyle(B.innerLinePx, hex(B.innerLine), 1);
+      tray.strokeRoundedRect(x + frame - B.innerLinePx / 2, y + frame - B.innerLinePx / 2, w - 2 * frame + B.innerLinePx, h - frame - B.edgeBottomPx - frame + B.innerLinePx, B.radiusInnerPx);
     } else {
-      // DS-16: an 8-column board leaves < 8 px beside its frame — a full-width band, top and bottom edges only
-      tray.fillRect(r.x, r.y, r.w, r.h);
-      tray.fillStyle(hex(TOKENS.kit.nav.edge), 1);
-      tray.fillRect(r.x, r.y - TRAY_LINE_PX / 2, r.w, TRAY_LINE_PX);
-      tray.fillRect(r.x, r.y + r.h - TRAY_LINE_PX / 2, r.w, TRAY_LINE_PX);
+      // DS-16: an 8-column board leaves < 8 px beside its frame — a full-width band with top and bottom edges only
+      const y = r.y - frame + TRAY_PAD_MAX_PX;
+      const h = r.h + 2 * (frame - TRAY_PAD_MAX_PX) + B.edgeBottomPx;
+      tray.fillStyle(hex(B.edge), 1).fillRect(0, y, W, h);
+      tray.fillGradientStyle(hex(B.frameTop), hex(B.frameTop), hex(B.frameBottom), hex(B.frameBottom), 1);
+      tray.fillRect(0, y + B.edgePx, W, h - B.edgePx - B.edgeBottomPx);
+      tray.fillStyle(hex(B.innerLine), 1);
+      tray.fillRect(0, y + frame - B.innerLinePx, W, B.innerLinePx);
+      tray.fillRect(0, y + h - B.edgeBottomPx - frame, W, B.innerLinePx);
     }
     this.band.setPosition(0, L.H - BAND_PX).setDisplaySize(W, BAND_PX);
     const p = L.top.panorama;
+    const CP = TOKENS.kit.v3.capsule;
     const well = this.panoWell.clear();
-    well.fillStyle(hex(TOKENS.color.board.blueprint), 1).fillRoundedRect(p.x, p.y, p.w, p.h, WELL_RADIUS_PX);
-    well.lineStyle(TOKENS.kit.panel.outlinePx, hex(TOKENS.color.ui.ink), 1);
-    well.strokeRoundedRect(p.x, p.y, p.w, p.h, WELL_RADIUS_PX);
+    well.fillStyle(hex(CP.hudFill), CP.fillAlpha).fillRoundedRect(p.x, p.y, p.w, p.h, WELL_RADIUS_PX);
+    well.lineStyle(CP.innerRingPx, hex(CP.innerRing), CP.innerRingAlpha);
+    well.strokeRoundedRect(p.x + 3, p.y + 3, p.w - 6, p.h - 6, WELL_RADIUS_PX - 3);
+    well.fillStyle(0xffffff, CP.topLineAlpha).fillRect(p.x + WELL_RADIUS_PX, p.y + 3, p.w - 2 * WELL_RADIUS_PX, 2);
+    // ART_REFERENCE §9.4 row 1: the "Bölüm {n}" capsule (rebuilt per layout; the text follows `levelId`)
+    this.levelCapsule?.destroy();
+    const lc = L.top.levelCapsule;
+    const cap = new Capsule(this, this.hudIcons, {
+      w: lc.w,
+      icon: 'icon_star',
+      value: t('home.play', { n: this.levelId }),
+      variant: 'hud',
+    });
+    cap.root.setPosition(lc.x + CP.iconOverhangPx, lc.y).setDepth(DEPTH.hud);
+    cap.root.disableInteractive();
+    this.levelCapsule = cap;
   }
 
   private refreshPanorama(): void {
@@ -984,21 +1005,10 @@ export class LevelScene extends Phaser.Scene {
     this.goals.setGoals(goalViews(s));
   }
 
-  /**
-   * UX §5.9 item 8 (DS-12): the panorama's rect inside its well — right of the "BÖLÜM {n}" label, or the whole well
-   * when the plan needs it (the label hides). Every panorama read (draw, #18 slot, tutorial arrow) uses this rect.
-   */
+  /** The panorama's rect inside its well (row 2, left; ART_REFERENCE §9.4): the well minus `WELL_PAD_PX`. */
   private panoRect(): Rect {
     const well = this.layoutNow.top.panorama;
-    const s = this.session?.state;
-    const label = this.levelLabel;
-    if (!s || !label) return well;
-    const text = upper(t('home.play', { n: this.levelId }));
-    if (label.text !== text) label.setText(text);
-    const split = panoramaWellSplit(well, panoramaView(s), PANORAMA_STYLE, Math.ceil(label.width));
-    if (split.label) label.setPosition(split.label.x, split.label.y + split.label.h / 2).setVisible(true);
-    else label.setVisible(false);
-    return split.strip;
+    return { x: well.x + WELL_PAD_PX, y: well.y + WELL_PAD_PX, w: well.w - 2 * WELL_PAD_PX, h: well.h - 2 * WELL_PAD_PX };
   }
 
   /** UX §13.2 level 5: the active segment's panorama column and the next one (≥ 2 segments). */

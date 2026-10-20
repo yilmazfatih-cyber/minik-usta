@@ -21,7 +21,7 @@
 <path d="M196 340V240Q194 226 180 216L186 210Q206 226 208 244V340Z" fill="#C7ADFF" fill-opacity=".3"/>
 </g>
 <rect x="104" y="194" width="48" height="24" rx="6" fill="#BB9C83"/>
-<rect x="62" y="128" width="16" height="36" rx="7" fill="url(#gS)"/><rect x="178" y="128" width="16" height="36" rx="7" fill="url(#gS)"/><use href="#hd" fill="url(#gS)"/>
+<rect x="62" y="128" width="16" height="36" rx="7" fill="url(#gS)"/><rect x="178" y="128" width="16" height="36" rx="7" fill="url(#gS)"/><path d="M68 138V154M188 138V154" stroke="#A38872" stroke-opacity=".6" stroke-width="3" stroke-linecap="round"/><use href="#hd" fill="url(#gS)"/>
 <g clip-path="url(#chd)">
 <path d="M60 186H200V222H60Z" fill="#A38872" fill-opacity=".4"/><path d="M60 196H200V222H60Z" fill="#A38872" fill-opacity=".25"/>
 <path d="M60 86H200V106H60Z" fill="#A38872" fill-opacity=".4"/>
@@ -41,7 +41,8 @@
 <use href="#ey" transform="translate(102 142)"/><use href="#ey" transform="translate(154 142)"/>
 <path d="M124 150Q138 156 136 170Q130 176 120 172" fill="#BB9C83"/><path d="M126 152Q134 156 134 166" fill="none" stroke="#957C68" stroke-opacity=".5" stroke-width="3" stroke-linecap="round"/>
 <path d="M104 182H152" stroke="#4A4F57" stroke-width="6" stroke-linecap="round"/>
-<path d="M108 192Q128 204 148 188" fill="none" stroke="#957C68" stroke-width="4" stroke-linecap="round"/>
+<path d="M108 192Q128 206 150 186" fill="none" stroke="#957C68" stroke-width="4" stroke-linecap="round"/><path d="M146 188Q152 184 154 180" fill="none" stroke="#957C68" stroke-width="3" stroke-linecap="round"/>
+<path d="M114 128Q124 124 136 128" fill="none" stroke="#A38872" stroke-opacity=".5" stroke-width="3" stroke-linecap="round"/>
 <g fill="#FF879A" fill-opacity=".25"><ellipse cx="88" cy="172" rx="10" ry="6"/><ellipse cx="168" cy="172" rx="10" ry="6"/></g>
 </g><g transform="rotate(-8 186 272)"><rect x="150" y="226" width="70" height="92" rx="7" fill="url(#gFo)"/><rect x="172" y="252" width="26" height="26" rx="4" fill="#B8BEC6"/><rect x="176" y="256" width="18" height="18" rx="2" fill="#90949A"/><path d="M158 236V308" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="4" stroke-linecap="round"/><path d="M150 310H220" stroke="#444950" stroke-width="6"/></g>
 <path d="M140 262Q160 252 176 262Q182 276 168 284Q150 288 140 278Z" fill="url(#gS)"/>
