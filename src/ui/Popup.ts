@@ -1,37 +1,62 @@
 /**
- * Window (UX_FLOWS §0.3 "Pencere": cream panel, 12 px `panelEdge`, 48 px corners, `ui.overlay` dim at
- * `alpha.overlay`; §0.1 / TECH §10.1 popup anchor contract: the panel's bottom edge is at `H − popup.panelBottomPx`, the
- * options are stacked bottom → top from `optionsBottomInsetPx` above it — never vertically centred; R-15 equal options;
- * §0.3 "Kapat (×)").
+ * Window v3 (ART_REFERENCE §3.7 indigo window, §3.6 mounted title, §3.2 red round ×, §9.5 / §9.7 / §9.8 layouts;
+ * UX §0.1 / TECH §10.1 popup anchor contract: the panel's bottom edge is at `H − popup.panelBottomPx`, the option
+ * buttons are stacked bottom → top above it — never vertically centred; UX §0.2: the primary action is the lowest).
  *
- * Content rows (title, text, switches, custom drawings) sit above the options; the panel grows upward to hold them. The
- * dim layer takes every touch under the window (the board and the HUD stay out). The window opens / closes through the
- * EventPlayer (JUICE #70 / #71, or #52 for the out-of-moves offer) via `target`; options press with #69.
+ * Anatomy: `overlay` dim (α `overlayAlpha`) → the 9-sliced indigo panel (`ui_panel`, 1000 wide) → content rows →
+ * option buttons (`KitButton` v3: L 560 × 212, M 360 × 136 or the full 920 × 152 option row) → the two-ring title
+ * mounted on the panel's top edge (centre = edge − 20) → the Ø 120 × overhanging the top-right corner (−60, +50).
+ * Rows: consecutive `text` rows share one cream card (`ui_card`, card text #1A467B); `toggle` rows share one lavender
+ * plate (`ui_plate`) with cream row strips and the 176 × 88 switch pill; `custom` rows draw themselves (centred on
+ * x = 0, top at y = 0). The dim layer takes every touch under the window. The window opens / closes through the
+ * EventPlayer (JUICE #70 / #71, or #52 for the out-of-moves offer) via `target`; options press with #69 / #97.
  */
-import type Phaser from 'phaser';
+import Phaser from 'phaser';
 import type { Layout, Rect } from '../theme/layout.ts';
 import { TOKENS } from '../theme/tokens.ts';
-import { splitInline } from '../services/i18n.ts';
-import { drawClose } from './icons.ts';
-import { InlineLabel } from './InlineLabel.ts';
-import { OptionButton } from './OptionButton.ts';
-import type { OptionContent, OptionTone } from './OptionButton.ts';
-import { hex, textStyle } from './text.ts';
-import type { FontRole } from './text.ts';
-import { UI } from './uiConstants.ts';
-import { addBakedGraphics } from './BakedGraphics.ts';
+import { KIT } from '../theme/textures.ts';
+import type { KitV3ButtonColor } from '../theme/draw/kitV3.ts';
+import { hex } from './text.ts';
+import { kitRef, kitSlice } from './kit/atlas.ts';
+import type { IconBinder } from './kit/icons.ts';
+import { KitButton } from './kit/KitButton.ts';
+import type { PressVariant } from './kit/KitButton.ts';
+import { addInlineText } from './kit/InlineText.ts';
+import { addKitText, addTitleGold, addTitleTwoRing, fitWidth, kitTextStyle } from './kit/text.ts';
+import type { LayeredTitle } from './kit/text.ts';
 
-const C = TOKENS.color.ui;
+const V3 = TOKENS.kit.v3;
+const PN = V3.panel;
+const CL = V3.close;
 
-export interface PopupOption extends OptionContent {
+export type OptionTone = 'primary' | 'secondary' | 'neutral' | 'disabled' | 'text';
+/** Option button sizes: L / M (ART_REFERENCE §3.1) or the full 920 × 152 option row (UX §7 equal options). */
+export type OptionSize = 'L' | 'M' | 'row';
+
+export interface PopupOption {
   readonly id: string;
+  readonly label: string;
   readonly tone: OptionTone;
   readonly enabled?: boolean;
+  readonly size?: OptionSize;
+  /** Leading "▶" (rewarded ad, UX §7). */
+  readonly play?: boolean;
+  /** PriceLabel (UX §0.3): coins line + real-money line. */
+  readonly price?: { readonly line1: string; readonly line2: string } | null;
+  /** One small right-hand line (ad: `lose.adToday` / `ads.none` / `ads.tomorrow`). */
+  readonly sub?: string | null;
 }
 
 export type PopupRow =
-  | { readonly kind: 'title'; readonly text: string }
-  | { readonly kind: 'text'; readonly text: string; readonly role?: FontRole; readonly color?: string }
+  | { readonly kind: 'title'; readonly text: string; readonly gold?: boolean }
+  | {
+      readonly kind: 'text';
+      readonly text: string;
+      /** Text size (default `kit.v3.text.cardText.fontPx` 48; `small` 34 lavender outside a card). */
+      readonly size?: number;
+      /** `card` (default: cream card, #1A467B) or `plain` (lavender on the panel body, no card). */
+      readonly look?: 'card' | 'plain';
+    }
   | { readonly kind: 'gap'; readonly h: number }
   | { readonly kind: 'toggle'; readonly id: string; readonly label: string; readonly on: boolean }
   | {
@@ -44,10 +69,16 @@ export type PopupRow =
 export interface PopupSpec {
   readonly rows: readonly PopupRow[];
   readonly options: readonly PopupOption[];
-  /** `stack` = equal options one under the other (920 × 152); `pair` = UX §0.3 equal pair (2 × 440 × 152). */
+  /** Kept for the callers of the v2 window: both arrangements stack bottom → top in v3 (UX §0.2). */
   readonly arrange?: 'stack' | 'pair';
   /** × in the top-right corner (same result as the "no" option, R-15). */
   readonly close?: boolean;
+  /** Title size: 96 (default) or 112 (the level-start window). */
+  readonly titlePx?: number;
+  /** Panel width (default `kit.v3.panel.w` 1000). */
+  readonly panelW?: number;
+  /** Inline `{coin}` icons of the option labels / price lines. */
+  readonly icons?: IconBinder | null;
 }
 
 export interface PopupHandlers {
@@ -55,38 +86,87 @@ export interface PopupHandlers {
   close?(): void;
   toggle?(id: string): void;
   /** JUICE #69 on any button of the window. */
-  button?(b: OptionButton, variant: 'press' | 'release'): void;
+  button?(b: KitButton, variant: PressVariant): void;
 }
 
-/** Equal-pair rects (UX §0.3): one row at the lowest option slot. */
+/** v3 option sizes (ART_REFERENCE §3.1 L / M; UX §7 row). */
+export const OPTION_SIZE: Readonly<Record<OptionSize, { readonly w: number; readonly h: number }>> = {
+  L: { w: V3.button.L.w, h: V3.button.L.h },
+  M: { w: V3.button.M.w, h: V3.button.M.h },
+  row: { w: TOKENS.layout.popup.optionW, h: TOKENS.layout.popup.optionH },
+};
+
+/** Vertical rhythm of the window (ART_REFERENCE §9.3 / §9.5: Oyna altı boşluk 80, kareler üstü 88). */
+const OPTIONS_BOTTOM_INSET = 80;
+const OPTION_GAP = 32;
+const CONTENT_TO_OPTIONS = 56;
+const PANEL_TOP_PAD = 104;
+const ROW_GAP = 24;
+/** Content width inside the panel (plate 880 wide at x 100, ART_REFERENCE §9.3). */
+const CONTENT_INSET = 100;
+/** Cream card and plate paddings. */
+const CARD_PAD_X = 48;
+const CARD_PAD_Y = 36;
+const PLATE_PAD = 24;
+const TOGGLE_ROW_H = V3.screen.settings.rowH;
+const TOGGLE_ROW_GAP = 16;
+
+/** Tone → v3 button colour (ART_REFERENCE §2.3). */
+const TONE_COLOR: Readonly<Record<OptionTone, KitV3ButtonColor>> = {
+  primary: 'green',
+  secondary: 'orange',
+  neutral: 'cream',
+  disabled: 'grey',
+  text: 'cream',
+};
+
+interface Toggle {
+  readonly pill: Phaser.GameObjects.Image;
+  on: boolean;
+}
+
+/** Equal-pair rects of the v2 window (kept for the layout tests: two 440 × 152 at the lowest option slot). */
 export function pairRects(layout: Layout): readonly Rect[] {
   const p = TOKENS.layout.popup;
   const y = layout.popup.optionsBottomY - p.optionH;
-  const total = 2 * UI.pairW + UI.pairGapPx;
-  const x0 = (layout.W - total) / 2;
+  const pairW = 440;
+  const gap = 40;
+  const x0 = (layout.W - 2 * pairW - gap) / 2;
   return [
-    { x: x0, y, w: UI.pairW, h: p.optionH },
-    { x: x0 + UI.pairW + UI.pairGapPx, y, w: UI.pairW, h: p.optionH },
+    { x: x0, y, w: pairW, h: p.optionH },
+    { x: x0 + pairW + gap, y, w: pairW, h: p.optionH },
   ];
 }
 
-interface Toggle {
-  readonly pill: Phaser.GameObjects.Graphics;
-  readonly state: Phaser.GameObjects.Text;
-  on: boolean;
-  readonly onText: string;
-  readonly offText: string;
+/** Rects of the options, index 0 = topmost (reading order), stacked bottom → top from `bottomY` (pure). */
+export function optionRects(
+  W: number,
+  bottomY: number,
+  options: readonly Pick<PopupOption, 'size'>[],
+): readonly Rect[] {
+  const out: Rect[] = [];
+  let y = bottomY;
+  for (let i = options.length - 1; i >= 0; i--) {
+    const s = OPTION_SIZE[options[i]?.size ?? 'row'];
+    y -= s.h;
+    out.unshift({ x: (W - s.w) / 2, y, w: s.w, h: s.h });
+    y -= OPTION_GAP;
+  }
+  return out;
 }
 
 export class Popup {
   readonly dim: Phaser.GameObjects.Rectangle;
   readonly panel: Phaser.GameObjects.Container;
-  readonly options: readonly OptionButton[];
+  readonly options: readonly KitButton[];
   /** Panel rectangle in design px (tests of the anchor contract read it). */
   readonly rect: Rect;
+  /** The mounted title (null without a title row). */
+  readonly title: LayeredTitle | null;
   private readonly toggles = new Map<string, Toggle>();
   private readonly extras: Phaser.GameObjects.GameObject[] = [];
   private closeButton: Phaser.GameObjects.Container | null = null;
+  private readonly scene: Phaser.Scene;
 
   constructor(
     scene: Phaser.Scene,
@@ -94,55 +174,47 @@ export class Popup {
     spec: PopupSpec,
     depth: number,
     handlers: PopupHandlers,
-    toggleTexts: { readonly on: string; readonly off: string } = { on: '', off: '' },
+    _toggleTexts: { readonly on: string; readonly off: string } = { on: '', off: '' },
   ) {
+    this.scene = scene;
     const W = layout.W;
-    const panelW = TOKENS.layout.popup.optionW + 2 * UI.panelSidePadPx;
-    const innerW = panelW - 2 * UI.panelSidePadPx;
-    const arrange = spec.arrange ?? 'stack';
-    const optionRects: readonly Rect[] =
-      spec.options.length === 0
-        ? []
-        : arrange === 'pair'
-          ? pairRects(layout).slice(0, spec.options.length)
-          : layout.popup.options(spec.options.length);
-    const optionsTop =
-      optionRects.length > 0 ? Math.min(...optionRects.map((r) => r.y)) : layout.popup.optionsBottomY;
+    const panelW = spec.panelW ?? PN.w;
+    const innerW = panelW - 2 * CONTENT_INSET;
+    const bottom = layout.popup.panelBottomY;
+    const rects = optionRects(W, bottom - OPTIONS_BOTTOM_INSET, spec.options);
+    const optionsTop = rects.length > 0 ? Math.min(...rects.map((r) => r.y)) : bottom - OPTIONS_BOTTOM_INSET;
 
-    // rows → objects with heights (measured), laid out top → bottom later
+    // rows → objects with heights (measured), laid out top → bottom later (titles are mounted, not in the flow)
     const built: { objs: Phaser.GameObjects.GameObject[]; h: number; place: (top: number) => void }[] = [];
-    for (const row of spec.rows) {
+    const titleRow = spec.rows.find((r) => r.kind === 'title');
+    const rows = spec.rows.filter((r) => r.kind !== 'title');
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i] as Exclude<PopupRow, { kind: 'title' }>;
       if (row.kind === 'gap') {
         built.push({ objs: [], h: row.h, place: () => {} });
         continue;
       }
-      if (row.kind === 'title' || row.kind === 'text') {
-        const role: FontRole = row.kind === 'title' ? 'h1' : (row.role ?? 'body');
-        const color = row.kind === 'title' ? C.ink : (row.color ?? C.ink);
-        if (splitInline(row.text).some((r) => r.kind === 'icon')) {
-          // one line with inline icons (`{coin}`, `{ok}`, STORY §0-11), shrunk to the panel width when needed
-          const label = new InlineLabel(scene, role, color, 'center').setText(row.text);
-          if (label.width > innerW) label.root.setScale(innerW / label.width);
-          const lh = label.height;
-          built.push({ objs: [label.root], h: lh, place: (top) => label.setPosition(0, top + lh / 2) });
+      if (row.kind === 'text') {
+        if (row.look === 'plain') {
+          const t = addKitText(scene, 0, 0, row.text, 'counterLavender', row.size ?? 34);
+          t.setOrigin(0.5, 0);
+          fitWidth(t, innerW);
+          const th = t.height;
+          built.push({ objs: [t], h: th, place: (top) => t.setPosition(0, top) });
           continue;
         }
-        const t = scene.add
-          .text(0, 0, row.text, {
-            ...textStyle(role, color),
-            wordWrap: { width: innerW, useAdvancedWrap: true },
-          })
-          .setOrigin(0.5, 0);
-        built.push({ objs: [t], h: t.height, place: (top) => t.setPosition(0, top) });
+        // one cream card for this and the following text rows
+        const group: Extract<PopupRow, { kind: 'text' }>[] = [row];
+        while (rows[i + 1]?.kind === 'text' && (rows[i + 1] as { look?: string }).look !== 'plain') {
+          group.push(rows[++i] as Extract<PopupRow, { kind: 'text' }>);
+        }
+        built.push(this.textCard(group, innerW, spec.icons ?? null));
         continue;
       }
       if (row.kind === 'toggle') {
-        const objs = this.buildToggle(scene, row, innerW, handlers, toggleTexts);
-        built.push({
-          objs,
-          h: UI.toggleRowH,
-          place: (top) => objs.forEach((o) => ((o as unknown as { y: number }).y += top)),
-        });
+        const group: Extract<PopupRow, { kind: 'toggle' }>[] = [row];
+        while (rows[i + 1]?.kind === 'toggle') group.push(rows[++i] as Extract<PopupRow, { kind: 'toggle' }>);
+        built.push(this.togglePlate(group, innerW, handlers));
         continue;
       }
       const objs = row.build(scene, innerW);
@@ -152,50 +224,52 @@ export class Popup {
         place: (top) => objs.forEach((o) => ((o as unknown as { y: number }).y += top)),
       });
     }
-    const contentH = built.reduce((s, b) => s + b.h, 0) + Math.max(0, built.length - 1) * UI.contentGapPx;
-    const bottom = layout.popup.panelBottomY;
-    const top = optionsTop - UI.contentToOptionsPx - contentH - UI.panelTopPadPx;
-    const h = bottom - top;
-    this.rect = { x: (W - panelW) / 2, y: top, w: panelW, h };
+    const contentH = built.reduce((s, b) => s + b.h, 0) + Math.max(0, built.length - 1) * ROW_GAP;
+    const top = optionsTop - CONTENT_TO_OPTIONS - contentH - PANEL_TOP_PAD;
+    const h = Math.min(PN.maxH + 200, bottom - top);
+    this.rect = { x: (W - panelW) / 2, y: bottom - h, w: panelW, h };
     const cx = W / 2;
-    const cy = top + h / 2;
+    const cy = this.rect.y + h / 2;
 
     this.dim = scene.add
-      .rectangle(0, 0, W, layout.H, hex(C.overlay), 1)
+      .rectangle(0, 0, W, layout.H, hex(V3.palette.overlay), 1)
       .setOrigin(0, 0)
       .setDepth(depth)
-      .setAlpha(TOKENS.alpha.overlay);
+      .setAlpha(V3.palette.overlayAlpha);
     this.dim.setInteractive(); // swallows every touch under the window
 
-    const g = addBakedGraphics(scene);
-    const r = TOKENS.radius.panel;
-    const lip = TOKENS.shadow.panelLipPx;
-    g.fillStyle(hex(C.panelShadow), 1).fillRoundedRect(-panelW / 2, -h / 2 + lip, panelW, h, r);
-    g.fillStyle(hex(C.panelEdge), 1).fillRoundedRect(-panelW / 2, -h / 2, panelW, h, r);
-    const e = UI.panelEdgePx;
-    g.fillStyle(hex(C.panel), 1).fillRoundedRect(
-      -panelW / 2 + e,
-      -h / 2 + e,
-      panelW - 2 * e,
-      h - 2 * e,
-      r - e,
-    );
-    const children: Phaser.GameObjects.GameObject[] = [g];
+    const pr = kitRef(scene.game, KIT.panel);
+    const ps = kitSlice(KIT.panel);
+    const frameH = h + PN.shadowYPx + Math.round(PN.shadowBlurPx / 2);
+    const body = scene.add
+      .nineslice(0, 0, pr.key, pr.frame, panelW, frameH, ps?.left, ps?.right, ps?.top, ps?.bottom)
+      .setOrigin(0.5, h / 2 / frameH);
+    const children: Phaser.GameObjects.GameObject[] = [body];
 
-    let y = -h / 2 + UI.panelTopPadPx;
+    let y = -h / 2 + PANEL_TOP_PAD;
     for (const b of built) {
       b.place(y);
       children.push(...b.objs);
-      y += b.h + UI.contentGapPx;
+      y += b.h + ROW_GAP;
     }
 
-    const buttons: OptionButton[] = [];
+    const buttons: KitButton[] = [];
     spec.options.forEach((o, i) => {
-      const rr = optionRects[i];
+      const rr = rects[i];
       if (!rr) return;
-      const tone: OptionTone = o.enabled === false ? 'disabled' : o.tone;
-      const btn = new OptionButton(scene, { w: rr.w, h: rr.h }, tone, o);
-      btn.setEnabled(o.enabled !== false);
+      const disabled = o.enabled === false || o.tone === 'disabled';
+      const btn = new KitButton(scene, {
+        color: TONE_COLOR[o.tone],
+        w: rr.w,
+        h: rr.h,
+        label: o.label,
+        disabled,
+        ...(o.play ? { play: true } : {}),
+        ...(o.price ? { price: o.price } : {}),
+        ...(o.sub ? { sub: o.sub } : {}),
+        icons: spec.icons ?? null,
+      });
+      btn.setEnabled(!disabled);
       btn.root.setPosition(rr.x + rr.w / 2 - cx, rr.y + rr.h / 2 - cy);
       btn.onTap(() => handlers.option(o.id));
       btn.onPress((v) => handlers.button?.(btn, v));
@@ -204,19 +278,46 @@ export class Popup {
     });
     this.options = buttons;
 
+    // mounted title (ART_REFERENCE §3.6): centre = panel top edge − 20, over a soft shadow band of the panel tone
+    let title: LayeredTitle | null = null;
+    if (titleRow && titleRow.kind === 'title') {
+      const px = spec.titlePx ?? V3.text.titleTwoRing.fontSmallPx;
+      const ty = -h / 2 + V3.header.mountedCenterOffsetPx;
+      title = titleRow.gold
+        ? addTitleGold(scene, 0, ty, titleRow.text, px)
+        : addTitleTwoRing(scene, 0, ty, titleRow.text, px);
+      title.fit(panelW - 2 * CL.diameterPx - 40);
+      children.push(title.root);
+    }
+    this.title = title;
+
     if (spec.close) {
-      const close = scene.add.container(
-        panelW / 2 - UI.closeVisualPx / 2 + UI.closeOverhangPx,
-        -h / 2 + UI.closeVisualPx / 2 - UI.closeOverhangPx,
-      );
-      const cg = addBakedGraphics(scene);
-      drawClose(cg, UI.closeVisualPx);
-      close.add(cg);
-      const size = Math.max(TOKENS.touch.minTargetPx, UI.closeVisualPx + 32);
-      close.setSize(size, size).setInteractive();
-      close.on('pointerup', (p: Phaser.Input.Pointer) => {
-        if (!p.wasCanceled) handlers.close?.();
+      const close = scene.add.container(panelW / 2 + CL.offsetXPx, -h / 2 + CL.offsetYPx);
+      const n = kitRef(scene.game, KIT.close);
+      const p = kitRef(scene.game, KIT.closePressed);
+      const normal = scene.add.image(0, 0, n.key, n.frame).setOrigin(0.5, CL.diameterPx / 2 / n.h);
+      const pressed = scene.add
+        .image(0, 0, p.key, p.frame)
+        .setOrigin(0.5, CL.diameterPx / 2 / p.h)
+        .setVisible(false);
+      close.add([normal, pressed]);
+      close.setSize(CL.hitPx, CL.hitPx).setInteractive();
+      let down = false;
+      close.on('pointerdown', () => {
+        down = true;
+        normal.setVisible(false);
+        pressed.setVisible(true);
+        handlers.button?.(buttons[0] as KitButton, 'press');
       });
+      const up = (tap: boolean): void => {
+        if (!down) return;
+        down = false;
+        normal.setVisible(true);
+        pressed.setVisible(false);
+        if (tap) handlers.close?.();
+      };
+      close.on('pointerup', (pt: Phaser.Input.Pointer) => up(!pt.wasCanceled));
+      close.on('pointerout', () => up(false));
       children.push(close);
       this.closeButton = close;
     }
@@ -228,7 +329,7 @@ export class Popup {
   get target(): {
     dim: Phaser.GameObjects.Rectangle;
     panel: Phaser.GameObjects.Container;
-    options: readonly OptionButton[];
+    options: readonly KitButton[];
   } {
     return { dim: this.dim, panel: this.panel, options: this.options };
   }
@@ -241,13 +342,13 @@ export class Popup {
     return { x: p.x + c.x * p.scaleX, y: p.y + c.y * p.scaleY };
   }
 
-  /** Switch row state (Pause window). */
+  /** Switch row state (Pause / Settings windows). */
   setToggle(id: string, on: boolean): void {
     const t = this.toggles.get(id);
     if (!t || t.on === on) return;
     t.on = on;
-    drawPill(t.pill, on);
-    t.state.setText(on ? t.onText : t.offText).setColor(on ? C.inkOnDark : C.ink);
+    const ref = kitRef(this.scene.game, on ? KIT.toggleOn : KIT.toggleOff);
+    t.pill.setTexture(ref.key, ref.frame);
   }
 
   /** Extra objects owned by the window (destroyed with it). */
@@ -266,50 +367,99 @@ export class Popup {
     this.dim.destroy();
   }
 
-  private buildToggle(
-    scene: Phaser.Scene,
-    row: Extract<PopupRow, { kind: 'toggle' }>,
+  /** Cream card with the text rows (ART_REFERENCE §3.7 layer 9, §4 `cardText`). */
+  private textCard(
+    rows: readonly Extract<PopupRow, { kind: 'text' }>[],
+    innerW: number,
+    icons: IconBinder | null,
+  ): { objs: Phaser.GameObjects.GameObject[]; h: number; place: (top: number) => void } {
+    const scene = this.scene;
+    const texts: { obj: Phaser.GameObjects.GameObject & { y: number }; h: number }[] = [];
+    const maxW = innerW - 2 * CARD_PAD_X;
+    for (const r of rows) {
+      const px = r.size ?? V3.text.cardText.fontPx;
+      if (icons && r.text.includes('{')) {
+        const inl = addInlineText(scene, icons, r.text, 'cardText', px, 'center');
+        if (inl.width > maxW) inl.root.setScale(maxW / inl.width);
+        texts.push({ obj: inl.root, h: px * 1.25 });
+        continue;
+      }
+      const t = scene.add
+        .text(0, 0, r.text, { ...kitTextStyle('cardText', px), wordWrap: { width: maxW, useAdvancedWrap: true } })
+        .setOrigin(0.5, 0);
+      texts.push({ obj: t, h: t.height });
+    }
+    const gap = 12;
+    const textH = texts.reduce((s, t) => s + t.h, 0) + gap * Math.max(0, texts.length - 1);
+    const h = textH + 2 * CARD_PAD_Y;
+    const cr = kitRef(scene.game, KIT.card);
+    const cs = kitSlice(KIT.card);
+    const card = scene.add
+      .nineslice(0, 0, cr.key, cr.frame, innerW, h, cs?.left, cs?.right, cs?.top, cs?.bottom)
+      .setOrigin(0.5, 0);
+    return {
+      objs: [card, ...texts.map((t) => t.obj)],
+      h,
+      place: (top) => {
+        card.setY(top);
+        let y = top + CARD_PAD_Y;
+        for (const t of texts) {
+          // inline containers are centred on their line; plain texts hang from their top
+          t.obj.y = t.obj instanceof Phaser.GameObjects.Container ? y + t.h / 2 : y;
+          y += t.h + gap;
+        }
+      },
+    };
+  }
+
+  /** Lavender plate with cream row strips and the switch pills (ART_REFERENCE §9.5, §9.8). */
+  private togglePlate(
+    rows: readonly Extract<PopupRow, { kind: 'toggle' }>[],
     innerW: number,
     handlers: PopupHandlers,
-    texts: { readonly on: string; readonly off: string },
-  ): Phaser.GameObjects.GameObject[] {
-    const h = UI.toggleRowH;
-    const label = scene.add.text(-innerW / 2, h / 2, row.label, textStyle('body', C.ink)).setOrigin(0, 0.5);
-    const pill = addBakedGraphics(scene).setPosition(innerW / 2 - UI.togglePillW / 2, h / 2);
-    drawPill(pill, row.on);
-    const state = scene.add
-      .text(
-        innerW / 2 - UI.togglePillW / 2,
-        h / 2,
-        row.on ? texts.on : texts.off,
-        textStyle('small', row.on ? C.inkOnDark : C.ink),
-      )
-      .setOrigin(0.5, 0.5);
-    const zone = scene.add.zone(0, h / 2, innerW, h).setInteractive();
-    zone.on('pointerup', (p: Phaser.Input.Pointer) => {
-      if (!p.wasCanceled) handlers.toggle?.(row.id);
+  ): { objs: Phaser.GameObjects.GameObject[]; h: number; place: (top: number) => void } {
+    const scene = this.scene;
+    const S = V3.screen.settings;
+    const rowW = innerW - 2 * PLATE_PAD;
+    const h = 2 * PLATE_PAD + rows.length * TOGGLE_ROW_H + (rows.length - 1) * TOGGLE_ROW_GAP;
+    const pr = kitRef(scene.game, KIT.plate);
+    const ps = kitSlice(KIT.plate);
+    const plate = scene.add
+      .nineslice(0, 0, pr.key, pr.frame, innerW, h, ps?.left, ps?.right, ps?.top, ps?.bottom)
+      .setOrigin(0.5, 0);
+    const objs: (Phaser.GameObjects.GameObject & { y: number })[] = [plate];
+    const strips = scene.add.graphics();
+    objs.push(strips);
+    rows.forEach((row, i) => {
+      const ry = PLATE_PAD + i * (TOGGLE_ROW_H + TOGGLE_ROW_GAP);
+      strips
+        .fillStyle(hex(S.rowStroke), 1)
+        .fillRoundedRect(-rowW / 2, ry, rowW, TOGGLE_ROW_H, S.rowRadiusPx)
+        .fillStyle(hex(S.rowFill), 1)
+        .fillRoundedRect(
+          -rowW / 2 + S.rowStrokePx,
+          ry + S.rowStrokePx,
+          rowW - 2 * S.rowStrokePx,
+          TOGGLE_ROW_H - 2 * S.rowStrokePx,
+          S.rowRadiusPx - S.rowStrokePx,
+        );
+      const label = addKitText(scene, 0, 0, row.label, 'cardText', V3.text.cardText.fontPx - 4);
+      label.setOrigin(0, label.originY).setPosition(-rowW / 2 + 32, ry + TOGGLE_ROW_H / 2);
+      const ref = kitRef(scene.game, row.on ? KIT.toggleOn : KIT.toggleOff);
+      const pill = scene.add
+        .image(rowW / 2 - 24 - V3.screen.pause.toggleW / 2, ry + TOGGLE_ROW_H / 2, ref.key, ref.frame)
+        .setOrigin(0.5, V3.screen.pause.toggleH / 2 / ref.h);
+      const zone = scene.add.zone(0, ry + TOGGLE_ROW_H / 2, rowW, TOGGLE_ROW_H).setInteractive();
+      zone.on('pointerup', (p: Phaser.Input.Pointer) => {
+        if (!p.wasCanceled) handlers.toggle?.(row.id);
+      });
+      this.toggles.set(row.id, { pill, on: row.on });
+      objs.push(label, pill, zone);
     });
-    this.toggles.set(row.id, { pill, state, on: row.on, onText: texts.on, offText: texts.off });
-    return [label, pill, state, zone];
+    return {
+      objs,
+      h,
+      place: (top) => objs.forEach((o) => (o.y += top)),
+    };
   }
-}
-
-function drawPill(g: Phaser.GameObjects.Graphics, on: boolean): void {
-  const w = UI.togglePillW;
-  const h = UI.togglePillH;
-  g.clear();
-  g.fillStyle(hex(on ? C.primaryLip : C.disabledLip), 1).fillRoundedRect(
-    -w / 2,
-    -h / 2 + 6,
-    w,
-    h,
-    TOKENS.radius.toggle,
-  );
-  g.fillStyle(hex(on ? C.primary : C.disabled), 1).fillRoundedRect(
-    -w / 2,
-    -h / 2,
-    w,
-    h,
-    TOKENS.radius.toggle,
-  );
 }

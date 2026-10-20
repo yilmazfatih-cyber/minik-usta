@@ -1,39 +1,60 @@
 /**
- * Candy button v2 (ART §14.1, §2.6; UX §0.3 "Hacimli düğme (v2)"; JUICE #97 on top of #69). The look is the baked kit
- * frame (`ui_button_<colour>_h<h>`, 3-sliced to any width; the pressed frame is a second NineSlice), the label is a
- * Phaser Text in the "Parlak başlık" look in the colour's stroke (cream: "Panel metni"), optionally an icon on the face.
+ * Chunky button v3 (ART_REFERENCE §3.1, §2.3, §4 "button"; JUICE #97 on top of #69). The look is the baked kit frame
+ * (`ui3_button_<colour>_h<h>`, 3-sliced to any width; the pressed frame is a second NineSlice), the label is a Phaser
+ * Text in the §4 button look (white, 0,06 em contour + 0,04 em shadow in the colour's `textStroke`), optionally an icon
+ * on the plate, a leading "▶" (rewarded ad, UX §7) and a right column (PriceLabel: coins line over the real-money
+ * line, or one small line — the out-of-moves options, UX §0.3).
  *
- * Press (#97): the face sinks `lipPx − pressedLipPx` (10 px, the pressed frame), the content follows, scale
- * `pressedScale` in `duration.buttonPress`; release: back up, 1.04 → 1.0 in `duration.buttonRelease` (Back.easeOut).
- * Reduced motion: only the thickness changes. The hit area is at least `touch.minTargetPx` (UX §0.3 "Görsel + pay").
- * It is a juice `ButtonTarget` too (`setLip` maps the v1 lip of #69 onto the v2 press).
+ * Press (#97): the plate content sinks `pressedDropPx` (8 px; the pressed frame shows the short lip), scale
+ * `pressedScale` in `duration.buttonPress`; release: back up, 1.04 → 1.0 in `duration.buttonRelease`
+ * (Back.easeOut). Reduced motion: only the thickness changes. The hit area is at least `touch.minTargetPx`
+ * (UX §0.3 "Görsel + pay"). It is a juice `ButtonTarget` too (`setLip` maps the v1 lip of #69 onto the v3 press).
+ * `square`: the HUD booster square anatomy (ART_REFERENCE §9.4).
  */
 import Phaser from 'phaser';
 import { hitArea } from '../../theme/layout.ts';
 import { TOKENS } from '../../theme/tokens.ts';
-import { buttonFaceRect } from '../../theme/draw/kit.ts';
-import type { KitButtonColor } from '../../theme/draw/kit.ts';
+import { buttonV3Metrics, buttonV3PlateRect } from '../../theme/draw/kitV3.ts';
+import type { KitV3ButtonColor } from '../../theme/draw/kitV3.ts';
+import { addBakedGraphics } from '../BakedGraphics.ts';
+import { drawPlay } from '../icons.ts';
 import { kitButtonRef } from './atlas.ts';
+import type { IconBinder } from './icons.ts';
+import { addInlineText } from './InlineText.ts';
 import { addKitText, fitWidth } from './text.ts';
 
 export interface KitButtonSpec {
-  readonly color: KitButtonColor;
+  readonly color: KitV3ButtonColor;
   readonly w: number;
   readonly h: number;
   readonly label?: string;
-  /** Label size (default `font.size.button` 56 px; "Bölüm N" uses 80). */
+  /** Label size (default: the size preset's `fontPx` — L 96, M 56, S 44). */
   readonly labelPx?: number;
-  /** An icon on the face (texture key + frame), drawn `iconPx` wide. */
+  /** An icon on the plate (texture key + frame), drawn `px` wide; with a label it sits left of the text. */
   readonly icon?: { readonly key: string; readonly frame?: string; readonly px: number } | null;
-  /** Label left of the icon instead of centred (icon + label rows). */
   readonly disabled?: boolean;
+  /** ART_REFERENCE §9.4 booster square anatomy (thin bands). */
+  readonly square?: boolean;
+  /** Leading "▶" (rewarded ad option, UX §7). */
+  readonly play?: boolean;
+  /** PriceLabel column (UX §0.3): coins line + real-money line; `{coin}` icons need `icons`. */
+  readonly price?: { readonly line1: string; readonly line2: string } | null;
+  /** One small right-hand line (ad: `lose.adToday` / `ads.none` / `ads.tomorrow`). */
+  readonly sub?: string | null;
+  /** Icon source of inline `{coin}` runs in the label / price lines. */
+  readonly icons?: IconBinder | null;
 }
 
-const KB = TOKENS.kit.button;
-/** JUICE #97: the face sinks by the lip difference (14 → 4 px). */
-export const PRESS_SINK_PX = KB.lipPx - KB.pressedLipPx;
+const KB = TOKENS.kit.v3.button;
+/** JUICE #97: the plate content sinks `pressedDropPx`. */
+export const PRESS_SINK_PX = KB.pressedDropPx;
 /** Release overshoot (JUICE #97 "1,04 → 1,0"). */
 const RELEASE_PEAK = 1.04;
+/** Side padding of a label with a right column (px). */
+const SIDE_PAD = 40;
+/** Right column text sizes (UX §0.3 PriceLabel: coins 44, real money 34). */
+const PRICE_PX = 44;
+const SUB_PX = 34;
 
 export type PressVariant = 'press' | 'release';
 
@@ -59,37 +80,82 @@ export class KitButton {
     const { w, h } = spec;
     this.w = w;
     this.h = h;
-    const color: KitButtonColor = spec.disabled ? 'grey' : spec.color;
-    const n = kitButtonRef(scene.game, color, h, spec.disabled ? 'disabled' : 'normal');
+    const square = spec.square ?? false;
+    const color: KitV3ButtonColor = spec.disabled ? 'grey' : spec.color;
+    const n = kitButtonRef(scene.game, color, h, spec.disabled ? 'disabled' : 'normal', square);
     this.normal = this.slice(n.ref, n.slices, w);
     const parts: Phaser.GameObjects.GameObject[] = [this.normal];
     if (!spec.disabled) {
-      const p = kitButtonRef(scene.game, color, h, 'pressed');
+      const p = kitButtonRef(scene.game, color, h, 'pressed', square);
       this.pressedLook = this.slice(p.ref, p.slices, w).setVisible(false);
       parts.push(this.pressedLook);
     } else this.pressedLook = null;
-    const face = buttonFaceRect({ color, w, h }, TOKENS);
-    // label centre = face centre + textOffsetY (ART §14.1 row 6 "yüzün ortası + 4 px")
-    const cy = -h / 2 + face.y + face.h / 2 + TOKENS.shadow.textOffsetY;
-    const q = TOKENS.kit.buttonColor[color];
+    const plate = buttonV3PlateRect({ color, w, h, square }, TOKENS);
+    const m = buttonV3Metrics(h, TOKENS, square);
+    // label centre = plate centre + 2 (ART_REFERENCE §3.1 row 8)
+    const cy = -h / 2 + plate.y + plate.h / 2 + 2;
+    const q = TOKENS.kit.v3.buttonColor[color];
     const contentParts: Phaser.GameObjects.GameObject[] = [];
+    const price = spec.price ?? null;
+    const sub = spec.sub ?? null;
+    const hasRight = price !== null || sub !== null;
+    const left = -w / 2 + plate.x + SIDE_PAD;
+    let labelX = hasRight ? left : 0;
+    if (spec.play) {
+      const play = addBakedGraphics(scene);
+      drawPlay(play, 44, q.text);
+      play.setPosition(labelX + 22, cy);
+      contentParts.push(play);
+      labelX += 56;
+    }
+    let rightW = 0;
+    if (price || sub) {
+      const right = w / 2 - plate.x - SIDE_PAD;
+      if (price) {
+        const l1 = this.inline(price.line1, PRICE_PX, q, spec.icons ?? null);
+        l1.root.setPosition(right, cy - 20);
+        const l2 = this.inline(price.line2, SUB_PX, q, spec.icons ?? null);
+        l2.root.setPosition(right, cy + 26);
+        contentParts.push(l1.root, l2.root);
+        rightW = Math.max(l1.width, l2.width);
+      } else if (sub) {
+        const l2 = this.inline(sub, SUB_PX, q, spec.icons ?? null);
+        l2.root.setPosition(right, cy + 26);
+        contentParts.push(l2.root);
+        rightW = l2.width;
+      }
+    }
     let icon: Phaser.GameObjects.Image | null = null;
     if (spec.icon) {
-      icon = scene.add.image(0, cy - TOKENS.shadow.textOffsetY, spec.icon.key, spec.icon.frame);
+      icon = scene.add.image(0, cy - 2, spec.icon.key, spec.icon.frame);
       icon.setDisplaySize(spec.icon.px, spec.icon.px);
       contentParts.push(icon);
     }
     this.icon = icon;
     let label: Phaser.GameObjects.Text | null = null;
     if (spec.label) {
-      const px = spec.labelPx ?? TOKENS.font.size.button;
-      label =
-        color === 'cream'
-          ? addKitText(scene, 0, cy, spec.label, 'panel', px)
-          : addKitText(scene, 0, cy, spec.label, 'brightTitle', px, q.stroke);
-      fitWidth(label, face.w - 2 * KB.glossInsetXPx - 24);
-      if (spec.disabled) label.setAlpha(0.8);
-      contentParts.push(label);
+      const px = spec.labelPx ?? m.fontPx;
+      const labelText = spec.icons && spec.label.includes('{') ? null : spec.label;
+      if (labelText !== null) {
+        label = addKitText(scene, 0, cy, labelText, 'button', px, q.textStroke, q.text);
+        if (hasRight) label.setOrigin(0, label.originY).setX(labelX);
+        const room = hasRight
+          ? w / 2 - plate.x - SIDE_PAD - rightW - SIDE_PAD / 2 - labelX
+          : plate.w - 2 * SIDE_PAD - (icon ? spec.icon!.px + 12 : 0);
+        fitWidth(label, Math.max(40, room));
+        if (icon && !hasRight) {
+          // icon + label side by side, the pair centred on the plate
+          const total = spec.icon!.px + 12 + label.width * label.scaleX;
+          icon.setX(-total / 2 + spec.icon!.px / 2);
+          label.setX(total / 2 - (label.width * label.scaleX) / 2);
+        }
+        if (spec.disabled) label.setAlpha(0.8);
+        contentParts.push(label);
+      } else {
+        const inl = this.inline(spec.label, spec.labelPx ?? m.fontPx, q, spec.icons ?? null, hasRight ? 'left' : 'center');
+        inl.root.setPosition(labelX, cy);
+        contentParts.push(inl.root);
+      }
     }
     this.label = label;
     this.content = scene.add.container(0, 0, contentParts);
@@ -122,6 +188,20 @@ export class KitButton {
       this.setPressed(false);
       this.pressFn?.('release');
     });
+  }
+
+  /** One line with inline `{coin}` icons in the button look (right column / inline labels). */
+  private inline(
+    text: string,
+    px: number,
+    q: { readonly text: string; readonly textStroke: string },
+    icons: IconBinder | null,
+    align: 'left' | 'center' | 'right' = 'right',
+  ): { root: Phaser.GameObjects.Container; width: number } {
+    if (icons) return addInlineText(this.scene, icons, text, 'button', px, align, q.textStroke, q.text);
+    const t = addKitText(this.scene, 0, 0, text, 'button', px, q.textStroke, q.text);
+    t.setOrigin(align === 'left' ? 0 : align === 'right' ? 1 : 0.5, t.originY);
+    return { root: this.scene.add.container(0, 0, [t]), width: t.width };
   }
 
   private slice(
@@ -180,6 +260,11 @@ export class KitButton {
     return this;
   }
 
+  setVisible(on: boolean): this {
+    this.root.setVisible(on);
+    return this;
+  }
+
   /** #97: pressed frame + sunk content (+ scale unless reduced). */
   setPressed(on: boolean): void {
     this.normal.setVisible(!on || !this.pressedLook);
@@ -210,7 +295,7 @@ export class KitButton {
     });
   }
 
-  /** `ButtonTarget.setLip` of JUICE #69: v1 lip px (`shadow.buttonLipPx` … `buttonPressedLipPx`) → the v2 press. */
+  /** `ButtonTarget.setLip` of JUICE #69: v1 lip px (`shadow.buttonLipPx` … `buttonPressedLipPx`) → the v3 press. */
   setLip(px: number): void {
     const v1 = TOKENS.shadow;
     const k = Math.min(1, Math.max(0, (v1.buttonLipPx - px) / (v1.buttonLipPx - v1.buttonPressedLipPx)));

@@ -1,10 +1,11 @@
 /**
- * Bottom navigation v2 (ART §14.7 `kit.nav`; UX §3 "Alt gezinme", §0.3 "Kilitli sekme (v2)"; R2-12): the indigo bar
- * (`ui_nav_bar`, stretched to the width; the band below it in `barBottom`), five tabs of `navTabW`. The selected tab is
- * the raised blue tile (`ui_nav_tab_selected`, `raisePx` above the bar) with a `iconSelectedPx` icon and a white
- * label; a locked tab shows its icon at `lockedAlpha` with a `lockPx` lock at its lower right and the label in
- * `labelLocked`. Tapping a locked tab shakes its lock (JUICE #73) — the scene shows the "Yakında" bubble; the tab
- * never changes.
+ * Bottom navigation v3 (ART_REFERENCE §3.9 `kit.v3.nav`; UX §3 "Alt gezinme", §0.3 "Kilitli sekme"; R2-12): the
+ * indigo bar (`ui_nav_bar`, h 200, stretched to the width; the safe-area band below it in `safeArea`), five tabs of
+ * `tabW` with 2 px dividers. The selected tab is the raised 300 × 300 tile (`ui_nav_tab_selected`, `raisePx` above
+ * the bar's top) with a `iconSelectedPx` icon and a white label; the other tabs show only their icon (`iconPx`), a
+ * locked one at `lockedAlpha` with the small gold lock at its lower right. The raised tile is the SELECTED tab, not the
+ * middle one (ART_REFERENCE §3.9). Tapping a locked tab shakes its lock (JUICE #73) — the scene shows the "Yakında"
+ * bubble; the tab never changes.
  */
 import Phaser from 'phaser';
 import { TOKENS } from '../../theme/tokens.ts';
@@ -16,7 +17,7 @@ import { kitRef } from './atlas.ts';
 import type { IconBinder } from './icons.ts';
 import { addKitText, fitWidth } from './text.ts';
 
-const NV = TOKENS.kit.nav;
+const NV = TOKENS.kit.v3.nav;
 
 export interface NavTabSpec {
   readonly id: string;
@@ -33,10 +34,6 @@ interface TabView {
   readonly lock: Phaser.GameObjects.Image | null;
 }
 
-/** Selected tile size (ART §14.7 "200×212 karo"). */
-const TILE_W = 200;
-const TILE_H = 212;
-
 export class NavBar {
   readonly root: Phaser.GameObjects.Container;
   private readonly scene: Phaser.Scene;
@@ -52,15 +49,23 @@ export class NavBar {
     specs: readonly NavTabSpec[],
   ) {
     this.scene = scene;
-    const navH = TOKENS.layout.home.navH;
+    const navH = NV.barH;
     const br = kitRef(scene.game, KIT.navBar);
     const parts: Phaser.GameObjects.GameObject[] = [];
     const under = addBakedGraphics(scene);
+    // the bar's shadow over the scene above it, the safe-area band under it, the dividers between the tabs
     under
-      .fillStyle(hex(NV.barBottom), 1)
+      .fillStyle(0x000000, NV.shadowAlpha)
+      .fillRect(bar.x, bar.y - NV.shadowPx, bar.w, NV.shadowPx)
+      .fillStyle(hex(NV.safeArea), 1)
       .fillRect(bar.x, bar.y + navH - 1, bar.w, Math.max(1, bar.h - navH + 1));
     const strip = scene.add.image(bar.x, bar.y, br.key, br.frame).setOrigin(0, 0).setDisplaySize(bar.w, navH);
-    parts.push(under, strip);
+    const dividers = addBakedGraphics(scene).fillStyle(hex(NV.divider), 1);
+    cells.forEach((c, i) => {
+      if (i === 0) return;
+      dividers.fillRect(c.x - NV.dividerPx / 2, bar.y + 60, NV.dividerPx, 80);
+    });
+    parts.push(under, strip, dividers);
     specs.forEach((spec, i) => {
       const cell = cells[i];
       if (!cell) return;
@@ -70,27 +75,25 @@ export class NavBar {
         parts.push(scene.add.image(cx, cell.y - NV.raisePx, tr.key, tr.frame).setOrigin(0.5, 0));
       }
       const iconPx = spec.selected ? NV.iconSelectedPx : NV.iconPx;
-      const top = spec.selected ? cell.y - NV.raisePx + 10 : cell.y + 10;
-      const icon = icons.add(scene, cx, top + iconPx / 2, spec.icon, iconPx);
+      // selected: the icon in the tile's upper part; others: centred 6 px above the bar's middle
+      const iconCy = spec.selected ? cell.y - NV.raisePx + 30 + iconPx / 2 : cell.y + navH / 2 - 6;
+      const icon = icons.add(scene, cx, iconCy, spec.icon, iconPx);
       if (spec.locked) icon.setAlpha(NV.lockedAlpha);
       parts.push(icon);
       let lock: Phaser.GameObjects.Image | null = null;
       if (spec.locked) {
-        lock = icons.add(
-          scene,
-          cx + iconPx / 2 - NV.lockPx / 2 + 4,
-          top + iconPx - NV.lockPx / 2,
-          'icon_lock',
-          NV.lockPx,
-        );
+        const lr = kitRef(scene.game, KIT.lockSmall);
+        lock = scene.add
+          .image(cx + iconPx / 2 - NV.lockPx / 2 + 8, iconCy + iconPx / 2 - NV.lockPx / 2 + 4, lr.key, lr.frame)
+          .setDisplaySize(NV.lockPx, (NV.lockPx * lr.h) / lr.w);
         parts.push(lock);
       }
-      const labelY = spec.selected ? cell.y - NV.raisePx + TILE_H - 34 : cell.y + navH - 36;
-      const label = addKitText(scene, cx, labelY, spec.label, 'counter', NV.labelPx);
-      if (spec.selected) label.setStroke(NV.selectedStroke, label.style.strokeThickness);
-      else label.setColor(spec.locked ? NV.labelLocked : NV.label);
-      fitWidth(label, (spec.selected ? TILE_W : cell.w) - 16);
-      parts.push(label);
+      if (spec.selected) {
+        const labelY = cell.y - NV.raisePx + NV.raisedH - 44;
+        const label = addKitText(scene, cx, labelY, spec.label, 'button', NV.labelPx, NV.labelStroke, '#FFFFFF');
+        fitWidth(label, NV.raisedW - 24);
+        parts.push(label);
+      }
       this.tabs.push({ spec, cell, icon, lock });
     });
     this.root = scene.add.container(0, 0, parts);

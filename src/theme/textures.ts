@@ -95,49 +95,65 @@ import {
 } from './draw/blockV2.ts';
 import type { CargoKind } from './draw/blockV2.ts';
 import {
-  KIT_BUTTON_COLORS,
-  KIT_BUTTON_HEIGHTS,
   KIT_RIBBON_COLORS,
-  badgeFrameSize,
-  bubbleFrameSize,
-  bubbleSlices,
-  bubbleTailSize,
-  buttonFrameSize,
-  buttonSlices,
-  capsuleSlices,
-  drawBadge,
-  drawBubble,
-  drawBubbleTail,
-  drawButton,
   drawButtonShine,
-  drawCapsule,
-  drawHighlight,
-  drawInset,
-  drawNavBar,
-  drawNavTab,
   drawNextFloorBadge,
-  drawPanel,
-  drawPortraitRing,
-  drawProgressFill,
-  drawProgressTrack,
   drawRibbon,
-  drawRoundButton,
-  highlightPad,
-  highlightSlices,
-  insetSlices,
-  kitButtonFrameName,
-  kitButtonSourceW,
-  panelFrameSize,
-  panelSlices,
-  progressFillHeight,
-  progressFillSlices,
-  progressSlices,
   ribbonFrameSize,
   ribbonSlices,
-  roundButtonFrameSize,
   shineSize,
 } from './draw/kit.ts';
-import type { ButtonState, KitButtonColor, Slices, TailDir } from './draw/kit.ts';
+import type { Slices } from './draw/kit.ts';
+import {
+  KIT_V3_BUTTON_BAKES,
+  badgeV3FrameSize,
+  bubbleV3FrameSize,
+  bubbleV3Slices,
+  bubbleV3TailSize,
+  buttonV3FrameSize,
+  buttonV3Slices,
+  capsuleV3Height,
+  capsuleV3Slices,
+  cardV3Slices,
+  closeV3FrameSize,
+  drawBadgeV3,
+  drawBubbleV3,
+  drawBubbleV3Tail,
+  drawButtonV3,
+  drawCapsuleV3,
+  drawCardV3,
+  drawCloseV3,
+  drawHighlightV3,
+  drawLockV3,
+  drawMovesPlateV3,
+  drawNavBarV3,
+  drawNavTabV3,
+  drawPanelV3,
+  drawPlateV3,
+  drawPlusV3,
+  drawPortraitRingV3,
+  drawProgressV3Fill,
+  drawProgressV3Track,
+  drawToggleV3,
+  highlightV3Pad,
+  highlightV3Slices,
+  kitButtonV3FrameName,
+  kitButtonV3SourceW,
+  kitButtonV3States,
+  lockV3Size,
+  movesPlateV3Size,
+  navTabV3Size,
+  panelV3FrameSize,
+  panelV3Slices,
+  plateV3Slices,
+  plusV3FrameSize,
+  progressV3FillHeight,
+  progressV3FillSlices,
+  progressV3Height,
+  progressV3Slices,
+  toggleV3Size,
+} from './draw/kitV3.ts';
+import type { ButtonV3State, KitV3ButtonColor, TailDirV3 } from './draw/kitV3.ts';
 import {
   FX,
   FX_SIZE,
@@ -697,33 +713,45 @@ export function levelFrames(
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// (c) Kit atlas (ART §14, §15; TECH §2R.7): baked once at boot, behind the intro panels
+// (c) Kit atlas (ART_REFERENCE §3, §8; ART §14.3 ribbon, §15 fx; TECH §2R.7): baked once at boot, behind the intro
 
 /** TECH §2R.7: kit atlas pages ≤ 2048 × 1024. */
 export const KIT_PAGE: PageLimits = Object.freeze({ maxWidth: 2048, maxHeight: 1024, gutter: 2 });
 export const KIT_ATLAS_KEY = 'kit';
 
-/** Fixed kit frame names (variable-width items are 9-/3-sliced: insets in `KIT_SLICES`). */
+/** Fixed kit frame names (variable-size items are 9-/3-sliced: insets in `kitSlices`). v3 (R2-13). */
 export const KIT = Object.freeze({
   close: 'ui_close',
   closePressed: 'ui_close_pressed',
   plus: 'ui_plus',
   plusPressed: 'ui_plus_pressed',
   shine: 'ui_button_shine',
+  /** ART_REFERENCE §3.7 indigo window, its lavender inner plate and the cream content card. */
   panel: 'ui_panel',
-  panelHud: 'ui_panel_hud',
-  inset: 'ui_panel_inset',
+  plate: 'ui_plate',
+  card: 'ui_card',
+  /** §3.5 count badges: window 72, HUD 68, small round 56, truck sub-badge 40. */
   badge: 'ui_badge',
-  badgeLocked: 'ui_badge_locked',
+  badgeHud: 'ui_badge_hud',
+  badgeSmall: 'ui_badge_small',
   truckSubBadge: 'ui_truck_subbadge',
+  /** §3.4 capsules: home 88, HUD 60. */
   capsule: 'ui_capsule',
+  capsuleHud: 'ui_capsule_hud',
+  /** §3.8 progress: meta 84 and compact 48. */
   progressTrack: 'ui_progress_track',
   progressFill: 'ui_progress_fill',
+  progressTrackCompact: 'ui_progress_track_compact',
+  progressFillCompact: 'ui_progress_fill_compact',
   navBar: 'ui_nav_bar',
   navTab: 'ui_nav_tab_selected',
   bubble: 'ui_tutorial_bubble',
   highlight: 'ui_highlight',
   portraitRing: 'ui_portrait_ring',
+  lockSmall: 'ui_lock_small',
+  toggleOn: 'ui_toggle_on',
+  toggleOff: 'ui_toggle_off',
+  movesPlate: 'ui_moves_plate',
   nextFloor: 'ui_badge_nextfloor',
   blocksLeft: 'ui_blocks_left_icon',
   blocksLeftCompact: 'ui_blocks_left_icon_72',
@@ -731,105 +759,104 @@ export const KIT = Object.freeze({
 });
 
 export const ribbonFrameName = (color: (typeof KIT_RIBBON_COLORS)[number]): string => `ui_ribbon_${color}`;
-export const bubbleTailFrameName = (dir: TailDir): string => `ui_tutorial_bubble_tail_${dir}`;
+export const bubbleTailFrameName = (dir: TailDirV3): string => `ui_tutorial_bubble_tail_${dir}`;
 
 /** Source sizes of the sliced kit frames (the scene stretches them with NineSlice). */
 const KIT_SRC = Object.freeze({
-  panel: { w: 192, h: 192 },
-  panelHud: { w: 112, h: 112 },
-  inset: { w: 96, h: 96 },
+  panel: { w: 200, h: 320 },
+  plate: { w: 128, h: 128 },
+  card: { w: 128, h: 128 },
   ribbonBodyW: 480,
   capsuleW: 128,
-  progressW: 112,
-  progressFillW: 72,
+  progressW: 128,
+  progressFillW: 96,
   navBarW: 8,
   bubble: { w: 160, h: 140 },
   highlight: 160,
 });
 
-/** Close (×) and plus (+) diameters (R2-12 red round ×; `kit.capsule.plusPx` green +). */
-export const KIT_CLOSE_PX = 112;
-/** The "Bölüm N" button the shine band is sized for (UX §3, `layout.home.playButtonW/H`). */
+/** The "Bölüm N" button the shine band is sized for (UX §3, `kit.v3.screen.home.playW/H`). */
 const shineFor = (tokens: Tokens): { buttonW: number; h: number } => ({
-  buttonW: tokens.layout.home.playButtonW,
-  h: tokens.layout.home.playButtonH,
+  buttonW: tokens.kit.v3.screen.home.playW,
+  h: tokens.kit.v3.screen.home.playH,
 });
 
 /** 9-/3-slice insets per sliced kit frame name (`top = bottom = 0` → 3-slice; the frame height is final). */
 export function kitSlices(tokens: Tokens): ReadonlyMap<string, Slices> {
   const m = new Map<string, Slices>();
-  for (const color of KIT_BUTTON_COLORS) {
-    for (const h of KIT_BUTTON_HEIGHTS) {
-      for (const state of kitButtonStates(color)) {
-        m.set(kitButtonFrameName(color, h, state), buttonSlices({ color, w: 0, h }, tokens));
-      }
+  for (const [color, h, square] of KIT_V3_BUTTON_BAKES) {
+    for (const state of kitButtonV3States(color)) {
+      m.set(
+        kitButtonV3FrameName(color, h, state, square),
+        buttonV3Slices({ color, w: 0, h, square }, tokens),
+      );
     }
   }
-  m.set(KIT.panel, panelSlices('frame', tokens));
-  m.set(KIT.panelHud, panelSlices('hud', tokens));
-  m.set(KIT.inset, insetSlices());
+  m.set(KIT.panel, panelV3Slices(tokens));
+  m.set(KIT.plate, plateV3Slices(tokens));
+  m.set(KIT.card, cardV3Slices(tokens));
   for (const c of KIT_RIBBON_COLORS) m.set(ribbonFrameName(c), ribbonSlices(tokens));
-  m.set(KIT.capsule, capsuleSlices(tokens));
-  m.set(KIT.progressTrack, progressSlices(tokens));
-  m.set(KIT.progressFill, progressFillSlices(tokens));
-  m.set(KIT.bubble, bubbleSlices(tokens));
-  m.set(KIT.highlight, highlightSlices(tokens));
+  m.set(KIT.capsule, capsuleV3Slices('home', tokens));
+  m.set(KIT.capsuleHud, capsuleV3Slices('hud', tokens));
+  m.set(KIT.progressTrack, progressV3Slices('meta', tokens));
+  m.set(KIT.progressFill, progressV3FillSlices('meta', tokens));
+  m.set(KIT.progressTrackCompact, progressV3Slices('compact', tokens));
+  m.set(KIT.progressFillCompact, progressV3FillSlices('compact', tokens));
+  m.set(KIT.bubble, bubbleV3Slices(tokens));
+  m.set(KIT.highlight, highlightV3Slices(tokens));
   m.set(KIT.yardFrame, yardFrameSlices(tokens));
   return m;
 }
 
-/** Which button states a colour bakes: grey is the pasif/locked colour (normal + disabled), the rest normal + pressed. */
-export function kitButtonStates(color: KitButtonColor): readonly ButtonState[] {
-  return color === 'grey' ? ['normal', 'disabled'] : ['normal', 'pressed'];
-}
+/** Which button states a colour bakes (v3): grey = normal + disabled, the rest normal + pressed. */
+export const kitButtonStates = kitButtonV3States;
 
-/** One kit button frame (on-demand bakes of other heights use the same naming). */
+/** One v3 kit button frame (on-demand bakes of other heights use the same naming). */
 export function kitButtonFrame(
-  color: KitButtonColor,
+  color: KitV3ButtonColor,
   h: number,
-  state: ButtonState,
+  state: ButtonV3State,
   tokens: Tokens,
+  square = false,
 ): FrameSpec {
-  const w = kitButtonSourceW(h, tokens);
-  return frame(kitButtonFrameName(color, h, state), buttonFrameSize({ color, w, h }, tokens), (ctx) =>
-    drawButton(ctx, { color, w, h, state }, tokens),
+  const w = kitButtonV3SourceW(h, tokens, square);
+  return frame(
+    kitButtonV3FrameName(color, h, state, square),
+    buttonV3FrameSize({ color, w, h, state, square }, tokens),
+    (ctx) => drawButtonV3(ctx, { color, w, h, state, square }, tokens),
   );
 }
 
-/** TECH §2R.7 kit atlas: buttons (6 colours × KIT_BUTTON_HEIGHTS), round ×/+, shine, panels, ribbons, badges,
- * capsule, progress, navigation, bubble + tails, highlight, portrait ring, HUD badges, blocks-left icons, yard frame,
- * the tutorial glove and the fx frames. */
+/**
+ * TECH §2R.7 kit atlas v3: the boot button bakes (`KIT_V3_BUTTON_BAKES`), round × / +, shine, window + plate + card,
+ * ribbons (v2 look, ART §14.3), badges, capsules, progress bars, navigation, bubble + tails, highlight, portrait ring,
+ * lock, toggles, moves plate, HUD icons, yard frame and the fx frames.
+ */
 export function kitAtlasFrames(tokens: Tokens): FrameSpec[] {
   const out: FrameSpec[] = [];
-  for (const color of KIT_BUTTON_COLORS) {
-    for (const h of KIT_BUTTON_HEIGHTS)
-      for (const st of kitButtonStates(color)) out.push(kitButtonFrame(color, h, st, tokens));
-  }
-  for (const [name, color, d, glyph, state] of [
-    [KIT.close, 'red', KIT_CLOSE_PX, 'close', 'normal'],
-    [KIT.closePressed, 'red', KIT_CLOSE_PX, 'close', 'pressed'],
-    [KIT.plus, 'green', tokens.kit.capsule.plusPx, 'plus', 'normal'],
-    [KIT.plusPressed, 'green', tokens.kit.capsule.plusPx, 'plus', 'pressed'],
+  for (const [color, h, square] of KIT_V3_BUTTON_BAKES)
+    for (const st of kitButtonV3States(color)) out.push(kitButtonFrame(color, h, st, tokens, square));
+  for (const [name, state] of [
+    [KIT.close, 'normal'],
+    [KIT.closePressed, 'pressed'],
   ] as const) {
-    out.push(
-      frame(name, roundButtonFrameSize({ color, d, glyph }, tokens), (ctx) =>
-        drawRoundButton(ctx, { color, d, glyph, state }, tokens),
-      ),
-    );
+    out.push(frame(name, closeV3FrameSize(tokens), (ctx) => drawCloseV3(ctx, { state }, tokens)));
+  }
+  for (const [name, state] of [
+    [KIT.plus, 'normal'],
+    [KIT.plusPressed, 'pressed'],
+  ] as const) {
+    out.push(frame(name, plusV3FrameSize(tokens), (ctx) => drawPlusV3(ctx, { state }, tokens)));
   }
   out.push(
     frame(KIT.shine, shineSize(shineFor(tokens), tokens), (ctx) =>
       drawButtonShine(ctx, shineFor(tokens), tokens),
     ),
-  );
-  out.push(
-    frame(KIT.panel, panelFrameSize({ ...KIT_SRC.panel, variant: 'frame' }, tokens), (ctx) =>
-      drawPanel(ctx, { ...KIT_SRC.panel, variant: 'frame' }, tokens),
+    frame(KIT.panel, panelV3FrameSize(KIT_SRC.panel, tokens), (ctx) =>
+      drawPanelV3(ctx, KIT_SRC.panel, tokens),
     ),
-    frame(KIT.panelHud, panelFrameSize({ ...KIT_SRC.panelHud, variant: 'hud' }, tokens), (ctx) =>
-      drawPanel(ctx, { ...KIT_SRC.panelHud, variant: 'hud' }, tokens),
-    ),
-    frame(KIT.inset, KIT_SRC.inset, (ctx) => drawInset(ctx, KIT_SRC.inset, tokens)),
+    frame(KIT.plate, KIT_SRC.plate, (ctx) => drawPlateV3(ctx, KIT_SRC.plate, tokens)),
+    frame(KIT.card, KIT_SRC.card, (ctx) => drawCardV3(ctx, KIT_SRC.card, tokens)),
   );
   for (const color of KIT_RIBBON_COLORS) {
     out.push(
@@ -838,39 +865,53 @@ export function kitAtlasFrames(tokens: Tokens): FrameSpec[] {
       ),
     );
   }
-  const badgePx = tokens.kit.badge.diameterPx;
+  const bd = tokens.kit.v3.badge;
   const subPx = tokens.layout.hud.truckSubBadgePx;
+  for (const [name, px, shape] of [
+    [KIT.badge, bd.sizePx, 'square'],
+    [KIT.badgeHud, bd.hudSizePx, 'square'],
+    [KIT.badgeSmall, bd.smallPx, 'circle'],
+    [KIT.truckSubBadge, subPx, 'circle'],
+  ] as const) {
+    out.push(frame(name, badgeV3FrameSize(px), (ctx) => drawBadgeV3(ctx, { sizePx: px, shape }, tokens)));
+  }
+  for (const [name, variant] of [
+    [KIT.capsule, 'home'],
+    [KIT.capsuleHud, 'hud'],
+  ] as const) {
+    out.push(
+      frame(name, { w: KIT_SRC.capsuleW, h: capsuleV3Height(variant, tokens) }, (ctx) =>
+        drawCapsuleV3(ctx, { w: KIT_SRC.capsuleW, variant }, tokens),
+      ),
+    );
+  }
+  for (const [track, fill, variant] of [
+    [KIT.progressTrack, KIT.progressFill, 'meta'],
+    [KIT.progressTrackCompact, KIT.progressFillCompact, 'compact'],
+  ] as const) {
+    out.push(
+      frame(track, { w: KIT_SRC.progressW, h: progressV3Height(variant, tokens) }, (ctx) =>
+        drawProgressV3Track(ctx, { w: KIT_SRC.progressW, variant }, tokens),
+      ),
+      frame(fill, { w: KIT_SRC.progressFillW, h: progressV3FillHeight(variant, tokens) }, (ctx) =>
+        drawProgressV3Fill(ctx, { w: KIT_SRC.progressFillW, variant }, tokens),
+      ),
+    );
+  }
+  const navH = tokens.kit.v3.nav.barH;
   out.push(
-    frame(KIT.badge, badgeFrameSize(badgePx), (ctx) =>
-      drawBadge(ctx, { variant: 'red', sizePx: badgePx }, tokens),
+    frame(KIT.navBar, { w: KIT_SRC.navBarW, h: navH }, (ctx) =>
+      drawNavBarV3(ctx, { w: KIT_SRC.navBarW, h: navH }, tokens),
     ),
-    frame(KIT.badgeLocked, badgeFrameSize(badgePx), (ctx) =>
-      drawBadge(ctx, { variant: 'locked', sizePx: badgePx }, tokens),
-    ),
-    frame(KIT.truckSubBadge, badgeFrameSize(subPx), (ctx) =>
-      drawBadge(ctx, { variant: 'red', sizePx: subPx }, tokens),
-    ),
-    frame(KIT.capsule, { w: KIT_SRC.capsuleW, h: tokens.kit.capsule.heightPx }, (ctx) =>
-      drawCapsule(ctx, { w: KIT_SRC.capsuleW }, tokens),
-    ),
-    frame(KIT.progressTrack, { w: KIT_SRC.progressW, h: tokens.kit.progress.heightPx }, (ctx) =>
-      drawProgressTrack(ctx, { w: KIT_SRC.progressW }, tokens),
-    ),
-    frame(KIT.progressFill, { w: KIT_SRC.progressFillW, h: progressFillHeight(tokens) }, (ctx) =>
-      drawProgressFill(ctx, { w: KIT_SRC.progressFillW }, tokens),
-    ),
-    frame(KIT.navBar, { w: KIT_SRC.navBarW, h: tokens.layout.home.navH }, (ctx) =>
-      drawNavBar(ctx, { w: KIT_SRC.navBarW, h: tokens.layout.home.navH }, tokens),
-    ),
-    frame(KIT.navTab, { w: 200, h: 212 }, (ctx) => drawNavTab(ctx, { w: 200, h: 212 }, tokens)),
-    frame(KIT.bubble, bubbleFrameSize(KIT_SRC.bubble, tokens), (ctx) =>
-      drawBubble(ctx, KIT_SRC.bubble, tokens),
+    frame(KIT.navTab, navTabV3Size(tokens), (ctx) => drawNavTabV3(ctx, tokens)),
+    frame(KIT.bubble, bubbleV3FrameSize(KIT_SRC.bubble, tokens), (ctx) =>
+      drawBubbleV3(ctx, KIT_SRC.bubble, tokens),
     ),
   );
   for (const dir of ['left', 'down', 'up'] as const) {
     out.push(
-      frame(bubbleTailFrameName(dir), bubbleTailSize(dir, tokens), (ctx) =>
-        drawBubbleTail(ctx, { dir }, tokens),
+      frame(bubbleTailFrameName(dir), bubbleV3TailSize(dir, tokens), (ctx) =>
+        drawBubbleV3Tail(ctx, { dir }, tokens),
       ),
     );
   }
@@ -880,10 +921,14 @@ export function kitAtlasFrames(tokens: Tokens): FrameSpec[] {
   const blIcon = tokens.layout.hud.goalChipIconPx;
   const blCompact = tokens.layout.hud.goalChipIconCompactPx;
   out.push(
-    frame(KIT.highlight, { w: hl, h: hl }, (ctx) => drawHighlight(ctx, { w: hl, h: hl }, tokens)),
+    frame(KIT.highlight, { w: hl, h: hl }, (ctx) => drawHighlightV3(ctx, { w: hl, h: hl }, tokens)),
     frame(KIT.portraitRing, { w: portrait, h: portrait }, (ctx) =>
-      drawPortraitRing(ctx, { d: portrait }, tokens),
+      drawPortraitRingV3(ctx, { d: portrait }, tokens),
     ),
+    frame(KIT.lockSmall, lockV3Size('small', tokens), (ctx) => drawLockV3(ctx, { variant: 'small' }, tokens)),
+    frame(KIT.toggleOn, toggleV3Size(tokens), (ctx) => drawToggleV3(ctx, { on: true }, tokens)),
+    frame(KIT.toggleOff, toggleV3Size(tokens), (ctx) => drawToggleV3(ctx, { on: false }, tokens)),
+    frame(KIT.movesPlate, movesPlateV3Size(tokens), (ctx) => drawMovesPlateV3(ctx, tokens)),
     frame(KIT.nextFloor, { w: nf, h: nf }, (ctx) => drawNextFloorBadge(ctx, { d: nf }, tokens)),
     frame(KIT.blocksLeft, { w: blIcon, h: blIcon }, (ctx) => drawBlocksLeftIcon(ctx, blIcon, tokens)),
     frame(KIT.blocksLeftCompact, { w: blCompact, h: blCompact }, (ctx) =>
@@ -901,8 +946,8 @@ export function kitAtlasFrames(tokens: Tokens): FrameSpec[] {
   return out;
 }
 
-/** Highlight frame inset: the target box starts `highlightPad` inside the 9-sliced highlight frame. */
-export const highlightInset = (tokens: Tokens): number => highlightPad(tokens);
+/** Highlight frame inset: the target box starts `highlightV3Pad` inside the 9-sliced highlight frame. */
+export const highlightInset = (tokens: Tokens): number => highlightV3Pad(tokens);
 
 // ---------------------------------------------------------------------------------------------------------------
 // (d) Procedural fallbacks of the SVG art (ASSET §16.3 "Prosedürel yedek"; baked on demand by services/assets.ts)

@@ -25,13 +25,14 @@ export function addInlineText(
   sizePx: number,
   align: InlineAlign = 'center',
   contour?: string,
+  fill?: string,
 ): { root: Phaser.GameObjects.Container; width: number } {
   const items: { obj: Phaser.GameObjects.GameObject & { x: number }; w: number; icon: boolean }[] = [];
   const iconPx = Math.round(sizePx * ICON_EM);
   for (const run of splitInline(text)) {
     if (run.kind === 'text') {
       if (run.text.length === 0) continue;
-      const t = addKitText(scene, 0, 0, run.text, role, sizePx, contour);
+      const t = addKitText(scene, 0, 0, run.text, role, sizePx, contour, fill);
       // addKitText centred the glyph box; keep its y origin, anchor x on the left edge
       t.setOrigin(0, t.originY);
       items.push({ obj: t, w: t.width, icon: false });

@@ -20,8 +20,9 @@ import {
   uploadAtlas,
 } from '../../theme/textures.ts';
 import type { FrameRef, UploadedAtlas } from '../../theme/textures.ts';
-import { KIT_BUTTON_HEIGHTS, buttonSlices, kitButtonFrameName } from '../../theme/draw/kit.ts';
-import type { ButtonState, KitButtonColor, Slices } from '../../theme/draw/kit.ts';
+import type { Slices } from '../../theme/draw/kit.ts';
+import { KIT_V3_BUTTON_BAKES, buttonV3Slices, kitButtonV3FrameName } from '../../theme/draw/kitV3.ts';
+import type { ButtonV3State, KitV3ButtonColor } from '../../theme/draw/kitV3.ts';
 import { timed } from '../../services/timings.ts';
 
 /** Fallback when the renderer reports no limit (Canvas). */
@@ -77,23 +78,28 @@ export function kitSlice(name: string): Slices | null {
   return slicesCache.get(name) ?? null;
 }
 
-/** A kit button frame of any height: from the atlas for `KIT_BUTTON_HEIGHTS`, baked once on demand otherwise. */
+/**
+ * A v3 kit button frame of any height (`square`: the HUD booster square look): from the atlas for the boot bakes
+ * (`KIT_V3_BUTTON_BAKES`), baked once on demand otherwise.
+ */
 export function kitButtonRef(
   game: Phaser.Game,
-  color: KitButtonColor,
+  color: KitV3ButtonColor,
   h: number,
-  state: ButtonState,
+  state: ButtonV3State,
+  square = false,
 ): { readonly ref: FrameRef; readonly slices: Slices } {
   const st = kitState(game);
   const states0 = kitButtonStates(color);
-  const s: ButtonState = states0.includes(state) ? state : 'normal';
-  const name = kitButtonFrameName(color, h, s);
-  const slices = buttonSlices({ color, w: 0, h }, TOKENS);
-  if ((KIT_BUTTON_HEIGHTS as readonly number[]).includes(h)) return { ref: kitRef(game, name), slices };
+  const s: ButtonV3State = states0.includes(state) ? state : 'normal';
+  const name = kitButtonV3FrameName(color, h, s, square);
+  const slices = buttonV3Slices({ color, w: 0, h, square }, TOKENS);
+  if (KIT_V3_BUTTON_BAKES.some(([c, hh, sq]) => c === color && hh === h && sq === square))
+    return { ref: kitRef(game, name), slices };
   let ref = st.extra.get(name);
   if (!ref) {
-    const key = `kit_btn_${color}_${h}`;
-    const frames = states0.map((x) => kitButtonFrame(color, h, x, TOKENS));
+    const key = `kit_btn_${color}_${h}${square ? 'sq' : ''}`;
+    const frames = states0.map((x) => kitButtonFrame(color, h, x, TOKENS, square));
     const atlas = uploadAtlas(
       game.textures,
       key,
