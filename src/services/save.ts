@@ -774,6 +774,9 @@ export class SaveService {
       d.progress.levels[key] = rec;
       d.lives.reserved = a.reserveLife ? 1 : 0;
       if (a.freeTrials) grantFreeTrials(d, a.freeTrials);
+      // GDD K-40: the pre-level boosters chosen in the level-start window are spent as the level starts (an exit
+      // before the first move refunds them, K-43 item 2; a voided attempt too, item 4)
+      for (const p of a.preBoosters) d.boosters.inventory[p] = Math.max(0, (d.boosters.inventory[p] ?? 0) - 1);
       d.inLevel = {
         levelId: a.levelId,
         seed: a.seed,

@@ -102,8 +102,8 @@ const OPTION_GAP = 32;
 const CONTENT_TO_OPTIONS = 56;
 const PANEL_TOP_PAD = 104;
 const ROW_GAP = 24;
-/** Content width inside the panel (plate 880 wide at x 100, ART_REFERENCE §9.3). */
-const CONTENT_INSET = 100;
+/** Content inset inside the panel (plate 880 wide in the 1000 window, ART_REFERENCE §9.3). */
+const CONTENT_INSET = 60;
 /** Cream card and plate paddings. */
 const CARD_PAD_X = 48;
 const CARD_PAD_Y = 36;
