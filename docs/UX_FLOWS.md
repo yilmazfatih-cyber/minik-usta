@@ -196,7 +196,7 @@ y    0 ┌───────────────────────�
 | --- | ------------- | --- |
 | Gök + ışın + bulut | tam ekran | ART_REFERENCE §7.4; EXPAND'de gök gradyanı H'ye ölçeklenir, bulut bandı alta çapalı |
 | Logo | 640×360, merkez (540, 420) | amblem `logo_emblem` solda 300×300, sağında `app.title` 3B harf (ART_REFERENCE §9.1; harf biçimi ve tuğla-harf motifi kopyalanmaz, §11) |
-| Uçuşan tuğlalar | 8 adet, halka r 420–520 | v3 blok (ART_REFERENCE §5.2), sembolsüz; açılar 20°, 70°, 110°, 160°, 200°, 250°, 290°, 340°; uzaktakiler 0,7 ölçek α 0,85 |
+| Uçuşan tuğlalar | 8 adet, halka r 420–520 | SVG `brick_fly_o` (2×2 R) / `brick_fly_i2` (2×1 B) / `brick_fly_l3` (L Y) / `brick_fly_1` (1×1 G), 200×200 kutu (ASSET §16.3 ek, 2026-10-20), 8 yerleşim için ikişer kopya; v3 blok (ART_REFERENCE §5.2), sembolsüz; açılar 20°, 70°, 110°, 160°, 200°, 250°, 290°, 340°; uzaktakiler 0,7 ölçek α 0,85 |
 | Karakter grubu | 840×720, merkez (540, 1060) | `chr_tuna_cheer` + `chr_kepce_bust` + `chr_dede_bust` (**[MVP-lite]** durağan; sıçrama pozu Sonra) |
 | Yükleme metni | (540, 1700), 64 px | `loading.text` "Yükleniyor" (STORY §7.8); 3 nokta döngüsü yok, çubuk gösterir |
 | Çubuk | 400×12, (340, 1770) | dolgu = yükleme yüzdesi; en az 1,5 s görünür (§1) |
@@ -534,7 +534,7 @@ y  564 ┌───────────────────────�
 | Başlık | "BÖLÜM 12" h1 88 panel içinde | `home.play` "Bölüm {n}" yazıldığı gibi, `titleTwoRing` 112, panel üst kenarına biner; zorluk hapı yanında |
 | Kapat | 144 px hedef köşede | Ø 120 kırmızı daire (hedef 144), köşeye biner (ART_REFERENCE §3.2) |
 | Hedefler + seri | panel gövdesinde | lavanta iç plaka içinde, iki satır |
-| Güçlendirici yuvaları | 200×200 krem kit | 184 kare `blue` dörtlü, rozet 72, kilitli yuva küçük altın kilit 48×56 + "Bölüm N" 34 (ART_REFERENCE §3.13) |
+| Güçlendirici yuvaları | 200×200 krem kit | 184 kare `blue` dörtlü, rozet 72, ikonlar `icon_thermos` / `icon_gold_trowel` / `icon_shutter` (100 px, atlas), seçili ✓ `icon_check` 40 px, kilitli yuva küçük altın kilit `icon_lock` 48×56 + "Bölüm N" 34 (ART_REFERENCE §3.13) |
 | Oyna | 640×176 | L 560×212, panel altından 80 px yukarıda |
 | Giriş | #70 | pencere 0,9 → 1,0 + karartma 200 ms; başlık 60 px yukarıdan düşer (#106 biçimi, ribbon yok) |
 

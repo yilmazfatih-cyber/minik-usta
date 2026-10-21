@@ -200,13 +200,19 @@ describe('UX 5.8 variable board layout (K-49, TECH 2R.1)', () => {
       expect(L.board.crane).toEqual({ x: g.yardX, y: row.craneTop, w: row.x[0], h: 2 * c });
       expect(row.g.h + 2 - row.wall).toBe(row.notch);
       expect(g.wallRect(row.wall).h).toBe(row.wall * c);
-      // panorama: one Ws-wide strip per segment, cell min(24, ⌊98 / Hs⌋) ≥ 12
+      // panorama: one Ws-wide strip per segment, cell min(24, ⌊(well − 2·pad) / Hs⌋) ≥ 12 (v3 well 136 high,
+      // ART_REFERENCE §9.4; the UX §5.8 table's `pano` column was written for the v2 110 px well)
       const seg = {
         rows: Array.from({ length: row.g.hs }, () => Array.from({ length: row.g.ws }, () => 'R')),
       };
       const pg = panoramaGeometry(L.top.panorama, [seg as never], panoStyle);
-      expect(pg.cell).toBe(row.pano);
-      expect(pg.colW).toBe(row.g.ws * row.pano);
+      const want = Math.max(
+        12,
+        Math.min(24, Math.floor((L.top.panorama.h - 2 * VIEW.panoramaPadPx) / row.g.hs)),
+      );
+      expect(pg.cell).toBe(want);
+      expect(pg.cell).toBeGreaterThanOrEqual(row.pano);
+      expect(pg.colW).toBe(row.g.ws * want);
       // UX §5.8 rule 2: the scene opened above = crane-area top − 288 (the default board's crane top)
       expect(g.craneTopY - 288).toBe(row.scene);
       expect(g.craneTopY - L.top.groupBottomY).toBeGreaterThanOrEqual(TOKENS.layout.board.minGapTopPx);

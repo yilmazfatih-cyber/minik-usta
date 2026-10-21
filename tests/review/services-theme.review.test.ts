@@ -891,7 +891,7 @@ describe('layout invariants (UX 0.1–0.3, TECH 2.2, 10.1)', () => {
     expect(l.grid.craneTopY).toBe(528);
     expect(l.top.pause).toEqual(FIT.top.pause);
     expect(l.top.moves).toEqual(FIT.top.moves);
-    expect(l.bottom.boosters[0]?.y).toBe(2400 - 88 - 172);
+    expect(l.bottom.boosters[0]?.y).toBe(2400 - 120 - 160); // ART_REFERENCE §9.4 booster squares
     expect(l.bottom.groupTopY).toBe(2080);
     expect(l.board.status.y + l.board.status.h).toBeLessThanOrEqual(l.bottom.groupTopY);
     expect(l.board.siteRibbon.x).toBe(FIT.board.siteRibbon.x); // ribbon x/w/h/tilt do not depend on H
@@ -1755,12 +1755,13 @@ describe('round 2: layout on 390×844 and 360×800 (UX 0.1, 5.1; TECH 2.2)', () 
     }
   });
 
-  it('UX 5.1 wireframe (FIT): pause 128 at (24,40), panorama 592×110 (168,40), moves 280×224 (776,40), goals 592×104 (168,160), crane rows 288 / 408 / 528, row 0 ends 1488, status 1520 h 80, Tuna 280×296 (16,1600), boosters 172 x 314–1056 y 1660–1832, board 1020 px = 94 %', () => {
+  it('UX 5.1 / ART_REFERENCE 9.4 HUD v3 (FIT): level capsule 220×60 (24,24), chips row (268,24), panorama well 300×136 (48,128), moves plate 300×136 (390,128), pause 136 (896,128), crane rows 288 / 408 / 528, row 0 ends 1488, status 1520 h 80, Tuna 280×296 (16,1600), boosters 160 x 304–1040 y 1640–1800, board 1020 px = 94 %', () => {
     const l = FIT;
-    expect(l.top.pause).toEqual({ x: 24, y: 40, w: 128, h: 128 });
-    expect(l.top.panorama).toEqual({ x: 168, y: 40, w: 592, h: 110 });
-    expect(l.top.moves).toEqual({ x: 776, y: 40, w: 280, h: 224 });
-    expect(l.top.goals).toEqual({ x: 168, y: 160, w: 592, h: 104 });
+    expect(l.top.levelCapsule).toEqual({ x: 24, y: 24, w: 220, h: 60 });
+    expect(l.top.goals).toEqual({ x: 268, y: 24, w: 788, h: 60 });
+    expect(l.top.panorama).toEqual({ x: 48, y: 128, w: 300, h: 136 });
+    expect(l.top.moves).toEqual({ x: 390, y: 128, w: 300, h: 136 });
+    expect(l.top.pause).toEqual({ x: 896, y: 128, w: 136, h: 136 });
     expect([l.grid.rowTop(9), l.grid.rowTop(8), l.grid.boardTopY, l.grid.boardBottomY]).toEqual([
       288, 408, 528, 1488,
     ]);
@@ -1774,8 +1775,8 @@ describe('round 2: layout on 390×844 and 360×800 (UX 0.1, 5.1; TECH 2.2)', () 
     expect(l.bottom.character).toEqual({ x: 16, y: 1600, w: 280, h: 296 });
     const slots = l.bottom.boosters;
     expect(slots).toHaveLength(4);
-    expect(slots.every((b) => b.w === 172 && b.h === 172 && b.y === 1660)).toBe(true);
-    expect([slots[0]?.x, (slots[3]?.x ?? 0) + 172, 1660 + 172]).toEqual([314, 1056, 1832]);
+    expect(slots.every((b) => b.w === 160 && b.h === 160 && b.y === 1640)).toBe(true);
+    expect([slots[0]?.x, (slots[3]?.x ?? 0) + 160, 1640 + 160]).toEqual([304, 1040, 1800]);
     expect(l.board.board.w).toBe(1020);
     expect(Math.round((100 * l.board.board.w) / 1080)).toBe(94);
   });

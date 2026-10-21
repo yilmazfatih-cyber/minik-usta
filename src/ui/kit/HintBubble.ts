@@ -20,7 +20,9 @@ const HINT_PX = 44;
 /** Height of a one-line hint bubble with its tail (the home screen places the locked-tab balloon with it). */
 export function hintBubbleHeight(): number {
   const ins = bubbleV3Inset(TOKENS);
-  return Math.ceil(HINT_PX * 1.3) + 2 * BB.padYPx + ins.side + ins.bottom + bubbleV3TailSize('down', TOKENS).h;
+  return (
+    Math.ceil(HINT_PX * 1.3) + 2 * BB.padYPx + ins.side + ins.bottom + bubbleV3TailSize('down', TOKENS).h
+  );
 }
 
 export class HintBubble {

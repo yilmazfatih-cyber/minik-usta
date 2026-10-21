@@ -136,6 +136,8 @@ export function installHarness(game: Phaser.Game): HarnessApi {
     const lv = game.scene.getScene(LEVEL_SCENE_KEY) as LevelScene | null;
     return lv && (lv.eventPlayer as LevelScene['eventPlayer'] | undefined) ? lv : null;
   };
+  const home = (): HomeScene | null =>
+    game.scene.isActive(HOME_SCENE_KEY) ? (game.scene.getScene(HOME_SCENE_KEY) as HomeScene | null) : null;
 
   /** Same layout as the scenes build (`createLayout` over the EXPAND design height, D-015; the level's geometry, K-49). */
   const layout = (): Layout => {
@@ -214,7 +216,7 @@ export function installHarness(game: Phaser.Game): HarnessApi {
       outcome: session?.outcome ?? null,
       movesMade: session?.movesMade ?? null,
       logLength: session ? session.log.length : 0,
-      window: lv?.openWindow ?? null,
+      window: lv?.openWindow ?? home()?.openWindow ?? null,
       interactive: interactive(lv),
       gameMs: round2(gameClock),
       loopRunning: game.loop.running,
@@ -383,7 +385,11 @@ export function installHarness(game: Phaser.Game): HarnessApi {
       return lv ? toClient(lv.trowelPoint) : null;
     }
     if (target.kind === 'close') {
-      const p = level()?.windowClosePoint ?? null;
+      const p = level()?.windowClosePoint ?? home()?.windowClosePoint ?? null;
+      return p ? toClient(p) : null;
+    }
+    if (target.kind === 'preSlot') {
+      const p = home()?.slotPoint(target.id) ?? null;
       return p ? toClient(p) : null;
     }
     if (target.kind === 'slot') {
@@ -504,6 +510,15 @@ export function installHarness(game: Phaser.Game): HarnessApi {
       game.scene.start(HOME_SCENE_KEY, {});
       await waitFor(() => activeKey() === HOME_SCENE_KEY, DEFAULT_WAIT_MS, 'the home screen');
       await waitGameMs(300);
+    },
+    async showReward(): Promise<void> {
+      const h = home();
+      if (!h) throw new Error('harness: showReward needs the home screen');
+      h.showRewardDemo();
+      await waitGameMs(900);
+    },
+    releaseBoot(): void {
+      (globalThis as { __holdBoot?: boolean }).__holdBoot = false;
     },
     texts,
     timings: () => timingSamples(),

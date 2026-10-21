@@ -141,17 +141,22 @@ export function drawClose(g: Phaser.GameObjects.Graphics, d: number): void {
  * slot, smaller in place of the strip's trowel icon), centred on (0, 0): stroke ring, lip, face, cross.
  */
 export function drawCancelX(g: Phaser.GameObjects.Graphics, d: number): void {
-  const red = TOKENS.kit.buttonColor.red;
+  const c = TOKENS.kit.v3.close;
   const r = d / 2;
   const lip = Math.max(4, Math.round(d * 0.06));
   g.clear();
-  g.fillStyle(hex(red.stroke), 1).fillCircle(0, lip, r);
-  g.fillStyle(hex(red.lip), 1).fillCircle(0, lip, r - 4);
-  g.fillStyle(hex(red.stroke), 1).fillCircle(0, 0, r);
-  g.fillStyle(hex(red.base), 1).fillCircle(0, 0, r - 5);
-  g.fillStyle(hex(red.top), 0.55).fillCircle(0, -r * 0.35, r * 0.45);
+  g.fillStyle(hex(c.ring), 1).fillCircle(0, lip, r);
+  g.fillStyle(hex(c.lip), 1).fillCircle(0, lip, r - 4);
+  g.fillStyle(hex(c.ring), 1).fillCircle(0, 0, r);
+  g.fillStyle(hex(c.face), 1).fillCircle(0, 0, r - 5);
+  g.fillStyle(hex(c.glossRing), 0.55).fillCircle(0, -r * 0.35, r * 0.45);
   const k = d * 0.19;
-  g.lineStyle(Math.max(6, Math.round(d * 0.13)), hex(C.inkOnDark), 1);
+  const t = Math.max(6, Math.round(d * 0.13));
+  g.lineStyle(t + 4, hex(c.glyphStroke), 1);
+  g.beginPath();
+  g.moveTo(-k, -k).lineTo(k, k).moveTo(k, -k).lineTo(-k, k);
+  g.strokePath();
+  g.lineStyle(t, hex(c.glyph), 1);
   g.beginPath();
   g.moveTo(-k, -k).lineTo(k, k).moveTo(k, -k).lineTo(-k, k);
   g.strokePath();

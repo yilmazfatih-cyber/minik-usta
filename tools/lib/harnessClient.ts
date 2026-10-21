@@ -159,6 +159,8 @@ export interface OpenOptions {
   readonly storage?: Readonly<Record<string, string>>;
   /** Browser permissions of the context (screens: `clipboard-write` for the feedback copy). */
   readonly permissions?: readonly string[];
+  /** Hold the loading screen (`window.__holdBoot`) until `__harness.releaseBoot()` (the loading-screen shot). */
+  readonly holdBoot?: boolean;
 }
 
 /** A fresh browser context (empty storage and cache) on the harness page. */
@@ -180,6 +182,11 @@ export async function openGame(browser: Browser, opts: OpenOptions): Promise<Gam
     }, opts.storage);
   }
   if (opts.permissions) await context.grantPermissions([...opts.permissions], { origin: opts.url });
+  if (opts.holdBoot) {
+    await context.addInitScript(() => {
+      (window as unknown as { __holdBoot: boolean }).__holdBoot = true;
+    });
+  }
   const page = await context.newPage();
   const gp = await attachGame(page, context);
   if (opts.cpuRate && opts.cpuRate !== 1)

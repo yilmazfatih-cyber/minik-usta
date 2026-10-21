@@ -151,13 +151,12 @@ describe('ANALYTICS feedback export (TECH 2R.16, WP-O)', () => {
     expect(await copyFeedback('x', undefined)).toBe('manual');
   });
 
-  it('UX 3 settings window: "Geri bildirim" is its last item (cream 640 × 128); copied → 1,5 s balloon, refused → manual box', () => {
+  it('UX 3 settings window: "Geri bildirim" is its last item (cream M 360 × 136, v3); copied → 1,5 s balloon, refused → manual box', () => {
     const home = readFileSync(new URL('../../src/scenes/HomeScene.ts', import.meta.url), 'utf8');
-    expect(home).toMatch(/const FEEDBACK_W = 640;\s+const FEEDBACK_H = 128;/);
+    // v3 (ART_REFERENCE §9.8): the cream secondary M button (360 × 136, `kit.v3.button.M`)
+    expect(home).toMatch(/const M = V3\.button\.M;/);
     expect(home).toMatch(/const FEEDBACK_COPIED_MS = 1500;/);
-    expect(home).toMatch(
-      /color: 'cream',\s+w: FEEDBACK_W,\s+h: FEEDBACK_H,\s+label: t\('settings\.feedback'\)/,
-    );
+    expect(home).toMatch(/color: 'cream',\s+w: M\.w,\s+h: M\.h,\s+label: t\('settings\.feedback'\)/);
     expect(home).toMatch(/t\('settings\.feedbackCopied'\)/);
     expect(home).toMatch(/hint: t\('settings\.feedbackManual'\), close: t\('common\.continue'\)/);
     // the button is the last row of the settings window (after the three switches)

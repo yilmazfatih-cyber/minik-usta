@@ -1293,5 +1293,12 @@ sütunu (§1-7), özgünlük listesi §11.8 (ART_REFERENCE §11 ile genişledi).
 `radialGradient` 4 durak serbest; ikon / yapı konturu 4 px tonun koyusu (`#3B2A1A` yalnız krem zeminde kalan
 metin-yakın öğelerde); karakter dosya sınırı 28 KB. `filter`, `mask`, `image` yasağı aynen.
 
+**Uygulandı — SVG v3 (2026-10-20, ASSET §15.1, §16.2 "v3 netleştirmeleri", §16.6 r3):** 39 SVG v3 diline çekildi
+(karakterler kontursuz 4 duraklı radyal + kenar ışığı + AO + temas gölgesi; ikonlar 3 ton + spekülar + dudak; ağaç ev
+ve arka planlar 4 px tonun koyusu kontur, 8 derinlik katmanı). İki ölçü bu belgeyi günceller: **ikon konturu 5 px**
+(4 px 64 px kullanımda 2 px'e düştüğü için; 128 viewBox) ve türetilmiş tonların yeri `tokens.json → check.svgTonesV3`
+(salt kontrol; `kit.v3` şeması değişmez). Yeni SVG'ler: `chr_tuna_stand` (ASSET §16.3 5b), `icon_shutter`, `icon_check`,
+`brick_fly_o/i2/l3/1` (yükleme). §11.7 yer tutucu iskeletleri geçmiş kayıt olarak kalır; final görünüm §17 + ART_REFERENCE §6.
+
 **Okuma sırası (v3):** ART_REFERENCE §1 → §2 → §3 → §4 → §5 → §6 → §9 → §10; bu belgede §17 → §3A (değişmeyen blok
 geometrisi) → §11 (karakter tanımları) → §9 (ikon dili).

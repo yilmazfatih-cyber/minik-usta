@@ -17,15 +17,18 @@
  * Layout: ui/kit/layout.ts `winLayout` (EXPAND: everything but the button moves down by (H − 1920) × 0.5).
  */
 import Phaser from 'phaser';
-import { t, upper } from '../services/i18n.ts';
+import { t } from '../services/i18n.ts';
 import type { Layout } from '../theme/layout.ts';
 import { TOKENS } from '../theme/tokens.ts';
 import { FX } from '../theme/draw/fx.ts';
-import { KIT } from '../theme/textures.ts';
-import { addBakedGraphics } from './BakedGraphics.ts';
+import { KIT, uploadCanvasArt } from '../theme/textures.ts';
+import { CARD_V3_RADIUS, drawRayFan } from '../theme/draw/kitV3.ts';
+import { roundRect } from '../theme/draw/blockV2.ts';
 import type { OptionButton } from './OptionButton.ts';
 import type { WinRewards } from './rewards.ts';
 import { hex } from './text.ts';
+
+const CP = TOKENS.kit.v3.capsule;
 import { ArtImage } from './kit/ArtImage.ts';
 import { kitRef, kitSlice } from './kit/atlas.ts';
 import { Capsule } from './kit/Capsule.ts';
@@ -56,8 +59,8 @@ const TUNA_RISE_PX = 40;
 const BUTTON_FROM = 0.9;
 /** Label of the 176 px primary button: the same 80 px "Parlak başlık" as "Bölüm N" (UX §3). */
 const PRIMARY_LABEL_PX = 80;
-/** Row text size (64 px wells, UX §6.1). */
-const ROW_TEXT_PX = 40;
+/** Row text size (64 px capsules, UX §6.1). */
+const ROW_TEXT_PX = 36;
 /** Big star of the card (ART §15 "ortadaki büyük yıldız"; #96 burst is Faz 5). */
 const CARD_STAR_PX = 168;
 /** Sunburst display size over the plaza (its 512 px frame is soft and scales up). */
@@ -157,7 +160,7 @@ export class WinScreen {
         reduced: reducedFn,
       },
     );
-    const ribbon = new Ribbon(scene, { color: 'gold', text: upper(t('win.title')), bodyW: g.ribbon.w });
+    const ribbon = new Ribbon(scene, { color: 'gold', text: t('win.title'), bodyW: g.ribbon.w });
     ribbon.setPosition(g.ribbon.x + g.ribbon.w / 2, g.ribbon.y);
     front.push(ribbon.root);
     const rowObjs: Phaser.GameObjects.Container[] = [];
@@ -185,20 +188,20 @@ export class WinScreen {
     const caps: Phaser.GameObjects.Container[] = [];
     if (g.starCapsule) {
       const s = new Capsule(scene, this.icons, {
-        w: g.starCapsule.w - TOKENS.kit.capsule.iconOverhangPx,
+        w: g.starCapsule.w - CP.iconOverhangPx,
         icon: 'icon_star',
         value: t('common.plus', { n: rewards.stars }),
       });
-      s.root.setPosition(g.starCapsule.x + TOKENS.kit.capsule.iconOverhangPx, g.starCapsule.y);
+      s.root.setPosition(g.starCapsule.x + CP.iconOverhangPx, g.starCapsule.y);
       s.root.disableInteractive();
       caps.push(s.root);
     }
     const coin = new Capsule(scene, this.icons, {
-      w: g.coinCapsule.w - TOKENS.kit.capsule.iconOverhangPx,
+      w: g.coinCapsule.w - CP.iconOverhangPx,
       icon: 'icon_coin',
       value: `+${formatCount(rewards.totalCoins)}`,
     });
-    coin.root.setPosition(g.coinCapsule.x + TOKENS.kit.capsule.iconOverhangPx, g.coinCapsule.y);
+    coin.root.setPosition(g.coinCapsule.x + CP.iconOverhangPx, g.coinCapsule.y);
     coin.root.disableInteractive();
     caps.push(coin.root);
     front.push(...caps);
@@ -211,7 +214,7 @@ export class WinScreen {
       color: 'green',
       w: b.w,
       h: b.h,
-      label: upper(t('common.continue')),
+      label: t('common.continue'),
       labelPx: PRIMARY_LABEL_PX,
     });
     this.button
@@ -227,7 +230,10 @@ export class WinScreen {
     void assets.loadGroup('P3');
   }
 
-  /** UX §6.1 card: ART §14.2 framed panel, the tree house fitted inside, the earned star at its lower right. */
+  /**
+   * UX §6.1 card (ART_REFERENCE §9.6): the indigo window frame with the cream card (ray fan, §3.7 layer 9) inside,
+   * the tree house fitted into it, the earned star at its lower right.
+   */
   private card(
     scene: Phaser.Scene,
     assets: WinContext['assets'],
@@ -237,38 +243,54 @@ export class WinScreen {
     reduced: () => boolean,
   ): Phaser.GameObjects.Container {
     const r = g.card;
+    const P = TOKENS.kit.v3.panel;
     const pr = kitRef(scene.game, KIT.panel);
     const ps = kitSlice(KIT.panel);
-    const shadowY = TOKENS.kit.panel.shadowYPx;
+    const frameH = r.h + P.shadowYPx + Math.round(P.shadowBlurPx / 2);
     const panel = scene.add
-      .nineslice(0, 0, pr.key, pr.frame, r.w, r.h + shadowY, ps?.left, ps?.right, ps?.top, ps?.bottom)
-      .setOrigin(0.5, r.h / 2 / (r.h + shadowY));
+      .nineslice(0, 0, pr.key, pr.frame, r.w, frameH, ps?.left, ps?.right, ps?.top, ps?.bottom)
+      .setOrigin(0.5, r.h / 2 / frameH);
     const parts: Phaser.GameObjects.GameObject[] = [panel];
-    // inner well behind the structure (a calm cream with a soft inset)
-    const ir = kitRef(scene.game, KIT.inset);
-    const is = kitSlice(KIT.inset);
-    const pad = TOKENS.kit.panel.outlinePx + TOKENS.kit.panel.framePx + TOKENS.kit.panel.innerLinePx + 18;
+    // cream card inside the body (above the two lip bands), with the ray fan baked once per size
+    const inset = P.outlinePx + P.rimPx + P.groovePx + P.bevelPx + 16;
+    const cw = r.w - 2 * inset;
+    const ch = r.h - 2 * inset - P.lipPx - P.lipDarkPx;
+    const cy = -r.h / 2 + inset + ch / 2;
+    const cr = kitRef(scene.game, KIT.card);
+    const cs = kitSlice(KIT.card);
     parts.push(
       scene.add
-        .nineslice(
-          0,
-          0,
-          ir.key,
-          ir.frame,
-          r.w - 2 * pad,
-          r.h - 2 * pad,
-          is?.left,
-          is?.right,
-          is?.top,
-          is?.bottom,
-        )
+        .nineslice(0, cy, cr.key, cr.frame, cw, ch, cs?.left, cs?.right, cs?.top, cs?.bottom)
         .setOrigin(0.5, 0.5),
     );
-    // tree house (760 × 820) fitted to the well
+    const rayKey = `win_card_rays_${cw}x${ch}`;
+    if (!scene.textures.exists(rayKey)) {
+      const e = P.creamEdgePx + 2;
+      uploadCanvasArt(scene.textures, rayKey, {
+        w: cw,
+        h: ch,
+        draw: (ctx) => {
+          ctx.save();
+          roundRect(ctx, e, e, cw - 2 * e, ch - 2 * e, CARD_V3_RADIUS - e);
+          ctx.clip();
+          drawRayFan(ctx, {
+            w: cw,
+            h: ch,
+            rays: 20,
+            light: P.creamRayLight,
+            dark: P.creamRayDark,
+            alpha: 0.9,
+          });
+          ctx.restore();
+        },
+      });
+    }
+    parts.push(scene.add.image(0, cy, rayKey));
+    // tree house (760 × 820) fitted to the card
     const sw = 760;
     const sh = 820;
-    const k = Math.min((r.w - 2 * pad - 24) / sw, (r.h - 2 * pad - 24) / sh);
-    const box = { x: (-sw * k) / 2, y: (-sh * k) / 2 + 6, w: sw * k, h: sh * k };
+    const k = Math.min((cw - 48) / sw, (ch - 40) / sh);
+    const box = { x: (-sw * k) / 2, y: cy - (sh * k) / 2 + 6, w: sw * k, h: sh * k };
     const ghost = ArtImage.create(scene, assets, 'town_ch1_treehouse_ghost', box, {
       reduced,
       crop: () =>
@@ -281,31 +303,30 @@ export class WinScreen {
     });
     parts.push(colour.image);
     if (star) {
-      const s = this.icons.add(scene, r.w / 2 - 70, r.h / 2 - 70, 'icon_star', CARD_STAR_PX);
+      const s = this.icons.add(scene, r.w / 2 - 70, r.h / 2 - 90, 'icon_star', CARD_STAR_PX);
       parts.push(s);
     }
     return scene.add.container(r.x + r.w / 2, r.y + r.h / 2, parts);
   }
 
-  /** UX §6.1 row: panel well (`ui_panel_inset`) with the label left and the coins (inline coin icon) right. */
+  /** UX §6.1 row (ART_REFERENCE §3.12 reward pill look): dark HUD capsule, label left, coins (inline icon) right. */
   private row(
     scene: Phaser.Scene,
     r: { x: number; y: number; w: number; h: number },
     left: string,
     right: string,
   ): Phaser.GameObjects.Container {
-    const ir = kitRef(scene.game, KIT.inset);
-    const is = kitSlice(KIT.inset);
+    const ir = kitRef(scene.game, KIT.capsuleHud);
+    const is = kitSlice(KIT.capsuleHud);
     const well = scene.add
-      .nineslice(0, 0, ir.key, ir.frame, r.w, r.h, is?.left, is?.right, is?.top, is?.bottom)
-      .setOrigin(0, 0);
-    const edge = addBakedGraphics(scene);
-    edge.lineStyle(4, hex(TOKENS.kit.panel.outline), 1).strokeRoundedRect(0, 0, r.w, r.h, 24);
-    const l = addInlineText(scene, this.icons, left, 'panel', ROW_TEXT_PX, 'left');
-    l.root.setPosition(28, r.h / 2);
-    const rt = addInlineText(scene, this.icons, right, 'panel', ROW_TEXT_PX, 'right');
-    rt.root.setPosition(r.w - 28, r.h / 2);
-    return scene.add.container(r.x, r.y, [well, edge, l.root, rt.root]);
+      .nineslice(0, 0, ir.key, ir.frame, r.w, 0, is?.left, is?.right, 0, 0)
+      .setOrigin(0, 0)
+      .setDisplaySize(r.w, r.h);
+    const l = addInlineText(scene, this.icons, left, 'counterCream', ROW_TEXT_PX, 'left');
+    l.root.setPosition(32, r.h / 2);
+    const rt = addInlineText(scene, this.icons, right, 'counterCream', ROW_TEXT_PX, 'right');
+    rt.root.setPosition(r.w - 32, r.h / 2);
+    return scene.add.container(r.x, r.y, [well, l.root, rt.root]);
   }
 
   /** The entry (see the header): layer, ribbon, Tuna, rows, capsules, button. */

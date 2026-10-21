@@ -89,7 +89,10 @@ export class Capsule {
     this.plusPressed = plusPressed;
     const ix = -CP.iconOverhangPx + this.iconPx / 2;
     // the icon's own soft shadow (a darker copy 4 px lower)
-    const shadow = icons.add(scene, ix, h / 2 + 4, spec.icon, this.iconPx).setTint(0x000000).setAlpha(0.3);
+    const shadow = icons
+      .add(scene, ix, h / 2 + 4, spec.icon, this.iconPx)
+      .setTint(0x000000)
+      .setAlpha(0.3);
     this.icon = icons.add(scene, ix, h / 2, spec.icon, this.iconPx);
     this.value = addKitText(scene, 0, h / 2, spec.value, this.role, this.fontPx);
     parts.push(this.value, shadow, this.icon);

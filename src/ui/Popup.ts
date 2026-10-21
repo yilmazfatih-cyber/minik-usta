@@ -31,7 +31,11 @@ const CL = V3.close;
 
 export type OptionTone = 'primary' | 'secondary' | 'neutral' | 'disabled' | 'text';
 /** Option button sizes: L / M (ART_REFERENCE §3.1) or the full 920 × 152 option row (UX §7 equal options). */
-export type OptionSize = 'L' | 'M' | 'row';
+import type { OptionSize } from './popupLayout.ts';
+import { optionRects } from './popupLayout.ts';
+
+export type { OptionSize } from './popupLayout.ts';
+export { OPTION_SIZE, optionRects, pairRects } from './popupLayout.ts';
 
 export interface PopupOption {
   readonly id: string;
@@ -89,16 +93,8 @@ export interface PopupHandlers {
   button?(b: KitButton, variant: PressVariant): void;
 }
 
-/** v3 option sizes (ART_REFERENCE §3.1 L / M; UX §7 row). */
-export const OPTION_SIZE: Readonly<Record<OptionSize, { readonly w: number; readonly h: number }>> = {
-  L: { w: V3.button.L.w, h: V3.button.L.h },
-  M: { w: V3.button.M.w, h: V3.button.M.h },
-  row: { w: TOKENS.layout.popup.optionW, h: TOKENS.layout.popup.optionH },
-};
-
 /** Vertical rhythm of the window (ART_REFERENCE §9.3 / §9.5: Oyna altı boşluk 80, kareler üstü 88). */
 const OPTIONS_BOTTOM_INSET = 80;
-const OPTION_GAP = 32;
 const CONTENT_TO_OPTIONS = 56;
 const PANEL_TOP_PAD = 104;
 const ROW_GAP = 24;
@@ -123,36 +119,6 @@ const TONE_COLOR: Readonly<Record<OptionTone, KitV3ButtonColor>> = {
 interface Toggle {
   readonly pill: Phaser.GameObjects.Image;
   on: boolean;
-}
-
-/** Equal-pair rects of the v2 window (kept for the layout tests: two 440 × 152 at the lowest option slot). */
-export function pairRects(layout: Layout): readonly Rect[] {
-  const p = TOKENS.layout.popup;
-  const y = layout.popup.optionsBottomY - p.optionH;
-  const pairW = 440;
-  const gap = 40;
-  const x0 = (layout.W - 2 * pairW - gap) / 2;
-  return [
-    { x: x0, y, w: pairW, h: p.optionH },
-    { x: x0 + pairW + gap, y, w: pairW, h: p.optionH },
-  ];
-}
-
-/** Rects of the options, index 0 = topmost (reading order), stacked bottom → top from `bottomY` (pure). */
-export function optionRects(
-  W: number,
-  bottomY: number,
-  options: readonly Pick<PopupOption, 'size'>[],
-): readonly Rect[] {
-  const out: Rect[] = [];
-  let y = bottomY;
-  for (let i = options.length - 1; i >= 0; i--) {
-    const s = OPTION_SIZE[options[i]?.size ?? 'row'];
-    y -= s.h;
-    out.unshift({ x: (W - s.w) / 2, y, w: s.w, h: s.h });
-    y -= OPTION_GAP;
-  }
-  return out;
 }
 
 export class Popup {
@@ -385,7 +351,10 @@ export class Popup {
         continue;
       }
       const t = scene.add
-        .text(0, 0, r.text, { ...kitTextStyle('cardText', px), wordWrap: { width: maxW, useAdvancedWrap: true } })
+        .text(0, 0, r.text, {
+          ...kitTextStyle('cardText', px),
+          wordWrap: { width: maxW, useAdvancedWrap: true },
+        })
         .setOrigin(0.5, 0);
       texts.push({ obj: t, h: t.height });
     }

@@ -28,20 +28,29 @@ export interface HomeLayout {
   readonly artY: number;
   readonly skyBand: Rect;
   readonly groundBand: Rect;
+  /** Top bar capsules (ART_REFERENCE §9.2: h 88) and the Ø 104 settings tool. */
   readonly lives: Rect;
   readonly coins: Rect;
   readonly stars: Rect;
   readonly settings: Rect;
   /** Area ribbon body: centre x, top y, body width, height (`kit.ribbon.heightPx`). */
   readonly ribbon: Rect;
+  /** Meta progress bar (ART_REFERENCE §3.8, h 84). */
   readonly progress: Rect;
-  /** Side icon slot k (0 = top) on the right / left edge (UX §3 "Kenar ikonları"). */
+  /** Side event bubble k (0 = top) on the right / left edge (ART_REFERENCE §9.2: Ø 176 + the 56 px label strip). */
   sideRight(k: number): Rect;
   sideLeft(k: number): Rect;
   /** Structure box (`structureMaxW × structureMaxH`, centred on `structureCenterX`, bottom on the base line). */
   readonly structure: Rect;
-  /** Character corner (Tuna + Kepçe), bottom on `characterBaseY`. */
+  /**
+   * Character group (ART_REFERENCE §9.2 "karakter grubu"): Tuna full figure in front at the left, Kepçe at her feet,
+   * Usta Dede's bust behind at the right; every box bottom on `characterBaseY` (24 px behind the button's top edge),
+   * the button's own area stays empty.
+   */
   readonly character: Rect;
+  readonly tuna: Rect;
+  readonly kepce: Rect;
+  readonly dede: Rect;
   readonly play: Rect;
   /** Difficulty tag: over the button's top-left corner, sticking out 24 px to the left and 24 px into the button. */
   readonly tag: Rect;
@@ -89,18 +98,28 @@ export const MORE_SOON_H = 80;
 export const MORE_SOON_W = 480;
 const MORE_SOON_GAP = 28;
 
+/** ART_REFERENCE §9.2: event bubble label strip height + gap, and the vertical step between side bubbles. */
+export const SIDE_LABEL_H = 56;
+const SIDE_LABEL_GAP = 8;
+const SIDE_STEP_GAP = 40;
+/** Meta progress bar top (under the area ribbon; ART_REFERENCE §9.2 keeps the v2 column). */
+const PROGRESS_Y = 300;
+/** The characters' feet sit this far below the button's top edge (behind it). */
+const CHARACTER_BEHIND_PX = 24;
+
 export function homeLayout(tokens: Tokens, H: number): HomeLayout {
   const L = tokens.layout.home;
+  const V = tokens.kit.v3.screen.home;
   const W = tokens.meta.designWidth;
   const shift = Math.max(0, H - BASE_H) * L.expandShare;
   const artY = shift;
   const play: Rect = {
-    x: (W - L.playButtonW) / 2,
-    y: H - L.playButtonBottomPx - L.playButtonH,
-    w: L.playButtonW,
-    h: L.playButtonH,
+    x: (W - V.playW) / 2,
+    y: H - V.playBottomPx - V.playH,
+    w: V.playW,
+    h: V.playH,
   };
-  const navTop = H - L.navBottomPx - L.navH;
+  const navTop = H - L.navBottomPx - V.navH;
   const tag: Rect = {
     x: play.x - TAG_OVERHANG_PX,
     y: play.y - L.levelTagH + TAG_OVERHANG_PX,
@@ -110,7 +129,34 @@ export function homeLayout(tokens: Tokens, H: number): HomeLayout {
   const tabs: Rect[] = [];
   const tabsW = L.navTabW * 5;
   for (let k = 0; k < 5; k++)
-    tabs.push({ x: (W - tabsW) / 2 + k * L.navTabW, y: navTop, w: L.navTabW, h: L.navH });
+    tabs.push({ x: (W - tabsW) / 2 + k * L.navTabW, y: navTop, w: L.navTabW, h: V.navH });
+  const capH = V.capsuleH;
+  const capY = L.topBarY;
+  const side = V.eventBubblePx;
+  const sideStep = side + SIDE_LABEL_GAP + SIDE_LABEL_H + SIDE_STEP_GAP;
+  const sideBox = (x: number, k: number): Rect => ({
+    x,
+    y: L.sideFirstY + k * sideStep,
+    w: side,
+    h: side + SIDE_LABEL_GAP + SIDE_LABEL_H,
+  });
+  // character group (ART_REFERENCE §9.2): Tuna 300 × 480 figure at 1,1, Kepçe 300 × 206 at 0,85, Dede bust 256 × 320 at 1,25
+  const baseY = play.y + CHARACTER_BEHIND_PX;
+  const tunaH = 528;
+  const tunaW = Math.round((tunaH * 300) / 480);
+  const tuna: Rect = { x: V.characterGroupX + 20, y: baseY - tunaH, w: tunaW, h: tunaH };
+  const kepceW = 255;
+  const kepceH = Math.round((kepceW * 206) / 300);
+  const kepce: Rect = { x: tuna.x + tunaW - 70, y: baseY + 6 - kepceH, w: kepceW, h: kepceH };
+  const dedeH = 400;
+  const dedeW = Math.round((dedeH * 256) / 320);
+  const dede: Rect = { x: W - V.characterGroupX - dedeW - 10, y: baseY - 16 - dedeH, w: dedeW, h: dedeH };
+  const character: Rect = {
+    x: V.characterGroupX,
+    y: baseY - V.characterGroupH,
+    w: V.characterGroupW,
+    h: V.characterGroupH,
+  };
   return {
     W,
     H,
@@ -118,33 +164,34 @@ export function homeLayout(tokens: Tokens, H: number): HomeLayout {
     artY,
     skyBand: { x: 0, y: 0, w: W, h: artY },
     groundBand: { x: 0, y: artY + BASE_H, w: W, h: Math.max(0, H - artY - BASE_H) },
-    lives: { x: L.livesX, y: L.topBarY, w: L.livesW, h: L.topBarH },
-    coins: { x: L.coinsX, y: L.topBarY, w: L.coinsW, h: L.topBarH },
-    stars: { x: L.starsX, y: L.topBarY, w: L.starsW, h: L.topBarH },
-    settings: { x: L.settingsX, y: L.settingsY, w: L.settingsSize, h: L.settingsSize },
+    lives: { x: L.livesX, y: capY, w: L.livesW, h: capH },
+    coins: { x: L.coinsX, y: capY, w: L.coinsW, h: capH },
+    stars: { x: L.starsX, y: capY, w: L.starsW, h: capH },
+    settings: {
+      x: W - L.livesX - V.settingsPx,
+      y: capY + (capH - V.settingsPx) / 2,
+      w: V.settingsPx,
+      h: V.settingsPx,
+    },
     ribbon: {
       x: W / 2 - L.areaRibbonW / 2,
       y: L.areaRibbonY,
       w: L.areaRibbonW,
       h: tokens.kit.ribbon.heightPx,
     },
-    progress: { x: L.progressX, y: L.progressY, w: L.progressW, h: tokens.kit.progress.heightPx },
-    sideRight: (k) => ({ x: L.sideRightX, y: L.sideFirstY + k * L.sideStepY, w: L.sideSize, h: L.sideSize }),
-    sideLeft: (k) => ({ x: L.sideLeftX, y: L.sideFirstY + k * L.sideStepY, w: L.sideSize, h: L.sideSize }),
+    progress: { x: L.progressX, y: PROGRESS_Y, w: L.progressW, h: tokens.kit.v3.progress.metaH },
+    sideRight: (k) => sideBox(W - L.sideLeftX - side, k),
+    sideLeft: (k) => sideBox(L.sideLeftX, k),
     structure: {
       x: L.structureCenterX - L.structureMaxW / 2,
       y: L.structureBaseY + shift - L.structureMaxH,
       w: L.structureMaxW,
       h: L.structureMaxH,
     },
-    character: {
-      x: L.characterX,
-      // `layout.home.characterExpandShare` (1, accepted 2026-10-08): the corner keeps its FIT distance to the "Bölüm N"
-      // button; on a tall phone Tuna and Kepçe stand on the foreground lawn (the structure keeps `expandShare` 0,5)
-      y: L.characterBaseY + (H - BASE_H) * L.characterExpandShare - L.characterH,
-      w: L.characterW,
-      h: L.characterH,
-    },
+    character,
+    tuna,
+    kepce,
+    dede,
     play,
     tag,
     moreSoon: (withTag) => ({
@@ -197,7 +244,7 @@ export function winLayout(tokens: Tokens, H: number, rows: WinRows): WinLayout {
   const L = tokens.layout.win;
   const W = tokens.meta.designWidth;
   const shift = Math.max(0, H - BASE_H) * L.expandShare;
-  const capH = tokens.kit.capsule.heightPx;
+  const capH = tokens.kit.v3.capsule.homeH;
   const rowX = (W - L.bonusW) / 2;
   const capY = L.rewardsY + shift + (rows.trowel ? L.rewardsShiftPx : 0);
   const pairW = 2 * L.rewardCapsuleW + L.rewardGapPx;

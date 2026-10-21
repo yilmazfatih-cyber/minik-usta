@@ -1467,3 +1467,37 @@ Kapanış dosyası: `docs/review_inbox/code-lead-2R-screens-1-closure.md` (KAPAN
 - [design-lead → orkestratör] **ÖNERİ (proje sahibine):** saha zemini sıcak kum (#E9C891) kalsın mı, referansla birebir
   koyu çivit (#2C2670, `kit.v3.board.floorDark`) mı? Varsayılan: kum kalır (renk körü ölçümleri bu zeminde).
   Karakter konturu kaldırma (v3 "render edilmiş" dil) ART §16.2 kuralını değiştirir; D-083'e ek karar önerilir.
+
+## SVG v3 paketi (design-lead, 2026-10-20; R2-07/R2-08/R2-13, ART §17, ART_REFERENCE §6–§8)
+
+- [design-lead → code-lead] **Katalog satırları (6 yeni SVG; `npm run assets` şimdilik "unknown" sayıyor, çıkış 1):**
+  `icon/brick_fly_o`, `brick_fly_i2`, `brick_fly_l3`, `brick_fly_1` → viewBox 0 0 200 200, raster 200×200 (ya da 100×100
+  ile 0,5 ölçek), atlasa girmez, yükleme ekranı grubu (P0'da gerekir: UX §1.1 8 tuğla = 4 SVG × 2 kopya, 96–200 px,
+  ±30°, uzaktakiler 0,7 ölçek α 0,85); `icon/icon_shutter` ve `icon/icon_check` → 128, atlas (`ICON_IDS`'e ekleyin;
+  23 ikon 512×768'e sığar). `chr/chr_tuna_stand` teslim edildi (ASSET §16.3 5b; 300×480, 12,5 KB) → `optional`
+  bayrağı kalkabilir; ana sayfa karakter köşesi büst yerine tam boyu kullanır (UX §3, DS-04). ASSET §16.3 satır
+  regex'i (`| N |`) için "5b" bilinçli; `catalog.test.ts` 10 satır sayımı korunur.
+- [design-lead → code-lead] **Tonlar `check.svgTonesV3`:** `kit.v3` sizin tarafınızda `z.object`'e daraltıldığı için
+  (tokens.ts 301) yeni alt grup açmadım; türetilmiş tonlar `check.*` altında (SALT KONTROL, şemadan düşer,
+  `tokenColors` zaten `check.*`'i paletin parçası sayıyor). `tests/theme/tokens.test.ts` + `tests/assets` yeşil (79/79).
+  Yeni ton gerekirse scratch üretici tabloyu yeniden yazar; elle düzenleme gerekmez.
+- [design-lead → code-lead] **Karakter boyut sınırı:** 28 KB gerekmedi; v3 karakterleri 6,8–12,9 KB (20 KB kalır,
+  `MAX_BYTES.chr` değişmez). Göz tanımı `<g id="ey">` + iki `<use>`; `clipPath` içinde `use` yalnız temel şekle bakar
+  (grup değil) — raster boru hattı Chromium'da doğrulandı (35 ok).
+- [design-lead → code-lead] **Öğretici eli:** `ui_tutorial_glove` artık ART_REFERENCE §3.14 ten rengi el (beyaz manşet
+  + turuncu bant); kimlik ve 140×160 kutu aynı, kod değişikliği gerekmez. Kontur #C0755A 5 px, gölge dosyanın içinde
+  (+10 px α 0,3) — kodda ikinci gölge çizilmesin.
+- [design-lead → code-lead] **Ağaç ev:** `t1`…`t7` geometrisi v2 ile birebir; yalnız kontur 6 → 4 px ve malzeme. Kırpma
+  bantları (§16.6 tablosu) ve hayalet türetimi aynen çalışır (`npm run assets` hayaleti yeniden üretti).
+- [design-lead → code-lead] **Önceden kırmızı testler (bu paketten bağımsız):** `tests/theme/layout.test.ts` (4) ve
+  `tests/theme/boardLayout.test.ts` (7) tokens `layout.*` ↔ UX §5.8 / TECH §10.1 uyuşmazlığıyla kırmızı; `check.svgTonesV3`
+  kaldırılınca da aynı 11 test kırmızı (doğrulandı). Görünüm v3 yerleşim çalışmanızla ilgili görünüyor.
+- [design-lead → code-lead] **Yükleme ekranı v3 kompozisyonu (UX §1.1):** karakter grubu `chr_tuna_cheer` (orta, 1,0)
+  + `chr_kepce_bust` (sol, 0,8) + `chr_dede_bust` (sağ arka, 0,9); kenar ışığı gök renginde (#C7ADFF) olduğu için
+  yükleme göğünde de okunur. Logo amblemi 300×300 solda, `app.title` 3B harf sağda (NAMING kararına bağlı).
+- [design-lead → product-lead] Bölüm başı penceresi 3. yuva için **`icon_shutter`** (Açık Kepenk: yarı açık kepenk +
+  yeşil yukarı ok) hazır; Termos ve Mala Başlangıcı mevcut ikonlarla. Seçili yuva ✓ `icon_check`. Uçuşan tuğlalar
+  sembolsüz süs — oyun blokları D-083 ile sembollü kalır.
+- [design-lead → orkestratör] **ÖNERİ:** (a) D-083/§16.2 eki — "karakter SVG'lerinde kontur yok; ikon/yapı konturu
+  tonun koyusu (×0,45) 5 / 4 px" (uygulandı, karar kaydı için); (b) v3 görünüm kabulü ekran rubriğiyle (`npm run
+  screens`) code-lead görünüm v3 uygulamasından sonra; SVG öz puanı §16.6 r3'te (karakter 4, ikon 4).

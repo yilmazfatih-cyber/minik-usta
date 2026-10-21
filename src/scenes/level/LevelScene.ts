@@ -58,7 +58,7 @@ import { shapeByIndex } from '../../core/shapes.ts';
 import { hasFlag, pieceColor, pieceShape, queueIds } from '../../core/state.ts';
 import type { GameState } from '../../core/state.ts';
 import { COLOR_CODES } from '../../core/types.ts';
-import type { DragNode, GameEvent, Move, PieceId, SessionAction } from '../../core/types.ts';
+import type { DragNode, GameEvent, Move, PieceId, PreBooster, SessionAction } from '../../core/types.ts';
 import { systemClock } from '../../services/clock.ts';
 import { timed } from '../../services/timings.ts';
 import { t } from '../../services/i18n.ts';
@@ -156,6 +156,8 @@ export interface LevelSceneData {
   /** Level to open (default 1). */
   readonly levelId?: number;
   readonly resume?: ResumeData;
+  /** GDD K-40: pre-level boosters chosen in the level-start window (spent at the start; UX §4.1). */
+  readonly preBoosters?: readonly PreBooster[];
 }
 
 /** The home scene's start data (scenes/HomeScene.ts). */
@@ -198,6 +200,7 @@ export class LevelScene extends Phaser.Scene {
   private layoutNow!: Layout;
   private levelId = 1;
   private pendingResume: ResumeData | null = null;
+  private pendingPre: readonly PreBooster[] = [];
   private loadToken = 0;
   private lvl: CompiledLevel | null = null;
   private session: GameSession | null = null;
@@ -288,6 +291,7 @@ export class LevelScene extends Phaser.Scene {
   init(data: LevelSceneData): void {
     this.levelId = data.levelId ?? 1;
     this.pendingResume = data.resume ?? null;
+    this.pendingPre = data.preBoosters ?? [];
   }
 
   create(): void {
@@ -470,7 +474,7 @@ export class LevelScene extends Phaser.Scene {
 
     const resume = this.pendingResume;
     this.pendingResume = null;
-    void this.startLevel(this.levelId, resume ? { resume } : {});
+    void this.startLevel(this.levelId, resume ? { resume } : { preBoosters: this.pendingPre });
   }
 
   /** The home screen woke the scene for the next level (TECH §10.4 reset path). */
@@ -480,7 +484,10 @@ export class LevelScene extends Phaser.Scene {
     this.layoutNow = this.computeLayout();
     this.placeHud();
     this.picker.relayout();
-    void this.startLevel(data.levelId ?? 1, data.resume ? { resume: data.resume } : {});
+    void this.startLevel(
+      data.levelId ?? 1,
+      data.resume ? { resume: data.resume } : { preBoosters: data.preBoosters ?? [] },
+    );
   }
 
   update(_time: number, delta: number): void {
@@ -645,7 +652,10 @@ export class LevelScene extends Phaser.Scene {
    * TECH §10.4 `LevelScene.reset(level)`: views go back to their pools, the level is loaded, baked and started — a new
    * attempt (saved at once, K-43) or the saved one (`resume`).
    */
-  async startLevel(id: number, opts: { readonly resume?: ResumeData } = {}): Promise<void> {
+  async startLevel(
+    id: number,
+    opts: { readonly resume?: ResumeData; readonly preBoosters?: readonly PreBooster[] } = {},
+  ): Promise<void> {
     const token = ++this.loadToken;
     this.levelId = id;
     this.drag.abort();
@@ -746,13 +756,17 @@ export class LevelScene extends Phaser.Scene {
       this.tailSteps = [];
     } else {
       const streakTier = streakTierOf(id, save.data.winStreak);
-      session = GameSession.start(
-        lvl,
-        { preBoosters: [], streakTier },
-        { hooks, streakBonus: streakBonusOf },
-      );
+      const preBoosters = opts.preBoosters ?? [];
+      // K-40 "bölüm başlarken harcanır": a pending update the beginAttempt write carries (one store write; an exit
+      // before the first move or a voided attempt gives them back, K-43 items 2 and 4)
+      if (preBoosters.length > 0)
+        save.update((d) => {
+          for (const p of preBoosters)
+            d.boosters.inventory[p] = Math.max(0, (d.boosters.inventory[p] ?? 0) - 1);
+        });
+      session = GameSession.start(lvl, { preBoosters, streakTier }, { hooks, streakBonus: streakBonusOf });
       this.attempt = LevelAttempt.begin({ save, track: appTrack, clock: systemClock }, lvl, {
-        preBoosters: [],
+        preBoosters,
         streakTier,
       });
     }
@@ -962,9 +976,21 @@ export class LevelScene extends Phaser.Scene {
       tray.fillStyle(0x000000, 0.3).fillRoundedRect(x, y + 12, w, h, ro);
       tray.fillStyle(hex(B.edge), 1).fillRoundedRect(x, y, w, h, ro);
       tray.fillGradientStyle(hex(B.frameTop), hex(B.frameTop), hex(B.frameBottom), hex(B.frameBottom), 1);
-      tray.fillRoundedRect(x + B.edgePx, y + B.edgePx, w - 2 * B.edgePx, h - B.edgePx - B.edgeBottomPx, ro - B.edgePx);
+      tray.fillRoundedRect(
+        x + B.edgePx,
+        y + B.edgePx,
+        w - 2 * B.edgePx,
+        h - B.edgePx - B.edgeBottomPx,
+        ro - B.edgePx,
+      );
       tray.lineStyle(B.innerLinePx, hex(B.innerLine), 1);
-      tray.strokeRoundedRect(x + frame - B.innerLinePx / 2, y + frame - B.innerLinePx / 2, w - 2 * frame + B.innerLinePx, h - frame - B.edgeBottomPx - frame + B.innerLinePx, B.radiusInnerPx);
+      tray.strokeRoundedRect(
+        x + frame - B.innerLinePx / 2,
+        y + frame - B.innerLinePx / 2,
+        w - 2 * frame + B.innerLinePx,
+        h - frame - B.edgeBottomPx - frame + B.innerLinePx,
+        B.radiusInnerPx,
+      );
     } else {
       // DS-16: an 8-column board leaves < 8 px beside its frame — a full-width band with top and bottom edges only
       const y = r.y - frame + TRAY_PAD_MAX_PX;
@@ -983,7 +1009,9 @@ export class LevelScene extends Phaser.Scene {
     well.fillStyle(hex(CP.hudFill), CP.fillAlpha).fillRoundedRect(p.x, p.y, p.w, p.h, WELL_RADIUS_PX);
     well.lineStyle(CP.innerRingPx, hex(CP.innerRing), CP.innerRingAlpha);
     well.strokeRoundedRect(p.x + 3, p.y + 3, p.w - 6, p.h - 6, WELL_RADIUS_PX - 3);
-    well.fillStyle(0xffffff, CP.topLineAlpha).fillRect(p.x + WELL_RADIUS_PX, p.y + 3, p.w - 2 * WELL_RADIUS_PX, 2);
+    well
+      .fillStyle(0xffffff, CP.topLineAlpha)
+      .fillRect(p.x + WELL_RADIUS_PX, p.y + 3, p.w - 2 * WELL_RADIUS_PX, 2);
     // ART_REFERENCE §9.4 row 1: the "Bölüm {n}" capsule (rebuilt per layout; the text follows `levelId`)
     this.levelCapsule?.destroy();
     const lc = L.top.levelCapsule;
@@ -1008,7 +1036,12 @@ export class LevelScene extends Phaser.Scene {
   /** The panorama's rect inside its well (row 2, left; ART_REFERENCE §9.4): the well minus `WELL_PAD_PX`. */
   private panoRect(): Rect {
     const well = this.layoutNow.top.panorama;
-    return { x: well.x + WELL_PAD_PX, y: well.y + WELL_PAD_PX, w: well.w - 2 * WELL_PAD_PX, h: well.h - 2 * WELL_PAD_PX };
+    return {
+      x: well.x + WELL_PAD_PX,
+      y: well.y + WELL_PAD_PX,
+      w: well.w - 2 * WELL_PAD_PX,
+      h: well.h - 2 * WELL_PAD_PX,
+    };
   }
 
   /** UX §13.2 level 5: the active segment's panorama column and the next one (≥ 2 segments). */

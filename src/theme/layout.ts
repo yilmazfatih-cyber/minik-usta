@@ -375,8 +375,12 @@ export function createLayout(tokens: Tokens, H: number, geo: BoardGeo = DEFAULT_
   const { grid, ...board } = boardLayout(tokens, geo, H);
   const slop = touch.hitSlopPx * grid.k;
 
-  // ART_REFERENCE §9.4: 4 × 160 booster squares, gap 32, x 304 …, bottom 120; the Tuna + Kepçe corner 240 × 260
+  // ART_REFERENCE §9.4: 4 × 160 booster squares, gap 32, x 304 …, bottom 120 (the character corner keeps the
+  // `layout.bottom` box so `bottom.groupTopFromBottomPx` stays the group's top, TECH §10.1)
   const hv = tokens.kit.v3.screen.hud;
+  // row 2 of the HUD ends on `top.groupBottomY` (264): y = 264 − 136 = 128 (the §9.4 sketch says 112; the group
+  // bottom is the invariant the board budget and the tutorial dock read, TECH §10.1)
+  const row2Y = Math.max(hv.row2Y, t.groupBottomY - hv.movesH);
   const boosters = Array.from({ length: BOOSTER_SLOTS }, (_, i) => ({
     x: hv.boosterX + i * (hv.boosterPx + hv.boosterGapPx),
     y: fromBottom(hv.boosterBottomPx, hv.boosterPx),
@@ -396,15 +400,15 @@ export function createLayout(tokens: Tokens, H: number, geo: BoardGeo = DEFAULT_
     boardShift,
     grid,
     top: {
-      pause: { x: hv.toolRightX, y: hv.row2Y, w: hv.toolPx, h: hv.toolPx },
-      panorama: { x: hv.toolLeftX, y: hv.row2Y, w: PANORAMA_WELL_W, h: hv.movesH },
+      pause: { x: hv.toolRightX, y: row2Y, w: hv.toolPx, h: hv.toolPx },
+      panorama: { x: hv.toolLeftX, y: row2Y, w: PANORAMA_WELL_W, h: hv.movesH },
       goals: {
         x: HUD_MARGIN_X + hv.levelCapsuleW + HUD_ROW_GAP,
         y: hv.row1Y,
         w: W - 2 * HUD_MARGIN_X - hv.levelCapsuleW - HUD_ROW_GAP,
         h: hv.row1H,
       },
-      moves: { x: (W - hv.movesW) / 2, y: hv.row2Y, w: hv.movesW, h: hv.movesH },
+      moves: { x: (W - hv.movesW) / 2, y: row2Y, w: hv.movesW, h: hv.movesH },
       levelCapsule: { x: HUD_MARGIN_X, y: hv.row1Y, w: hv.levelCapsuleW, h: hv.row1H },
       topBar: { x: 0, y: t.topBarY, w: W, h: t.topBarH },
       groupBottomY: t.groupBottomY,
@@ -413,9 +417,9 @@ export function createLayout(tokens: Tokens, H: number, geo: BoardGeo = DEFAULT_
     bottom: {
       character: {
         x: bt.characterX,
-        y: fromBottom(bt.characterBottomPx, hv.cornerH),
-        w: hv.cornerW,
-        h: hv.cornerH,
+        y: fromBottom(bt.characterBottomPx, bt.characterH),
+        w: bt.characterW,
+        h: bt.characterH,
       },
       boosters,
       nav,

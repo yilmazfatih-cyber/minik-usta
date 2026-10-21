@@ -189,7 +189,18 @@ export class GoalsPanel {
       const ref = kit.ref(KIT.capsuleHud);
       const sl = kit.slice(KIT.capsuleHud);
       return this.scene.add
-        .nineslice(x + OVERHANG, y, ref.key, ref.frame, w - OVERHANG, 0, sl?.left ?? 38, sl?.right ?? 38, 0, 0)
+        .nineslice(
+          x + OVERHANG,
+          y,
+          ref.key,
+          ref.frame,
+          w - OVERHANG,
+          0,
+          sl?.left ?? 38,
+          sl?.right ?? 38,
+          0,
+          0,
+        )
         .setOrigin(0, 0);
     }
     const g = addBakedGraphics(this.scene);
@@ -198,7 +209,14 @@ export class GoalsPanel {
   }
 
   private countText(text: string, done: boolean): Phaser.GameObjects.Text {
-    const t0 = addKitText(this.scene, 0, this.midY(), text, done ? 'counterCream' : 'counterLavender', TEXT_PX);
+    const t0 = addKitText(
+      this.scene,
+      0,
+      this.midY(),
+      text,
+      done ? 'counterCream' : 'counterLavender',
+      TEXT_PX,
+    );
     if (done) t0.setColor(TOKENS.kit.v3.palette.checkGreen);
     return t0.setOrigin(0, t0.originY);
   }
@@ -211,7 +229,10 @@ export class GoalsPanel {
     return g;
   }
 
-  private buildChip(goal: GoalView | undefined): { w: number; build: (x: number) => Phaser.GameObjects.GameObject[] } {
+  private buildChip(goal: GoalView | undefined): {
+    w: number;
+    build: (x: number) => Phaser.GameObjects.GameObject[];
+  } {
     const done = goal?.done ?? false;
     const text = this.countText(t('common.count', { n: goal?.value ?? 0, max: goal?.target ?? 0 }), done);
     const w = ICON_PX + TEXT_GAP + text.width + PAD_R;
@@ -237,7 +258,12 @@ export class GoalsPanel {
     const labelText = optText('hud.blocks');
     const label = labelText
       ? this.scene.add
-          .text(0, this.midY() + LABEL_DY_PX, labelText, kitTextStyle('counterLavender', HUD.blocksLeftLabelPx))
+          .text(
+            0,
+            this.midY() + LABEL_DY_PX,
+            labelText,
+            kitTextStyle('counterLavender', HUD.blocksLeftLabelPx),
+          )
           .setOrigin(0, 0.5)
       : null;
     const w = ICON_PX + TEXT_GAP + num.width + (label ? LABEL_GAP_PX + label.width : 0) + PAD_R;
@@ -267,7 +293,12 @@ export class GoalsPanel {
           if (sub) out.push(this.scene.add.image(bx, by, sub.key, sub.frame).setOrigin(0.5, 0.5));
           out.push(
             this.scene.add
-              .text(bx, by, t('common.plus', { n: this.pending }), kitTextStyle('button', SUB_FONT_PX, TOKENS.kit.v3.badge.textStroke))
+              .text(
+                bx,
+                by,
+                t('common.plus', { n: this.pending }),
+                kitTextStyle('button', SUB_FONT_PX, TOKENS.kit.v3.badge.textStroke),
+              )
               .setOrigin(0.5, 0.55),
           );
         }
@@ -278,7 +309,10 @@ export class GoalsPanel {
     };
   }
 
-  private goalChip(goal: GoalView | undefined): { w: number; build: (x: number) => Phaser.GameObjects.GameObject[] } {
+  private goalChip(goal: GoalView | undefined): {
+    w: number;
+    build: (x: number) => Phaser.GameObjects.GameObject[];
+  } {
     const done = goal?.done ?? false;
     const text = this.countText(t('common.count', { n: goal?.value ?? 0, max: goal?.target ?? 0 }), done);
     const w = ICON_PX + TEXT_GAP + text.width + PAD_R;

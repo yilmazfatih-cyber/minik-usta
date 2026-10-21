@@ -29,6 +29,7 @@ import { boardTray, createLayout } from '../../src/theme/layout.ts';
 import { TOKENS } from '../../src/theme/tokens.ts';
 import { DEBUG_ROOT_ID, LABEL } from '../../src/debug/labels.ts';
 import { BALLOON_BUTTON_GAP_PX, homeLayout, lockedTabBalloon } from '../../src/ui/kit/layout.ts';
+import { hintBubbleHeight } from '../../src/ui/kit/HintBubble.ts';
 import { WELL_LABEL_PAD_PX, panoramaWellSplit } from '../../src/ui/Panorama.ts';
 import { levelFile } from '../core/moves.fixtures.ts';
 
@@ -65,8 +66,8 @@ describe('design-lead screens review 1 — code-lead findings', () => {
   });
 
   it('UX 5.9 item 8 level label in the panorama well (DS-12): left of the strip, hidden when the plan needs the room', () => {
-    const L = layoutOf(1);
-    const well = L.top.panorama;
+    // the pure split (a v2 592 × 110 well; v3 moved the label to the row-1 capsule and the well is the panorama's)
+    const well = { x: 168, y: 40, w: 592, h: 110 };
     const one = panoramaView(createInitialState(levelFile(1)));
     const split = panoramaWellSplit(well, one, STYLE, 260);
     expect(split.label).toEqual({ x: well.x + WELL_LABEL_PAD_PX, y: well.y, w: 260, h: well.h });
@@ -78,10 +79,12 @@ describe('design-lead screens review 1 — code-lead findings', () => {
       rows: [Array(4).fill('W'), Array(4).fill('W')],
     })) as unknown as PanoramaSegment[];
     expect(panoramaWellSplit(well, wide, STYLE, 260)).toEqual({ label: null, strip: well });
+    // v3 (ART_REFERENCE §9.4): the level label is the row-1 "Bölüm {n}" capsule, the well (row 2) is the panorama's
     const scene = src('src/scenes/level/LevelScene.ts');
-    expect(scene).toMatch(/upper\(t\('home\.play', \{ n: this\.levelId \}\)\)/);
-    expect(scene).toMatch(/kitTextStyle\('brightTitle', LEVEL_LABEL_PX, TOKENS\.color\.ui\.ink\)/);
-    expect(scene).toMatch(/const LEVEL_LABEL_PX = 52;/);
+    expect(scene).toMatch(
+      /new Capsule\(this, this\.hudIcons, \{[\s\S]{0,160}value: t\('home\.play', \{ n: this\.levelId \}\)/,
+    );
+    expect(scene).not.toMatch(/LEVEL_LABEL_PX/);
     // every panorama read (draw, the #18 slot, the tutorial arrow) uses the same rect
     expect(scene.match(/this\.panoRect\(\)/g)?.length).toBe(3);
   });
@@ -100,15 +103,13 @@ describe('design-lead screens review 1 — code-lead findings', () => {
     const picker = src('src/scenes/level/TrowelPicker.ts');
     expect(picker).not.toMatch(/TextButton|common\.cancel/); // the big cream "Vazgeç" button is gone
     const slots = src('src/ui/boosterSlots.ts');
-    expect(slots).toMatch(/const CANCEL_PX = 128;/);
+    expect(slots).toMatch(/const CANCEL_PX = 120;/); // ART_REFERENCE §3.2 Ø 120
     expect(slots).toMatch(/v\.cancel\.setVisible\(on\);/);
     expect(slots).toMatch(/const showCount = !v\.raised &&/); // the count badge hides on the selected slot
     expect(src('src/ui/StatusStrip.ts')).toMatch(
       /this\.cancel\.setVisible\(on\);\s+this\.trowel\.setVisible\(!on\);/,
     );
-    expect(src('src/ui/icons.ts')).toMatch(
-      /export function drawCancelX[\s\S]{0,200}TOKENS\.kit\.buttonColor\.red/,
-    );
+    expect(src('src/ui/icons.ts')).toMatch(/export function drawCancelX[\s\S]{0,200}TOKENS\.kit\.v3\.close/);
   });
 
   it('UX 13.1 tutorial block ghost (DS-15): the glove walks in finger space, the ghost in block space with the same cell steps', () => {
@@ -193,8 +194,7 @@ describe('design-lead screens review 1 — code-lead findings', () => {
     expect(TOKENS.color.board.planUnderlay).toBe('#BCCADD');
   });
   it('UX 3 locked tab balloon (DS-06): never over the "Bölüm N" button — above the tab only with an 8 px clearance, else inside the nav bar and on screen', () => {
-    const bb = TOKENS.kit.bubble;
-    const balloonH = Math.ceil(TOKENS.font.size.body * 1.3) + 2 * bb.padYPx + bb.tailPx; // HomeScene comingSoonBalloonH
+    const balloonH = hintBubbleHeight(); // HomeScene: the v3 hint bubble with its tail (ART_REFERENCE §3.14)
     const span = (p: ReturnType<typeof lockedTabBalloon>): [number, number] =>
       p.dir === 'down' ? [p.at.y - balloonH, p.at.y] : [p.at.y, p.at.y + balloonH];
     for (const H of [1920, 2336, 2400]) {
@@ -219,7 +219,7 @@ describe('design-lead screens review 1 — code-lead findings', () => {
     });
     expect(lockedTabBalloon(play, nav, { x: 540, y: 1200 }, balloonH).dir).toBe('up');
     const home = src('src/scenes/HomeScene.ts');
-    expect(home).toMatch(/lockedTabBalloon\(this\.geo\.play, this\.geo\.nav, at, comingSoonBalloonH\(\)\)/);
+    expect(home).toMatch(/lockedTabBalloon\(this\.geo\.play, this\.geo\.nav, at, hintBubbleHeight\(\)\)/);
   });
 
   it('JUICE 61 hammer flash (DS-19): the baked cargo silhouette as an additive white copy at 0,85 — the piece frame itself, corner radius kept', () => {

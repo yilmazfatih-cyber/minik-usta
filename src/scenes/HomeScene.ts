@@ -1,24 +1,28 @@
 /**
- * Home screen v2 (UX_FLOWS §3 "Ana ekran — ana sayfa v2", R2-09; META §10 slice scope; ART §7.2, §14; TECH §2R.8).
- * One screen, one primary action: the top bar (lives, coins + "+", stars, settings), the area ribbon `town.ch1.title`
- * and its progress bar, the Renkli Tepe art with the tree house opening floor by floor (ozalit ghost + full colour,
- * `setCrop` from the bottom), Tuna and Kepçe, the level chest ring, the big green "Bölüm N" button and the bottom
- * navigation (only "Ana Sayfa" open; the other tabs say "Yakında").
+ * Home screen v3 (UX_FLOWS §3 "Ana ekran — ana sayfa v2", §4.1 level-start window, R2-09; ART_REFERENCE §9.2 home,
+ * §3 kit; META §10 slice scope; TECH §2R.8). One screen, one primary action: the top bar (lives capsule with the count
+ * inside the heart, coins + "+", stars, the purple settings tool), the area ribbon `town.ch1.title` and the meta
+ * progress bar, the Renkli Tepe art with the tree house opening floor by floor (ozalit ghost + full colour, `setCrop`
+ * from the bottom), the character group (Tuna full figure, Kepçe, Usta Dede), the side event bubbles (level chest
+ * ring, locked Usta Ligi), the big green L "Bölüm N" button and the bottom navigation (only "Ana Sayfa" open; the
+ * other tabs say "Yakında"). From level 3 on "Bölüm N" opens the level-start window (booster slots + "Oyna", K-40).
  *
  * Content comes from the pure meta/home.ts model; geometry from ui/kit/layout.ts; looks from the kit atlas; art from
  * the asset service (SVG raster when loaded, procedural fallback first, 200 ms cross-fade). Text from i18n — keys
- * that are not in tr.json yet (STORY §7.7: `nav.*`, `town.ch1.title`, `hud.livesFull`, `settings.title`,
- * `common.comingSoon`) go through `tDynamic`, which shows the key until WP-L adds the text.
+ * that are not in tr.json yet (STORY §7.7) go through `tDynamic`, which shows the key until WP-L adds the text.
  *
- * Cut 2 and 3 of TECH §2R.12: the entry / exit transitions are a 150 ms fade (JUICE #99–#102 are Faz 5), no "Bölüm N"
- * shine sweep (#98), no cloud parallax and no chest preview window (Faz 4; the ring stays static). A voided attempt
- * (K-43 item 4, UX §1 (c)) still opens the `resume.void` window first; the "Bölüm 2" pulse after level 1 (UX §2.2
- * step 11) stays, with a steady gold edge under reduced motion.
+ * Cut 2 and 3 of TECH §2R.12: the entry / exit transitions are a 150 ms fade (JUICE #99–#102 are Faz 5), no cloud
+ * parallax and no chest preview window (Faz 4; the ring stays static). A voided attempt (K-43 item 4, UX §1 (c)) still
+ * opens the `resume.void` window first; the "Bölüm 2" pulse after level 1 (UX §2.2 step 11) stays, with a steady gold
+ * edge under reduced motion.
  */
 import Phaser from 'phaser';
 import { scaleMode } from '../config/display.ts';
+import type { CompiledLevel } from '../core/level/compile.ts';
+import type { PreBooster } from '../core/types.ts';
 import { HOME_TABS, formatCountdown, homeModel } from '../meta/home.ts';
 import type { Difficulty, HomeModel, HomeTab } from '../meta/home.ts';
+import { opensLevelStartWindow } from '../meta/levelStart.ts';
 import { ICON_ATLAS_KEY } from '../services/assetCatalog.ts';
 import type { AssetService } from '../services/assets.ts';
 import { copyFeedback } from '../services/feedback.ts';
@@ -29,27 +33,28 @@ import type { Layout, Rect } from '../theme/layout.ts';
 import { TOKENS } from '../theme/tokens.ts';
 import { addBakedGraphics } from '../ui/BakedGraphics.ts';
 import { drawHeart } from '../ui/icons.ts';
-import { InlineLabel } from '../ui/InlineLabel.ts';
+import { LevelStartWindow } from '../ui/LevelStartWindow.ts';
 import { openManualCopy } from '../ui/manualCopy.ts';
-import type { OptionButton } from '../ui/OptionButton.ts';
 import { Popup } from '../ui/Popup.ts';
+import { RewardLayer } from '../ui/RewardLayer.ts';
 import { hex } from '../ui/text.ts';
 import { UI } from '../ui/uiConstants.ts';
 import { ArtImage } from '../ui/kit/ArtImage.ts';
 import { ensureKitAtlas } from '../ui/kit/atlas.ts';
 import { Capsule } from '../ui/kit/Capsule.ts';
+import { EventBubble } from '../ui/kit/EventBubble.ts';
 import { buttonFeel, lockedFeel } from '../ui/kit/feel.ts';
-import { HintBubble } from '../ui/kit/HintBubble.ts';
+import { HintBubble, hintBubbleHeight } from '../ui/kit/HintBubble.ts';
 import { IconBinder } from '../ui/kit/icons.ts';
 import { KitButton } from '../ui/kit/KitButton.ts';
+import type { PressVariant } from '../ui/kit/KitButton.ts';
 import { BASE_H, homeLayout, lockedTabBalloon } from '../ui/kit/layout.ts';
 import type { HomeLayout } from '../ui/kit/layout.ts';
 import { NavBar } from '../ui/kit/NavBar.ts';
 import { ProgressBar } from '../ui/kit/ProgressBar.ts';
 import { Ribbon } from '../ui/kit/Ribbon.ts';
-import { RingIcon } from '../ui/kit/RingIcon.ts';
-import { drawHedge } from '../ui/kit/scenery.ts';
-import { addKitText, formatCount } from '../ui/kit/text.ts';
+import { addInlineText } from '../ui/kit/InlineText.ts';
+import { addKitText, fitWidth, formatCount } from '../ui/kit/text.ts';
 import {
   appSave,
   appTrack,
@@ -67,9 +72,8 @@ import { availableLevels, loadLevelById } from './level/levels.ts';
 import { gameAudio, gameHaptics } from './level/sceneServices.ts';
 import { shaderWarmup } from './shaderWarmup.ts';
 
-const C = TOKENS.color.ui;
+const V3 = TOKENS.kit.v3;
 const HL = TOKENS.layout.home;
-const CH1 = TOKENS.color.chapter.ch1;
 
 /** Depth bands of the home screen (bottom → top). */
 const D = Object.freeze({
@@ -105,31 +109,21 @@ const TOGGLES = [
   ['haptics', 'settings.haptics'],
 ] as const;
 
-/** UX §3 Ayarlar "Geri bildirim": cream secondary button 640 × 128, the window's last item; the copied balloon 1,5 s. */
-const FEEDBACK_W = 640;
-const FEEDBACK_H = 128;
-const FEEDBACK_ROW_PAD = 24;
+/** UX §3 / §11 Ayarlar "Geri bildirim": cream secondary M button, the window's last item; the copied balloon 1,5 s. */
+const FEEDBACK_ROW_PAD = 16;
 const FEEDBACK_COPIED_MS = 1500;
-
-/** Height of a one-line HintBubble with its tail (ui/kit/HintBubble: body line × 1,3 + pads + tail). */
-function comingSoonBalloonH(): number {
-  const bb = TOKENS.kit.bubble;
-  return Math.ceil(TOKENS.font.size.body * 1.3) + 2 * bb.padYPx + bb.tailPx;
-}
-
-/** Kepçe's share of the character corner (UX §3: 70 %). */
-const KEPCE_SCALE = 0.7;
-/** Character corner dressing: hedge height, how far it sits below / around the bust, Kepçe's overlap with it. */
-const HEDGE_H = 80;
-const HEDGE_DROP_PX = 28;
-const HEDGE_INSET_PX = 20;
-const KEPCE_OVERLAP_PX = 30;
 /** Lives countdown refresh (UX §3 "29:12"). */
 const LIVES_TICK_MS = 1000;
+/** "Bölüm N" label size on the L button (ART_REFERENCE §3.1 L 96). */
+const PLAY_LABEL_PX = V3.button.L.fontPx;
+
+/** The home screen's open window (harness status). */
+export type HomeWindow = 'levelStart' | 'settings' | 'notice' | null;
 
 interface HomeView {
   readonly objects: Phaser.GameObjects.GameObject[];
   readonly lives: Capsule;
+  readonly coins: Capsule;
   readonly button: KitButton;
   readonly structureRoot: Phaser.GameObjects.Container;
   readonly colour: ArtImage;
@@ -143,6 +137,7 @@ export class HomeScene extends Phaser.Scene {
   private data0: HomeSceneData = {};
   private model!: HomeModel;
   private nextDifficulty: Difficulty | null = null;
+  private nextLevelData: CompiledLevel | null = null;
   private layoutNow!: Layout;
   private geo!: HomeLayout;
   private assets!: AssetService;
@@ -151,7 +146,8 @@ export class HomeScene extends Phaser.Scene {
   private view: HomeView | null = null;
   private notice: Popup | null = null;
   private settings: Popup | null = null;
-  /** The settings window's balloon (above the window; the screen's own hint sits under windows). */
+  private levelStart: LevelStartWindow | null = null;
+  /** The windows' balloon (above the window; the screen's own hint sits under windows). */
   private windowHint!: HintBubble;
   /** The manual copy box is open (TECH §2R.16: the clipboard refused). */
   private closeManual: (() => void) | null = null;
@@ -168,13 +164,14 @@ export class HomeScene extends Phaser.Scene {
     this.data0 = data ?? {};
     this.starting = false;
     this.nextDifficulty = null;
+    this.nextLevelData = null;
   }
 
   create(): void {
     applySettings();
     const save = appSave();
     this.reduced = reducedMotion();
-    this.cameras.main.setBackgroundColor(CH1.skyTop);
+    this.cameras.main.setBackgroundColor(V3.palette.skyTop);
     // the kit atlas bakes behind the entry fade (TECH §2R.7, ≤ 200 ms at 4× CPU)
     ensureKitAtlas(this.game);
     this.assets = gameAssets(this.game);
@@ -188,7 +185,7 @@ export class HomeScene extends Phaser.Scene {
     // home art (P2) after the icons (P1); the win art (P3) after it (TECH §2R.6). Idempotent.
     void this.assets.loadGroup('P1').then(() => this.icons.refresh());
     void this.assets.startBackground();
-    this.loadDifficulty(this.model.nextLevel);
+    this.loadNext(this.model.nextLevel);
     // JUICE #99 is Faz 5 (cut 2): a 150 ms fade
     this.cameras.main.fadeIn(TOKENS.duration.reducedFade);
     const onResize = (): void => {
@@ -209,8 +206,10 @@ export class HomeScene extends Phaser.Scene {
       this.clearView();
       this.notice?.destroy();
       this.settings?.destroy();
+      this.levelStart?.destroy();
       this.notice = null;
       this.settings = null;
+      this.levelStart = null;
       this.icons.clear();
       // the home art stays resident (≈ 4.5 MB of the 64 MB budget): releasing it would show the fallback and a
       // cross-fade on every return from a level (TECH §2R.8 note)
@@ -235,7 +234,10 @@ export class HomeScene extends Phaser.Scene {
       const before = this.model.lives;
       this.model = this.computeModel();
       const l = this.model.lives;
-      if (l.count !== before.count || l.nextInMs !== null) v.lives.setValue(...livesText(this.model));
+      if (l.count !== before.count || l.nextInMs !== null) {
+        const [count, sub] = livesText(this.model);
+        v.lives.setValue(sub ?? '', count);
+      }
     }
     if (!this.model.pulse || this.reduced) return;
     const period = TOKENS.duration.lastMovesPulse;
@@ -267,10 +269,14 @@ export class HomeScene extends Phaser.Scene {
     return L;
   }
 
-  /** The ZOR / ÇOK ZOR tag needs the level's difficulty (its JSON chunk is small and loads lazily, TECH §8.3). */
-  private loadDifficulty(id: number): void {
+  /**
+   * The next level's data: the ZOR / ÇOK ZOR tag needs its difficulty, the level-start window its segments and gaps
+   * (the JSON chunk is small and loads lazily, TECH §8.3).
+   */
+  private loadNext(id: number): void {
     void loadLevelById(id).then((res) => {
       if (!res.ok || !this.scene.isActive() || this.model.nextLevel !== id) return;
+      this.nextLevelData = res.level;
       this.nextDifficulty = res.level.difficulty;
       this.model = this.computeModel();
       if (this.model.difficultyTag) this.build();
@@ -332,13 +338,18 @@ export class HomeScene extends Phaser.Scene {
     hop.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, () => this.hop(structureRoot));
     structureRoot.add(hop);
     objects.push(structureRoot);
-    objects.push(...this.characters(g.character, reducedFn));
+    objects.push(...this.characters(reducedFn));
 
-    // --- top bar
+    // --- top bar (ART_REFERENCE §9.2: capsules 88, the count inside the heart, green "+", purple settings tool)
     const hud: Phaser.GameObjects.GameObject[] = [];
-    const lives = new Capsule(this, this.icons, { w: g.lives.w, icon: 'icon_life', value: '' });
-    lives.setValue(...livesText(m));
-    lives.root.setPosition(g.lives.x, g.lives.y);
+    const [count, sub] = livesText(m);
+    const lives = new Capsule(this, this.icons, {
+      w: g.lives.w,
+      icon: 'icon_life',
+      value: sub ?? '',
+      inIcon: count,
+    });
+    lives.root.setPosition(g.lives.x + V3.capsule.iconOverhangPx, g.lives.y);
     lives.onPress(buttonFeel).onTap(() => lives.bounce(this.reduced));
     const coins = new Capsule(this, this.icons, {
       w: g.coins.w,
@@ -346,7 +357,7 @@ export class HomeScene extends Phaser.Scene {
       value: formatCount(m.coins),
       plus: true,
     });
-    coins.root.setPosition(g.coins.x, g.coins.y);
+    coins.root.setPosition(g.coins.x + V3.capsule.iconOverhangPx, g.coins.y);
     // META §10: the shop is locked in the slice → the coin capsule and its "+" say "Yakında"
     coins.onPress(buttonFeel).onTap(() => this.comingSoon(coins.anchor(), 'up'));
     const stars = new Capsule(this, this.icons, {
@@ -354,14 +365,15 @@ export class HomeScene extends Phaser.Scene {
       icon: 'icon_star',
       value: formatCount(m.stars),
     });
-    stars.root.setPosition(g.stars.x, g.stars.y);
+    stars.root.setPosition(g.stars.x + V3.capsule.iconOverhangPx, g.stars.y);
     // META §10: no task window in the slice → the structure glows for 300 ms
     stars.onPress(buttonFeel).onTap(() => this.glow(structureRoot, colour));
     const gear = new KitButton(this, {
-      color: 'blue',
+      color: 'purple',
       w: g.settings.w,
       h: g.settings.h,
-      icon: { ...this.icons.frame('icon_settings'), px: 88 },
+      square: true,
+      icon: { ...this.icons.frame('icon_settings'), px: 60 },
     });
     gear
       .setPosition(g.settings.x + g.settings.w / 2, g.settings.y + g.settings.h / 2)
@@ -369,26 +381,34 @@ export class HomeScene extends Phaser.Scene {
     gear.onPress(buttonFeel).onTap(() => this.openSettings());
     hud.push(lives.root, coins.root, stars.root, gear.root);
 
-    // --- area ribbon + progress bar
-    const ribbon = new Ribbon(this, { color: 'orange', text: tDynamic(KEY.area), bodyW: g.ribbon.w });
+    // --- area ribbon + meta progress bar
+    const ribbon = new Ribbon(this, { color: 'gold', text: tDynamic(KEY.area), bodyW: g.ribbon.w });
     ribbon.setPosition(g.ribbon.x + g.ribbon.w / 2, g.ribbon.y);
     const progress = new ProgressBar(this, this.icons, g.progress.w, m.progress.value, m.progress.max);
     progress.setPosition(g.progress.x, g.progress.y);
     hud.push(ribbon.root, progress.root);
 
-    // --- side icon: the level chest ring is always shown (META §8.2, PL-2R-09); the preview window is Faz 4 (cut 3)
-    const side = g.sideRight(0);
-    const chest = new RingIcon(this, this.icons, {
-      size: side.w,
+    // --- side bubbles: the level chest ring (META §8.2, PL-2R-09) right; the locked Usta Ligi left (META §10)
+    const chest = new EventBubble(this, this.icons, {
+      box: g.sideRight(0),
       icon: 'icon_chest',
-      value: m.chest.value,
-      max: m.chest.max,
-      done: m.chest.full,
       label: t('common.count', { n: m.chest.value, max: m.chest.max }),
+      tone: 'green',
+      progress: { value: m.chest.value, max: m.chest.max, done: m.chest.full },
     });
-    chest.root.setPosition(side.x + side.w / 2, side.y + side.h / 2);
     chest.onTap(() => chest.bounce(this.reduced));
-    hud.push(chest.root);
+    const league = new EventBubble(this, this.icons, {
+      box: g.sideLeft(0),
+      icon: 'icon_nav_league',
+      label: tDynamic(KEY.comingSoon),
+      tone: 'grey',
+      locked: true,
+    });
+    league.onTap(() => {
+      league.shakeLock(this.reduced);
+      this.comingSoon(league.anchor(), 'down');
+    });
+    hud.push(chest.root, league.root);
 
     // --- content end band, difficulty tag, "Bölüm N"
     let tagRoot: Phaser.GameObjects.Container | null = null;
@@ -408,8 +428,8 @@ export class HomeScene extends Phaser.Scene {
     if (m.pulse) {
       const e = UI.homeEdgePx;
       edge = addBakedGraphics(this)
-        .lineStyle(e, hex(C.gold), 1)
-        .strokeRoundedRect(r.x - e, r.y - e, r.w + 2 * e, r.h + 2 * e, TOKENS.kit.button.radiusMaxPx + e)
+        .lineStyle(e, hex(V3.palette.gold), 1)
+        .strokeRoundedRect(r.x - e, r.y - e, r.w + 2 * e, r.h + 2 * e, V3.button.L.r + e)
         .setVisible(this.reduced);
       hud.push(edge);
     }
@@ -417,8 +437,8 @@ export class HomeScene extends Phaser.Scene {
       color: 'green',
       w: r.w,
       h: r.h,
-      label: upper(t('home.play', { n: m.nextLevel })),
-      labelPx: 80,
+      label: t('home.play', { n: m.nextLevel }),
+      labelPx: PLAY_LABEL_PX,
     });
     button.setPosition(r.x + r.w / 2, r.y + r.h / 2).setReduced(this.reduced);
     button.onPress(buttonFeel).onTap(() => this.play());
@@ -446,6 +466,7 @@ export class HomeScene extends Phaser.Scene {
     this.view = {
       objects,
       lives,
+      coins,
       button,
       structureRoot,
       colour,
@@ -458,59 +479,47 @@ export class HomeScene extends Phaser.Scene {
   }
 
   /**
-   * UX §3 character corner: Tuna (bust, the corner's height) and Kepçe at 70 % in front of her right side, so her
-   * thumbs-up stays visible; a hedge (ui/kit/scenery) in front of the bust's straight lower edge grounds both.
+   * ART_REFERENCE §9.2 character group: Tuna's full figure (`chr_tuna_stand`, the cheer-figure fallback until the SVG
+   * lands — DS-04) in front at the left, Kepçe at her feet, Usta Dede's bust behind at the right; all on the ground
+   * line just behind the button's top edge, the button's own area empty.
    */
-  private characters(c: Rect, reduced: () => boolean): Phaser.GameObjects.GameObject[] {
+  private characters(reduced: () => boolean): Phaser.GameObjects.GameObject[] {
+    const g = this.geo;
     const out: Phaser.GameObjects.GameObject[] = [];
-    const base = c.y + c.h;
-    const tunaH = c.h;
-    const tunaW = (tunaH * 300) / 375;
-    const tunaX = c.x - HEDGE_INSET_PX;
-    const tuna = ArtImage.create(
-      this,
-      this.assets,
-      'chr_tuna_bust',
-      { x: tunaX, y: base - tunaH, w: tunaW, h: tunaH },
-      {
-        reduced,
-      },
-    );
-    out.push(tuna.image.setDepth(D.stage + 1));
-    const hedge = addBakedGraphics(this).setDepth(D.stage + 2);
-    drawHedge(hedge, tunaX - HEDGE_INSET_PX, base + HEDGE_DROP_PX, tunaW + 2 * HEDGE_INSET_PX, HEDGE_H);
-    out.push(hedge);
-    const kw = c.w * KEPCE_SCALE;
-    const kh = (kw * 206) / 300;
-    const kepce = ArtImage.create(
-      this,
-      this.assets,
-      'chr_kepce_bust',
-      { x: tunaX + tunaW - KEPCE_OVERLAP_PX, y: base + HEDGE_DROP_PX + 6 - kh, w: kw, h: kh },
-      { reduced },
-    );
+    const dede = ArtImage.create(this, this.assets, 'chr_dede_bust', g.dede, { reduced });
+    out.push(dede.image.setDepth(D.stage + 1));
+    const tuna = ArtImage.create(this, this.assets, 'chr_tuna_stand', g.tuna, { reduced });
+    out.push(tuna.image.setDepth(D.stage + 2));
+    const kepce = ArtImage.create(this, this.assets, 'chr_kepce_bust', g.kepce, { reduced });
     out.push(kepce.image.setDepth(D.stage + 3));
+    // contact shadows (ART_REFERENCE §6.1): an ellipse under each figure's feet
+    const shadows = addBakedGraphics(this).setDepth(D.stage);
+    for (const r of [g.tuna, g.kepce, g.dede]) {
+      shadows.fillStyle(0x000000, 0.22).fillEllipse(r.x + r.w / 2, r.y + r.h - 4, r.w * 0.8, r.w * 0.16);
+    }
+    out.push(shadows);
     return out;
   }
 
-  /** UX §3 tag: red "ZOR" / purple "ÇOK ZOR" sticker over the button's top-left corner (no touch). */
+  /** UX §3 tag: red "ZOR" / pink "ÇOK ZOR" pill over the button's top-left corner (no touch). */
   private levelTag(r: Rect, tag: 'hard' | 'superhard'): Phaser.GameObjects.Container {
-    const fill = tag === 'hard' ? C.tagHard : C.tagSuperHard;
-    const stroke = TOKENS.kit.buttonColor.red.stroke;
+    const fill = tag === 'hard' ? V3.badge.mid : V3.palette.pink;
+    const stroke = tag === 'hard' ? V3.badge.stroke : V3.panel.outline;
     const g = addBakedGraphics(this);
-    const rad = 24;
+    const rad = r.h / 2;
     g.fillStyle(hex(stroke), 1).fillRoundedRect(0, 0, r.w, r.h + 6, rad);
     g.fillStyle(hex(fill), 1).fillRoundedRect(6, 6, r.w - 12, r.h - 12, rad - 6);
-    g.fillStyle(0xffffff, 0.25).fillRoundedRect(16, 10, r.w - 32, (r.h - 20) * 0.4, 10);
+    g.fillStyle(0xffffff, 0.22).fillRoundedRect(16, 10, r.w - 32, (r.h - 20) * 0.4, 10);
     const label = addKitText(
       this,
       r.w / 2,
       r.h / 2,
       upper(t(tag === 'hard' ? 'difficulty.hard' : 'difficulty.superhard')),
-      'brightTitle',
-      44,
+      'button',
+      40,
       stroke,
     );
+    fitWidth(label, r.w - 28);
     const root = this.add.container(r.x, r.y, [g, label]);
     root.setAngle(-4);
     return root;
@@ -564,8 +573,8 @@ export class HomeScene extends Phaser.Scene {
     if (!locked) return;
     nav.shakeLock(id, this.reduced);
     // DS-06: above the tab only when the balloon clears the "Bölüm N" button (top ≥ button bottom + 8); else it sits
-    // inside the bar, over the tab's label, so the button's text is never covered (`lockedTabBalloon`)
-    const p = lockedTabBalloon(this.geo.play, this.geo.nav, at, comingSoonBalloonH());
+    // inside the bar, over the tab's icon, so the button's text is never covered (`lockedTabBalloon`)
+    const p = lockedTabBalloon(this.geo.play, this.geo.nav, at, hintBubbleHeight());
     this.comingSoon(p.at, p.dir);
   }
 
@@ -573,6 +582,48 @@ export class HomeScene extends Phaser.Scene {
   get settingsPoint(): { readonly x: number; readonly y: number } | null {
     const g = this.view ? this.geo.settings : null;
     return g ? { x: g.x + g.w / 2, y: g.y + g.h / 2 } : null;
+  }
+
+  /** The open window (harness status). */
+  get openWindow(): HomeWindow {
+    if (this.levelStart) return 'levelStart';
+    if (this.settings) return 'settings';
+    if (this.notice) return 'notice';
+    return null;
+  }
+
+  /** Centre of the open window's × in design px (harness), or null. */
+  get windowClosePoint(): { readonly x: number; readonly y: number } | null {
+    return this.levelStart?.closePoint ?? this.settings?.closePoint ?? null;
+  }
+
+  /** The level-start window's slot `id` centre (harness). */
+  slotPoint(id: string): { x: number; y: number } | null {
+    return this.levelStart?.slotPoint(id as PreBooster) ?? null;
+  }
+
+  /**
+   * UX §6.2 "Dokun ve al" demo for the screen set (harness `showReward`): the layer with the level chest's items; the
+   * slice has no trigger of its own (the chest window is Faz 4), nothing is granted here.
+   */
+  showRewardDemo(): void {
+    const v = this.view;
+    if (!v) return;
+    const layer = new RewardLayer(
+      this,
+      this.icons,
+      { W: this.layoutNow.W, H: this.layoutNow.H },
+      {
+        title: t('reward.ready'),
+        items: [
+          { icon: 'icon_coin', count: '200', target: v.coins.iconPoint() },
+          { icon: 'icon_hammer', count: t('common.times', { n: 1 }), target: null },
+        ],
+        reduced: this.reduced,
+      },
+      D.windows + 20,
+    );
+    layer.onDone(() => undefined);
   }
 
   /** JUICE §0 rule 8: the pulse stops (steady gold edge) or starts again; buttons keep only the thickness change. */
@@ -585,50 +636,118 @@ export class HomeScene extends Phaser.Scene {
     if (on) v.button.root.setScale(1);
   }
 
+  /** "Bölüm N": from level 3 on the level-start window (UX §4.1), else the level starts at once (UX §3). */
   private play(): void {
-    if (this.starting || this.notice || this.settings) return;
+    if (this.starting || this.notice || this.settings || this.levelStart) return;
+    const id = this.model.nextLevel;
+    if (!opensLevelStartWindow(id)) {
+      this.startLevel([]);
+      return;
+    }
+    const lvl = this.nextLevelData;
+    if (!lvl || lvl.id !== id) {
+      // the level data is still loading (a slow first paint): open as soon as it is there
+      void loadLevelById(id).then((res) => {
+        if (!res.ok || !this.scene.isActive() || this.levelStart) return;
+        this.nextLevelData = res.level;
+        this.openLevelStart(res.level);
+      });
+      return;
+    }
+    this.openLevelStart(lvl);
+  }
+
+  private openLevelStart(lvl: CompiledLevel): void {
+    const save = appSave();
+    this.levelStart = new LevelStartWindow(
+      this,
+      this.layoutNow,
+      {
+        level: lvl,
+        inventory: save.data.boosters.inventory,
+        lives: this.model.lives,
+        areaKey: KEY.area,
+        difficultyTag: this.model.difficultyTag,
+      },
+      { icons: this.icons, assets: this.assets, reduced: () => this.reduced },
+      D.windows,
+      {
+        onPlay: (pre) => this.startLevel(pre),
+        onClose: () => this.closeLevelStart(),
+        onSlotHint: (slot, at) => {
+          lockedFeel();
+          const text =
+            slot.state === 'locked'
+              ? t('common.unlockAt', { n: slot.unlockLevel })
+              : slot.state === 'unavailable'
+                ? t('booster.noShutter')
+                : t('common.notEnoughCoins');
+          this.windowHint.show(text, at, 'down', this.reduced);
+        },
+        onRefill: (at) => {
+          lockedFeel();
+          this.windowHint.show(tDynamic(KEY.comingSoon), at, 'down', this.reduced);
+        },
+        button: (_b, v) => press(v),
+      },
+    );
+  }
+
+  private closeLevelStart(): void {
+    this.windowHint.hide();
+    this.levelStart?.destroy();
+    this.levelStart = null;
+  }
+
+  private startLevel(preBoosters: readonly PreBooster[]): void {
+    if (this.starting) return;
     this.starting = true;
+    this.windowHint.hide();
     const id = this.model.nextLevel;
     // JUICE #100 is Faz 5 (cut 2): a 150 ms fade into the game screen's indigo
-    const bg = Phaser.Display.Color.HexStringToColor(TOKENS.color.scene.gameTop);
+    const bg = Phaser.Display.Color.HexStringToColor(V3.palette.gameBase);
     this.cameras.main.fadeOut(TOKENS.duration.reducedFade, bg.red, bg.green, bg.blue);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       // TECH §10.4: a sleeping level screen is woken (its pools and HUD are kept), else started; home stops
-      this.scene.run(LEVEL_SCENE_KEY, { levelId: id } satisfies LevelSceneData);
+      this.scene.run(LEVEL_SCENE_KEY, {
+        levelId: id,
+        preBoosters: [...preBoosters],
+      } satisfies LevelSceneData);
       this.scene.stop();
     });
   }
 
-  /** UX §3 "Ayarlar" (Faz 2R): the Pause window's sound / music / haptics rows under `settings.title`. */
+  /** UX §3 "Ayarlar" (Faz 2R; ART_REFERENCE §9.8): the sound / music / haptics rows under `settings.title`. */
   private openSettings(): void {
-    if (this.settings || this.notice) return;
+    if (this.settings || this.notice || this.levelStart) return;
     const s = (): DeepReadonly<{ sound: boolean; music: boolean; haptics: boolean }> =>
       appSave().data.settings;
+    const M = V3.button.M;
     const popup: Popup = new Popup(
       this,
       this.layoutNow,
       {
         rows: [
-          { kind: 'title', text: upper(tDynamic(KEY.settings)) },
+          { kind: 'title', text: tDynamic(KEY.settings) },
           ...TOGGLES.map(([id, key]) => ({ kind: 'toggle' as const, id, label: t(key), on: s()[id] })),
-          // UX §3 / §11 (EN-2R-20): "Geri bildirim" is the window's last item, a cream secondary button
+          // UX §3 / §11 (EN-2R-20): "Geri bildirim" is the window's last item, a cream secondary M button
           {
             kind: 'custom' as const,
-            h: FEEDBACK_H + 2 * FEEDBACK_ROW_PAD,
+            h: M.h + 2 * FEEDBACK_ROW_PAD,
             build: (scene: Phaser.Scene) => {
               const b = new KitButton(scene, {
                 color: 'cream',
-                w: FEEDBACK_W,
-                h: FEEDBACK_H,
+                w: M.w,
+                h: M.h,
                 label: t('settings.feedback'),
               });
-              b.root.setPosition(0, FEEDBACK_ROW_PAD + FEEDBACK_H / 2);
+              b.root.setPosition(0, FEEDBACK_ROW_PAD + M.h / 2);
               b.onPress(buttonFeel).onTap(() => void this.sendFeedback(b));
               return [b.root];
             },
           },
         ],
-        options: [{ id: 'ok', label: upper(t('common.ok')), tone: 'primary' }],
+        options: [{ id: 'ok', label: t('common.ok'), tone: 'primary', size: 'L' }],
         close: true,
       },
       D.windows,
@@ -640,7 +759,7 @@ export class HomeScene extends Phaser.Scene {
           changeSetting(key, !s()[key]);
           popup.setToggle(id, s()[key]);
         },
-        button: (b, v) => pressV1(b, v),
+        button: (_b, v) => press(v),
       },
       { on: t('common.on'), off: t('common.off') },
     );
@@ -693,25 +812,18 @@ export class HomeScene extends Phaser.Scene {
       this.layoutNow,
       {
         rows: [
-          { kind: 'title', text: upper(t('resume.void.title')) },
-          { kind: 'text', text: t('resume.void.body', { n: notice.level }) },
+          { kind: 'title', text: t('resume.void.title') },
+          { kind: 'text', text: t('resume.void.body', { n: notice.level }), size: 44 },
           {
             kind: 'custom',
             h: 112,
-            build: (scene) => refundRow(scene, refunds.life, refunds.coins),
+            build: (scene) => refundRow(scene, this.icons, refunds.life, refunds.coins),
           },
           ...(notice.bridge
-            ? [
-                {
-                  kind: 'text' as const,
-                  text: t('resume.void.bridge'),
-                  role: 'caption' as const,
-                  color: C.inkSoft,
-                },
-              ]
+            ? [{ kind: 'text' as const, text: t('resume.void.bridge'), look: 'plain' as const }]
             : []),
         ],
-        options: [{ id: 'ok', label: upper(t('common.ok')), tone: 'primary' }],
+        options: [{ id: 'ok', label: t('common.ok'), tone: 'primary', size: 'L' }],
       },
       D.windows,
       {
@@ -720,30 +832,32 @@ export class HomeScene extends Phaser.Scene {
           popup.destroy();
           this.notice = null;
         },
-        button: (b, v) => pressV1(b, v),
+        button: (_b, v) => press(v),
       },
     );
     this.notice = popup;
   }
 }
 
-/** Lives capsule text: the count and the countdown or `hud.livesFull` (UX §3). */
+/** Lives capsule text: the count (inside the heart) and the countdown or `hud.livesFull` (UX §3). */
 function livesText(m: HomeModel): [string, string | null] {
   const l = m.lives;
   const sub = l.full ? tDynamic(KEY.livesFull) : l.nextInMs !== null ? formatCountdown(l.nextInMs) : null;
   return [String(l.count), sub];
 }
 
-/** v1 window buttons (Popup): the lip press of JUICE #69 without the level's EventPlayer. */
-function pressV1(b: OptionButton, v: 'press' | 'release'): void {
-  if (v === 'press') {
-    b.setLip(TOKENS.shadow.buttonPressedLipPx);
-    gameAudio().play('sfx_button');
-  } else b.setLip(TOKENS.shadow.buttonLipPx);
+/** Window buttons: the press sound of JUICE #69 (the v3 button animates itself, #97). */
+function press(v: PressVariant): void {
+  if (v === 'press') gameAudio().play('sfx_button');
 }
 
-/** UX §1 (c) refund row: only the items > 0, icon + amount. */
-function refundRow(scene: Phaser.Scene, life: number, coins: number): Phaser.GameObjects.GameObject[] {
+/** UX §1 (c) refund row: only the items > 0, icon + amount, in the card text look on the panel body. */
+function refundRow(
+  scene: Phaser.Scene,
+  icons: IconBinder,
+  life: number,
+  coins: number,
+): Phaser.GameObjects.GameObject[] {
   const out: Phaser.GameObjects.GameObject[] = [];
   const items: { heart: boolean; text: string }[] = [];
   if (life > 0) items.push({ heart: true, text: t('common.times', { n: life }) });
@@ -756,9 +870,8 @@ function refundRow(scene: Phaser.Scene, life: number, coins: number): Phaser.Gam
       drawHeart(g, 72);
       out.push(g);
     }
-    const label = new InlineLabel(scene, 'h2', C.ink, it.heart ? 'left' : 'center')
-      .setText(it.text)
-      .setPosition(it.heart ? x - 12 : x, 56);
+    const label = addInlineText(scene, icons, it.text, 'counterCream', 44, it.heart ? 'left' : 'center');
+    label.root.setPosition(it.heart ? x - 12 : x, 56);
     out.push(label.root);
   });
   return out;

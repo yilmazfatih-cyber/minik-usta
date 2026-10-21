@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createLayout } from '../../src/theme/layout.ts';
 import { TOKENS } from '../../src/theme/tokens.ts';
-import { pairRects } from '../../src/ui/Popup.ts';
+import { pairRects } from '../../src/ui/popupLayout.ts';
 import { wrapWords } from '../../src/ui/SpeechBubble.ts';
 import { UI } from '../../src/ui/uiConstants.ts';
 

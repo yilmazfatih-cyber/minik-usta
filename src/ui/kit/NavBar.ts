@@ -84,13 +84,27 @@ export class NavBar {
       if (spec.locked) {
         const lr = kitRef(scene.game, KIT.lockSmall);
         lock = scene.add
-          .image(cx + iconPx / 2 - NV.lockPx / 2 + 8, iconCy + iconPx / 2 - NV.lockPx / 2 + 4, lr.key, lr.frame)
+          .image(
+            cx + iconPx / 2 - NV.lockPx / 2 + 8,
+            iconCy + iconPx / 2 - NV.lockPx / 2 + 4,
+            lr.key,
+            lr.frame,
+          )
           .setDisplaySize(NV.lockPx, (NV.lockPx * lr.h) / lr.w);
         parts.push(lock);
       }
       if (spec.selected) {
         const labelY = cell.y - NV.raisePx + NV.raisedH - 44;
-        const label = addKitText(scene, cx, labelY, spec.label, 'button', NV.labelPx, NV.labelStroke, '#FFFFFF');
+        const label = addKitText(
+          scene,
+          cx,
+          labelY,
+          spec.label,
+          'button',
+          NV.labelPx,
+          NV.labelStroke,
+          '#FFFFFF',
+        );
         fitWidth(label, NV.raisedW - 24);
         parts.push(label);
       }

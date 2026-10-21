@@ -16,6 +16,7 @@ import type { Layout, Rect, ScaleMode } from '../../src/theme/layout.ts';
 
 const L = TOKENS.layout;
 const { grid: g, board: b, top: t, bottom: bt, popup: p } = L;
+const hv = TOKENS.kit.v3.screen.hud;
 const W = TOKENS.meta.designWidth;
 const MIN_TARGET = TOKENS.touch.minTargetPx;
 /**
@@ -144,13 +145,15 @@ describe('anchor groups (TECH 10.1, UX 0.1, D-015)', () => {
       b.boardBottomY,
     ]);
     expect(l.board.status).toEqual({ x: g.yardX, y: b.statusY, w: 1020, h: b.statusH });
-    expect(l.top.panorama).toEqual({ x: t.panoramaX, y: t.panoramaY, w: t.panoramaW, h: t.panoramaH });
+    // HUD v3 (ART_REFERENCE §9.4, `kit.v3.screen.hud`): row 2 ends on top.groupBottomY (264 − 136 = 128)
+    expect(l.top.panorama).toEqual({ x: hv.toolLeftX, y: t.groupBottomY - hv.movesH, w: 300, h: hv.movesH });
+    expect(l.top.levelCapsule).toEqual({ x: 24, y: hv.row1Y, w: hv.levelCapsuleW, h: hv.row1H });
     expect(l.bottom.character.y).toBe(1600);
     expect(l.bottom.boosters.map((r) => [r.x, r.y])).toEqual([
-      [314, 1660],
-      [504, 1660],
-      [694, 1660],
-      [884, 1660],
+      [304, 1640],
+      [496, 1640],
+      [688, 1640],
+      [880, 1640],
     ]);
     expect(l.bottom.playButton).toEqual({ x: 180, y: 1480, w: 720, h: 176 });
     expect(l.bottom.nav).toEqual({ x: 0, y: 1720, w: 1080, h: 176 });
@@ -162,7 +165,7 @@ describe('anchor groups (TECH 10.1, UX 0.1, D-015)', () => {
     const tall = createLayout(TOKENS, 2400);
     expect(tall.top).toEqual(fit.top);
     expect(tall.bottom.character.y - fit.bottom.character.y).toBe(480);
-    expect(tall.bottom.boosters[0]?.y).toBe(2400 - bt.boosterBottomPx - bt.boosterSize);
+    expect(tall.bottom.boosters[0]?.y).toBe(2400 - hv.boosterBottomPx - hv.boosterPx);
   });
 
   it('createLayout rejects heights outside [fitHeight, expandMaxHeight]; the layout is frozen', () => {

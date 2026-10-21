@@ -11,8 +11,9 @@
  * `__harness.loadLevelData` — the same schema + logic check as a bundled level.
  *
  * Shots (artifacts/screens/2r/<profile>/<name>.png):
+ * - loading: `boot-v3` (UX §1.1; the boot is held by `window.__holdBoot` until the shot);
  * - home: `home-v2-first`, `home-v2`, `home-v2-fallback`, `home-v2-locked-tap`, `home-settings`, `home-feedback-copied`,
- *   `home-feedback-manual` (UX §3, §11; WP-O);
+ *   `home-feedback-manual` (UX §3, §11; WP-O), `home-level-start` (UX §4.1, K-40), `home-reward-layer` (UX §6.2);
  * - level starts `level-01` … `level-10` (every board size of the slice; `-fallback` for 1 and 8);
  * - tutorial: `tutorial-shown`, `tutorial-hidden`, `tutorial-l03-step1`, `tutorial-l01-ghost-motion` (UX §13.1, DS-15);
  * - win: `win-v2`, `win-v2-loop` (META §10 replay: base coins only, no star);
@@ -77,6 +78,9 @@ const RAW_KEY = /^[a-z]+(\.[A-Za-z0-9_]+)+$/;
 const DEBUG_LABEL = LABEL.toggle;
 /** TECH §2R.13 "Hücre": the level 1 block on 360 × 800, CSS px. */
 const GATE_CELL_CSS = 48;
+/** The locked "Lig" tab of the v3 navigation: cell 1 centre (x 324), the bar's middle 124 px above the bottom edge. */
+const NAV_LEAGUE_X = 324;
+const NAV_TAB_FROM_BOTTOM = 124;
 /** Söküm fixture id (outside the slice ids; `loadLevelData`). */
 const TEARDOWN_LEVEL_ID = 90;
 /**
@@ -94,6 +98,8 @@ interface Scenario {
   readonly seed?: Seed | null;
   readonly reducedMotion?: boolean;
   readonly permissions?: readonly string[];
+  /** Hold the loading screen (`window.__holdBoot`) and skip the ready wait (the loading-screen shot, UX §1.1). */
+  readonly holdBoot?: boolean;
   readonly run: (gp: GamePage, shoot: Shoot, notes: string[]) => Promise<void>;
 }
 
@@ -279,6 +285,50 @@ const SHORT_STARTS: readonly Scenario[] = LEVEL_STARTS.slice(0, 5).map((sc) => (
 
 const SCENARIOS: readonly Scenario[] = [
   {
+    id: 'boot',
+    shots: ['boot-v3'],
+    seed: null,
+    holdBoot: true,
+    run: async (gp, shoot) => {
+      // UX §1.1 loading screen v3: held by `__holdBoot` until the shot; the font wait draws the texts (≤ 1,5 s)
+      await gp.page.waitForFunction(() => window.__harness !== undefined, null, { timeout: 30_000 });
+      await waitText(gp, 'loading.text', 30_000);
+      await settle(gp, 600);
+      await shoot('boot-v3');
+      await gp.page.evaluate(() => window.__harness!.releaseBoot());
+      await waitReady(gp.page, 60_000);
+    },
+  },
+  {
+    id: 'level-start',
+    shots: ['home-level-start'],
+    seed: { won: 2 },
+    run: async (gp, shoot) => {
+      // UX §4.1: from level 3 on "Bölüm N" opens the level-start window (K-40 slots, "Oyna")
+      await waitHome(gp);
+      await tap(gp, { kind: 'text', key: 'home.play', params: { n: 3 } });
+      await waitWindow(gp.page, 'levelStart');
+      await settle(gp, 500);
+      await shoot('home-level-start');
+      await tap(gp, { kind: 'close' });
+      await gp.page.waitForFunction(() => window.__harness!.status().window === null, null, {
+        timeout: 20_000,
+      });
+    },
+  },
+  {
+    id: 'reward',
+    shots: ['home-reward-layer'],
+    seed: { won: 4 },
+    run: async (gp, shoot) => {
+      // UX §6.2 "Dokun ve al" layer (no trigger in the slice: the harness opens it over the home screen)
+      await waitHome(gp);
+      await gp.page.evaluate(() => window.__harness!.showReward());
+      await settle(gp, 300);
+      await shoot('home-reward-layer');
+    },
+  },
+  {
     id: 'home-first',
     shots: ['home-v2-first'],
     seed: { won: 0 },
@@ -295,7 +345,8 @@ const SCENARIOS: readonly Scenario[] = [
     run: async (gp, shoot, notes) => {
       await waitHome(gp);
       await shoot('home-v2');
-      await tap(gp, { kind: 'text', key: 'nav.league' });
+      // v3 nav: only the raised (selected) tab carries a label — the locked "Lig" tab is tapped by its cell centre
+      await tap(gp, { kind: 'design', x: NAV_LEAGUE_X, y: -NAV_TAB_FROM_BOTTOM });
       await waitText(gp, 'common.comingSoon');
       await shoot('home-v2-locked-tap');
       await settle(gp, 1500); // the "Yakında" balloon leaves
@@ -600,6 +651,7 @@ async function runScenario(
   profile: Profile,
   sc: Scenario,
   cvd: CvdKind | null,
+  flatDir: string | null,
 ): Promise<Result> {
   const t0 = Date.now();
   const shots: string[] = [];
@@ -617,6 +669,7 @@ async function runScenario(
       reducedMotion: sc.reducedMotion ?? true,
       ...(cvd ? { query: `&cvd=${cvd}` } : {}),
       ...(sc.permissions ? { permissions: sc.permissions } : {}),
+      ...(sc.holdBoot ? { holdBoot: true, waitReady: false } : {}),
     });
     const page = gp.page;
     if (sc.seed) {
@@ -628,6 +681,7 @@ async function runScenario(
       gp,
       async (name) => {
         await page.screenshot({ path: join(dir, `${name}.png`) });
+        if (flatDir) await page.screenshot({ path: join(flatDir, `${name}-${outName}.png`) });
         shots.push(name);
         // DS-01 / DS-20: no raw i18n key and no debug label on screen (the Phaser texts), and no debug panel in
         // the DOM (it is a `import.meta.env.DEV` import; the harness build is a build, so it must be absent)
@@ -686,6 +740,9 @@ async function main(): Promise<number> {
   const wanted = (s: Scenario): boolean => !only || s.shots.some((n) => only.some((o) => n.startsWith(o)));
   const scenariosOf = (p: Profile): readonly Scenario[] =>
     SHORT_PROFILES.includes(p) ? SHORT_STARTS.filter(wanted) : SCENARIOS.filter(wanted);
+  // `--flat <dir>`: every shot also as `<dir>/<name>-<profile>.png` (the review folder of a visual round)
+  const flatDir = arg('--flat');
+  if (flatDir) mkdirSync(flatDir, { recursive: true });
   const cvdArg = arg('--cvd');
   const cvds: (CvdKind | null)[] =
     cvdArg === null ? [null] : cvdArg === 'all' ? [...CVD_KINDS] : cvdArg.split(',').filter(isCvdKind);
@@ -703,7 +760,7 @@ async function main(): Promise<number> {
     for (const cvd of cvds) {
       for (const profile of profiles) {
         for (const sc of scenariosOf(profile)) {
-          const r = await runScenario(browser, server.url, profile, sc, cvd);
+          const r = await runScenario(browser, server.url, profile, sc, cvd, flatDir);
           results.push(r);
           const bad = r.error !== null || r.consoleErrors.length > 0 || r.textIssues.length > 0;
           process.stdout.write(

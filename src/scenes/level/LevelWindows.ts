@@ -268,7 +268,13 @@ export class LevelWindows {
   /** UX §6 win screen (Phase 2: rows + "Devam" under the board). */
   openWin(opts: { readonly rewards: WinRewards; readonly onContinue: () => void }): void {
     const build = (animate: boolean): void => {
-      const view = new WinScreen(this.scene, this.host.layout(), opts.rewards, DEPTH.windows, opts.onContinue);
+      const view = new WinScreen(
+        this.scene,
+        this.host.layout(),
+        opts.rewards,
+        DEPTH.windows,
+        opts.onContinue,
+      );
       this.set('win', view, () => build(false));
       if (animate) this.host.player.play(70, { window: view.target });
     };

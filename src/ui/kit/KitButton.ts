@@ -152,7 +152,13 @@ export class KitButton {
         if (spec.disabled) label.setAlpha(0.8);
         contentParts.push(label);
       } else {
-        const inl = this.inline(spec.label, spec.labelPx ?? m.fontPx, q, spec.icons ?? null, hasRight ? 'left' : 'center');
+        const inl = this.inline(
+          spec.label,
+          spec.labelPx ?? m.fontPx,
+          q,
+          spec.icons ?? null,
+          hasRight ? 'left' : 'center',
+        );
         inl.root.setPosition(labelX, cy);
         contentParts.push(inl.root);
       }

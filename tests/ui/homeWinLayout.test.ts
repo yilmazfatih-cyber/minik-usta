@@ -18,24 +18,32 @@ const HS = [
 const bottom = (r: Rect): number => r.y + r.h;
 const HL = TOKENS.layout.home;
 const WL = TOKENS.layout.win;
+const V = TOKENS.kit.v3.screen.home;
 
 describe('UX 3 home layout', () => {
-  it('UX 3 home layout at H 1920 matches the wireframe numbers', () => {
+  it('UX 3 / ART_REFERENCE 9.2 home layout v3 at H 1920 matches the measured numbers', () => {
     const g = homeLayout(TOKENS, 1920);
-    expect(g.lives).toEqual({ x: 24, y: 40, w: 290, h: 96 });
-    expect(g.coins).toEqual({ x: 338, y: 40, w: 330, h: 96 });
-    expect(g.stars).toEqual({ x: 692, y: 40, w: 220, h: 96 });
-    expect(g.settings).toEqual({ x: 936, y: 36, w: 120, h: 120 });
+    // top bar capsules 88 high, the Ø 104 settings tool vertically centred on them
+    expect(g.lives).toEqual({ x: 24, y: 40, w: 290, h: 88 });
+    expect(g.coins).toEqual({ x: 338, y: 40, w: 330, h: 88 });
+    expect(g.stars).toEqual({ x: 692, y: 40, w: 220, h: 88 });
+    expect(g.settings).toEqual({ x: 952, y: 32, w: 104, h: 104 });
     expect(g.ribbon).toMatchObject({ y: 176, w: 560 });
     expect(g.ribbon.x + g.ribbon.w / 2).toBe(540);
-    expect(g.progress).toEqual({ x: 240, y: 312, w: 600, h: 48 });
-    expect(g.play).toEqual({ x: 180, y: 1480, w: 720, h: 176 });
-    expect(g.nav.y).toBe(1720);
+    expect(g.progress).toEqual({ x: 240, y: 300, w: 600, h: 84 });
+    // "Bölüm N" L 600 × 200, bottom 336 (y 1384–1584); navigation 200 high, 24 above the bottom edge
+    expect(g.play).toEqual({ x: 240, y: 1384, w: 600, h: 200 });
+    expect(g.nav.y).toBe(1696);
     expect(g.navTabs.map((r) => r.x)).toEqual([0, 216, 432, 648, 864]);
     expect(bottom(g.structure)).toBe(1180);
     expect(g.structure.x + g.structure.w / 2).toBe(540);
-    expect(g.sideRight(0)).toEqual({ x: 904, y: 420, w: 152, h: 152 });
-    expect(g.character).toEqual({ x: 60, y: 880, w: 300, h: 360 });
+    // side event bubbles Ø 176 + the 56 px label strip 8 px under it
+    expect(g.sideRight(0)).toEqual({ x: 880, y: 420, w: 176, h: 240 });
+    expect(g.sideLeft(0)).toEqual({ x: 24, y: 420, w: 176, h: 240 });
+    // character group: feet 24 px behind the button's top edge, the button's own area empty
+    for (const r of [g.tuna, g.kepce, g.dede]) expect(bottom(r)).toBeLessThanOrEqual(g.play.y + 30);
+    expect(g.tuna.x).toBeGreaterThanOrEqual(V.characterGroupX);
+    expect(g.dede.x + g.dede.w).toBeLessThanOrEqual(1080 - V.characterGroupX);
     expect(g.skyBand.h).toBe(0);
     expect(g.groundBand.h).toBe(0);
   });
@@ -46,13 +54,13 @@ describe('UX 3 home layout', () => {
       const shift = (H - BASE_H) * HL.expandShare;
       // top group fixed, bottom group bottom-anchored, middle group shifted
       expect(g.lives.y).toBe(HL.topBarY);
-      expect(H - bottom(g.play)).toBe(HL.playButtonBottomPx);
-      expect(H - (g.nav.y + HL.navH)).toBe(HL.navBottomPx);
+      expect(H - bottom(g.play)).toBe(V.playBottomPx);
+      expect(H - (g.nav.y + V.navH)).toBe(HL.navBottomPx);
       expect(bottom(g.structure)).toBeCloseTo(HL.structureBaseY + shift);
-      // UX §0.2: the primary action is in the comfortable zone (y ≥ 1400 at FIT; bottom 27 % at any H)
-      expect(g.play.y).toBeGreaterThanOrEqual(H - 0.27 * BASE_H - 1);
-      // UX §3 EXPAND note: at least 300 px of grass between the structure and the button
-      expect(g.play.y - bottom(g.structure)).toBeGreaterThanOrEqual(300);
+      // UX §0.2: the primary action is in the comfortable zone (y ≥ 1384 at FIT; bottom 28 % at any H)
+      expect(g.play.y).toBeGreaterThanOrEqual(H - 0.28 * BASE_H - 1);
+      // ART_REFERENCE §9.2: the character group stands between the structure and the button (≥ 200 px at FIT)
+      expect(g.play.y - bottom(g.structure)).toBeGreaterThanOrEqual(200);
       // the art moves with the structure: its base keeps 124 px under the art's 1056 px grass line
       expect(bottom(g.structure) - g.artY).toBe(HL.structureBaseY);
       expect(g.skyBand.h + BASE_H + g.groundBand.h).toBeCloseTo(H);
@@ -91,8 +99,8 @@ describe('UX 6.1 win v2 layout', () => {
     expect(g.bonus).toEqual({ x: 160, y: 1080, w: 760, h: 64 });
     expect(g.trowel).toEqual({ x: 160, y: 1160, w: 760, h: 64 });
     // with the trowel row the capsules move down 80 px (1180 → 1260)
-    expect(g.starCapsule).toEqual({ x: 220, y: 1260, w: 300, h: 96 });
-    expect(g.coinCapsule).toEqual({ x: 560, y: 1260, w: 300, h: 96 });
+    expect(g.starCapsule).toEqual({ x: 220, y: 1260, w: 300, h: 88 });
+    expect(g.coinCapsule).toEqual({ x: 560, y: 1260, w: 300, h: 88 });
     expect(g.button).toEqual({ x: 220, y: 1600, w: 640, h: 176 });
     // Tuna covers the card's left edge by 60 px
     expect(g.character.x + g.character.w - g.card.x).toBe(60);
@@ -105,7 +113,7 @@ describe('UX 6.1 win v2 layout', () => {
     const loop = winLayout(TOKENS, 1920, { bonus: false, trowel: false, star: false });
     expect(loop.bonus).toBeNull();
     expect(loop.starCapsule).toBeNull();
-    expect(loop.coinCapsule).toEqual({ x: 390, y: 1180, w: 300, h: 96 });
+    expect(loop.coinCapsule).toEqual({ x: 390, y: 1180, w: 300, h: 88 });
   });
 
   for (const H of HS) {

@@ -35,7 +35,13 @@ import { tDynamic } from '../../services/i18n.ts';
 import type { I18nParams } from '../../services/i18n.ts';
 import type { TextureRef } from '../../services/assets.ts';
 import { gloveTip } from '../../theme/draw/characters.ts';
-import { bubbleTailSize, highlightPad, highlightSlices } from '../../theme/draw/kit.ts';
+import {
+  BUBBLE_V3_TAIL_PX,
+  bubbleV3Inset,
+  bubbleV3TailSize,
+  highlightV3Pad,
+  highlightV3Slices,
+} from '../../theme/draw/kitV3.ts';
 import type { Layout, Rect } from '../../theme/layout.ts';
 import { KIT, bubbleTailFrameName } from '../../theme/textures.ts';
 import { TOKENS } from '../../theme/tokens.ts';
@@ -54,7 +60,9 @@ import type { PresenceLook } from './tutorial/TutorialPresence.ts';
 import { VIEW } from './viewConstants.ts';
 
 const TT = TOKENS.tutorial;
-const BB = TOKENS.kit.bubble;
+const BB = TOKENS.kit.v3.bubble;
+/** ART_REFERENCE §3.14: the bubble text (card text #1D4F8F; 44 px fits the ≤ 6-word lines in 640 px). */
+const BUBBLE_TEXT_PX = 44;
 /** UX §13.1: glove fade-in, reduced-motion bubble fade, tap ring growth. */
 const GLOVE_IN_MS = 160;
 const REDUCED_FADE_MS = 150;
@@ -306,7 +314,7 @@ export class TutorialView {
 
   private makeHighlight(): Phaser.GameObjects.NineSlice {
     const ref = kitRef(this.scene.game, KIT.highlight);
-    const sl = highlightSlices(TOKENS);
+    const sl = highlightV3Slices(TOKENS);
     return this.scene.add
       .nineslice(
         0,
@@ -331,21 +339,22 @@ export class TutorialView {
     this.gloveImg.setTexture(ref.key, ref.frame).setDisplaySize(TT.gloveW, TT.gloveH);
   }
 
-  /** The bubble of `text` (built once per text; ART §14.8). */
+  /** The bubble of `text` (built once per text; ART_REFERENCE §3.14 cream two-ring bubble + Usta Dede portrait). */
   private bubbleFor(text: string): BubbleParts {
     const ready = this.bubbles.get(text);
     if (ready) return ready;
     const s = this.scene;
-    const pad = BB.padXPx + BB.strokePx;
+    const ins = bubbleV3Inset(TOKENS);
+    const pad = BB.padXPx + ins.side;
     const label = s.add.text(0, 0, text, {
-      ...kitTextStyle('panel', TOKENS.font.size.body),
-      align: 'left',
+      ...kitTextStyle('cardText', BUBBLE_TEXT_PX),
+      align: 'center',
       wordWrap: { width: TT.bubbleMaxW - 2 * pad, useAdvancedWrap: true },
     });
     const boxW = Math.min(TT.bubbleMaxW, Math.ceil(label.width) + 2 * pad);
-    const boxH = Math.max(TT.bubbleMinH, Math.ceil(label.height) + 2 * (BB.padYPx + BB.strokePx));
-    const tail = bubbleTailSize('left', TOKENS);
-    const boxX = TT.portraitPx + TT.portraitGapPx + BB.tailPx;
+    const boxH = Math.max(TT.bubbleMinH, Math.ceil(label.height) + 2 * BB.padYPx + ins.side + ins.bottom);
+    const tail = bubbleV3TailSize('left', TOKENS);
+    const boxX = TT.portraitPx + TT.portraitGapPx + BUBBLE_V3_TAIL_PX;
     const h = Math.max(TT.portraitPx, boxH);
     const boxY = (h - boxH) / 2;
     const ref = kitRef(s.game, KIT.bubble);
@@ -366,17 +375,17 @@ export class TutorialView {
       .setOrigin(0, 0);
     const tl = kitRef(s.game, bubbleTailFrameName('left'));
     const tailLeft = s.add
-      .image(boxX + BB.strokePx, boxY + boxH / 2, tl.key, tl.frame)
+      .image(boxX + ins.side, boxY + boxH / 2, tl.key, tl.frame)
       .setOrigin(1, 0.5)
       .setDisplaySize(tail.w, tail.h);
     const tu = kitRef(s.game, bubbleTailFrameName('up'));
-    const up = bubbleTailSize('up', TOKENS);
+    const up = bubbleV3TailSize('up', TOKENS);
     const tailUp = s.add
-      .image(boxX + BB.radiusPx + up.w / 2, boxY + BB.strokePx, tu.key, tu.frame)
+      .image(boxX + BB.radiusPx + up.w / 2, boxY + ins.side, tu.key, tu.frame)
       .setOrigin(0.5, 1)
       .setDisplaySize(up.w, up.h)
       .setVisible(false);
-    label.setPosition(boxX + pad, boxY + (boxH - label.height) / 2);
+    label.setPosition(boxX + pad, boxY + ins.side + (boxH - ins.side - ins.bottom - label.height) / 2);
     const p = this.host.portrait();
     const portrait = s.add
       .image(TT.portraitPx / 2, h / 2, p.key, p.frame)
@@ -542,7 +551,7 @@ export class TutorialView {
       : 1 +
         (TT.highlightPulseScale - 1) *
           (0.5 - 0.5 * Math.cos((2 * Math.PI * (now % TT.highlightPulseMs)) / TT.highlightPulseMs));
-    const pad = highlightPad(TOKENS);
+    const pad = highlightV3Pad(TOKENS);
     rects.forEach((r, i) => {
       let h = this.highlights[i];
       if (!h) {

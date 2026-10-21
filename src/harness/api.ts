@@ -83,8 +83,10 @@ export type TapTarget =
       /** i18n parameters of the text (`home.play` → `{ n: 2 }`). */
       readonly params?: Readonly<Record<string, string | number>>;
     }
-  /** The × of the open level window (UX §0.3). */
+  /** The × of the open level window (UX §0.3) or of the home screen's open window (settings, level start). */
   | { readonly kind: 'close' }
+  /** A pre-level booster slot of the open level-start window (`thermos`, `trowelStart`, `openShutter`; K-40). */
+  | { readonly kind: 'preSlot'; readonly id: string }
   /** The Golden Trowel icon of the status strip (UX §5.2; its tap target is the whole streak strip). */
   | { readonly kind: 'trowel' }
   /** A booster slot of the level screen (K-54; `hammer`, `crane`, `paintBrush`, `undo`). */
@@ -122,7 +124,7 @@ export interface HarnessStatus {
   readonly movesMade: number | null;
   /** Length of the attempt's action log (`start` included). */
   readonly logLength: number;
-  /** Open level window (`pause`, `exit`, `offer`, `loss`, `win`, `store`). */
+  /** Open window: level (`pause`, `exit`, `offer`, `loss`, `win`, `store`) or home (`levelStart`, `settings`, `notice`). */
   readonly window: string | null;
   /** The board takes a grab now: attempt running, no window, no pending or locked cues. */
   readonly interactive: boolean;
@@ -302,6 +304,10 @@ export interface HarnessApi {
   loadLevelData(id: number, data: unknown): Promise<HarnessState>;
   /** The home screen (`Home`, a fresh build of it); resolves when it runs. */
   goHome(): Promise<void>;
+  /** Opens the "Dokun ve al" reward layer over the home screen (UX §6.2; the slice has no trigger of its own). */
+  showReward(): Promise<void>;
+  /** Releases a boot held by `window.__holdBoot` (the loading-screen shot). */
+  releaseBoot(): void;
   /**
    * Screens set-up of the meta save (never the game state of an attempt): the prologue seen, levels 1…`won` won
    * (`stars` = `won`, META §10) and META §4 boosters (`inventory`, `freeTrialsGranted`). One save write; refused while
