@@ -123,7 +123,7 @@ export type BrickFlyId = (typeof BRICK_FLY_IDS)[number];
 export const BRICK_FLY_PX = 200;
 
 /**
- * ART_REFERENCE §9.1 v1.1 boot pack (tokens `check.v3Addenda.bootPack.ids`, same order): the loading screen's art, load
+ * ART_REFERENCE §9.1 v1.1 boot pack (tokens `kit.v3.screen.loading.bootPack.ids`, same order): the loading screen's art, load
  * group P0. The UX §1.1 composition: Tuna cheering, Usta Dede and Kepçe, the emblem, the eight bricks (four SVGs twice).
  */
 export const BOOT_PACK_IDS = [

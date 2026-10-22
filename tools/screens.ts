@@ -315,6 +315,12 @@ const SHORT_STARTS: readonly Scenario[] = LEVEL_STARTS.slice(0, 5).map((sc) => (
 
 /** The mid-drag shot holds the finger at this share of the golden move's path (over the wall, ART_REFERENCE §9.4). */
 const DRAG_SHOT_SHARE = 0.55;
+/**
+ * `home-level-start-ready`: the demo window's level (past every META §4 unlock) and inventory — Termos ready (chosen in
+ * the shot), Mala Başlangıcı empty ("+"), Açık Kepenk unavailable (no slice level has a shutter gap). Plain data: the
+ * page evaluate reads it from the Node side.
+ */
+const LEVEL_START_DEMO = { levelId: 20, inventory: { thermos: 2, trowelStart: 0 } } as const;
 
 const SCENARIOS: readonly Scenario[] = [
   {
@@ -352,6 +358,30 @@ const SCENARIOS: readonly Scenario[] = [
     },
   },
   {
+    id: 'level-start-ready',
+    shots: ['home-level-start-ready'],
+    seed: { won: 3 },
+    run: async (gp, shoot, notes) => {
+      // ART_REFERENCE §9.3 slot looks past the slice (META §4 unlocks at 12 / 16 / 20 keep every slice level's slots
+      // locked): the harness opens the window of level 20 over the home screen with Termos × 2 (then chosen: cyan ring
+      // + ✓ `icon_check`), Mala Başlangıcı 0 ("+" badge) and Açık Kepenk with no shutter gap (unavailable, grey);
+      // a demo — nothing is granted, spent or started
+      await waitHome(gp, notes);
+      await gp.page.evaluate(
+        (d) => window.__harness!.showLevelStart(d.levelId, d.inventory),
+        LEVEL_START_DEMO,
+      );
+      await waitWindow(gp.page, 'levelStart');
+      await tap(gp, { kind: 'preSlot', id: 'thermos' });
+      await settle(gp, 500);
+      await shoot('home-level-start-ready');
+      await tap(gp, { kind: 'close' });
+      await gp.page.waitForFunction(() => window.__harness!.status().window === null, null, {
+        timeout: 20_000,
+      });
+    },
+  },
+  {
     id: 'reward',
     shots: ['home-reward-layer'],
     seed: { won: 4 },
@@ -375,7 +405,8 @@ const SCENARIOS: readonly Scenario[] = [
   {
     id: 'home',
     shots: ['home-v2', 'home-v2-locked-tap', 'home-settings', 'home-feedback-copied', 'home-v2-fallback'],
-    seed: { won: 4 },
+    // three wins: "Bölüm 4", the tree house's third floor stop (visual v3 package B review set)
+    seed: { won: 3 },
     permissions: ['clipboard-read', 'clipboard-write'],
     run: async (gp, shoot, notes) => {
       await waitHome(gp, notes);

@@ -965,25 +965,49 @@ const KitV3 = z.object({
     'maxSvgKb',
   ] as const),
   screen: z.object({
-    loading: nums([
-      'logoCx',
-      'logoCy',
-      'logoW',
-      'logoH',
-      'brickCount',
-      'brickMinPx',
-      'brickMaxPx',
-      'ringMinPx',
-      'ringMaxPx',
-      'groupCx',
-      'groupCy',
-      'groupW',
-      'groupH',
-      'textY',
-      'barW',
-      'barH',
-      'barY',
-    ] as const),
+    loading: z.object({
+      ...shapeOf(
+        [
+          'logoCx',
+          'logoCy',
+          'logoW',
+          'logoH',
+          'brickCount',
+          'brickMinPx',
+          'brickMaxPx',
+          'ringMinPx',
+          'ringMaxPx',
+          'groupCx',
+          'groupCy',
+          'groupW',
+          'groupH',
+          'textY',
+          'barW',
+          'barH',
+          'barY',
+        ] as const,
+        num,
+      ),
+      // ART_REFERENCE §9.1 v1.1 boot pack (moved here from `check.v3Addenda`, 2026-10-22): the loading screen's P0
+      // ids (catalogue order), the emblem on the letter block, the title lines; `scale` / `maxKb` / `dir` are the §9.1
+      // build-time PNG recipe (the game ships the committed rasters within `maxKb`, TECH §2R.6)
+      bootPack: z.object({
+        ...shapeOf(
+          [
+            'scale',
+            'maxKb',
+            'emblemPx',
+            'emblemOffsetX',
+            'emblemOffsetY',
+            'titleLineH',
+            'titleBlockH',
+          ] as const,
+          num,
+        ),
+        dir: str,
+        ids: z.array(str),
+      }),
+    }),
     home: nums([
       'capsuleH',
       'settingsPx',
@@ -1783,11 +1807,11 @@ export const TOKENS: Tokens = parseTokens(rawTokens);
 
 /**
  * ART_REFERENCE v1.1 addenda (`check.v3Addenda`, design-lead 2026-10-21: capsule badge §3.4, direction arrow §3.14,
- * boot pack §9.1, avatar square §9.2, town area window §9.10, reward layer §9.6). design-lead parked them under
- * `check.*` so the TECH 2R.7 "every kit.v3 key is typed" test stayed green until the components existed; the
- * components exist now (visual v3 round 2), so the group is typed here with its own schema and read from
- * `check.v3Addenda`. When design-lead moves the values to their `kit.v3.<group>` targets (`_doc`), only `addendaRaw`
- * below changes. The main `TOKENS` object still carries no `check.*` key.
+ * avatar square §9.2, town area window §9.10, reward layer §9.6). design-lead parked them under `check.*` so the TECH
+ * 2R.7 "every kit.v3 key is typed" test stayed green until the components existed; the components exist now (visual
+ * v3 round 2), so the group is typed here with its own schema and read from `check.v3Addenda`. When design-lead moves
+ * the values to their `kit.v3.<group>` targets (`_doc`), only `addendaRaw` below changes. The boot pack (§9.1) moved
+ * to `kit.v3.screen.loading.bootPack` (code-lead, 2026-10-22). The main `TOKENS` object still carries no `check.*` key.
  */
 const V3Addenda = z.object({
   capsuleBadge: nums(['diameterPx', 'fontPx', 'offsetXPx', 'offsetYPx', 'pulseScale', 'pulseMs']),
@@ -1811,14 +1835,6 @@ const V3Addenda = z.object({
       num,
     ),
     ...shapeOf(['top', 'mid', 'bottom', 'stroke'] as const, hex),
-  }),
-  bootPack: z.object({
-    ...shapeOf(
-      ['scale', 'maxKb', 'emblemPx', 'emblemOffsetX', 'emblemOffsetY', 'titleLineH', 'titleBlockH'] as const,
-      num,
-    ),
-    dir: str,
-    ids: z.array(str),
   }),
   avatarSquare: z.object({
     ...shapeOf(['sizePx', 'radiusPx', 'strokePx', 'innerLinePx'] as const, num),

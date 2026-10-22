@@ -30,7 +30,7 @@ import type { BrickFlyId } from '../services/assetCatalog.ts';
 import { t } from '../services/i18n.ts';
 import type { LevelIdentity } from '../services/save.ts';
 import { designHeight } from '../theme/layout.ts';
-import { TOKENS, V3_ADDENDA } from '../theme/tokens.ts';
+import { TOKENS } from '../theme/tokens.ts';
 import { drawLoadingSkyV3 } from '../theme/draw/kitV3.ts';
 import { uploadCanvasArt } from '../theme/textures.ts';
 import { hex } from '../ui/text.ts';
@@ -51,8 +51,8 @@ import { gameAudio } from './level/sceneServices.ts';
 const FONT_WAIT_MS = 1500;
 const V3 = TOKENS.kit.v3;
 const LD = V3.screen.loading;
-/** ART_REFERENCE §9.1 v1.1 logo group (`check.v3Addenda.bootPack`): emblem 240 at (−40, −60) of the letter block. */
-const BP = V3_ADDENDA.bootPack;
+/** ART_REFERENCE §9.1 v1.1 logo group (`kit.v3.screen.loading.bootPack`): emblem 240 at (−40, −60) of the letter block. */
+const BP = LD.bootPack;
 /** Sky bake width (the gradient and the clouds scale cleanly). */
 const SKY_BAKE_W = 270;
 const SKY_KEY = 'boot_sky_v3';
@@ -74,6 +74,10 @@ const BRICKS: readonly (readonly [number, number, number, BrickFlyId])[] = [
 ];
 /** Logo letters: dark contour, extrusion (8, 12) in the letter tone × 0,6 (ART_REFERENCE §9.1 "3B harf"). */
 const LOGO_STROKE = '#4F1E9C';
+/** The letters' drop shadow (ART_REFERENCE §9.1 "gölge α 0,4 +12"): a black silhouette of each letter, soft-edged. */
+const LOGO_SHADOW_OFFSET = 12;
+const LOGO_SHADOW_ALPHA = 0.4;
+const LOGO_SHADOW_BLUR = 10;
 /** Letter size = the line height (150); the two lines sit `titleBlockH` / 2 apart (360 → pitch 180). */
 const LOGO_FONT_PX = BP.titleLineH;
 const LOGO_LINE_PITCH = BP.titleBlockH / 2;
@@ -293,28 +297,54 @@ export class BootScene extends Phaser.Scene {
     let ci = 0;
     let blockLeft = lt.cx;
     const letterObjs: Phaser.GameObjects.Text[] = [];
+    const shadowObjs: Phaser.GameObjects.Text[] = [];
     lines.forEach((line, li) => {
       const y = blockTop + LOGO_LINE_PITCH * (li + 0.5);
-      const letters = [...line].map((ch) => {
+      const styles = [...line].map((ch) => {
         const color = ch === ' ' ? '#FFFFFF' : (colors[ci % colors.length] ?? '#FFFFFF');
         if (ch !== ' ') ci += 1;
+        return { ch, style: kitTextStyle('button', LOGO_FONT_PX, LOGO_STROKE, undefined, color), color };
+      });
+      const letters = styles.map(({ ch, style, color }) => {
         const tone = Phaser.Display.Color.HexStringToColor(color).darken(40).rgba;
         return this.add
           .text(0, y, ch, {
-            ...kitTextStyle('button', LOGO_FONT_PX, LOGO_STROKE, undefined, color),
+            ...style,
             shadow: { offsetX: 7, offsetY: 11, color: tone, blur: 0, stroke: true, fill: true },
           })
           .setOrigin(0, 0.5);
       });
+      // the drop shadow under the block: the same glyphs as black silhouettes (fill + the letter's contour width),
+      // blurred edge, α 0,4, +12 down-right; all shadows sit under every letter (depth order below)
+      const shadows = styles.map(({ ch, style }) =>
+        this.add
+          .text(0, y + LOGO_SHADOW_OFFSET, ch, {
+            ...style,
+            color: '#000000',
+            stroke: '#000000',
+            shadow: {
+              offsetX: 0,
+              offsetY: 0,
+              color: '#000000',
+              blur: LOGO_SHADOW_BLUR,
+              stroke: true,
+              fill: true,
+            },
+          })
+          .setOrigin(0, 0.5)
+          .setAlpha(LOGO_SHADOW_ALPHA),
+      );
       const total = letters.reduce((s, l) => s + l.width * LETTER_ADVANCE, 0);
       const k = Math.min(1, lt.w / total);
       let x = lt.cx - (total * k) / 2;
       blockLeft = Math.min(blockLeft, x);
-      for (const l of letters) {
+      letters.forEach((l, i) => {
         l.setScale(k).setX(x);
+        shadows[i]?.setScale(k).setX(x + LOGO_SHADOW_OFFSET * k);
         x += l.width * LETTER_ADVANCE * k;
-      }
+      });
       letterObjs.push(...letters);
+      shadowObjs.push(...shadows);
     });
     // the emblem behind the letters, its centre at (−40, −60) of the block's top-left corner — the corner of the
     // glyphs (cap top ≈ 0,38 em above the first line's centre, the first letter's left bearing), not of the line box
@@ -328,7 +358,8 @@ export class BootScene extends Phaser.Scene {
       { x: ex - e / 2, y: ey - e / 2, w: e, h: e },
       { reduced: lt.reduced, waitArt: true },
     );
-    for (const l of letterObjs) this.children.moveAbove(l, emblem.image);
+    // each move puts the object directly above the emblem: the letters first, then the shadows slide in between
+    for (const o of [...letterObjs, ...shadowObjs]) this.children.moveAbove(o, emblem.image);
   }
 
   /** Progress bar 400 × 12 (UX §1.1: track `#0A1F4A` α 0,4, fill white α 0,9). */

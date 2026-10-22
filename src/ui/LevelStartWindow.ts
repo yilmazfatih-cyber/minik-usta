@@ -43,9 +43,15 @@ export const PRE_SLOT_ICON: Readonly<Record<PreBooster, string>> = {
   trowelStart: 'icon_gold_trowel',
   openShutter: 'icon_shutter',
 };
-/** The selected slot's ✓ (`icon_check`, 40 px at the upper right; ASSET §16.3 ek 2026-10-20). */
+/**
+ * The chosen slot's ✓ (`icon_check`, 40 px; ASSET §16.3 ek 2026-10-20) on a white Ø 56 disc with the panel contour,
+ * riding the square's upper-right corner (ART_REFERENCE §9.3 "seçili: 8 px #24CCFF ışıma + ✓ 40"; the bare ✓ on the
+ * blue face read weakly in the v3 package B shots).
+ */
 const CHECK_ICON = 'icon_check';
 const CHECK_PX = 40;
+const CHECK_DISC_PX = 56;
+const CHECK_DISC_STROKE_PX = 4;
 
 export interface LevelStartInput {
   readonly level: CompiledLevel;
@@ -71,7 +77,7 @@ interface SlotView {
   readonly root: Phaser.GameObjects.Container;
   readonly face: Phaser.GameObjects.NineSlice;
   readonly ring: Phaser.GameObjects.Graphics;
-  readonly ok: Phaser.GameObjects.Image;
+  readonly ok: Phaser.GameObjects.Container;
   readonly badge: Phaser.GameObjects.Image;
   readonly count: Phaser.GameObjects.Text;
 }
@@ -332,7 +338,13 @@ export class LevelStartWindow {
     ring
       .lineStyle(V.effects.selectGlowPx, hex(V.effects.selectGlow), 0.9)
       .strokeRoundedRect(-px / 2 - 6, -px / 2 - 6, px + 12, px + 12, 46);
-    const ok = this.icons.add(scene, px / 2 - 14, -px / 2 + 14, CHECK_ICON, CHECK_PX).setVisible(false);
+    const okDisc = addBakedGraphics(scene);
+    const dr = CHECK_DISC_PX / 2;
+    okDisc.fillStyle(0x000000, 0.25).fillCircle(0, 4, dr);
+    okDisc.fillStyle(hex(V.panel.outline), 1).fillCircle(0, 0, dr);
+    okDisc.fillStyle(0xffffff, 1).fillCircle(0, 0, dr - CHECK_DISC_STROKE_PX);
+    const okIcon = this.icons.add(scene, 0, 0, CHECK_ICON, CHECK_PX);
+    const ok = scene.add.container(px / 2 - 10, -px / 2 + 10, [okDisc, okIcon]).setVisible(false);
     // count badge riding the lower-right corner (grey while locked, UX §4)
     const bref = kitRef(scene.game, KIT.badge);
     const bx = px / 2 - 8;

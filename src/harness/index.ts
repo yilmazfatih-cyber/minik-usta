@@ -524,6 +524,12 @@ export function installHarness(game: Phaser.Game): HarnessApi {
       h.showRewardDemo();
       await waitGameMs(900);
     },
+    async showLevelStart(levelId, inventory): Promise<void> {
+      const h = home();
+      if (!h) throw new Error('harness: showLevelStart needs the home screen');
+      await h.showLevelStartDemo(levelId, inventory);
+      await waitFor(() => h.openWindow === 'levelStart', DEFAULT_WAIT_MS, 'the level-start window');
+    },
     releaseBoot(): void {
       (globalThis as { __holdBoot?: boolean }).__holdBoot = false;
     },

@@ -241,9 +241,19 @@ describe('tokens v2 schema (TECH 2R.7; ART 3A, 7.1, 14; UX 3, 5.8, 5.9, 6.1, 13.
     for (const g of CHECK_TYPED_GROUPS) expect(raw.check[g], g).toBeDefined();
     // addenda: a missing value is a boot error that names the path
     const a = structuredClone(raw.check.v3Addenda) as Record<string, Record<string, unknown>>;
-    delete (a.bootPack as Record<string, unknown>).maxKb;
-    expect(() => parseV3Addenda(a)).toThrow(/bootPack\.maxKb/);
-    expect(Object.isFrozen(V3_ADDENDA.bootPack.ids)).toBe(true);
+    delete (a.rewardLayer as Record<string, unknown>).itemPx;
+    expect(() => parseV3Addenda(a)).toThrow(/rewardLayer\.itemPx/);
+    expect(Object.isFrozen(V3_ADDENDA.arrow)).toBe(true);
+    // the boot pack (§9.1) lives under kit.v3.screen.loading since 2026-10-22: typed, frozen, a missing value named
+    expect('bootPack' in a).toBe(false);
+    const loading = TOKENS.kit.v3.screen.loading;
+    expect(Object.isFrozen(loading.bootPack.ids)).toBe(true);
+    expect(loading.bootPack.ids).toHaveLength(8);
+    const b = structuredClone(rawTokens) as unknown as {
+      kit: { v3: { screen: { loading: { bootPack: Record<string, unknown> } } } };
+    };
+    delete b.kit.v3.screen.loading.bootPack.maxKb;
+    expect(() => parseTokens(b)).toThrow(/kit\.v3\.screen\.loading\.bootPack\.maxKb/);
     // tones: every group of the table (minus _doc) is typed as a frozen record of #RRGGBB
     const groups = Object.keys(raw.check.svgTonesV3 as object).filter((k) => !k.startsWith('_doc'));
     expect([...Object.keys(SVG_TONES_V3)].sort()).toEqual([...groups].sort());

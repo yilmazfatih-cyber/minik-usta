@@ -77,7 +77,10 @@ describe('SVG v3 package — code-lead side (ASSET 16.3 ek 2026-10-20)', () => {
       /PRE_SLOT_ICON[^}]*\{\s+thermos: 'icon_thermos',\s+trowelStart: 'icon_gold_trowel',\s+openShutter: 'icon_shutter',\s+\}/,
     );
     expect(win).toMatch(/const CHECK_ICON = 'icon_check';\s+const CHECK_PX = 40;/);
-    expect(win).toMatch(/this\.icons\.add\(scene, px \/ 2 - 14, -px \/ 2 \+ 14, CHECK_ICON, CHECK_PX\)/);
+    // visual v3 package B: the ✓ sits on a white Ø 56 disc riding the square's upper-right corner
+    expect(win).toMatch(/const CHECK_DISC_PX = 56;/);
+    expect(win).toMatch(/this\.icons\.add\(scene, 0, 0, CHECK_ICON, CHECK_PX\)/);
+    expect(win).toMatch(/scene\.add\.container\(px \/ 2 - 10, -px \/ 2 \+ 10, \[okDisc, okIcon\]\)/);
     expect(win).not.toMatch(/drawOk/);
     expect(ICON_NAMES).toContain('shutter');
     expect(ICON_NAMES).toContain('check');

@@ -666,14 +666,38 @@ export class HomeScene extends Phaser.Scene {
     this.openLevelStart(lvl);
   }
 
-  private openLevelStart(lvl: CompiledLevel): void {
+  /**
+   * Level-start window demo for the screen set (harness `showLevelStart`, ART_REFERENCE §9.3 slot looks): the window
+   * of `levelId` over this home screen with `inventory` as the player's boosters. Every slice level (1–10) keeps the
+   * three pre-level slots locked (META §4 unlocks at 12 / 16 / 20), so the ready / chosen (cyan ring + ✓) / empty
+   * ("+") / unavailable looks can only be reviewed this way. The next level's data stands in for the level (segments,
+   * gaps); nothing is granted, spent or started — "Oyna" closes the window. Resolves once the window is open.
+   */
+  async showLevelStartDemo(
+    levelId: number,
+    inventory: Readonly<Partial<Record<string, number>>>,
+  ): Promise<void> {
+    if (this.notice || this.settings || this.levelStart) return;
+    const base =
+      this.nextLevelData ?? (await loadLevelById(this.model.nextLevel).then((r) => (r.ok ? r.level : null)));
+    if (!base || !this.scene.isActive() || this.levelStart) return;
+    this.openLevelStart({ ...base, id: levelId }, { inventory, demo: true });
+  }
+
+  private openLevelStart(
+    lvl: CompiledLevel,
+    demo: {
+      readonly inventory: Readonly<Partial<Record<string, number>>>;
+      readonly demo: true;
+    } | null = null,
+  ): void {
     const save = appSave();
     this.levelStart = new LevelStartWindow(
       this,
       this.layoutNow,
       {
         level: lvl,
-        inventory: save.data.boosters.inventory,
+        inventory: demo ? demo.inventory : save.data.boosters.inventory,
         lives: this.model.lives,
         areaKey: KEY.area,
         difficultyTag: this.model.difficultyTag,
@@ -681,7 +705,7 @@ export class HomeScene extends Phaser.Scene {
       { icons: this.icons, assets: this.assets, reduced: () => this.reduced },
       D.windows,
       {
-        onPlay: (pre) => this.startLevel(pre),
+        onPlay: (pre) => (demo ? this.closeLevelStart() : this.startLevel(pre)),
         onClose: () => this.closeLevelStart(),
         onSlotHint: (slot, at) => {
           lockedFeel();

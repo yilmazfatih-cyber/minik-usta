@@ -312,6 +312,12 @@ export interface HarnessApi {
   goHome(): Promise<void>;
   /** Opens the "Dokun ve al" reward layer over the home screen (UX §6.2; the slice has no trigger of its own). */
   showReward(): Promise<void>;
+  /**
+   * Opens the level-start window of `levelId` over the home screen with `inventory` as the player's pre-level boosters
+   * (ART_REFERENCE §9.3 slot looks: ready / chosen / empty / unavailable — every slice level keeps the slots locked,
+   * META §4). A demo: nothing is granted, spent or started; "Oyna" closes the window. Resolves once it is open.
+   */
+  showLevelStart(levelId: number, inventory: Readonly<Record<string, number>>): Promise<void>;
   /** Releases a boot held by `window.__holdBoot` (the loading-screen shot). */
   releaseBoot(): void;
   /**

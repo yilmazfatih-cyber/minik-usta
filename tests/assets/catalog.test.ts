@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import type Phaser from 'phaser';
 import { describe, expect, it } from 'vitest';
 import tokens from '../../src/theme/tokens.json' with { type: 'json' };
-import { TOKENS, V3_ADDENDA } from '../../src/theme/tokens.ts';
+import { TOKENS } from '../../src/theme/tokens.ts';
 import { readManifest } from '../../tools/assets.ts';
 import {
   ASSET_BY_ID,
@@ -121,8 +121,8 @@ describe('catalogue = ASSET 16.3 table', () => {
   it('TECH 2R.6 load groups: P0 boot pack (ART_REFERENCE 9.1 v1.1); P1 icons, chr_tuna_bust, bg_level_site_edge (+ ASSET 16.5 glove); P2 home; P3 win', () => {
     const g = (grp: string) => ASSET_CATALOG.filter((a) => a.group === grp && !a.inAtlas).map((a) => a.id);
     // DS3-01 (b): the loading screen's art is the P0 boot pack — the catalogue's P0 rows are exactly its ids, in the
-    // order of tokens `check.v3Addenda.bootPack.ids`; moved there from P1 (Dede), P2 (Kepçe, emblem) and P3 (cheer)
-    expect([...BOOT_PACK_IDS]).toEqual([...V3_ADDENDA.bootPack.ids]);
+    // order of tokens `kit.v3.screen.loading.bootPack.ids`; moved there from P1 (Dede), P2 (Kepçe, emblem) and P3 (cheer)
+    expect([...BOOT_PACK_IDS]).toEqual([...TOKENS.kit.v3.screen.loading.bootPack.ids]);
     expect(g('P0').sort()).toEqual([...BOOT_PACK_IDS].sort());
     expect(g('P1').sort()).toEqual(['bg_level_site_edge', 'chr_tuna_bust', 'ui_tutorial_glove']);
     // ASSET §16.3 #4b town_ch1_tree (DS-02): P2 with the tree house it stands under, no ghost texture
@@ -162,7 +162,7 @@ describe('catalogue = ASSET 16.3 table', () => {
     if (m) {
       const bytes = BOOT_PACK_IDS.reduce((sum, id) => sum + (m.manifest.assets[id]?.bytes ?? 0), 0);
       expect(bytes).toBeGreaterThan(0);
-      expect(bytes).toBeLessThanOrEqual(V3_ADDENDA.bootPack.maxKb * 1024);
+      expect(bytes).toBeLessThanOrEqual(TOKENS.kit.v3.screen.loading.bootPack.maxKb * 1024);
       for (const id of BOOT_PACK_IDS) expect(m.manifest.assets[id]?.group, id).toBe('P0');
     }
     expect(

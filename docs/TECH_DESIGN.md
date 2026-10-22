@@ -1194,7 +1194,7 @@ Görsel sonradan gelirse 200 ms'lik çapraz solmayla değişir (UX §3 "Yükleni
   ok, indirme 274,6 KB). Testler `tests/assets/svgV3.test.ts`, `catalog.test.ts` ("ASSET 16.3 ek 2026-10-20", "TECH
   2R.6 P0 …").
 - **Boot paketi ve görsel v3 tur 2 (2026-10-22; ART_REFERENCE §9.1 v1.1, DS3-01):** yükleme ekranının görselleri
-  (`BOOT_PACK_IDS` = tokens `check.v3Addenda.bootPack.ids`: `chr_tuna_cheer`, `chr_dede_bust`, `chr_kepce_bust`,
+  (`BOOT_PACK_IDS` = tokens `kit.v3.screen.loading.bootPack.ids` (paket B'de `check.v3Addenda`'dan taşındı): `chr_tuna_cheer`, `chr_dede_bust`, `chr_kepce_bust`,
   `logo_emblem`, 4 × `brick_fly_*`) katalogda **P0** grubudur; `BootScene` grubu font beklemesiyle birlikte en çok
   `BOOT_ART_WAIT_MS` (1200 ms) bekler, sonra sahnenin görsellerini kurar — karakterler, amblem ve tuğlalar ilk
   karelerinden raster gösterir. Ucuz seçenek: ART_REFERENCE §9.1'in "derleme zamanı ikinci PNG seti, 0,75 ölçek,
@@ -1521,6 +1521,10 @@ kalır; yalnız `required` dalları silinir.
 
 - **`tools/screens.ts`** yeni ekranlar:
   - `home-v2-first`, `home-v2`, `home-v2-locked-tap`, `win-v2`;
+  - `home-level-start-ready` (görsel v3 paket B): `__harness.showLevelStart(levelId, inventory)` ile Bölüm 20'nin
+    bölüm başı penceresi (Termos × 2 seçili ✓, Mala Başlangıcı 0 "+", Açık Kepenk kepenksiz bölümde kullanılamaz) —
+    dilim bölümlerinde üç yuva da kilitli olduğu (META §4: 12 / 16 / 20) için hazır / seçili / boş görünümleri ancak
+    bu demo ile incelenir; hiçbir şey verilmez, harcanmaz, başlatılmaz ("Oyna" pencereyi kapatır);
   - `level-01` … `level-10` başlangıç tahtaları;
   - `tutorial-shown`, `tutorial-hidden`;
   - `teardown` (çıkmaz fikstürü), `booster-no-target`.

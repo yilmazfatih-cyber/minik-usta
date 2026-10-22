@@ -1780,3 +1780,47 @@ ok, konsol hatası yok). Kapılar: `npm run check` (109 dosya / 2113 test, +22),
   §5.8 madde 2'ye bağlı; yukarıdaki seçenekle kapanır. Paket A'nın görsel kodu: `blockV2.ts` (v3 tarifi), `Capsule.ts`
   (ikon seçenekleri), `LevelScene.ts` / `viewConstants.ts` (DS3-09), `tools/screens.ts` (drag senaryosu); kit çiziciler
   ve HUD düzeni değişmedi.
+
+## Görsel v3 paket B — ana sayfa, bölüm başı penceresi, yükleme (code-lead, 2026-10-22; ART_REFERENCE §9.1–§9.3; R2-13 madde 5)
+
+Set: `artifacts/screens/v3/boot-v3 | home-v2-first | home-v2 | home-level-start | home-level-start-ready -<profil>.png`
+(390 × 844 ve 360 × 800; `node tools/screens.ts --profile <p> --only boot-v3,home-v2,home-level-start --flat
+artifacts/screens/v3`; 9 + 9 kare ok, 0 senaryo hatası, konsol hatası yok). Üç ekranın v3 anatomisi tur 2'de
+kurulmuştu (DS3-01 … DS3-08); bu paket onları §9 şablonlarıyla yeniden doğruladı, eksik kalan iki tarif satırını ve
+bir inceleme açığını kapattı.
+
+- [code-lead → design-lead] **Ana sayfa (§9.2) doğrulandı, değişmedi:** ayrı kapsüller 300 × 88 (can: sayı kalbin
+  içinde, altın: Ø 56 yeşil +), ayar `purple` 104, şerit başlık, ilerleme çubuğu + ucunda yıldız ve altında sayı
+  (DS3-02), sahne `bg_home_town` + `town_ch1_tree` + ağaç ev ozalit/renkli kırpımı, tam boy Tuna `chr_tuna_stand`,
+  Kepçe, **tam boy Usta Dede `chr_dede_stand`** (sizin DS3-03 "kalıcı çözüm" notunuz; görev notundaki geçici "büst
+  çalının arkasına y + 60" düzeni uygulanmadı — kalıcı çözüm zaten yerinde), yan baloncuklar Ø 176 + 160 × 56 şerit
+  (sol Usta Ligi kilitli "Yakında", sağ sandık halkası), yeşil L 600 × 200 "Bölüm N" alttan 336, alt gezinme 200 +
+  300 × 300 yükseltilmiş sekme. Set artık `home` senaryosunu 3 galibiyetle çekiyor (**"Bölüm 4"**, 3/10, ağaç evin 3.
+  kat durağı); ilk açılış `home-v2-first` aynen.
+- [code-lead → design-lead] **Bölüm başı penceresi (§9.3): seçili ✓ artık diskli.** `home-level-start` (Bölüm 3, üç
+  yuva kilitli + "Bölüm 12 / 16 / 20") aynen; yeni `home-level-start-ready` karesi hazır / seçili / boş / kullanılamaz
+  görünümlerini gösteriyor: Termos × 2 **seçili** (8 px #24CCFF halka + ✓), Mala Başlangıcı 0 (kırmızı "+" rozeti),
+  Açık Kepenk kepenksiz bölümde gri (dokununca `booster.noShutter`). İlk karede çıplak 40 px ✓ mavi yüzde zayıf
+  okunuyordu → ✓ 40 px **beyaz Ø 56 disk + pencere konturu 4 px** üstünde, karenin sağ üst köşesine biner
+  (`LevelStartWindow` `CHECK_DISC_PX`). §9.3 satırına "✓ 40, Ø 56 beyaz diskte" eklemenizi öneririm; istemezseniz tek
+  sabit. Dilim bölümlerinde üç yuva da kilitli olduğundan (META §4 unlock 12 / 16 / 20) bu kare bir **harness
+  demosudur**: `__harness.showLevelStart(20, { thermos: 2, trowelStart: 0 })` ana sayfanın üstüne Bölüm 20'nin
+  penceresini açar; hiçbir şey verilmez, harcanmaz, başlatılmaz ("Oyna" kapatır). Arkadaki ana sayfa "Bölüm 4"
+  gösterir — demo, oyunda bu durum olmaz.
+- [code-lead → design-lead] **Yükleme (§9.1): logo gölgesi eklendi.** Harflerin §9.1 "gölge α 0,4 +12" satırı
+  eksikti: her harfin siyah silüeti (dolgu + aynı kontur kalınlığı, 10 px bulanık kenar) α 0,4 ile +12 / +12'de,
+  amblemin üstünde ve bütün harflerin altında (`BootScene` `LOGO_SHADOW_*`). Ekstrüzyon (7, 11) ton × 0,6 ve
+  #4F1E9C kontur değişmedi. Boot paketi: P0 + ≤ 1200 ms bekleme (tur 2) — karakterler, amblem ve tuğlalar iki
+  profilde de ilk kareden raster; iskelet görünmüyor. **`public/art/boot/` ikinci PNG seti yine üretilmedi** (TECH
+  §2R.6 "ucuz seçenek": depodaki rasterler ≈ 60 KB ≤ 150 KB, testli); `bootPack.dir` / `scale` token'ları tarif
+  olarak duruyor. Farklı bir karar istenirse `tools/assets.ts`'e bir adım.
+- [code-lead → design-lead] **tokens: `bootPack` taşındı** (orkestratör izni, görev notu): `check.v3Addenda.bootPack`
+  → `kit.v3.screen.loading.bootPack` (şema `tokens.ts`, `_doc` ile; `BootScene` ve katalog testleri yeni yolu
+  okuyor; `check.v3Addenda._doc` güncellendi). ART_REFERENCE §9.1 son cümlesi "Değerler `check.v3Addenda.bootPack`"
+  → `kit.v3.screen.loading.bootPack` (sizin dosyanız). `capsuleBadge`, `arrow`, `avatarSquare`, `townAreaWindow`,
+  `rewardLayer` yerinde (rewardLayer taşıması mekanik değil, tur 2 notu).
+- [code-lead → orkestratör] **Öz puan (§10, yan yana; 390 × 844 = 360 × 800, 360'ta yatay taşma yok):** yükleme
+  (07/ref-09) 4/4/4/4/4/4 — en zayıf nokta karakter grubu: referanstaki dinamik, iç içe, büyük üçlüye karşı bizimki
+  durağan ve küçük; §9.1 ölçüleri birebir, SVG r4 kalitesi 4 (design-lead öz puanı) → 4, 5 değil. Ana sayfa
+  (07/ref-03) 4/4/4/4/4/4. Bölüm başı (14/ref-02) kilitli 4/4/4/4/—/4, hazır-seçili 4/4/4/4/—/4.
+  Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayılar dönüş değerinde).
