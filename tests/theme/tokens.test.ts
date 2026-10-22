@@ -4,7 +4,17 @@ import { describe, expect, it } from 'vitest';
 import rawTokens from '../../src/theme/tokens.json' with { type: 'json' };
 import { COLOR_CODES } from '../../src/core/types.ts';
 import type { ColorCode } from '../../src/core/types.ts';
-import { PENDING_TOKEN_KEYS, RETIRED_TOKEN_KEYS, TOKENS, parseTokens } from '../../src/theme/tokens.ts';
+import {
+  CHECK_TYPED_GROUPS,
+  PENDING_TOKEN_KEYS,
+  RETIRED_TOKEN_KEYS,
+  SVG_TONES_V3,
+  TOKENS,
+  V3_ADDENDA,
+  parseSvgTonesV3,
+  parseTokens,
+  parseV3Addenda,
+} from '../../src/theme/tokens.ts';
 import {
   blockPalette,
   css,
@@ -160,12 +170,23 @@ describe('tokens v2 schema (TECH 2R.7; ART 3A, 7.1, 14; UX 3, 5.8, 5.9, 6.1, 13.
     expect('_doc' in TOKENS.blockV2 || '_docStud' in TOKENS.blockV2).toBe(false);
   });
 
-  it('TECH 2R.7 every key of tokens.json (except _doc*, meta.units and check.*) reaches the runtime tokens', () => {
+  it('TECH 2R.7 every key of tokens.json (except _doc*, meta.units and the test-only check.* tables) reaches the runtime tokens; check.v3Addenda / check.svgTonesV3 reach V3_ADDENDA / SVG_TONES_V3', () => {
     const missing: string[] = [];
     const walk = (raw: unknown, typed: unknown, path: string): void => {
       if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
       for (const [k, v] of Object.entries(raw)) {
-        if (k.startsWith('_doc') || k === 'check' || path + k === 'meta.units') continue;
+        if (k.startsWith('_doc') || path + k === 'meta.units') continue;
+        if (path + k === 'check') {
+          // the two schema-typed check.* subgroups (the PENDING path of ART_REFERENCE v1.1 / SVG v3); the other
+          // check.* tables (blockTop, plan, v2 …) are read by this file only
+          const c = v as Record<string, unknown>;
+          for (const g of CHECK_TYPED_GROUPS) {
+            const typed = g === 'v3Addenda' ? V3_ADDENDA : SVG_TONES_V3;
+            if (c[g] === undefined) missing.push(`check.${g}`);
+            else walk(c[g], typed, `check.${g}.`);
+          }
+          continue;
+        }
         if (PENDING_TOKEN_KEYS.includes(path + k) || RETIRED_TOKEN_KEYS.includes(path + k)) continue;
         const t = (typed as Record<string, unknown> | undefined)?.[k];
         if (t === undefined) missing.push(path + k);
@@ -211,6 +232,39 @@ describe('tokens v2 schema (TECH 2R.7; ART 3A, 7.1, 14; UX 3, 5.8, 5.9, 6.1, 13.
     const c = clone();
     delete ((c.layout as Record<string, unknown>).home as Record<string, unknown>).playButtonW;
     expect(() => parseTokens(c)).toThrow(/layout\.home\.playButtonW/);
+  });
+
+  it('TECH 2R.7 check.v3Addenda and check.svgTonesV3 are schema-validated at module load (PENDING path); TOKENS carries no check.*', () => {
+    expect([...CHECK_TYPED_GROUPS]).toEqual(['v3Addenda', 'svgTonesV3']);
+    expect('check' in TOKENS).toBe(false);
+    const raw = rawTokens as unknown as { check: Record<string, unknown> };
+    for (const g of CHECK_TYPED_GROUPS) expect(raw.check[g], g).toBeDefined();
+    // addenda: a missing value is a boot error that names the path
+    const a = structuredClone(raw.check.v3Addenda) as Record<string, Record<string, unknown>>;
+    delete (a.bootPack as Record<string, unknown>).maxKb;
+    expect(() => parseV3Addenda(a)).toThrow(/bootPack\.maxKb/);
+    expect(Object.isFrozen(V3_ADDENDA.bootPack.ids)).toBe(true);
+    // tones: every group of the table (minus _doc) is typed as a frozen record of #RRGGBB
+    const groups = Object.keys(raw.check.svgTonesV3 as object).filter((k) => !k.startsWith('_doc'));
+    expect([...Object.keys(SVG_TONES_V3)].sort()).toEqual([...groups].sort());
+    expect(groups.length).toBeGreaterThanOrEqual(10);
+    let tones = 0;
+    for (const group of Object.values(SVG_TONES_V3)) {
+      expect(Object.isFrozen(group)).toBe(true);
+      for (const hex of Object.values(group)) {
+        expect(hex).toMatch(/^#[0-9A-F]{6}$/i);
+        tones++;
+      }
+    }
+    expect(tones).toBeGreaterThanOrEqual(200);
+    // a malformed tone or a non-record group is a boot error that names the path
+    const t = structuredClone(raw.check.svgTonesV3) as Record<string, Record<string, unknown>>;
+    (t.tuna as Record<string, unknown>).skinHi = 'red';
+    expect(() => parseSvgTonesV3(t)).toThrow(/tuna\.skinHi/);
+    const u = structuredClone(raw.check.svgTonesV3) as Record<string, unknown>;
+    u.block = 'not a group';
+    expect(() => parseSvgTonesV3(u)).toThrow(/block/);
+    expect(() => parseSvgTonesV3(undefined)).toThrow(/check\.svgTonesV3/);
   });
 
   it('TECH 2R.1 layout.adaptive.cellMaxPx is optional: absent → the cell stays 120, present → typed', () => {

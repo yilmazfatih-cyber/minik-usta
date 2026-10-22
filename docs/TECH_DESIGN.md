@@ -3595,7 +3595,14 @@ bloğunun üstüne, sembolün altına) pişirilir; ıslak sayacı ayrı görünt
   doğrular; eksik anahtar geliştirmede açılış hatasıdır. Zod şeması yalnızca tokens'ta **var olan** yolları ister
   (`color.chapter.chN.skyTop`, `drag.fingerOffsetCells`, `layout.grid.*`, `layout.board.*`, `layout.top.*`,
   `layout.bottom.*`, `audio.sfx.*`, `audio.seq.*` …; `_doc` anahtarları yok sayılır). `check.*` grubu çalışma anı şemasına
-  girmez; yalnızca `tests/theme/tokens.test.ts` hazır renk ↔ formül (±1) tutarlılığını denetler.
+  girmez (`TOKENS` taşımaz); yalnızca `tests/theme/tokens.test.ts` hazır renk ↔ formül (±1) tutarlılığını denetler.
+  **İstisna — PENDING yolu (v3 stabilizasyon, 2026-10-22; `CHECK_TYPED_GROUPS`):** `check.v3Addenda` (`V3_ADDENDA`,
+  ART_REFERENCE v1.1 ekleri) ve `check.svgTonesV3` (`SVG_TONES_V3`, grup → ton → `#RRGGBB`, `_doc` ayıklanır) kendi
+  zod şemalarıyla modül yüklenirken doğrulanır; bozuk değer yolunu adlandıran açılış hatasıdır. tokens.test.ts "her
+  anahtar çalışma zamanına ulaşır" testi bu iki alt grubu anahtar anahtar `V3_ADDENDA` / `SVG_TONES_V3` ile karşılaştırır;
+  `tests/assets/svgTonesV3.test.ts` tablodaki her tonun bir `public/art` SVG'sinde geçtiğini ve `paletteOf`'un kabul
+  ettiğini sabitler. design-lead değerleri `kit.v3.<grup>` hedeflerine taşıdığında yalnız `addendaRaw` / `svgTonesRaw`
+  yolu değişir.
 - WebGL bağlam kaybı: Phaser 4 kaynakları kendisi yeniden kurar, yalnızca dinamik (GPU'da çizilmiş) dokuları kullanıcıya
   bırakır (`Phaser.Renderer.Events.RESTORE_WEBGL`). Atlas ve bölüm sayfaları kaynak tuvali olan `CanvasTexture`
   olduğundan tuvaller bellekte tutulur ve bu olayda savunma amaçlı `tex.refresh()` çağrılır.

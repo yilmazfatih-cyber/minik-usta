@@ -1692,3 +1692,36 @@ puanları aşağıda (§10; her boyut ≥ 4 hedefi). Kapılar: `npm run check`, 
 - [design-lead → orkestratör] R2-13 madde 5 sayacı değişmez (ekran turu 2 code-lead düzeltmelerinden sonra). ÖNERİ
   (bilgi): ART §16.2 "karakterde kontur yok" kuralı gözlük, kemer gibi **nesnelerde** tonun koyusu + spekülar ile
   uygulanır (Dede r4); D-083/§16.2 eki olarak kaydedilebilir.
+
+## v3 stabilizasyon (code-lead, 2026-10-22; görev: yarım v3 ağacını yeşile çek, SVG v3 katalog, tokens şeması)
+
+- [code-lead → orkestratör] **Görev notundaki "yarım kalmış v3 kodu" bayattı:** `a9e151b` (snapshot 4) üstünde çalışma
+  ağacı temizdi; `WinScreen.ts` `inset` yerel bir sabit (tip hatası yok), `tests/theme/layout` / `boardLayout` /
+  `services-theme.review` / K-40 testleri yeşil. Tur başında kapılar: typecheck (3 tsconfig), lint, format:check, vitest
+  107 dosya / 2088 test, test:rules (76 kimlik), `npm run assets` 41 SVG → 42 ok (çıkış 0, manifest değişmedi),
+  `assets:check`, build (first load 605,9 / 620 KB), `levels:check` (10/10 solved) — hepsi yeşil. Silinen ya da
+  "güvenli yola alınan" v3 bileşeni yok; görsel kod bu turda değişmedi.
+- [code-lead → design-lead] **SVG v3 katalog satırları** (`brick_fly_o/i2/l3/1` viewBox 0 0 200 200, raster 200, P0,
+  atlas dışı; `icon_shutter` + `icon_check` `ICON_IDS` → atlas 23 ikon 512 × 768) 2026-10-21 notuyla kapalıydı; bu turda
+  yalnız doğrulandı (`tests/assets/catalog`, `svgV3`; `npm run assets` çıkış 0).
+- [code-lead → design-lead] **tokens el sıkışması — `check.svgTonesV3` artık şemada (TECH 2R.7 PENDING yolu):**
+  `tokens.ts` `SvgTonesV3` (grup → ton → `#RRGGBB`; `_doc` ayıklanır) → `SVG_TONES_V3`; bozuk ton yolunu adlandıran
+  açılış hatası (`parseSvgTonesV3`, ör. `tuna.skinHi`). `check.v3Addenda` zaten `V3_ADDENDA` ile tipliydi.
+  `CHECK_TYPED_GROUPS = ['v3Addenda', 'svgTonesV3']`; tokens.test.ts "her anahtar çalışma zamanına ulaşır" testi artık
+  bu iki alt grubu anahtar anahtar `V3_ADDENDA` / `SVG_TONES_V3` ile karşılaştırır (`check.*`'ı toptan atlamıyor);
+  `TOKENS` yine `check.*` taşımaz. Yeni `tests/assets/svgTonesV3.test.ts`: tablodaki 250 tonun hepsi bir `public/art`
+  SVG'sinde geçiyor (sizin "yalnız dosyada geçen tonlar" kuralınız) ve `paletteOf` hepsini kabul ediyor. Tabloyu
+  yeniden üretirken SVG'de artık geçmeyen bir ton kalırsa bu test `grup.ton=#hex` ile söyler. TECH §2R.7 paragrafı
+  güncellendi.
+- [code-lead → design-lead] **`kit.v3` hedeflerine taşıma (tokens.json sizin; orkestratör izin verdi ama mekanik
+  olmayanı size bırakıyorum):** `bootPack` → `kit.v3.screen.loading.bootPack` mekanik (çakışma yok; kodda `addendaRaw`
+  tek satır). `rewardLayer` → `kit.v3.screen.reward` mekanik **değil**: `itemPx` 200 (v1.1) ↔ 240 (mevcut
+  `reward.itemPx`); `tapTextY` / `tapTextPx` ↔ `tapY` / `tapFontPx` ad farkı. `RewardLayer` bugün v1.1 değerini (200)
+  uygular; taşırken 240'ı düşürüp adları birleştirmenizi öneririm, karar sizin. `capsuleBadge`, `arrow`,
+  `avatarSquare`, `townAreaWindow` tüketicileri Faz 4; şema hazır.
+- [code-lead → orkestratör] Ekran seti bu ağaçtan yeniden çekildi: `artifacts/screens/v3/<ekran>-<profil>.png`
+  (`npm run screens -- --flat artifacts/screens/v3`; 390 × 844 20 senaryo hatasız, konsol hatası yok). Referansla yan
+  yana öz puan (§10, 390 × 844; görsel kod değişmediği için v3r2 ile aynı): yükleme (07/ref-09) 4/4/4/4/4/4, ana sayfa
+  (07/ref-03) 4/4/4/4/4/4, bölüm başı (07/ref-02) 4/4/4/4/—/4, ödül katmanı (07/ref-06) 4/4/4/4/—/4, oyun HUD +
+  öğretici (07/ref-01) 4/4/4/4/4/4, kazanma 4/4/4/4/4/4. Açık: DS3-09 (HUD kapsül ikonu "içeride" okunuyor; token
+  kararı design-lead'in).

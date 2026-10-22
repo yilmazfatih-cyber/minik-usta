@@ -1884,3 +1884,53 @@ export function parseV3Addenda(raw: unknown): V3Addenda {
 
 /** The typed ART_REFERENCE v1.1 addenda (see `V3Addenda`). */
 export const V3_ADDENDA: V3Addenda = parseV3Addenda(addendaRaw);
+
+// ---------------------------------------------------------------------------------------------------------------
+// SVG v3 tone table (ART_REFERENCE §6.2, ART §17; `check.svgTonesV3`)
+
+/**
+ * The derived tones the `public/art` SVGs use beyond the base palette (design-lead 2026-10-20: hi = c·0,65 +
+ * white·0,35, lo = ×0,78, deep = ×0,62, edge = ×0,45, plus fixed reference colours), grouped by subject (`block`,
+ * `tuna`, `scene`, …; the groups are design-lead's, hence a record). The game never reads them; `services/assetCatalog`
+ * `paletteOf` widens the SVG palette check with every colour of the tokens tree, so this schema is the gate that keeps
+ * the table `#RRGGBB`-only — a malformed tone fails at module load with its path instead of silently shrinking the
+ * palette. tests/assets/svgTonesV3.test.ts pins design-lead's invariant that every listed tone occurs in an SVG.
+ */
+const SvgTonesV3 = z.record(str, z.record(str, hex));
+export type SvgTonesV3 = z.output<typeof SvgTonesV3>;
+
+/**
+ * The `check.*` subgroups the schema validates at module load (`V3_ADDENDA`, `SVG_TONES_V3`) — the PENDING path of
+ * TECH §2R.7 for values design-lead parked under `check.*` until their `kit.v3.<group>` targets exist. Every other
+ * `check.*` table is read by tests/theme/tokens.test.ts only; `TOKENS` itself never carries `check.*`.
+ */
+export const CHECK_TYPED_GROUPS = ['v3Addenda', 'svgTonesV3'] as const;
+
+/** Drops `_doc*` keys (two levels), which a record schema — unlike `z.object` — would otherwise type as values. */
+function withoutDocs(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw;
+  const isGroup = (v: unknown): v is object => v !== null && typeof v === 'object' && !Array.isArray(v);
+  return Object.fromEntries(
+    Object.entries(raw)
+      .filter(([k]) => !k.startsWith('_doc'))
+      .map(([k, v]) => [
+        k,
+        isGroup(v) ? Object.fromEntries(Object.entries(v).filter(([kk]) => !kk.startsWith('_doc'))) : v,
+      ]),
+  );
+}
+
+export function parseSvgTonesV3(raw: unknown): SvgTonesV3 {
+  const result = SvgTonesV3.safeParse(withoutDocs(raw));
+  if (!result.success) {
+    throw new Error(
+      `src/theme/tokens.json check.svgTonesV3 is invalid (ART_REFERENCE §6.2):\n${z.prettifyError(result.error)}`,
+    );
+  }
+  return deepFreeze(result.data);
+}
+
+const svgTonesRaw = (rawTokens as unknown as { check?: { svgTonesV3?: unknown } }).check?.svgTonesV3;
+
+/** The typed SVG v3 tone table: group → tone name → `#RRGGBB` (see `SvgTonesV3`). */
+export const SVG_TONES_V3: SvgTonesV3 = parseSvgTonesV3(svgTonesRaw);
