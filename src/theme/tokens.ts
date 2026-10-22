@@ -1780,3 +1780,107 @@ export function parseTokens(raw: unknown): Tokens {
 
 /** The validated design tokens. Throws at module load when tokens.json misses a required key. */
 export const TOKENS: Tokens = parseTokens(rawTokens);
+
+/**
+ * ART_REFERENCE v1.1 addenda (`check.v3Addenda`, design-lead 2026-10-21: capsule badge §3.4, direction arrow §3.14,
+ * boot pack §9.1, avatar square §9.2, town area window §9.10, reward layer §9.6). design-lead parked them under
+ * `check.*` so the TECH 2R.7 "every kit.v3 key is typed" test stayed green until the components existed; the
+ * components exist now (visual v3 round 2), so the group is typed here with its own schema and read from
+ * `check.v3Addenda`. When design-lead moves the values to their `kit.v3.<group>` targets (`_doc`), only `addendaRaw`
+ * below changes. The main `TOKENS` object still carries no `check.*` key.
+ */
+const V3Addenda = z.object({
+  capsuleBadge: nums(['diameterPx', 'fontPx', 'offsetXPx', 'offsetYPx', 'pulseScale', 'pulseMs']),
+  arrow: z.object({
+    ...shapeOf(
+      [
+        'w',
+        'h',
+        'shaftW',
+        'headH',
+        'strokePx',
+        'glossAlpha',
+        'glossPx',
+        'shadowYPx',
+        'shadowAlpha',
+        'gapPx',
+        'bobPx',
+        'bobMs',
+        'maxCount',
+      ] as const,
+      num,
+    ),
+    ...shapeOf(['top', 'mid', 'bottom', 'stroke'] as const, hex),
+  }),
+  bootPack: z.object({
+    ...shapeOf(
+      ['scale', 'maxKb', 'emblemPx', 'emblemOffsetX', 'emblemOffsetY', 'titleLineH', 'titleBlockH'] as const,
+      num,
+    ),
+    dir: str,
+    ids: z.array(str),
+  }),
+  avatarSquare: z.object({
+    ...shapeOf(['sizePx', 'radiusPx', 'strokePx', 'innerLinePx'] as const, num),
+    ...shapeOf(['faceTop', 'faceBottom', 'stroke', 'innerLine'] as const, hex),
+    mvpVisible: z.boolean(),
+  }),
+  townAreaWindow: z.object({
+    ...shapeOf(
+      [
+        'panelH',
+        'progressCardW',
+        'progressCardH',
+        'progressBarW',
+        'progressBarH',
+        'chestPx',
+        'dividerAlpha',
+        'rowW',
+        'rowH',
+        'rowRadiusPx',
+        'rowIconPx',
+        'rowFontPx',
+        'buildButtonW',
+        'buildButtonH',
+        'doneCheckPx',
+        'doneRowAlpha',
+        'cardStrokePx',
+      ] as const,
+      num,
+    ),
+    ...shapeOf(['cardFill', 'cardStroke', 'divider', 'shortageText'] as const, hex),
+  }),
+  rewardLayer: z.object({
+    ...shapeOf(
+      [
+        'glowAlpha',
+        'glowRadiusRatio',
+        'itemPx',
+        'twoItemOffsetPx',
+        'overlayAlpha',
+        'tapTextY',
+        'tapTextPx',
+      ] as const,
+      num,
+    ),
+    ...shapeOf(['glow', 'overlay'] as const, hex),
+  }),
+});
+
+export type V3Addenda = z.output<typeof V3Addenda>;
+
+/** Where the addenda live in tokens.json today (`check.v3Addenda`; the `_doc` there names the `kit.v3.*` targets). */
+const addendaRaw = (rawTokens as unknown as { check?: { v3Addenda?: unknown } }).check?.v3Addenda;
+
+export function parseV3Addenda(raw: unknown): V3Addenda {
+  const result = V3Addenda.safeParse(raw);
+  if (!result.success) {
+    throw new Error(
+      `src/theme/tokens.json check.v3Addenda is invalid (ART_REFERENCE v1.1):\n${z.prettifyError(result.error)}`,
+    );
+  }
+  return deepFreeze(result.data);
+}
+
+/** The typed ART_REFERENCE v1.1 addenda (see `V3Addenda`). */
+export const V3_ADDENDA: V3Addenda = parseV3Addenda(addendaRaw);

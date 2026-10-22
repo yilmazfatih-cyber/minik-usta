@@ -21,7 +21,7 @@ import { t } from '../services/i18n.ts';
 import type { Layout } from '../theme/layout.ts';
 import { TOKENS } from '../theme/tokens.ts';
 import { FX } from '../theme/draw/fx.ts';
-import { KIT, uploadCanvasArt } from '../theme/textures.ts';
+import { KIT, KIT_WIN_STAR_PX, uploadCanvasArt } from '../theme/textures.ts';
 import { CARD_V3_RADIUS, drawRayFan } from '../theme/draw/kitV3.ts';
 import { roundRect } from '../theme/draw/blockV2.ts';
 import type { OptionButton } from './OptionButton.ts';
@@ -61,8 +61,8 @@ const BUTTON_FROM = 0.9;
 const PRIMARY_LABEL_PX = 80;
 /** Row text size (64 px capsules, UX §6.1). */
 const ROW_TEXT_PX = 36;
-/** Big star of the card (ART §15 "ortadaki büyük yıldız"; #96 burst is Faz 5). */
-const CARD_STAR_PX = 168;
+/** Big star of the card (ART §15; DS3-06: the baked §2.4 gold star, three tones + #B8430A contour + lip, not the 128 px icon scaled). */
+const CARD_STAR_PX = KIT_WIN_STAR_PX;
 /** Sunburst display size over the plaza (its 512 px frame is soft and scales up). */
 const SUNBURST_PX = 1500;
 /**
@@ -303,7 +303,10 @@ export class WinScreen {
     });
     parts.push(colour.image);
     if (star) {
-      const s = this.icons.add(scene, r.w / 2 - 70, r.h / 2 - 90, 'icon_star', CARD_STAR_PX);
+      const sr = kitRef(scene.game, KIT.winStar);
+      const s = scene.add
+        .image(r.w / 2 - 70, r.h / 2 - 90, sr.key, sr.frame)
+        .setOrigin(0.5, CARD_STAR_PX / 2 / sr.h);
       parts.push(s);
     }
     return scene.add.container(r.x + r.w / 2, r.y + r.h / 2, parts);

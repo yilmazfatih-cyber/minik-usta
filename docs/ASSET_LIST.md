@@ -475,6 +475,26 @@ depo dışı (scratch) kontak sayfasında yapıldı.
 | `town_ch1_tree` | 3 | design-lead ajanı | elle SVG v3 (yardımcı şablon betiği ile üretildi, Chromium önizleme; ücret 0) | web MVP final | 2026-10-20 | yok | mağaza öncesi (yapılmadı) | `public/art/town/town_ch1_tree.svg` (5.5 KB) | proje sahibine ait |
 | `town_ch1_treehouse` | 3 | design-lead ajanı | elle SVG v3 (yardımcı şablon betiği ile üretildi, Chromium önizleme; ücret 0) | web MVP final | 2026-10-20 | yok | mağaza öncesi (yapılmadı) | `public/art/town/town_ch1_treehouse.svg` (11.5 KB) | proje sahibine ait |
 
+### 15.2 SVG v3 r4 kayıtları (2026-10-22)
+
+r4 paketi (§16.6 "Planlanan r4", REVIEW_LOG DS3-03; ART_REFERENCE §6–§8, R2-13): **1 yeni SVG + 6 yeniden çizim**; toplam
+41 SVG, 187.6 KB. Yazım yolu §15.1 ile aynı (design-lead şablon betiği: gradyan / kenar ışığı / göz tarifleri tek yerden,
+Usta Dede başı `_dede_parts` ortak parçası; kurulu Chromium'da kullanım boyutunda önizleme). Referans görsellerden iz
+sürme, kırpma, yeniden boyama ya da piksel aktarımı **yapılmadı**; yeni tonlar `check.svgTonesV3`'te (dede: `trousers*`
+= `color.character.tuna.patch` kum tonları, `boot*` = `dede.belt`, `frame*` = `ui.hazardBlack`; icon: `slate*` =
+`color.character.gribeton.brows`). Yan yana kalite kıyası yalnız scratch'te yapıldı (depoya girmez). Öteki 33 SVG
+yalnız iç `id` sayacı yüzünden yeniden yazıldı (görünüm aynı; `npm run assets` sha1 ile yeniden rasterledi).
+
+| Varlık | Sürüm | Yazar (insan / design-lead ajanı) | Araç ve plan (ücret) | Rol (eskiz / web MVP final / mağaza final) | Tarih | İnsan rötuşu (var/yok, kim) | Ters görsel arama (araç, tarih, sonuç) | Kaynak dosya | Lisans / devir — r4 değişikliği |
+| ------ | ----- | --------------------------------- | -------------------- | ------------------------------------------ | ----- | --------------------------- | -------------------------------------- | ------------ | ------------------------------- |
+| `chr_dede_stand` | 1 | design-lead ajanı | elle SVG v3 r4 (şablon betiği, Chromium önizleme; ücret 0) | web MVP final (katalog satırı code-lead'de, §16.3 7b) | 2026-10-22 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_dede_stand.svg` (13.7 KB) | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 — yeni: tam boy Usta Dede 300 × 480, ≈ 4,2 kafatası boyu (uzun-ince, ART §11.2), kasket + gözlük + mala bıyık + 4 cepli zeytin ceket (dikiş, düğme spekülarları) + kemer metre kutusu + kum pantolon + kahve bot; poz (1) metreyle işaret (büstle aynı el hareketi); kenar ışığı, AO, 3 elips temas gölgesi |
+| `chr_dede_bust` | 4 | design-lead ajanı | elle SVG v3 r4 (şablon betiği, Chromium önizleme; ücret 0) | web MVP final | 2026-10-22 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_dede_bust.svg` (9.6 KB) | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 — gözlük çerçevesi düz siyah halka yerine plastik (radyal 3 ton #747474 / #2B2B2B / #1B1B1B + beyaz α 0,55 spekülar yay); baş parçası `_dede_parts` ile `chr_dede_stand` ile ortak; portre kırpımı (126, 142) r 84 değişmedi |
+| `chr_tuna_cheer` | 4 | design-lead ajanı | elle SVG v3 r4 (şablon betiği, Chromium önizleme; ücret 0) | web MVP final | 2026-10-22 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_tuna_cheer.svg` (13.1 KB) | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 — eldivenler iş eldiveni: 4 parmak (17 px, ±12° yelpaze, orta en uzun) + başparmak 48° + manşet, parmak arası AO çizgileri, eklem parlaması; v3 "yıldız patlaması" (uzun ince parmaklar 42° açık) kalktı. Baş parçası ve D-087 oranları aynen |
+| `chr_kepce_bust` | 4 | design-lead ajanı | elle SVG v3 r4 (şablon betiği, Chromium önizleme; ücret 0) | web MVP final | 2026-10-22 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_kepce_bust.svg` (8.8 KB) | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 — kürk: sırt şeridi 19 yumru + yanak tutamı 6 + kuyruk püskülü 4 daire + karın 14 (≈ 43 yumru, §6.2 madde 7); uzak kulak başın arkasında; dachshund kaş lekeleri (ağız çevresi rengi); gövdede 3 kürk kıvrım çizgisi |
+| `chr_gribeton_bust` | 4 | design-lead ajanı | elle SVG v3 r4 (şablon betiği, Chromium önizleme; ücret 0) | web MVP final | 2026-10-22 | yok | mağaza öncesi (yapılmadı) | `public/art/chr/chr_gribeton_bust.svg` (8.5 KB) | proje sahibine ait; D-084/P-15: mağaza öncesi insan sanatçı kararı Faz 5 — kumaş: α 0,14 dikey ince çizgi (10 px), yakalar koyu gradyan (#8C939C → #666C75 → #4E535A) + dikiş, beyaz mendil, düğme spekülarları, omuz çizgileri; yüz: elmacık gölgesi α 0,18, burun parlaması, kulak önü gölgesi; saç bloğunda uç kalıp çizgileri + üst açık bant + 9 gözenek; klasör üst kenar bandı |
+| `icon_kettlebell` | 4 | design-lead ajanı | elle SVG v3 r4 (şablon betiği, Chromium önizleme; ücret 0) | web MVP final | 2026-10-22 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_kettlebell.svg` (1.9 KB) | proje sahibine ait — v3 dosyasında top gradyanı tanımsız kimliğe (`gp22`) bakıyordu → top siyah disk çıkıyordu; sap halkası yükseltildi (açıklık görünür), arduvaz dökme demir tonları (`slate*`), üst disk + perçin, bevel α 0,34 |
+| `icon_nextfloor` | 4 | design-lead ajanı | elle SVG v3 r4 (şablon betiği, Chromium önizleme; ücret 0) | web MVP final | 2026-10-22 | yok | mağaza öncesi (yapılmadı) | `public/art/icon/icon_nextfloor.svg` (2.6 KB) | proje sahibine ait — krem plaka üstünde 3B yeşil ok (kontur 4 px #1E8A10 + dudak 5 + bevel 7) + kat çubuğu 56 × 12; v3 düz mürekkep glifi (UI sembolü gibi okunuyordu) kalktı |
+
 ## 16. Faz 2R görsel üretim listesi v2 (R2-07, R2-08 güncellemesi, R2-12)
 
 Sürüm: Faz 2R (2026-10-07), çapraz inceleme kapanışı. Görsel dil ART §1, §3A, §7, §9, §11, §14, §15. Bu bölüm §0.1
@@ -589,6 +609,7 @@ Raster = oyunun yüklediği doku boyutu; GPU = RGBA bellek. "Faz" sütunu: **2R*
 | 5b | `chr/chr_tuna_stand` (2026-10-20 teslim; DS-04) | 0 0 300 480 | 300×480 / 0,58 MB | Ana sayfa karakter köşesi (UX §3; başparmak yukarı, tam boy) | #5 ile aynı baş parçası (0,62), kafatası ölçüsüyle ≥ 3,6 baş (D-087); `optional` bayrağı kalkar (code-lead) | ART §11.7 Tuna | 2R |
 | 6 | `chr/chr_tuna_cheer` | 0 0 300 400 | 300×400 / 0,48 MB | Kazanma (UX §6.1) | #5 ile aynı karakter (yan yana 2 kişiden 2'si aynı der); tam boy ≥ 3,6 baş (kafatası ölçüsüyle, D-087) | Tuna SVG + eldivenler yukarıda | 2R |
 | 7 | `chr/chr_dede_bust` | 0 0 256 320 | 256×320 / 0,33 MB + portre 128×128 (Canvas2D daire kırpımı, bir kez; ART §14.8) | Öğretici balonu, ara sahne | Kasket #C65A3A, ceket #7A8B4A birebir; katlanır metre görünür; Ø 128 dairede yüz + kasket sığar **Portre kırpım dairesi: viewBox merkezi (126, 142), r 84** → 128 px (yüz, kasket, bıyık ve metrenin ucu içeride; 72 px'te de okunur, `contact_characters.png`) | ART §11.7 Usta Dede | 2R |
+| 7b | `chr/chr_dede_stand` (2026-10-22 teslim; DS3-03) | 0 0 300 480 | 300×480 / 0,58 MB | Ana sayfa karakter grubu (ART_REFERENCE §9.2: Tuna önde 1,0, Kepçe solda, Usta Dede sağ arkada 0,9; büstün çimende düz kesik durması DS3-03 kalıcı çözüm); yükleme sahnesi isteğe bağlı (boot paketi büstle kalır, ≤ 150 KB) | #7 ile aynı baş parçası (0,64; `_dede_parts`), kasket #C65A3A ve ceket #7A8B4A birebir; ≈ 4,2 kafatası boyu (Tuna 3,7 — "Tuna'dan uzun ve ince", ART §11.2); katlanır metre görünür; katalog satırı code-lead (P2, imza `dede: cap, jacket`) | ART §11.7 Usta Dede | 2R |
 | 8 | `chr/chr_kepce_bust` | 0 0 320 220 | 300×206 / 0,25 MB | Oyun köşesi, ana sayfa | Kask #FF9A1F, tasma #7FE0C4; sosis köpek oranı (gövde ≥ 2,5 × omuz yüksekliği) | ART §11.7 Kepçe | 2R |
 | 9 | `chr/chr_gribeton_bust` | 0 0 256 320 | 256×320 / 0,33 MB | Ara sahne, rakip satırları | Dikdörtgen siluet, beton blok saç; takım #8C939C; kötü adam ifadesi yok | ART §11.7 Gribeton | 2R |
 | 10 | `logo/logo_emblem` | 0 0 360 360 | 360×360 / 0,52 MB | Açılış logosu (UX §1) | Harf yok (yazı `app.title` kodla, Baloo 2); 48 px'te siluet okunur; küp yığını yok; studlu tek tuğla + vinç kancası + duvar başlığı motifi | `logo_wordmark` yer tutucusu | 2R |
@@ -728,3 +749,34 @@ düzen SVG dışı.
 artırılabilir); Kepçe kürk yumruları yalnız karın ve kulakta (§6.2 madde 7 "40–60 yumru" tam değil); karakterlerde
 malzeme dikiş çizgileri yok; `bg_win_plaza` alt üçte biri hâlâ sade (UI örtüyor). İkonlarda `icon_nav_team` iki
 kask örtüşmesi 40 px'te tek biçime yaklaşır (yıldız ayırt eder).
+
+**Planlanan r4 (2026-10-21; v3 ekran incelemesi 1, REVIEW_LOG DS3-01…DS3-10):** (a) `chr/chr_dede_stand` — tam boy
+Usta Dede 300 × 480 (ana sayfa karakter grubu; büstün çimende düz kesik durması DS3-03); §16.3 satırı ("7b") code-lead
+katalog satırıyla aynı turda gelir (katalog dışı SVG kuralı yukarıda); o güne kadar büst ön plan çalısının (bg katman 6)
+arkasına alınır. (b) **Boot paketi** (ART_REFERENCE §9.1 v1.1): `chr_tuna_cheer`, `chr_dede_bust`, `chr_kepce_bust`,
+`logo_emblem`, `brick_fly_o/i2/l3/1` derleme zamanında PNG (kullanım boyutunun 0,75'i, toplam ≤ 150 KB,
+`public/art/boot/`); üretim code-lead `tools/assets.ts`, SVG'ler değişmez. (c) `chr_tuna_cheer` kazanma ve yükleme
+ekranında raster hazır olmadan iskelet yer tutucuyla çekildi (DS3-01); SVG sorunu değil, yakalama / yükleme sırası
+sorunu. (d) `brick_fly_*` yükleme ekranında kullanılmıyor (oyun blok dokuları uçuyor, DS3-07) — katalog satırı açılınca
+devreye girer.
+
+**r4 — teslim (2026-10-22, design-lead; §15.2):** (a) `chr/chr_dede_stand` **yeni** (300 × 480, 13.7 KB; §16.3 satır 7b, katalog
+satırı code-lead'de). (b) Yeniden çizim: `chr_dede_bust` (plastik gözlük çerçevesi), `chr_tuna_cheer` (iş eldiveni),
+`chr_kepce_bust` (≈ 43 kürk yumrusu, uzak kulak, kuyruk püskülü), `chr_gribeton_bust` (kumaş çizgisi, yaka, mendil, yüz
+derinliği), `icon_kettlebell` (tanımsız gradyan hatası + sap), `icon_nextfloor` (3B ok). (c) Boot paketi SVG'leri
+(`chr_tuna_cheer`, `chr_dede_bust`, `chr_kepce_bust`, `logo_emblem`, `brick_fly_*`) code-lead'in P0 grubunda; SVG'ler
+değişince rasterler `npm run assets` ile yenilendi. **Denetimler:** (1) design-lead betiği (`checkSvg` salt okunur çağrı;
+`chr_dede_stand` sentetik tanımla): 41 / 41 geçer, palet dışı renk 0, 1 ondalık, yasak öğe yok; karakterler 8,5–13,7 KB
+(sınır 20 KB), ikonlar ≤ 3,6 KB. (2) `npm run assets`: 41 SVG → 41 ok + 1 "unknown" (`chr_dede_stand`, katalog satırı
+bekler; araç bu yüzden çıkış 1), indirme 274,9 / 900 KB, doku 16,3 / 64 MB; `npm run assets:check` 1 uyarı (aynı dosya).
+(3) Görsel inceleme Chromium'da kullanım boyutunda: `artifacts/screens/art-review/v3-icons.png`, `v3-characters.png`
+(Dede tam boy eklendi; 1,0× gök, 0,6× çivit ve krem), `v3-scenes.png` (ana sayfa: Tuna önde solda, Kepçe, Dede sağ
+arkada 0,9; yükleme: Dede tam boy). Referansla yan yana kıyas (07/ref-09 üçlü, 14/ref-13 kral + köpek, 07/ref-03 dörtlü;
+14/ref-01 ve 07/ref-02 güçlendirici kareleri) yalnız scratch'te.
+
+**Öz puan r4 (ART_REFERENCE §10, yalnız SVG katkısı):** hacim/ışık 4, renk/kontrast 4, **karakter/sahne 4** (rim + AO +
+temas gölgesi + iki parlama her karakterde; malzeme: plastik kask/gözlük spekülarları, kumaş dikiş + ince çizgi, kürk
+yumruları; 5 için referansın yüzey zenginliği — alt yüzey ışığı, kumaş dokusu, derinlik alanı — vektörde elde edilemez;
+sahne vinyeti ve hava §7.1 ile ana sayfada var), **ikon/rozet 4** (kettlebell ve nextfloor 3 → 4; 5 için ikincil
+parlamalar). **Zayıf kalanlar:** Gribeton yüzü 4'ün alt sınırı (ifade seti §11.6 gelince kaş/göz kapağı varyantlarıyla
+derinleşir); Kepçe gövdesi düz kapsül (sırt kemeri eğrisi Faz 3 pozlarıyla); `bg_win_plaza` alt üçte biri sade (UI örtüyor).

@@ -1132,16 +1132,20 @@ tek yerde toplar. İndirme bütçesi (≤ 900 KB) iki yolda da tutar.
 2. **Raster:** Chromium sayfasında `<img src="…svg">` → `decode()` → Canvas2D `drawImage` ile ASSET §16.3 "Raster"
    boyutunda (arka planlar 0,5 ölçek, 540×960). Yapı (`town_ch1_treehouse`) için aynı sayfada ozalit hayalet dokusu ART
    §7.2 formülüyle üretilir. Kodlama `canvas.toBlob('image/webp', 0.80)`.
-3. **İkon atlası:** 19 ikon (16 + `icon_piggy`, `icon_kettlebell`, `icon_nextfloor`) × 128 px, raf paketleyici →
-   `icons_v2.webp` (512×640, 20 yuva) + Phaser JSON Hash.
-4. **Manifest:** `{ version, assets: { [key]: { file, w, h, bytes, srcSha1, group: 'P1' | 'P2' | 'P3', status } } }`.
+3. **İkon atlası:** 23 ikon (16 + `icon_piggy`, `icon_kettlebell`, `icon_nextfloor` + `icon_nav_home`, `icon_nav_album`
+   + SVG v3'ün `icon_shutter`, `icon_check`'i; 2026-10-21) × 128 px, raf paketleyici → `icons_v2.webp` (512×768, 24
+   yuva) + Phaser JSON Hash.
+4. **Manifest:** `{ version, assets: { [key]: { file, w, h, bytes, srcSha1, group: 'P0' | 'P1' | 'P2' | 'P3', status } } }`.
    Bir SVG denetimden geçmezse girdisi `status: 'rejected'` olur, oyun prosedürel yedeği kullanır ve araç çıkış 1 verir.
 5. **Bayatlık kapısı** (`npm test`, Chromium'suz): `tests/assets/manifest.test.ts` her SVG'nin sha1'ini manifestteki
    `srcSha1` ile karşılaştırır; uyuşmazlıkta "npm run assets çalıştır" iletisiyle kırmızıdır. Adım 1'in Chromium
    gerektirmeyen kısımları (yasak öğe düzenli ifadesi, boyut, viewBox, palet) aynı testte de koşar.
 
 **Çalışma anı** (`src/services/assets.ts` + `src/scenes/AssetLoaderScene.ts`). Yükleme dört gruptadır:
-- **P0** (açılış; değişmez): font ve giriş panelleri. FTUE kritik yolu değişmez; SVG görselleri FTUE'ye girmez.
+- **P0** (açılış): font ve giriş panelleri; 2026-10-21'den beri ayrıca yükleme ekranının dört uçuşan tuğlası
+  (`brick_fly_o/i2/l3/1`, 200 × 200, atlas dışı; ASSET §16.3 ek 2026-10-20). `BootScene` `loadGroup('P0')`'ı kendisi
+  ister ve **beklemez**: tuğlalar prosedürel v2 blok (aynı çıkıntı dizilimi ve renk) olarak başlar, raster gelince 200
+  ms çapraz solar. FTUE kritik yolu değişmez; P0 arka plan zincirinde (`ASSET_GROUPS` = P1 → P2 → P3) değildir.
 - **P1** (Bölüm 1 etkileşime açıldıktan sonra, arka planda): `icons_v2`, `chr_dede_bust` (yüklenince Ø 128 portre bir
   kez Canvas2D `arc` + `clip` ile pişirilir, CL-2R-26), `chr_tuna_bust`, `bg_level_site_edge`.
 - **P2** (P1 bitince): `bg_home_town`, `town_ch1_treehouse` (+ hayalet), `chr_kepce_bust`, `logo_emblem`.
@@ -1173,6 +1177,38 @@ Görsel sonradan gelirse 200 ms'lik çapraz solmayla değişir (UX §3 "Yükleni
   imza renkleri), manifest zod şeması ve `checkSvg` statik denetimleri. Ek iki satır: `ui_tutorial_glove` (ASSET §16.5,
   atlas dışı tek görsel, P1) ve isteğe bağlı `icon_nav_home` / `icon_nav_album`. Katalogda olmayan SVG "unknown"
   sayılır ve araç çıkış 1 verir.
+- **SVG v3 katalog satırları (2026-10-21; design-lead'in 2026-10-20 teslimi):** `BRICK_FLY_IDS` (4 × 200 × 200, grup
+  P0, kategori `icon`, 6 KB sınırı), `icon_shutter` / `icon_check` `ICON_IDS`'te (atlas 23 ikon → 512 × 768),
+  `chr_tuna_stand` `optional` bayrağı kalktı (ASSET §16.3 satır 5b; DS-04 tam kapandı). Prosedürel yedekler:
+  `theme/draw/kitIcons.ts` `shutter` (çelik kepenk kutusu, yarı açık lameller, yeşil yukarı ok) ve `check` (yeşil ✓);
+  `theme/textures.ts` `BRICK_FLY_FALLBACK` (tuğla kimliği → v2 `BlockSpec`: O4 R, D2 B, C3 Y, B1 G; `fallbackArt` kareye
+  sığdırır). Tüketiciler: `BootScene` halkası (4 SVG × 2 kopya, kapsayıcı içinde eğim; `ArtImage` yedek ↔ raster),
+  `LevelStartWindow` 3. yuva `icon_shutter`, seçili yuva ✓ `icon_check` 40 px. **Tek doku kuralı (2026-10-22 bulgusu):**
+  yüklenen dört tuğla `AssetService.bakeBrickAtlas` ile tek kanvas atlasına (`art:bricks_v2`, kimlik adlı 200 px
+  kareler) çizilir ve `texture('brick_fly_*')` o atlasın karesini verir; dört ayrı görsel kaynaklı doku ile sekiz
+  eğik kare aynı partide çizilince yazılım GPU'sunda (Phaser 4.2.1 + SwiftShader) |eğim| 30° yuvalarda karenin bir
+  üçgeni kayıyordu (deneyler: eğim 0 temiz, hepsi tek doku temiz, kanvas yedekleri temiz). Gerçek GPU'da
+  doğrulanamadı; eğik sprite kümelerini tek dokuda tutmak kuraldır (`tests/assets` "TECH 2R.6 P0 …"). Halka yuvaları:
+  başlığın sağındaki 20° yuvasında tek çıkıntılı tuğla (200 px kare "Land"a değiyordu), 2 × 2 tuğla 110° (sol alt),
+  sol üst L payı 0,9 → 0,8 (ekran kenarına dayanıyordu). `npm run assets` çıkış 0 (40 SVG → 41
+  ok, indirme 274,6 KB). Testler `tests/assets/svgV3.test.ts`, `catalog.test.ts` ("ASSET 16.3 ek 2026-10-20", "TECH
+  2R.6 P0 …").
+- **Boot paketi ve görsel v3 tur 2 (2026-10-22; ART_REFERENCE §9.1 v1.1, DS3-01):** yükleme ekranının görselleri
+  (`BOOT_PACK_IDS` = tokens `check.v3Addenda.bootPack.ids`: `chr_tuna_cheer`, `chr_dede_bust`, `chr_kepce_bust`,
+  `logo_emblem`, 4 × `brick_fly_*`) katalogda **P0** grubudur; `BootScene` grubu font beklemesiyle birlikte en çok
+  `BOOT_ART_WAIT_MS` (1200 ms) bekler, sonra sahnenin görsellerini kurar — karakterler, amblem ve tuğlalar ilk
+  karelerinden raster gösterir. Ucuz seçenek: ART_REFERENCE §9.1'in "derleme zamanı ikinci PNG seti, 0,75 ölçek,
+  `public/art/boot/`" yöntemi yerine depodaki rasterler kullanıldı — sekiz dosya toplam ≈ 60 KB (sınır 150 KB;
+  test "TECH 2R.6 load groups"), kullanım boyutunun zaten ≤ 0,75'inde (Tuna 300 × 400 raster → 405 × 540 ekran),
+  ikinci bir dosya seti ve indirme yok; tarayıcı önbelleği ikinci açılışta anında verir. `ArtImage` `waitArt`
+  seçeneği: raster beklenirken (`AssetService.expectsArt`) görsel gizli kalır, raster gelince belirir; prosedürel
+  iskelet yalnız raster gelemeyecekse (yük hatası, manifest'te yok) çizilir. `AssetService.loadGroup` bir grup
+  bitince (yüklendi / başarısız / manifest yok) o gruptaki **her dinlenen kimliğe** güncel referansını (raster ya da
+  yedek) duyurur. Manifest'in `group` alanı katalogla çelişirse `assets --check` / `npm test` bayat sayar (grup
+  taşınınca `npm run assets` şart). `__harness.status().artPending` (raster bekleyen canlı `ArtImage` kimlikleri) +
+  `iconsArt`; `tools/screens.ts` `waitArt` her karede bunlar boşalana kadar bekler (zaman aşımı not, kapı değil).
+  Harness `goHome` yükleyici sahneyi durdurmaz (P0 yarıdayken durdurmak kuyruğu kilitliyordu). ASSET §16.3 satır 7b
+  `chr_dede_stand` (300 × 480, P2, imza `dede` cap / jacket; yedek: büst kutunun altında) — DS3-03 kalıcı çözüm.
 - **Manifest** `{ version, generator, assets, atlases, unknown }`: ikonlar `assets[id].atlas = 'icons_v2'` taşır.
   Atlas girdisi `{ file, json, w, h, bytes, jsonBytes, group, frames }`, yapı hayaleti `town_ch1_treehouse_ghost`
   ayrı görseldir. Hayalet Chromium'da silüet + 4 px büyütülmüş halka + çapraz şerit deseniyle (16/12) üretilir.
@@ -1537,6 +1573,17 @@ kalır; yalnız `required` dalları silinir.
    hareketleri SwiftShader'ın 700 ms'lik tek karesine yığılır: kare başına "touch handlers" gerçek cihazdakinin ~40
    katı okunur — CPU-tarafı sürükleme sayıları bu sanal ortamda üst sınırdır (yorum aşağıda).
 6. **Kapı sonuçları (bu tur):** `npm run check` yeşil (vitest 102 / 2023, rules 76 kimlik); `npm run build` yeşil (ilk yük 588,4 / 620 KB); `npm run levels:check` yeşil (10 / 10, 0 warn); e2e 11 / 11 (38 dk); `screens` 90 kare, 0 hata, kapılar temiz, hücre 48,0 CSS px; `perf` (SwiftShader, CPU tarafı 4×) 7 PASS / 6 FAIL — sürükleme 59,1 fps ve p95 12,8 ms, ana sayfa 60 fps, girdi ≤ 1 kare, adım 12 en kötü 7,3 ms, doku 54,9 MB geçti; kazanma 38,8 fps (açılış karesi 157 ms), ilk bırakma karesi 170,7 ms (JIT-soğuk commit), FTUE 13,1 s (giriş 5,4 s + yazılım GPU karesi), pişirme 699 / 684 ms, adım 12 p99 3,0 ms düştü; 1×'te bütün değerler kapı altında (bölüm pişirme 158 ms hariç). Öneriler §2R.14'e eklendi.
+7. **Devralma doğrulaması (2026-10-21; dördüncü oturum, kapanış belgesi "Dördüncü oturum").** Görev notu bayattı
+   (`HomeScene.ts(573)` hatası ikinci oturumda kapanmıştı); devralınan ağaçta görünüm v3'ün dört ara anlık görüntüsü
+   (`e0beabe` … `55f6bb3`) vardı. `tools/screens.ts` o anlık görüntülerle genişledi: `boot-v3` (yükleme ekranı,
+   `window.__holdBoot` ile tutulur, `__harness.releaseBoot()`), `home-level-start` (UX §4.1, K-40; `preSlot` dokunma
+   hedefi), `home-reward-layer` (UX §6.2; `__harness.showReward()`), kilitli sekme dokunuşu gezinme hücresinin
+   merkezine (`design` hedefi, v3 gezinmede yalnız seçili sekmenin etiketi var), `--flat <klasör>` (her kare ayrıca
+   `<ad>-<profil>.png`; görsel tur inceleme klasörü). SVG v3 katalog satırları §2R.6 uygulama notunda. Bu turda:
+   `npm run check` YEŞİL — typecheck (3 tsconfig) · eslint · prettier · vitest 106 dosya / 2076 test · `test:rules --phase 2R` 76 kimlik (K 46, engel 5, E 22, N 3), `npm run build` YEŞİL — `assets:check` 40 SVG uyarısız, indirme 274,6 / 900 KB, doku 16,3 / 64 MB · vite 270 modül · `verify-dist` ilk yük 604,1 / 620 KB, v2 görsel 274,6 / 1024 KB, 75 dosya, hata ayıklama / harness kodu yok (R-20), `npm run levels:check` YEŞİL — validate + solve: 10 bölüm (önbellekten), 0 error, 0 warning; bot (WP-N, Faz 3) yok, atlandı, `screens` YEŞİL — 96 kare (390×844 ve 360×800 43'er, 390×763 ve 360×740 5'er), 0 senaryo hatası, 0 konsol hatası, ham i18n anahtarı 0, `DBG` / `#mu-debug` 0 (DS-01, DS-20), hücre kapısı 360×800 Bölüm 1 = 48,0 CSS px (390×844 52,0); iki ana profil paralel ≈ 95 dk; `boot-v3` ve `home-level-start` son harness ile yeniden çekildi (tuğla atlası, `icon_shutter`), e2e YEŞİL — 11 / 11, 28,4 dk (Bölüm 1 golden 4,4 dk, Bölüm 2 devam + kazanma 4,0 dk, öğretici yeniden yükleme 5,6 dk),
+   `perf` SARI (çıkış 1; yazılım GPU'su SwiftShader, CPU tarafı 4×): **PASS 7** — sürükleme ortalama 59,3 fps ≥ 50, sürükleme p95 11,9 ms ≤ 25, ana sayfa 60 fps, FTUE 0 dokunuş ≤ 3, adım 12 en kötü 6,4 ms ≤ 8, doku 57,3 / 64 MB, girdi gecikmesi p95 / max 1 kare (1404 örnek); **FAIL 6** — kazanma ortalama 34,6 fps (p95 57,6 ms; kazanma katmanının açılış karesi 431,6 ms), sürüklemede > 50 ms kare 6 (en uzunu 87,5 ms, Bölüm 1 ilk bırakma: dokunma işleyicileri 55 ms), FTUE 11,75 s > 10 s (giriş 3,8 s'de, bölüm ekranı 11,75 s'de; "Geç" yolu 9,1 s), bölüm pişirme 541,5 ms > 150 (1×'te 108), kit pişirme 429,7 ms > 200 (1×'te 82,6), adım 12 p99 2,3 ms > 2 (1×'te 0,4). Üçüncü oturuma göre: FTUE 13,1 → 11,75 s, pişirmeler 699 / 684 → 542 / 430 ms, en uzun bırakma karesi 170,7 → 87,5 ms, adım 12 p99 3,0 → 2,3 ms; kazanma 38,8 → 34,6 fps. 1× koşusunda bütün ölçütler kapı altında (bölüm pişirme 108 ≤ 150 dahil). Not: 1× ağsız FTUE 15,8 s (giriş 9,2 s'de; üçüncü oturumda 7,9 s) tek koşuluk yazılım GPU'su değeri, kapı 4× koşusunu okur — sonraki perf koşusunda yeniden bakılacak. K-40 ön güçlendirici harcaması `beginAttempt`'ten `LevelScene.startLevel`'a taşınmış (aynı kare,
+   `save.update` + `beginAttempt` tek yazım; K-43 iade yolu aynı); META §4 / §10, analytics v6 ve WP-O davranışı
+   değişmedi (testler yeşil).
 
 ### 2R.12 İş paketleri (son hali; paralel yazılabilir)
 

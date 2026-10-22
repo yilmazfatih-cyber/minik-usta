@@ -38,6 +38,8 @@ export const ICON_NAMES = [
   'nextfloor',
   'nav_home',
   'nav_album',
+  'shutter',
+  'check',
 ] as const;
 export type IconName = (typeof ICON_NAMES)[number];
 
@@ -382,6 +384,44 @@ const DRAW: Readonly<Record<IconName, (p: Pen, t: Tokens) => void>> = {
       p.ctx.arc(22, 30 + i * 18, 6, 0, Math.PI * 2);
       p.line(5);
     }
+  },
+  // ASSET §16.3 ek 2026-10-20 (SVG v3): Açık Kepenk — a steel shutter box with the slats rolled half way up and a green
+  // up arrow in the open part (the level-start window's third slot, K-40)
+  shutter: (p, t) => {
+    const steel = parseHex(t.color.obstacle.cargoSteel);
+    roundRect(p.ctx, 14, 14, 100, 22, 7);
+    p.vol(steel, 14, 36, 6);
+    roundRect(p.ctx, 22, 34, 84, 40, 4);
+    p.vol(steel, 34, 74, 6);
+    p.ctx.beginPath();
+    p.ctx.moveTo(28, 48);
+    p.ctx.lineTo(100, 48);
+    p.ctx.moveTo(28, 61);
+    p.ctx.lineTo(100, 61);
+    p.line(4);
+    p.gloss(40, 24, 10, 4);
+    p.ctx.beginPath();
+    p.ctx.moveTo(64, 118);
+    p.ctx.lineTo(64, 88);
+    p.ctx.moveTo(44, 104);
+    p.ctx.lineTo(64, 84);
+    p.ctx.lineTo(84, 104);
+    p.line(20);
+    p.line(10, H(t, 'primary'));
+  },
+  // ASSET §16.3 ek 2026-10-20 (SVG v3): the selected slot's ✓ (green, ink contour, a white hairline on top)
+  check: (p, t) => {
+    p.ctx.beginPath();
+    p.ctx.moveTo(26, 68);
+    p.ctx.lineTo(52, 94);
+    p.ctx.lineTo(102, 40);
+    p.line(34);
+    p.line(18, H(t, 'primary'));
+    p.ctx.beginPath();
+    p.ctx.moveTo(30, 65);
+    p.ctx.lineTo(52, 87);
+    p.ctx.lineTo(98, 41);
+    p.line(5, WHITE);
   },
 };
 

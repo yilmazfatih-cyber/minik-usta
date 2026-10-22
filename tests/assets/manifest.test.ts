@@ -131,6 +131,26 @@ describe('staleness logic on a scratch tree (TECH 2R.6)', () => {
     expect(stalenessProblems(sources, m, out)).toEqual([]);
   });
 
+  it('TECH 2R.6 a manifest group that differs from the catalogue is stale (the boot pack move, DS3-01)', () => {
+    const { root, out } = tree('<svg/>');
+    const sources = readSvgSources(root);
+    const m = emptyManifest();
+    m.assets['icon_coin'] = {
+      atlas: 'icons_v2',
+      w: 128,
+      h: 128,
+      bytes: 0,
+      srcSha1: sha1('<svg/>'),
+      group: 'P2',
+      status: 'ok',
+    };
+    expect(stalenessProblems(sources, m, out).join()).toMatch(
+      /icon_coin: manifest group P2 differs from the catalogue's P1/,
+    );
+    m.assets['icon_coin'] = { ...m.assets['icon_coin'], group: 'P1' } as (typeof m.assets)[string];
+    expect(stalenessProblems(sources, m, out)).toEqual([]);
+  });
+
   it('TECH 2R.6 an SVG outside the catalogue is "unknown" and must be listed as such in the manifest', () => {
     const { root, out } = tree('<svg/>');
     writeFileSync(join(root, 'public', 'art', 'icon', 'icon_mystery.svg'), '<svg/>');

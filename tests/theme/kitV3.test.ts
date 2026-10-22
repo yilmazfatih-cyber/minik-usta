@@ -243,6 +243,72 @@ describe('capsule, badge, window, progress, nav, bubble, lock (ART_REFERENCE 3.4
   });
 });
 
+describe('visual v3 round 2 drawers (DS3-04 … DS3-06)', () => {
+  it('ART_REFERENCE 8 reward glow (DS3-04): a white radial disc α 1 → 0 the scene tints #FFE7A3 at α 0,55 over 1,6 × the object', () => {
+    const ops = record((ctx) => K3.drawRadialGlowV3(ctx, { d: 256 }));
+    const g = styleAt(ops, 'fillRect', 'fillStyle')[0];
+    expect(isGradient(g)).toBe(true);
+    if (isGradient(g)) {
+      expect(g.stops[0]).toEqual([0, '#FFFFFF']);
+      expect(g.stops.at(-1)).toEqual([1, 'rgba(255,255,255,0)']);
+    }
+    expect(V.effects.glowColor).toBe('#FFE7A3');
+    expect(V.effects.glowRadiusRatio).toBe(1.6);
+  });
+
+  it('ART_REFERENCE 5.3 / 7.2 crane area (DS3-05): #3F35A0 → #352C8E (±4) gradient + a 12 px inner shadow of the frame edge #221B66', () => {
+    const t = K3.craneAreaTones(TOKENS);
+    expect(css(t.top)).toBe('#3F35A0');
+    const want = parseHex('#352C8E');
+    for (let i = 0; i < 3; i++)
+      expect(Math.abs((t.bottom[i] ?? 0) - (want[i] ?? 0)), `channel ${i}`).toBeLessThanOrEqual(4);
+    expect(css(t.shadow)).toBe('#221B66');
+    expect(K3.CRANE_AREA_SHADOW_PX).toBe(12);
+    const ops = record((ctx) => K3.drawCraneAreaV3(ctx, { w: 8, h: 560 }, TOKENS));
+    const fills = styleAt(ops, 'fillRect', 'fillStyle');
+    expect(fills).toHaveLength(2);
+    expect(isGradient(fills[0]) ? fills[0].stops.map((x) => x[1]) : null).toEqual([
+      css(t.top),
+      css(t.bottom),
+    ]);
+    expect(isGradient(fills[1]) ? fills[1].stops[0] : null).toEqual([0, css(t.shadow, 0.9)]);
+  });
+
+  it('ART_REFERENCE 2.4 win star (DS3-06): gold three tones #FFE96A / #FFD119 / #FFAD00, #B8430A contour, a lip, the gloss', () => {
+    const p = V.palette;
+    const ops = record((ctx) => K3.drawStarV3(ctx, { sizePx: 168 }, TOKENS));
+    const fills = styleAt(ops, 'fill', 'fillStyle');
+    expect(fills).toContain(p.goldStroke);
+    const face = fills.find((f) => isGradient(f));
+    expect(isGradient(face) ? face.stops : null).toEqual([
+      [0, p.goldLight],
+      [0.5, p.gold],
+      [1, p.goldDark],
+    ]);
+    expect(styleAt(ops, 'stroke', 'strokeStyle')).toEqual([p.goldStroke, p.goldStroke]);
+    expect(fills.at(-1)).toBe(css([255, 255, 255], 0.4));
+    expect(K3.starV3FrameSize(168)).toEqual({ w: 168, h: 178 });
+  });
+
+  it('ART_REFERENCE 2.3 cream / grey labels: a dark label fill takes no dark contour — a white emboss instead (pause "Bölümden çık", DS3 round 2)', () => {
+    const cream = V.buttonColor.cream;
+    const look = K3.textLookV3('button', 56, TOKENS, { fill: cream.text, stroke: cream.textStroke });
+    expect(look).toMatchObject({
+      fill: cream.text,
+      stroke: null,
+      strokePx: 0,
+      shadow: '#FFFFFF',
+      shadowDy: 2,
+    });
+    expect(look.shadowAlpha).toBeLessThan(1);
+    // a light label keeps the contour (green primary, grey disabled: white α 0,8 → white)
+    const green = K3.textLookV3('button', 96, TOKENS);
+    expect(green.stroke).toBe(V.buttonColor.green.textStroke);
+    expect(green.strokePx).toBe(2 * 0.06 * 96);
+    expect(K3.DARK_LABEL_LSTAR).toBe(50);
+  });
+});
+
 describe('text looks v3 (ART_REFERENCE 4)', () => {
   it('ART_REFERENCE 4 button: white + 0,06 em contour (≥ 4 px) + 0,04 em shadow; counters; big number; plain; two-ring title layers', () => {
     const b = K3.textLookV3('button', 96, TOKENS, { stroke: '#0E5A14' });
@@ -327,6 +393,9 @@ describe('determinism of every v3 drawer (TECH 2R.7)', () => {
     K3.drawToggleV3(ctx, { on: false }, TOKENS);
   });
   pureCheck('moves plate', (ctx) => K3.drawMovesPlateV3(ctx, TOKENS));
+  pureCheck('radial glow', (ctx) => K3.drawRadialGlowV3(ctx, { d: 256 }));
+  pureCheck('crane area', (ctx) => K3.drawCraneAreaV3(ctx, { w: 8, h: 400 }, TOKENS));
+  pureCheck('win star', (ctx) => K3.drawStarV3(ctx, { sizePx: 168 }, TOKENS));
   pureCheck('highlight + portrait ring', (ctx) => {
     K3.drawHighlightV3(ctx, { w: 160, h: 160 }, TOKENS);
     K3.drawPortraitRingV3(ctx, { d: 128 }, TOKENS);

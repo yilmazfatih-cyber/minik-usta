@@ -23,11 +23,14 @@ const V = TOKENS.kit.v3.screen.home;
 describe('UX 3 home layout', () => {
   it('UX 3 / ART_REFERENCE 9.2 home layout v3 at H 1920 matches the measured numbers', () => {
     const g = homeLayout(TOKENS, 1920);
-    // top bar capsules 88 high, the Ø 104 settings tool vertically centred on them
-    expect(g.lives).toEqual({ x: 24, y: 40, w: 290, h: 88 });
-    expect(g.coins).toEqual({ x: 338, y: 40, w: 330, h: 88 });
-    expect(g.stars).toEqual({ x: 692, y: 40, w: 220, h: 88 });
-    expect(g.settings).toEqual({ x: 952, y: 32, w: 104, h: 104 });
+    // ART_REFERENCE §3.4 "kapsül düzeni" (DS3-02): two separate 300 × 88 capsules at x 160 / 500 (gap 40), the Ø 104
+    // settings tool at x 936 vertically centred on them; no star capsule (the count sits under the progress star)
+    expect(g.lives).toEqual({ x: 160, y: 40, w: 300, h: 88 });
+    expect(g.coins).toEqual({ x: 500, y: 40, w: 300, h: 88 });
+    expect(g.coins.x - (g.lives.x + g.lives.w)).toBe(40);
+    expect(g.settings).toEqual({ x: 936, y: 32, w: 104, h: 104 });
+    expect(g.settings.x + g.settings.w).toBe(1040);
+    expect('stars' in g).toBe(false);
     expect(g.ribbon).toMatchObject({ y: 176, w: 560 });
     expect(g.ribbon.x + g.ribbon.w / 2).toBe(540);
     expect(g.progress).toEqual({ x: 240, y: 300, w: 600, h: 84 });
@@ -40,8 +43,12 @@ describe('UX 3 home layout', () => {
     // side event bubbles Ø 176 + the 56 px label strip 8 px under it
     expect(g.sideRight(0)).toEqual({ x: 880, y: 420, w: 176, h: 240 });
     expect(g.sideLeft(0)).toEqual({ x: 24, y: 420, w: 176, h: 240 });
-    // character group: feet 24 px behind the button's top edge, the button's own area empty
+    // character group: feet 24 px behind the button's top edge, the button's own area empty; Dede's full figure at
+    // 0,9 of Tuna's (DS3-03 permanent, `chr_dede_stand`), feet on her ground line
     for (const r of [g.tuna, g.kepce, g.dede]) expect(bottom(r)).toBeLessThanOrEqual(g.play.y + 30);
+    expect(bottom(g.dede)).toBe(bottom(g.tuna));
+    expect(g.dede.h).toBe(Math.round(g.tuna.h * 0.9));
+    expect(g.dede.w / g.dede.h).toBeCloseTo(300 / 480, 1);
     expect(g.tuna.x).toBeGreaterThanOrEqual(V.characterGroupX);
     expect(g.dede.x + g.dede.w).toBeLessThanOrEqual(1080 - V.characterGroupX);
     expect(g.skyBand.h).toBe(0);

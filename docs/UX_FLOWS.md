@@ -460,6 +460,30 @@ mağazanın başlangıç paketi kartı, açılış bölümü henüz gelmemiş g�
 rozetiyle görünür (§0.3, §4, §5.1). Örnekler: Bölüm 10 sandığındaki Termos (açılış 12); günlük ödül döngüsünün 2. günündeki Çekiç (8);
 Bölüm 5'te açılan başlangıç paketindeki Çekiç (8), Vinç (10), Termos (12).
 
+**Görev penceresi v3 (kasaba alanı, "Yap ★N"; ART_REFERENCE §9.10 "Kasaba alan penceresi", 2026-10-21; §2.2 adım 8,
+META yıldızla inşa; Faz 4 kasaba ekranı):**
+
+```
+       │ ═════[ Ağaç Ev ]═════        (×)   │  §3.6 bant başlık 240 (alan adı), çift altın çizgi; × köşeye biner
+       │ ┌──────────────────────────────────┐│
+       │ │ [████░░░░░░░░░░] 4/10   ┌──────┐ ││  krem ilerleme kartı 920×200; meta çubuk 600×84 "k/n"
+       │ │                         │sandık│ ││  sandık 160 çubuğun sağ ucuna biner (alan sandığı, META §8.2)
+       │ └──────────────────────────────────┘│
+       │ ──────────────────────────────────── │  4 px ayraç
+       │ ┌──────────────────────────────────┐│
+       │ │ ▣ Ağaç basamakları    [ Yap ★1 ] ││  satır 920×160; ikon 96; M greenSoft 280×120; `town.ch1.t1.name`
+       │ └──────────────────────────────────┘│
+       │ ┌──────────────────────────────────┐│
+       │ │ ✓ Çatı                           ││  yapılmış: Ø 64 yeşil ✓, düğme yok, satır α 0,7
+       │ └──────────────────────────────────┘│
+```
+
+Durumlar: **yıldız yetmiyor** → düğme gri pasif, "★N" rakamı kırmızı #B8260A, dokununca 2 px titreşim (ölü uç yok;
+can penceresi kalıbı); **hepsi yapılmış** → satırlar ✓, çubuk n/n, sandık açık ikonu (§8.2 kutlama kazanma ekranında
+yaşanır, burada yeniden oynatılmaz); **sıradaki görev** her zaman listenin **en üstünde** ve tek yeşil düğme odur
+(§0.2 tek birincil). "Yap" → görev sahnesi (§12 akışı, `T -->|Yap ★| TS`). Metin anahtarları mevcut `town.*`
+(yeni anahtar yok).
+
 ---
 
 ## 4. Bölüm öncesi pencere
@@ -1497,6 +1521,12 @@ bırakma önizlemesi deseni (4 px noktalı beyaz kontur) + 8 px parlama · `gap:
 duvar şeridinin konturu · `crane` vinç alanı bandı α 0,10 → 0,22 nabız + alt sınır çizgisi parlar · `build` şantiye
 iskelesinin dış konturu · `front` inşa cephesi hücreleri (§5.5) nabız · HUD kimlikleri ilgili panelin konturu ·
 `booster:` yuvanın konturu + yuva 1,0 ↔ 1,04 · `truck` kamyon göstergesi konturu.
+
+**Yön oku (isteğe bağlı sunum, ART_REFERENCE §3.14; 2026-10-21):** vurgu kimliği geniş bir alansa (`crane`, `build`,
+`wall`, `goals`, `moves`, `truck`, `streak`) ve eldiven yolu bu alana **girmiyorsa**, vurguya ek olarak 120 × 170 sarı
+ok alanın 24 px dışında durur ve alanı gösterir (600 ms'de 16 px salınım; azaltılmış harekette sabit); en çok 2 ok.
+Adım verisinde yeni alan **yoktur** (sunum kararı; product-lead JSON'u değişmez). Karartma yok (R2-10, D-082). Değerler
+`check.v3Addenda.arrow` → `kit.v3.bubble.arrow*` (code-lead tipler).
 
 ### 13.2 Öğretici tablosu
 

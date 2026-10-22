@@ -27,30 +27,75 @@
       "status": "ok",
       "w": 540
     },
+    "brick_fly_1": {
+      "bytes": 1760,
+      "file": "brick_fly_1.webp",
+      "group": "P0",
+      "h": 200,
+      "srcSha1": "ec637d65d8b7c1be2a5b70034bdfc7d197c7fa3c",
+      "status": "ok",
+      "w": 200
+    },
+    "brick_fly_i2": {
+      "bytes": 2582,
+      "file": "brick_fly_i2.webp",
+      "group": "P0",
+      "h": 200,
+      "srcSha1": "c2d66e4007943b00be36e5dcadf908445fd36e6e",
+      "status": "ok",
+      "w": 200
+    },
+    "brick_fly_l3": {
+      "bytes": 2656,
+      "file": "brick_fly_l3.webp",
+      "group": "P0",
+      "h": 200,
+      "srcSha1": "995574c37ebd99004aa20fa129e5fe186672d487",
+      "status": "ok",
+      "w": 200
+    },
+    "brick_fly_o": {
+      "bytes": 2824,
+      "file": "brick_fly_o.webp",
+      "group": "P0",
+      "h": 200,
+      "srcSha1": "4ec92230008457a70e6dcca7ba354ccda2f648f4",
+      "status": "ok",
+      "w": 200
+    },
     "chr_dede_bust": {
-      "bytes": 9028,
+      "bytes": 9084,
       "file": "chr_dede_bust.webp",
-      "group": "P1",
+      "group": "P0",
       "h": 320,
-      "srcSha1": "ecf0f6ef42c3d6291c557ff6d437c644b50a13e3",
+      "srcSha1": "a440cf62716e6ac83d2e28a9c222b0a75e38bcb3",
       "status": "ok",
       "w": 256
     },
+    "chr_dede_stand": {
+      "bytes": 12156,
+      "file": "chr_dede_stand.webp",
+      "group": "P2",
+      "h": 480,
+      "srcSha1": "c8e12e3a5eb88ac32d8531410c80edf679fde1b7",
+      "status": "ok",
+      "w": 300
+    },
     "chr_gribeton_bust": {
-      "bytes": 5462,
+      "bytes": 5766,
       "file": "chr_gribeton_bust.webp",
       "group": "P3",
       "h": 320,
-      "srcSha1": "a069426cf063cdffe9a73d321e83a41f327047c3",
+      "srcSha1": "8191bc4ebec644ea57c5ca0ec46e02670598ae27",
       "status": "ok",
       "w": 256
     },
     "chr_kepce_bust": {
-      "bytes": 9042,
+      "bytes": 9498,
       "file": "chr_kepce_bust.webp",
-      "group": "P2",
+      "group": "P0",
       "h": 206,
-      "srcSha1": "62d8972127b2abb4b8323b5046a20ef0902bd313",
+      "srcSha1": "794485d25b0dff3db6c71ef0a338a804b58c3d5b",
       "status": "ok",
       "w": 300
     },
@@ -64,11 +109,11 @@
       "w": 300
     },
     "chr_tuna_cheer": {
-      "bytes": 16772,
+      "bytes": 15242,
       "file": "chr_tuna_cheer.webp",
-      "group": "P3",
+      "group": "P0",
       "h": 400,
-      "srcSha1": "ee3d928241efca1a16dd0652a85cfe2c053d2a7d",
+      "srcSha1": "c5fd9b1e3fa2e5cd2426c99776661803c7f5c155",
       "status": "ok",
       "w": 300
     },
@@ -86,7 +131,16 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "15cc078285d37a8061722be509d9d56dfb969975",
+      "srcSha1": "aa8865e31942591859c8c42e42e9bd8e44b8e1dc",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_check": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "434ae9579a57d5f0fc07879f49f7a60660c405df",
       "status": "ok",
       "w": 128
     },
@@ -95,7 +149,7 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "5ac6da86761b42c8e2e25662b3096d571e4392b2",
+      "srcSha1": "e7bbfdbbc9998fbb8ce2f13c5e3ce314c19cb784",
       "status": "ok",
       "w": 128
     },
@@ -113,7 +167,7 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "f5aaa44064af19180906636a614a516dc64cfe8f",
+      "srcSha1": "4ea8276fd81edd2636b62dbfbcdb08aed1c67a36",
       "status": "ok",
       "w": 128
     },
@@ -122,7 +176,7 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "d5746add600ccb2aa2f841467d15c48a6e9b9b09",
+      "srcSha1": "5d85d288f5562443ae83b800ae30bf475e193e71",
       "status": "ok",
       "w": 128
     },
@@ -131,7 +185,7 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "63de902b280690de59e68602afb8b3e36950dd53",
+      "srcSha1": "9bdadad06fab058f39f4a27db94895a5103d779f",
       "status": "ok",
       "w": 128
     },
@@ -140,7 +194,7 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "d5d7184f22ad00786c9178ba964c361d41046f6d",
+      "srcSha1": "9db6f9f6576d0ea821c862dd6b06086276c05d1e",
       "status": "ok",
       "w": 128
     },
@@ -176,7 +230,7 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "e6ad5ae22bd29905e5a4bd0f270e795d13168efd",
+      "srcSha1": "5af75c580562d09755428f95f21e57c4eabc08a5",
       "status": "ok",
       "w": 128
     },
@@ -185,7 +239,7 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "d2469feae51f9f496ba51777a563094caebe558f",
+      "srcSha1": "946f5a3b3b7211ab48eeb5805cd1f3046251df0b",
       "status": "ok",
       "w": 128
     },
@@ -194,7 +248,7 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "2a7af0c42524847aeca2c8880286b4f726edf93d",
+      "srcSha1": "19d8defa6dd6bc83c20a6839013b972fa61b4396",
       "status": "ok",
       "w": 128
     },
@@ -203,7 +257,7 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "1967ad4533343206358a49d447203e01a2e4184f",
+      "srcSha1": "1a727f23b77927f63b0e8e1b44276ce579f78fb0",
       "status": "ok",
       "w": 128
     },
@@ -212,7 +266,7 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "87764e8f13c965d0c9ad84d5371e2b8fff9c5990",
+      "srcSha1": "059097cf07d7ece3ba4e55719d0c9407ef9d5967",
       "status": "ok",
       "w": 128
     },
@@ -221,7 +275,7 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "c9752261ceeceb71bd70e5262c95280a3c352d91",
+      "srcSha1": "f6d89ab715e8e4a75e0bfd5721e049954af8a50e",
       "status": "ok",
       "w": 128
     },
@@ -230,7 +284,7 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "7571e1d82f9c353b6b7995b6718b284e544434e7",
+      "srcSha1": "cc2e247c1c5819a5fe0958e629859319adb7e769",
       "status": "ok",
       "w": 128
     },
@@ -240,6 +294,15 @@
       "group": "P1",
       "h": 128,
       "srcSha1": "007f1ad7ed34104733fb6828a7a575ae2530509c",
+      "status": "ok",
+      "w": 128
+    },
+    "icon_shutter": {
+      "atlas": "icons_v2",
+      "bytes": 0,
+      "group": "P1",
+      "h": 128,
+      "srcSha1": "9e0d0fbfeaf4f88c2bf014473dab8f2f22d5533c",
       "status": "ok",
       "w": 128
     },
@@ -257,7 +320,7 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "16552680a4c9abea9831f88876ad5e1e2372f551",
+      "srcSha1": "0fc211b4ad957056e26c22e805a8e33022ba0b63",
       "status": "ok",
       "w": 128
     },
@@ -266,14 +329,14 @@
       "bytes": 0,
       "group": "P1",
       "h": 128,
-      "srcSha1": "ed0e81f2a01f0575ac334ca9544811fec85c12f5",
+      "srcSha1": "43d738065f7c0bbc678650e5325b8dc6918041ea",
       "status": "ok",
       "w": 128
     },
     "logo_emblem": {
       "bytes": 15476,
       "file": "logo_emblem.webp",
-      "group": "P2",
+      "group": "P0",
       "h": 360,
       "srcSha1": "d8d3e6735c0723d41eb2a34a44b6a3701cfe2f64",
       "status": "ok",
@@ -317,7 +380,7 @@
   },
   "atlases": {
     "icons_v2": {
-      "bytes": 45084,
+      "bytes": 49074,
       "file": "icons_v2.webp",
       "frames": [
         "icon_coin",
@@ -340,41 +403,18 @@
         "icon_kettlebell",
         "icon_nextfloor",
         "icon_nav_home",
-        "icon_nav_album"
+        "icon_nav_album",
+        "icon_shutter",
+        "icon_check"
       ],
       "group": "P1",
       "h": 768,
       "json": "icons_v2.json",
-      "jsonBytes": 7379,
+      "jsonBytes": 8063,
       "w": 512
     }
   },
   "generator": "tools/assets.ts",
-  "unknown": [
-    {
-      "path": "public/art/icon/brick_fly_1.svg",
-      "srcSha1": "ec637d65d8b7c1be2a5b70034bdfc7d197c7fa3c"
-    },
-    {
-      "path": "public/art/icon/brick_fly_i2.svg",
-      "srcSha1": "c2d66e4007943b00be36e5dcadf908445fd36e6e"
-    },
-    {
-      "path": "public/art/icon/brick_fly_l3.svg",
-      "srcSha1": "995574c37ebd99004aa20fa129e5fe186672d487"
-    },
-    {
-      "path": "public/art/icon/brick_fly_o.svg",
-      "srcSha1": "4ec92230008457a70e6dcca7ba354ccda2f648f4"
-    },
-    {
-      "path": "public/art/icon/icon_check.svg",
-      "srcSha1": "434ae9579a57d5f0fc07879f49f7a60660c405df"
-    },
-    {
-      "path": "public/art/icon/icon_shutter.svg",
-      "srcSha1": "10783fb411b9ff06b898c869ff1e42d9596ebc51"
-    }
-  ],
+  "unknown": [],
   "version": 1
 }

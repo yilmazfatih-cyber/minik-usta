@@ -13,7 +13,12 @@ import type { TextureRef } from '../../services/assets.ts';
 export interface ArtSource {
   texture(id: string): TextureRef | null;
   onChange(id: string, cb: (ref: TextureRef) => void): () => void;
+  /** The raster of `id` may still arrive (see `AssetService.expectsArt`); absent = unknown, treated as "no". */
+  expectsArt?(id: string): boolean;
 }
+
+/** Live images (registered until destroyed): the harness waits until none of them still expects its raster. */
+const live = new Set<ArtImage>();
 
 /** Phaser's built-in transparent texture: the stand-in of an id that has nothing to show yet. */
 const EMPTY_TEXTURE = '__DEFAULT';
@@ -35,6 +40,12 @@ export interface ArtImageOptions {
    * background, UX §0.1: no seam against a flat colour). Display px; 0 = none.
    */
   readonly extend?: { readonly top: number; readonly bottom: number };
+  /**
+   * ART_REFERENCE §9.1 v1.1 (DS3-01): no skeleton — while the raster is still expected the image stays hidden and
+   * appears with the raster (fade); the procedural fallback shows only once the art cannot come (failed load, no
+   * manifest entry). Off (default): the fallback shows at once and the raster cross-fades over it.
+   */
+  readonly waitArt?: boolean;
 }
 
 export class ArtImage {
@@ -44,7 +55,15 @@ export class ArtImage {
   readonly edges: readonly Phaser.GameObjects.Image[];
   private readonly box: ArtBox;
   private readonly opts: ArtImageOptions;
+  private readonly source: ArtSource;
   private art: boolean;
+
+  /** Ids of the live images whose raster is still expected (harness `status().artPending`; tools/screens waits). */
+  static pendingIds(): string[] {
+    const out: string[] = [];
+    for (const a of live) if (!a.art && a.source.expectsArt?.(a.id) === true) out.push(a.id);
+    return out;
+  }
 
   /**
    * An art image. An id with neither art nor a fallback yet (e.g. a base layer that has no procedural version) starts
@@ -68,10 +87,14 @@ export class ArtImage {
     box: ArtBox,
     opts: ArtImageOptions,
   ) {
-    const ref = initial ?? { key: EMPTY_TEXTURE, art: false };
+    // `waitArt`: a fallback is not shown while the raster is still expected (the image starts hidden)
+    const hold =
+      opts.waitArt === true && initial !== null && !initial.art && source.expectsArt?.(id) === true;
+    const ref = initial && !hold ? initial : { key: EMPTY_TEXTURE, art: false };
     this.id = id;
     this.box = box;
     this.opts = opts;
+    this.source = source;
     this.art = ref.art;
     const edges: Phaser.GameObjects.Image[] = [];
     const ext = opts.extend;
@@ -81,12 +104,14 @@ export class ArtImage {
       edges.push(scene.add.image(0, 0, ref.key, ref.frame).setOrigin(0, 0).setName('bottom'));
     this.edges = edges;
     this.image = scene.add.image(box.x, box.y, ref.key, ref.frame).setOrigin(0, 0);
-    if (!initial) this.image.setVisible(false);
+    if (!initial || hold) this.image.setVisible(false);
     this.fit(this.image);
     this.fitEdges();
     const off = source.onChange(id, (next) => this.swap(next));
+    live.add(this);
     this.image.once(Phaser.GameObjects.Events.DESTROY, () => {
       off();
+      live.delete(this);
       for (const e of this.edges) e.destroy();
     });
   }

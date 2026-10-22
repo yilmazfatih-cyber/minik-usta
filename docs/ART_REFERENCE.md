@@ -1,6 +1,6 @@
 # Stil kitabı — ART_REFERENCE v1 (R2-13 stil öğrenimi)
 
-Sahip: design-lead · Sürüm: **v1 (2026-10-14)** · Kaynak: proje sahibinin 25 referans ekranı
+Sahip: design-lead · Sürüm: **v1.1 (2026-10-21; v1 2026-10-14)** · Kaynak: proje sahibinin 25 referans ekranı
 (`artifacts/reference/owner-2026-10-07/ref-01…09.png`, `artifacts/reference/owner-2026-10-14/ref-01…16.png`; git dışı,
 yalnız stil; R2-12, R2-13) · Bağlı belgeler: `ART_DIRECTION.md` §17 (v3 farkları), `UX_FLOWS.md` §1.1, §4.1, §6.2,
 `STORY.md` §7.8, `src/theme/tokens.json → kit.v3`.
@@ -17,6 +17,13 @@ yalnız stil; R2-12, R2-13) · Bağlı belgeler: `ART_DIRECTION.md` §17 (v3 far
 > ortalamasıdır; gradyan durakları ekranın dikey sütunlarından, kalınlıklar satır/sütun boyunca renk koşularından
 > okundu (örnek: "Oyna" düğmesi y 1556–1791 → 236 px → 211 tasarım px). Aşağıdaki her değer **tasarım px**'tir
 > (parantez içi değer referansın ham ölçüsüdür, yalnız iz sürülebilirlik için).
+>
+> **v1.1 (2026-10-21).** 25 referans ikinci kez tek tek açıldı (doğrulama: v1 ölçüleri değişmedi). Eklenen: §3.4
+> kapsül üstü rozet (14/ref-13, ref-16), §3.14 yön oku (14/ref-11), §9.1 yükleme "boot paketi" kuralı (iskelet yer
+> tutucu yükleme ve kazanma ekranında kabul edilmez), §9.2 avatar karesi (Faz 4), §9.10 kasaba alan penceresi
+> (14/ref-16) ve etkinlik sonu kartı (07/ref-05), §10.1 ilk puanlama kaydı (code-lead v3 ekran seti 2026-10-20).
+> Tokens: `check.v3Addenda` (şemadan düşer; code-lead bileşeni yazarken `kit.v3.<grup>` altına tipleyerek taşır —
+> TECH 2R.7 testi `kit.v3`'te tiplenmemiş anahtar kabul etmez).
 
 ---
 
@@ -192,6 +199,17 @@ yay (210°→330°) → "+" beyaz iki çubuk 28 × 8, uçlar yuvarlak, gölge #0
 Can kapsülünde sayı kalbin **içinde** (beyaz 36 px, #B80E12 kontur 0,08 em), kapsül metni süre ("43:37") ya da "Dolu".
 Zaman kapsülü (HUD ortası): 300 × 68, saat ikonu Ø 44 lavanta çizgi 5 px, rakamlar krem #FFF6E3 48 px sabit hane.
 
+**Kapsül düzeni (ana sayfa, 07/ref-03 ölçümü):** kapsüller **ayrı ayrı** çizilir, tek birleşik bar yoktur: can
+kapsülü 300 × 88 (x 160), altın kapsülü 300 × 88 (x 500), aralık 40; her kapsülün sol ucunda ikon 20 px dışarı taşar,
+sağ ucunda (altında satın alma varsa) Ø 56 yeşil +; sağ uçta ayar düğmesi 104 (x 936). Yıldız sayacı (bizde) can
+kapsülünün soluna değil **ilerleme çubuğunun sağ ucuna** biner (§3.8 "ödül ikonu" yuvası): üst çubukta en çok 2
+kapsül + ayar kalır (375 pt'te okunurluk).
+
+**Kapsül üstü rozet (14/ref-13, ref-16):** kapsülün sağ üst köşesine Ø 56 kırmızı daire rozeti (§3.5 küçük boy, rakam
+34) biner: merkez = kapsül sağ kenarı − 16, kapsül üst kenarı + 4. Kullanım: harcanabilir yıldız sayısı (kasaba görevi
+bekliyor); altın ve can kapsülünde yok. Rozet görünürken kapsül 1,0 ↔ 1,04 nabız 2 s'de bir (azaltılmış harekette
+sabit). Değerler `check.v3Addenda.capsuleBadge` → `kit.v3.capsule.badge*`.
+
 ### 3.5 Kare sayı rozeti (`kit.v3.badge`)
 
 **72 × 72** (80 pencere / 67 HUD), r 20, bağlı olduğu karenin sağ alt köşesine **merkezi köşede** olacak biçimde biner
@@ -300,6 +318,13 @@ Karartma **yok** (D-082; referanstaki α 0,75 karartma alınmaz).
 **Eldiven / el:** 140 × 160; ten #FEC999 (0) → #F2A978 (0,6) → #D98A5E (1), kontur #C0755A 5 (siyah değil), işaret
 parmağı yukarı, manşet beyaz #FFFFFF + turuncu reflektör bandı #FF8A1F (Tuna'nın yeleği; RM'deki kırmızı-taş bileklik
 alınmaz), gölge siyah α 0,30 +10; `tap` 0,9× basılı, halka dalgası beyaz 4 px α 0,8 → 0.
+
+**Yön oku (isteğe bağlı, 14/ref-11 ölçümü 134 × 190):** 120 × 170; gövde 48 genişlik + üçgen uç 120 genişlik / 70
+yükseklik; dolgu dikey #FFD53A (0) → #FFC21A (0,5) → #F5A300 (1), kontur #7A3A00 5, üst-sol 6 px beyaz α 0,45 çizgi,
+gölge siyah α 0,30 +8; hedefin **24 px dışında** durur ve hedefi gösterir; 600 ms'de 16 px ileri-geri salınım
+(`Sine.easeInOut`), azaltılmış harekette sabit. Yalnız eldivenin parmak ucuyla gösterilemeyen geniş hedeflerde (vinç
+alanı bandı, şantiye, HUD paneli) ve en çok 2 ok; karartma yok (D-082). Değerler `check.v3Addenda.arrow` →
+`kit.v3.bubble.arrow*`. Kullanım kuralı UX §13.1.
 
 ---
 
@@ -495,6 +520,15 @@ ile **değişen** ölçüler verilir. Değerler `kit.v3.screen.*`.
 
 Referans ölçüm: logo merkezi 0,18 H, karakterler 0,40–0,80 H, metin 0,89 H, bulut bandı 0,68 H'den aşağı.
 
+**Boot paketi kuralı (v1.1):** yükleme ekranı **ilk karesinden itibaren** SVG rasterlerini gösterir; ART §11.7
+iskelet yer tutucusu (kalın kontur, düz renk) yükleme ve kazanma ekranında kabul edilmez (rubrik "karakter / sahne"
+≤ 2). Yöntem (R2-08 "derlemede PNG'ye çevrilir"): `chr_tuna_cheer`, `chr_dede_bust`, `chr_kepce_bust`, `logo_emblem`,
+`brick_fly_o/i2/l3/1` derleme zamanında PNG'ye çevrilir (kullanım boyutunun 0,75'i; ekranda 1,33× büyütme), toplam
+≤ 150 KB, `public/art/boot/`; BootScene bunları ilk boyamadan önce yükler, iskelet yalnız ağ hatası yedeğidir. Logo
+grubu: amblem 240 px harf bloğunun sol üstüne (−40, −60) biner (iki ayrı nesne gibi durmaz); harf bloğu 2 satır,
+toplam 360 px yükseklik, her satır 150 px harf. Uçuşan tuğlalar `brick_fly_*` (sembolsüz süs); oyun blok dokuları
+kullanılmaz. Değerler `check.v3Addenda.bootPack`.
+
 ### 9.2 Ana sayfa (UX §3 üstüne)
 
 | Öğe | v2 | v3 | Ölçüm |
@@ -505,6 +539,7 @@ Referans ölçüm: logo merkezi 0,18 H, karakterler 0,40–0,80 H, metin 0,89 H,
 | Yapı + karakterler | yapı merkez, karakter köşesi 300 × 360 | yapı aynı; **karakter grubu 700 × 760** (x 60–760, y 700–1460): Tuna önde büyük, Kepçe solda, Usta Dede sağ arkada; düğmenin arkası boş | 3 karakter + penguen 0,33–0,78 H |
 | Bölüm düğmesi | 720 × 176, alttan 264 | **600 × 200 L** (§3.1), alttan **336** (y 1384–1584) | 568 × 204, alt boşluk 122 + sekme 12 |
 | Alt gezinme | h 176, 24 taşan sekme | **h 200**, yükseltilmiş sekme 300 × 300 (100 taşar), §3.9 | 199 / 308 / 109 |
+| Avatar karesi (Faz 4, profil girişi) | — | sol üstte 100 × 100 (r 24) lavanta kare: yüz #8C7DFE (0) → #6A5CFF (1), kontur #3A27B0 8, iç çizgi #B5BAF7 3, içinde Tuna portresi (`chr_tuna_bust` kırpımı); MVP'de **gizli**, kapsüller x 160'tan başlar (§3.4 kapsül düzeni) | 07/ref-03 avatar 110, 14/ref-13 100 |
 
 ### 9.3 Bölüm başı penceresi (UX §4.1)
 
@@ -588,6 +623,8 @@ parlama #24CCFF α 0,35 18 px** (referans seçili kart ışıması). Karartma yo
 | **Takım** | başlık şeridi; krem kart 960 × 1240 (ışın yelpazesi) içinde illüstrasyon 760 × 760 + açıklama `cardText` 56 (vurgu kelime kırmızı #B8260A) + 2 satır ödül (ikon 96 + "BEDAVA canlar" 56: BEDAVA krem + #1A467B kontur, devamı #1A467B); "Katıl" L `greenSoft` 560 × 240 | 14/ref-13, 14/ref-15 |
 | **Günlük hediye** | pencere §3.7 1000 × 1240; başlık `titleGold`; 3 × 3 kapalı kutu kareleri 200 × 200 (v3 blok dili: kapak + "?" krem 96); seçilen kutu 1,0 → 1,15 + #24CCFF ışıma, açılınca §8 "Dokun ve al"; referansın arcade kabini ve piksel sanatı **alınmaz** (§11) | 07/ref-07, 07/ref-08 |
 | **Etkinlik geçidi (bilet)** | magenta zemin #B0215C (§2.1), bilet şeridi §3.6, iki sütun kart 420 × 440 (sol pembe #F280A5 / kontur #DB2D7F, sağ altın #F6D35A / kontur #E09A00) + ortada dikey iz (yeşil #6FED2B → gri #4B1537) ve numaralı Ø 96 turuncu daireler; **Faz 5+** (BUSINESS kapsamı) | 07/ref-04 |
+| **Kasaba alan penceresi ("Yap ★N"; UX §3.1 görev penceresi, META yıldızla inşa)** | §3.6 bant başlık (alan adı `town.ch<n>.title`, bant 240, çift altın çizgi) + × köşeye biner; gövde §3.7 çivit pencere 1000 × 1240; **ilerleme kartı** 920 × 200 krem (#F5EBC1, r 36, kontur #D9B878 4): içinde §3.8 meta çubuk 600 × 84 ("k/n" krem + #06436D kontur) ve sağ uçta sandık ikonu 160 çubuğun üstüne biner; altında 4 px ayraç #0F3E6E α 0,4; **görev satırları** 920 × 160 krem (r 32), sol ikon 96 + görev adı `cardText` 48 (#1A467B), sağda M `greenSoft` 280 × 120 "Yap ★1" (yıldız ikonu 48 metnin içinde); yapılmış satır: ikon yerine Ø 64 yeşil ✓ (#3ED121 + #1E8A10), düğme yok, satır α 0,7; yıldız yetmezse düğme `grey` + "★1" rakamı kırmızı #B8260A, dokununca 2 px titreşim (ölü uç yok); değerler `check.v3Addenda.townAreaWindow` | 14/ref-16 |
+| **Etkinlik sonu kartı** (Faz 5+) | sahne üstünde 1000 × 480 pencere: §3.6 bant başlık (etkinlik adı), krem gövde #F5EBC1 içinde sol 160 sonuç ikonu (kazanç: altın kupa; kayıp: gri kum saati — kırmızı × yalnız kapat düğmesidir, §1-6) + `cardText` 48 iki satır; altında M `cream` 360 × 136 "Bitti"; sahnenin altında `plain` 64 "Devam etmek için dokun" (bütün ekran dokunma hedefi) | 07/ref-05 |
 
 ---
 
@@ -604,6 +641,24 @@ parlama #24CCFF α 0,35 18 px** (referans seçili kart ışıması). Karartma yo
 
 Puanlama: `npm run screens` çıktısı her ekran için 6 satırlık tablo; 3 düzeltme turu; sonra orkestratör proje sahibine
 sorar (R2-13 madde 5).
+
+### 10.1 Puanlama kaydı
+
+Tur 1 (design-lead, 2026-10-21; set `artifacts/screens/v3/*-390x844.png`, code-lead 2026-10-20). Bulgular ve
+düzeltmeler `REVIEW_LOG.md` "v3 ekran incelemesi 1" (DS3-01…DS3-10). "—" = ekranda karakter yok (boyut sayılmaz).
+
+| Ekran | Hacim/ışık | Renk/kontrast | Tipografi | Düzen/boşluk | Karakter/sahne | İkon/rozet | Kabul |
+| ----- | ---------- | ------------- | --------- | ------------ | -------------- | ---------- | ----- |
+| Yükleme (`boot-v3`) | 3 | 4 | 3 | 4 | 2 (iskelet yer tutucu) | 3 | hayır |
+| Ana sayfa (`home-v2`, `home-v2-first`) | 4 | 4 | 4 | 4 | 3 | 4 | hayır (karakter) |
+| Bölüm başı penceresi (`home-level-start`) | 4 | 4 | 4 | 4 | — | 4 | **evet** |
+| Ödül katmanı (`home-reward-layer`) | 3 | 4 | 4 | 3 | — | 3 | hayır |
+| Oyun HUD + tahta + öğretici (`level-01*`, `tutorial-*`) | 4 | 4 | 4 | 3 | 3 | 4 | hayır (düzen, karakter) |
+| Kazanma (`win-v2`) | 3 | 4 | 4 | 4 | 2 (iskelet yer tutucu) | 3 | hayır |
+
+SVG öz puanı r4 (design-lead, 2026-10-22; yalnız SVG katkısı, ASSET §16.6 r4): karakter/sahne **4** (Tuna büst / sevinç /
+tam boy, Usta Dede büst / **tam boy yeni**, Kepçe, Gribeton), ikon/rozet **4** (kettlebell ve nextfloor 3 → 4). Ekran puanı
+tur 2, code-lead DS3-01…DS3-09 düzeltmeleri + yeni `npm run screens` setiyle.
 
 ---
 

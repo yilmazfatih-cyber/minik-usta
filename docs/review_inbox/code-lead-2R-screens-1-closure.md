@@ -6,7 +6,7 @@ R2-08, R2-12, R2-13; DECISIONS D-073…D-090 · Paket: yarım kalan WP-K (göç 
 dışa aktarımı) bitirildi, ekran incelemesi 1'in code-lead maddeleri kapatıldı. Görünüm v3 (ART_REFERENCE stil kitabı,
 rubrik ≥ 4/5) **bu paketin konusu değildir**; bu tur yalnız doğru içerik ve çalışan araçlardır.
 
-Özet: **KAPANDI 20 · RET (bu turda) 3 · AÇIK SORU 0.** Değişen dosyalar yalnız sahiplik matrisindeki kendi
+Özet: **KAPANDI 20 · RET (bu turda) 3 · AÇIK SORU 0** (dördüncü oturum 2026-10-21: DS-04 tam kapandı, SVG v3 katalog satırları eklendi; aşağıda). Değişen dosyalar yalnız sahiplik matrisindeki kendi
 dosyalarım (`src/**` tokens.json hariç, `tools/**`, `tests/**`, `docs/TECH_DESIGN.md`, bu dosya). `git commit` yok.
 
 ## Yarım kalan WP-K + WP-O'nun durumu (devralınan çalışma ağacı)
@@ -107,9 +107,10 @@ geçirildi ve tamam bulundu:
 - [DS-03] / [DS-30] → KAPANDI (`tools/assets.ts` hayalet işi: silüet önce opak `color.board.planUnderlay` #BCCADD, üstüne
   `board.blueprint` %35 ve 4 px beyaz %90 kesik kontur; `town_ch1_treehouse_ghost.webp` yeniden üretildi. Aynı hayalet
   kazanma kartında da kullanıldığı için DS-30'un ayrı kart tonu gerekmez. Test "ART 7.2 ozalit ghost (DS-03 / DS-30)")
-- [DS-04] → KAPANDI (code-lead payı: `assetCatalog.ts` `chr_tuna_stand` 300 × 480, P2, `optional: true` — SVG yokken
-  `assets:check` yeşil (33 SVG). Sahne bağlantısı (ölçek 1,35, taban düğmenin 24 px üstünde, çalı kalkar, Kepçe oturan
-  poz) SVG ve ASSET §16.3 satırı geldiğinde görünüm v3 paketinde; şimdi büst + çalı duruyor)
+- [DS-04] → KAPANDI (code-lead payı iki adımda: 2026-10-14 `assetCatalog.ts` `chr_tuna_stand` 300 × 480, P2,
+  `optional: true` — SVG yokken `assets:check` yeşil; 2026-10-21 SVG teslim edildi (ASSET §16.3 satır 5b), `optional`
+  kalktı, ana sayfa karakter köşesi tam boyu çiziyor (`HomeScene` `ArtImage.create(… 'chr_tuna_stand' …)`, büst ve çalı
+  yaması yok — görünüm v3 anlık görüntüsünde). Test "UX 3 home character corner (DS-04)")
 - [DS-05] → RET (bu turda; Öneri: kalp içi sayı görünüm v3 paketinin işidir — bu paket "yalnız doğru içerik". UX §3
   ölçüsü değişmeden uygulanacak; REVIEW_LOG'a not)
 - [DS-06] → KAPANDI (`ui/kit/layout.ts` `lockedTabBalloon(play, nav, tab, balloonH)`: balon sekmenin üstünde yalnız üst
@@ -159,9 +160,48 @@ geçirildi ve tamam bulundu:
   o güne kadar `block.*` v1 anahtarları ile `alpha.gloss`, `alpha.seam` tokens.json'da kalmalı)
 - [Devir listesi: yerleşim sabitleri, i18n] → KAPANDI (WP-M; `NOT_IN_STORY` boş, "D-017 …" sıkı testi yeşil)
 
+## Dördüncü oturum (2026-10-21): devralma doğrulaması ve SVG v3 katalog satırları
+
+Görev notu bayattı (`HomeScene.ts(573)` ikinci oturumda kapanmıştı). Devralınan çalışma ağacı temizdi ve üstünde
+görünüm v3'ün dört ara anlık görüntüsü vardı (`e0beabe`, `1f51d9b`, `b16a984`, `55f6bb3`: kit v3 çizicileri, bölüm
+başı penceresi v3, ödül katmanı, yükleme ekranı v3, `tools/screens.ts`'e `boot-v3` / `home-level-start` /
+`home-reward-layer` ve `--flat`). Bu tur onları geri almadı; kapıları bu ağaçta yeniden koştu ve yarım kalmış
+görünen tek şeyi kapattı:
+
+1. **Yarım iş denetimi.** `npm run typecheck` yeşildi; `npm run check` 105 dosya / 2068 test yeşil; `build` ve
+   `levels:check` yeşil. K-40 ön güçlendirici harcaması anlık görüntüde `SaveService.beginAttempt`'ten
+   `LevelScene.startLevel`'a taşınmış (aynı kare, `save.update` + `beginAttempt` tek yazım; K-43 iade yolu aynı) —
+   davranış farkı yok. META §4 deneme hakları, envanter düşümü, META §10 yıldız, analytics v6, WP-O testleri yeşil.
+2. **Tek kırmızı iz:** `npm run build` içinde `assets:check` 6 uyarı veriyordu (design-lead'in 2026-10-20 SVG v3
+   teslimi `brick_fly_*`, `icon_shutter`, `icon_check` katalog dışı) ve `npm run assets` çıkış 1'di — design-lead'in
+   bütün SVG yenilemelerini kilitleyen boru hattı hatası (sahibi code-lead, R2-08 "boru hattı, atlas"). KAPANDI:
+   `AssetGroup`'a **P0** (yükleme ekranı grubu; arka plan zinciri P1 → P2 → P3 değişmedi), dört tuğla 200 × 200 atlas
+   dışı P0 satırı, `BootScene` halkası 4 SVG × 2 kopya (`ArtImage`, kapsayıcıda eğim; `loadGroup('P0')` beklenmeden)
+   ve prosedürel yedek = aynı çıkıntı dizilimli v2 blok (`BRICK_FLY_FALLBACK`); `icon_shutter` + `icon_check` atlasta
+   (23 ikon, 512 × 768) ve `kitIcons.ts` yedek çizicileri; `LevelStartWindow` 3. yuva `icon_shutter`, ✓ `icon_check`
+   40 px. `chr_tuna_stand` `optional` kalktı (DS-04 tam, yukarıdaki satır). `npm run assets` çıkış 0 (40 SVG → 41 ok,
+   274,6 / 900 KB, 16,3 / 64 MB), `assets:check` uyarısız, `verify-dist` 75 dosya / ilk yük 604,1 / 620 KB. Testler:
+   `tests/assets/svgV3.test.ts` (3), `catalog.test.ts` (+2), `screensReview1.test.ts` (+1). İlk `boot-v3` karesinde
+   (390 × 844 ve 360 × 800) iki tuğla yırtık çıktı (karenin bir üçgeni kaymış; yalnız |eğim| 30° yuvalar); deneylerle
+   (eğim 0, hepsi tek doku, kanvas yedek) nedeni "dört görsel kaynaklı doku + eğik kareler aynı partide" olarak
+   daraltıldı (Phaser 4.2.1 + SwiftShader; gerçek GPU'da doğrulanamadı) → yüklenen tuğlalar `AssetService` içinde tek
+   kanvas atlasına (`art:bricks_v2`) pişiriliyor, `ArtImage` o atlasın karesini alıyor; son kare iki profilde de
+   temiz. Halka yuva ataması da düzeltildi (2 × 2 kare "Land"a değiyordu, sol üst L ekran kenarındaydı).
+3. **Kapı sonuçları** aşağıdaki bölümde bu turun değerleriyle güncellendi (önceki turun değerleri TECH §2R.11 madde
+   6'da kalır).
+
 ## Kapı sonuçları
 
-(aşağıdaki değerler bu turun koşularıdır; ayrıntı TECH §2R.11 uygulama notu)
+(aşağıdaki değerler dördüncü oturumun (2026-10-21) koşularıdır; üçüncü oturumun değerleri TECH §2R.11 madde 6'da)
+
+- `npm run check`: YEŞİL — typecheck (3 tsconfig) · eslint · prettier · vitest 106 dosya / 2076 test · `test:rules --phase 2R` 76 kimlik (K 46, engel 5, E 22, N 3)
+- `npm run build`: YEŞİL — `assets:check` 40 SVG uyarısız, indirme 274,6 / 900 KB, doku 16,3 / 64 MB · vite 270 modül · `verify-dist` ilk yük 604,1 / 620 KB, v2 görsel 274,6 / 1024 KB, 75 dosya, hata ayıklama / harness kodu yok (R-20)
+- `npm run levels:check`: YEŞİL — validate + solve: 10 bölüm (önbellekten), 0 error, 0 warning; bot (WP-N, Faz 3) yok, atlandı
+- `npm run perf`: SARI (çıkış 1; yazılım GPU'su SwiftShader, CPU tarafı 4×): **PASS 7** — sürükleme ortalama 59,3 fps ≥ 50, sürükleme p95 11,9 ms ≤ 25, ana sayfa 60 fps, FTUE 0 dokunuş ≤ 3, adım 12 en kötü 6,4 ms ≤ 8, doku 57,3 / 64 MB, girdi gecikmesi p95 / max 1 kare (1404 örnek); **FAIL 6** — kazanma ortalama 34,6 fps (p95 57,6 ms; kazanma katmanının açılış karesi 431,6 ms), sürüklemede > 50 ms kare 6 (en uzunu 87,5 ms, Bölüm 1 ilk bırakma: dokunma işleyicileri 55 ms), FTUE 11,75 s > 10 s (giriş 3,8 s'de, bölüm ekranı 11,75 s'de; "Geç" yolu 9,1 s), bölüm pişirme 541,5 ms > 150 (1×'te 108), kit pişirme 429,7 ms > 200 (1×'te 82,6), adım 12 p99 2,3 ms > 2 (1×'te 0,4). Üçüncü oturuma göre: FTUE 13,1 → 11,75 s, pişirmeler 699 / 684 → 542 / 430 ms, en uzun bırakma karesi 170,7 → 87,5 ms, adım 12 p99 3,0 → 2,3 ms; kazanma 38,8 → 34,6 fps. 1× koşusunda bütün ölçütler kapı altında (bölüm pişirme 108 ≤ 150 dahil). Not: 1× ağsız FTUE 15,8 s (giriş 9,2 s'de; üçüncü oturumda 7,9 s) tek koşuluk yazılım GPU'su değeri, kapı 4× koşusunu okur — sonraki perf koşusunda yeniden bakılacak
+- `npm run screens`: YEŞİL — 96 kare (390×844 ve 360×800 43'er, 390×763 ve 360×740 5'er), 0 senaryo hatası, 0 konsol hatası, ham i18n anahtarı 0, `DBG` / `#mu-debug` 0 (DS-01, DS-20), hücre kapısı 360×800 Bölüm 1 = 48,0 CSS px (390×844 52,0); iki ana profil paralel ≈ 95 dk; `boot-v3` ve `home-level-start` son harness ile yeniden çekildi (tuğla atlası, `icon_shutter`)
+- e2e (`npx playwright test -c tests/e2e/playwright.config.ts`): YEŞİL — 11 / 11, 28,4 dk (Bölüm 1 golden 4,4 dk, Bölüm 2 devam + kazanma 4,0 dk, öğretici yeniden yükleme 5,6 dk)
+
+### Üçüncü oturumun kapı sonuçları (2026-10-14; bilgi için)
 
 - `npm run check`: YEŞİL — typecheck (3 tsconfig) · eslint · prettier · vitest 102 dosya / 2023 test (100 s) · `test:rules --phase 2R` 76 kimlik (K 46, engel 5, E 22, N 3)
 - `npm run build`: YEŞİL — `assets:check` 33 SVG, indirme 257,7 / 900 KB, doku 15,1 / 64 MB · vite 266 modül · `verify-dist` ilk yük 588,4 / 620 KB gzip, v2 görsel 257,7 / 1024 KB, 63 dosya, hata ayıklama / harness kodu yok (R-20)

@@ -1501,3 +1501,194 @@ Kapanış dosyası: `docs/review_inbox/code-lead-2R-screens-1-closure.md` (KAPAN
 - [design-lead → orkestratör] **ÖNERİ:** (a) D-083/§16.2 eki — "karakter SVG'lerinde kontur yok; ikon/yapı konturu
   tonun koyusu (×0,45) 5 / 4 px" (uygulandı, karar kaydı için); (b) v3 görünüm kabulü ekran rubriğiyle (`npm run
   screens`) code-lead görünüm v3 uygulamasından sonra; SVG öz puanı §16.6 r3'te (karakter 4, ikon 4).
+
+## v3 ekran incelemesi 1 — ART_REFERENCE §10 rubriği (design-lead, 2026-10-21; R2-13 madde 5)
+
+Set: `artifacts/screens/v3/*-390x844.png` (code-lead, 2026-10-20; 10 görüntü) + `art-review/v3-characters/icons/
+scenes.png`. 25 referans ikinci kez tek tek açıldı; v1 ölçüleri doğrulandı, ekler ART_REFERENCE **v1.1** (§3.4 kapsül
+düzeni + kapsül üstü rozet, §3.14 yön oku, §9.1 boot paketi, §9.2 avatar karesi, §9.10 kasaba alan penceresi +
+etkinlik sonu kartı, §10.1 puanlama kaydı). Puan tablosu ART_REFERENCE §10.1; kabul her boyutta ≥ 4, **tur 1 / 3**.
+Kabul edilen: **bölüm başı penceresi** (4/4/4/4/–/4). Diğerleri aşağıdaki düzeltmelerle tur 2'ye.
+
+- [design-lead → code-lead] **DS3-01 (Engel) yükleme + kazanma: iskelet yer tutucu çekilmiş.** `boot-v3` ve `win-v2`'de
+  Tuna / Dede / Kepçe ART §11.7 iskeletiyle (kalın kontur, düz renk) görünüyor; `home-v2` aynı kimliklerle v3 rasteri
+  gösteriyor → sorun SVG değil, `ArtImage` yedeğinin yakalanması. Düzeltme: (a) `npm run screens` her karede bütün
+  `ArtImage`'lar `art = true` olana kadar bekler (harness kancası; `AssetService.onChange`); (b) yükleme ekranı için
+  **boot paketi**: `check.v3Addenda.bootPack` kimlikleri derleme zamanında PNG (0,75 kullanım boyutu, ≤ 150 KB,
+  `public/art/boot/`), BootScene ilk boyamadan önce yükler; iskelet yalnız ağ hatası yedeği (ART_REFERENCE §9.1 v1.1,
+  R2-08 "derlemede PNG'ye çevrilir"). Rubrik karakter 2 → 4.
+- [design-lead → code-lead] **DS3-02 (Önemli) ana sayfa üst çubuk: tek birleşik bar.** Can + altın + yıldız tek koyu
+  barda, ikonlar içeride, "+" ortada. ART_REFERENCE §3.4 "kapsül düzeni": **ayrı** kapsüller 300 × 88 (can x 160, altın
+  x 500, aralık 40), ikon Ø 80 sol uçtan 20 px taşar, altın kapsülünün sağ ucunda Ø 56 yeşil + (§3.3), koyu iç halka
+  #0E0C2C α 0,7; ayar 104 `purple` x 936. Yıldız sayacı üst çubuktan çıkar, ilerleme çubuğunun sağ ucundaki yıldız
+  ikonunun **altına** 34 px rakam (§3.8 "ödül ikonu" yuvası; çubukta zaten 4/10 var → yıldız ikonu + sayı "4").
+- [design-lead → code-lead] **DS3-03 (Önemli) ana sayfa: Usta Dede büstü çimende düz kesik.** `chr_dede_bust` alt
+  kenarı çimen üstünde keskin yatay çizgi. Geçici: büst y + 60 ve `bg_home_town` sağ ön plan çalısının (katman 6)
+  **arkasına** (derinlik: çalı > büst); kalıcı: `chr_dede_stand` (design-lead r4, ASSET §16.6). Tuna `chr_tuna_stand`
+  ve Kepçe doğru.
+- [design-lead → code-lead] **DS3-04 (Önemli) ödül katmanı: sert kenarlı sarı disk, iki ödül üst üste, düğme okunuyor.**
+  Ölçüm: parlama #FCBE1C düz disk; karartma #131A1A (düğme yazısı okunuyor). ART_REFERENCE §8 "Parlama" + §9.6:
+  radyal #FFE7A3 α 0,55 → 0 (ADD), r = nesnenin 1,6 katı; iki ödülde merkezler 540 ∓ 200, nesne 200 px (glow'lar
+  kesişmez); karartma #05030D α 0,85 **düz** (`kit.v3.palette.overlay`); `reward.tap` `plain` 72 y 1540 (FIT), nabız
+  1,04 / 1,2 s; sayı `bigNumber` 72 nesnenin 40 px altında. Değerler `check.v3Addenda.rewardLayer`. "Ödülün hazır"
+  `titleGold` doğru.
+- [design-lead → code-lead] **DS3-05 (Önemli) oyun: vinç alanı düz lavanta levha.** Tepsi çerçevesi (§5.3) iyi; vinç
+  alanı 1000 × 560 tek renk #5C53B6. Düzeltme: alan zemini çerçeve yüzünün koyusu dikey #3F35A0 (0) → #352C8E (1) +
+  alt sınırda 24 px kesik çizgi (zaten var) + üst kenarda 12 px #221B66 iç gölge; öğretici vurgusunda cyan kontur
+  (§9.9) kalır. Tahta grubu dikey dengesi doğru (HUD altı 225 / çubuk üstü 210); değişmez.
+- [design-lead → code-lead] **DS3-06 (Önemli) kazanma: pencere düz, yıldız düz.** Çivit panel tek dolgu + alt dudak;
+  ART_REFERENCE §3.7 katmanları (kontur #221380 7 → açık kenar #3A27B0 16 → oluk #27198A 8 → iç bevel #3C2AAD 22 →
+  gövde #4A3AC7 → #523ED5 → alt dudak 40 + 22) uygulanmalı; krem kart + ışın yelpazesi doğru. Köşedeki yıldız §2.4
+  `gold` 3 ton (#FFE96A / #FFD119 / #FFAD00) + kontur #B8430A 6 + alt dudak. "Devam" L doğru.
+- [design-lead → code-lead] **DS3-07 (Öneri) yükleme: logo iki ayrı nesne, tuğlalar oyun dokusu.** Amblem solda ayrı,
+  harf bloğu sağda küçük (2 satır ≈ 300 px). §9.1 v1.1: amblem 240 harf bloğunun sol üstüne (−40, −60) biner; harf
+  bloğu 2 satır × 150 (toplam 360); uçuşan tuğlalar `brick_fly_*` (sembolsüz; D-083 sembol kuralı oyun bloklarına
+  aittir) — katalog satırları 2026-10-20 notunda. `Yükleniyor` + sürüm doğru.
+- [design-lead → code-lead] **DS3-08 (Öneri) bölüm başı penceresi: iç plakada 180 px boşluk.** Hedef satırı ile
+  "Güçlendiricileri seç" arasında boş bant. §9.3: seri satırı yokken plaka 560 → 480 (hedef satırı 40 aşağı, etiket y
+  976, kareler y 1012); Bölüm 15+ seri satırı gelince 560'a döner. Kilitli kare gri + kilit + "Bölüm N" doğru (§2.3).
+- [design-lead → code-lead] **DS3-09 (Öneri) HUD: üst satır kapsülleri.** "Bölüm 1" yıldız ikonu kapsülün içinde;
+  §3.4 HUD boyu: ikon Ø 64 sol uçtan 20 px taşar. Hamle plakası (lacivert bant + krem + `bigNumber`) ve duraklat
+  `purple` doğru. Tuna + Kepçe köşesi 240 × 260 doğru.
+- [design-lead → code-lead] **DS3-10 (Öneri) öğretici: doğru.** Krem balon + çift halka + Dede portresi, v3 eldiven,
+  cyan vurgu ART_REFERENCE §3.14 / §9.9 ile uyumlu. Yedek eldiven (sarı konturlu) yalnız raster yokken; DS3-01 (a) ile
+  görüntüde görünmez olur. İsteğe bağlı yön oku (UX §13.1 v1.1) Bölüm 1'de **gerekmez**.
+- [design-lead → code-lead] **tokens el sıkışması (v1.1):** yeni değerler `check.v3Addenda` (şemadan düşer, test
+  yeşil: `npx vitest run tests/theme` 9 dosya / 412 test, `tests/assets` yeşil). Bileşeni yazarken alt grubu
+  `kit.v3.<grup>` altına tipleyip taşıyın (hedef yollar `_doc`'ta); `kit.v3` şeması anahtar anahtar tiplendiği için
+  doğrudan `kit.v3`'e eklemedim (TECH 2R.7 testi kırmızıya dönerdi).
+- [design-lead → product-lead] Kasaba görev penceresi v3 (UX §3.1) içerik aynı (görev adı + maliyet ★ + "Yap");
+  yalnız anatomi; sıradaki görev listenin en üstünde ve tek yeşil düğme (§0.2). Yön oku adım verisini değiştirmez.
+- [design-lead → orkestratör] **ÖNERİ (D-0xx):** "Yükleme ve kazanma ekranı iskelet yer tutucu göstermez; boot paketi
+  derleme zamanı PNG (R2-08 kapsamında)". Önceki ÖNERİ (saha zemini `floorDark`, karakter kontursuz) açık.
+
+## Faz 2R devralma — WP-K + WP-O + DS-1 doğrulaması ve SVG v3 katalog satırları (code-lead, 2026-10-21)
+
+- [code-lead → orkestratör] Görev notu bayattı: `HomeScene.ts(573)` `geo.button` hatası 2026-10-14 ikinci oturumda
+  kapanmıştı; WP-K + WP-O + DS-1 kapanışı `code-lead-2R-screens-1-closure.md`'de duruyordu. Devralınan ağaçta görünüm
+  v3'ün dört ara anlık görüntüsü (`e0beabe` … `55f6bb3`, orkestratör commit'leri) vardı; bu tur onları geri almadı,
+  üstünde kapıları yeniden koştu (sonuçlar kapanış belgesi "Dördüncü oturum" + TECH §2R.11 madde 7). Görünüm v3'ün
+  kendisi (DS3-xx, rubrik ≥ 4) bu turun konusu değil; `npm run screens` seti o anlık görüntülerin eklediği
+  `boot-v3`, `home-level-start`, `home-reward-layer` kareleriyle çalışır durumda.
+- [code-lead → design-lead] **SVG v3 katalog satırları (2026-10-20 isteği) KAPANDI:** `brick_fly_o/i2/l3/1` 200 × 200,
+  atlas dışı, yeni **P0** yükleme grubu (`AssetGroup`; arka plan zinciri P1 → P2 → P3 değişmedi); `BootScene` halkası
+  artık bu dört SVG'nin iki kopyası (DS3-07'nin istediği gibi), `loadGroup('P0')` beklenmeden istenir, raster gelene
+  kadar prosedürel v2 blok (aynı çıkıntı dizilimi: O4 kırmızı, D2 mavi, C3 sarı, B1 yeşil) görünür ve 200 ms çapraz
+  solar. `icon_shutter` + `icon_check` `ICON_IDS`'te (atlas 23 ikon, 512 × 768), prosedürel yedekleri `kitIcons.ts`'te;
+  bölüm başı penceresi 3. yuvada `icon_shutter`, seçili yuva ✓'si `icon_check` 40 px. `chr_tuna_stand` `optional`
+  bayrağı kalktı (ASSET §16.3 satır 5b) — DS-04'ün code-lead payı tamam. `npm run assets` çıkış 0 (40 SVG → 41 ok,
+  0 sorun, indirme 274,6 / 900 KB, doku 16,3 / 64 MB); `assets:check` uyarısız. Testler: `tests/assets/svgV3.test.ts`
+  (3), `catalog.test.ts` (+2), `screensReview1.test.ts` DS-04 (+1). **Çizim bulgusu (bilgi, görünüm v3 paketine):**
+  dört ayrı tuğla dokusuyla sekiz eğik kare aynı partide çizilince yazılım GPU'sunda |eğim| 30° yuvalarda karenin bir
+  üçgeni kayıyordu (eğim 0 temiz, hepsi tek doku temiz, kanvas yedekleri temiz) → yüklenen tuğlalar tek kanvas
+  atlasına (`art:bricks_v2`) pişirilip kare olarak veriliyor (TECH §2R.6). Eğik sprite kümelerini (tuğla halkası,
+  konfeti, uçuşan ödüller) tek dokuda tutun. Halka yuvaları: başlığın sağında tek çıkıntı (2 × 2 kare "Land"a
+  değiyordu), 2 × 2 sol altta, sol üst L 0,8 payda; ekran `artifacts/screens/2r/<profil>/boot-v3.png`.
+- [code-lead → design-lead] "Önceden kırmızı testler" (`layout.test` 4, `boardLayout.test` 7): devralınan ağaçta
+  yeşil — görünüm v3 anlık görüntüleri `layout.*` token'larıyla UX §5.8 / TECH §10.1'i eşitlemiş. İşlem gerekmez.
+- [code-lead → design-lead] Öğretici eli: kodda ikinci gölge yok (`TutorialView` yalnız balonun ve sürüklenen bloğun
+  gölgesini çizer; eldiven görseli olduğu gibi). `check.svgTonesV3` / `check.v3Addenda`: şema `check.*`'i düşürdüğü
+  için tip sorunu yok; görünüm v3 paketi bir alt grubu tüketirken `kit.v3.<grup>` altına tipleyip taşıyacak (mevcut
+  uygulama).
+- [code-lead → design-lead] **DS3-01 kök neden notu (görünüm v3 paketine devir):** yükleme ekranının karakterleri ve
+  amblemi P1 (`chr_dede_bust`), P2 (`chr_kepce_bust`, `logo_emblem`) ve P3 (`chr_tuna_cheer`) gruplarındadır; bu
+  gruplar TECH §2R.6 gereği ancak Bölüm 1 etkileşime açıldıktan sonra (`startBackground`) yüklenir. Taze bağlamda
+  yükleme ekranı bu yüzden **yalnız** prosedürel yedeği gösterebilir; (a) "bütün `ArtImage`'lar `art = true` olana kadar
+  bekle" tek başına `boot-v3`'ü düzeltmez (hiç yüklenmez), `win-v2` ve ana sayfa için işe yarar (harness'ta henüz
+  "yüklü görseller" kancası yok, `screens` sabit 2,5 s bekler — eklenecek). (b) için mekanizma hazır: P0 grubu +
+  `BootScene`'in kendi `loadGroup('P0')` isteği; boot paketi kimlikleri (0,75 ölçek rasterlar) kataloğa P0 satırı olarak
+  girdiğinde `ArtImage` yedekten rastere kendiliğinden geçer. Kapsam ve karar (D-0xx ÖNERİ) orkestratörün.
+- [code-lead → orkestratör] K-40 ön güçlendirici harcaması anlık görüntüde `SaveService.beginAttempt`'ten
+  `LevelScene.startLevel`'a taşınmış (aynı kare, tek yazım); K-43 iade yolu değişmedi, testler yeşil — davranış
+  farkı yok, bilgi için.
+
+## Görsel v3 tur 2 — DS3-01 … DS3-10 uygulaması (code-lead, 2026-10-22; ART_REFERENCE §3–§9, R2-13 madde 5)
+
+Set: `artifacts/screens/v3r2/<ekran>-<profil>.png` (390 × 844 ve 360 × 800, `npm run screens --flat`), rubrik öz
+puanları aşağıda (§10; her boyut ≥ 4 hedefi). Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil.
+
+- [code-lead → design-lead] **DS3-01 (Engel) KAPANDI — boot paketi + harness kancası.** (b) Yükleme ekranının
+  görselleri (`chr_tuna_cheer`, `chr_dede_bust`, `chr_kepce_bust`, `logo_emblem`, 4 tuğla = `check.v3Addenda.bootPack.ids`)
+  katalogda **P0**; `BootScene` grubu font beklemesiyle birlikte en çok 1200 ms bekler, sonra görselleri kurar:
+  karakterler, amblem ve tuğlalar **ilk karelerinden raster** (`boot-v3`). Zaman aşımında görseller gizli kalır ve
+  raster gelince belirir; iskelet yalnız raster gelemeyecekse (yük hatası / manifest'te yok) çizilir (`ArtImage`
+  `waitArt`). **Ucuz alternatif (§9.1 v1.1 "derleme zamanı ikinci PNG seti" yerine):** depodaki rasterler zaten
+  kullanım boyutunun ≤ 0,75'inde ve sekizi toplam ≈ 60 KB (sınır 150 KB, testli); ikinci dosya seti, ikinci indirme
+  ve yeni boru hattı adımı yok. Kazanma ekranı Tuna'yı P0'dan hazır bulur (`win-v2` raster). (a) `__harness.status()`
+  `artPending` (raster bekleyen canlı `ArtImage` kimlikleri) + `iconsArt`; `npm run screens` her karede bunlar
+  boşalana kadar bekler (eski sabit 2,5 s yerine; zaman aşımı not düşer, kapı değil). Harness `goHome` yükleyici
+  sahneyi artık durdurmuyor (P0 yarıdayken durdurmak kuyruğu kilitliyor, ana sayfa yedekte kalıyordu — ilk koşuda
+  yakalandı). Manifest'in `group` alanı katalogla çelişirse `assets --check` bayat sayar (grup taşıması `npm run
+  assets` ister). D-0xx ÖNERİ'niz (iskelet yükleme/kazanmada yok, boot paketi) uygulamada; karar kaydı orkestratörün.
+- [code-lead → design-lead] **DS3-02 (Önemli) KAPANDI.** Üst çubuk ayrı kapsüller: can 300 × 88 x 160, altın 300 × 88
+  x 500 (aralık 40), ayar 104 x 936 (sağ kenar 1040); ikon Ø 80 sol uçtan 20 taşar, altın kapsülünde Ø 56 yeşil +.
+  Yıldız kapsülü kalktı: sayı ilerleme çubuğunun sağ ucundaki yıldızın **altında** 34 px krem (`ProgressBar` `endCount`,
+  yıldız + sayı tek dokunma hedefi — eski "yapı parlar" davranışı oraya taşındı). Ölçüler `ui/kit/layout.ts`
+  `TOP_BAR` sabitlerinde (tokens.json sizin): `kit.v3.screen.home` altına `livesX 160`, `coinsX 500`, `capsuleW 300`,
+  `settingsX 936`, `starCountPx 34` eklerseniz sabitleri token okur hâle getiririm. Not: avatar karesi (MVP gizli)
+  için sol 160 px boş kalıyor — spec'iniz böyle; göze "sol pay geniş" gelirse söyleyin, MVP'de 40'a kaydırmak tek sabit.
+- [code-lead → design-lead] **DS3-03 (Önemli) KAPANDI — kalıcı çözümle.** r4 `chr_dede_stand` katalog satırı girdi
+  (ASSET §16.3 7b: 300 × 480, P2, imza `dede` cap / jacket; yedek: büst kutunun alt kenarında) ve ana sayfa karakter
+  grubu tam boy Dede'yi Tuna'nın 0,9'unda, ayakları onun çimen çizgisinde çizer (temas gölgesi dosyanızda; kodda yok).
+  Geçici "büst y + 60 + çalı" düzeni aynı turda yazılıp sizin r4 notunuzla kaldırıldı. `npm run assets` 41 SVG → 42 ok,
+  0 sorun (indirme 286,8 / 900 KB, doku 16,8 / 64 MB) — r4 rasterleri (ikon düzeltmeleri dahil) depoda.
+- [code-lead → design-lead] **DS3-04 (Önemli) KAPANDI.** Ödül katmanı: parlama `ui_glow_radial` (beyaz radyal α 1 → 0,
+  kit atlası) #FFE7A3 α 0,55 tonunda, yarıçap nesnenin 1,6 katı, ADD; iki ödülde merkezler 540 ∓ 200, nesne 200 px
+  (parlamalar kesişmez); karartma #05030D α 0,85 **düz** (azaltılmış harekette ilk kareden; ölçüm: çim 121 → 23);
+  sayı `bigNumber` 72 nesnenin 40 px altında; `reward.tap` plain 72 y 1540 (FIT, alttan çapalı), nabız 1,04 / 1,2 s.
+  Değerler `check.v3Addenda.rewardLayer`'dan okunuyor (aşağıdaki tokens notu).
+- [code-lead → design-lead] **DS3-05 (Önemli) KAPANDI.** Vinç alanı zemini dikey #3F35A0 → #372F8D (frameBottom'dan
+  floorDark'a %40; istediğiniz #352C8E'den kanal başına ≤ 4) + üst kenarda 12 px #221B66 iç gölge (`crane_area_v3_<h>`
+  dokusu, 8 px genişlik, yatay gerilir); saha havası ve duvar havası bantları alt tonu düz alır; kesik çizgi aynen.
+- [code-lead → design-lead] **DS3-06 (Önemli) KAPANDI.** Panel 7 katmanı devralınan ağaçta zaten vardı (Oct 21
+  seti); bu turda köşe yıldızı 128 px ikonun 168'e büyütülmüşü yerine kit atlasında pişen `ui_star_win` 168: §2.4
+  altın 3 ton (#FFE96A / #FFD119 / #FFAD00) + #B8430A 6 kontur (yuvarlak köşe) + 6 px alt dudak + sol üst parlama.
+- [code-lead → design-lead] **DS3-07 (Öneri) KAPANDI.** Logo: `app.title` iki satır ("Lift &" / "Land"; en dengeli
+  bölünme, `ui/kit/logoLines.ts`), satır 150 px harf, aralık 180 (blok 360); amblem 240 px harf bloğunun **görsel**
+  sol üst köşesine (harf gövdesi; satır kutusu değil) (−40, −60) ile biner ve harflerin arkasındadır. Harf renkleri blok
+  paleti, W ve C (ahşap, beton) hariç. 200° yuvasındaki tuğla amblemin arkasında kalır (uzak, 0,55).
+- [code-lead → design-lead] **DS3-08 (Öneri) KAPANDI.** Seri satırı yokken iç plaka 480 (684–1164), etiket y 976,
+  kareler y 1012–1196: kareler plakanın alt kenarına **biner** (alt 32 px + rozetler pencere gövdesinde) — spec'inizin
+  sayıları böyle veriyor; "Bölüm N" kilit yazıları gövdede okunur. Seri satırı gelince (Bölüm 15+) 560'a döner.
+- [code-lead → design-lead] **DS3-09 (Öneri) — açık soru.** "Bölüm N" HUD kapsülünde ikon Ø 64 ve sol uçtan 20 px
+  taşma zaten geometrik olarak doğru (kapsül kökü x + 20, ikon merkezi x + 32); ikon kapsülle neredeyse aynı yükseklikte
+  (64 / 60) olduğu için "içeride" okunuyor. Seçenek: HUD ikonu ham ölçüm 72'ye çıkar + taşma 28 (`kit.v3.capsule.hudIconPx`
+  sizin token'ınız); onayınızla uygularım.
+- [code-lead → design-lead] **DS3-10** değişmedi. **Ek bulgu (kendi incelemem, tipografi):** krem M düğmelerin koyu
+  etiketi ("Bölümden çık", "Geri bildirim", "Hayır, teşekkürler") 56 px'te 0,06 em koyu kontur + gölgeyle bloba
+  dönüyordu; L* < 50 etiketler artık kontursuz + 2 px beyaz α 0,45 kabartma (`textLookV3` `DARK_LABEL_LSTAR`).
+  Yeşil / mor / mavi etiketler değişmedi. §4 tablosuna "koyu etiket" satırı olarak eklemenizi öneririm.
+- [code-lead → design-lead] **tokens:** `check.v3Addenda` artık kod tarafından **okunuyor** — `tokens.ts` `V3_ADDENDA`
+  (kendi zod şeması, `check.v3Addenda` yolundan; `TOKENS` yine `check.*` taşımaz, TECH 2R.7 testi yeşil). Değerleri
+  `_doc`'taki `kit.v3.<grup>` hedeflerine taşıdığınızda tek satır (`addendaRaw` yolu) değişir. Tüketilenler bu turda:
+  `bootPack` (BootScene logo + P0), `rewardLayer` (RewardLayer). `capsuleBadge`, `arrow`, `avatarSquare`,
+  `townAreaWindow` tipli ve hazır, bileşenleri Faz 4 (kasaba penceresi, yön oku, avatar).
+- [code-lead → orkestratör] DS3-01 (Engel) ve DS3-02 … DS3-08 kapandı, DS3-09 soru, DS3-10 değişmedi; set
+  `artifacts/screens/v3r2/`. D-0xx ÖNERİ (design-lead): "yükleme ve kazanma ekranı iskelet göstermez; boot paketi" —
+  uygulama P0 + bekleme (ikinci PNG seti yerine depodaki rasterler, ≈ 60 KB); karar metnine bu biçimiyle girmesini
+  öneririm. Çalışma ağacında design-lead'in r4 SVG'leri ve belge düzenlemeleri de var (ART_*, ASSET_LIST, tokens.json);
+  rasterleri bu turda `npm run assets` ile yenilendi (manifest sha1 uyumlu, `assets:check` uyarısız).
+
+## SVG v3 r4 — tam boy Usta Dede, eldiven, Kepçe, Gribeton, 2 ikon (design-lead, 2026-10-22; ASSET §15.2, §16.6 r4)
+
+- [design-lead → code-lead] **Katalog satırı isteği (ASSET §16.3 7b):** `chr_dede_stand` — `def('chr_dede_stand', 'chr',
+  { w: 300, h: 480 }, { w: 300, h: 480 }, 'P2', { signature: { who: 'dede', keys: ['cap', 'jacket'] } })` (Tuna stand ile aynı
+  kalıp). `npm run assets` şimdilik 41 ok + 1 "unknown" (çıkış 1) — satır girince 0; rasterler bu turda yenilendi
+  (`public/assets/v2` manifest sha1'leri, atlas 23 ikon). Boot paketi kimlikleri değişmez (büst P0'da kalır).
+- [design-lead → code-lead] **DS3-03 kalıcı çözüm:** HomeScene karakter grubu ART_REFERENCE §9.2 — Tuna `chr_tuna_stand`
+  önde (1,0), Kepçe solda, **Usta Dede `chr_dede_stand` sağ arkada 0,9**; tabanı Tuna ile aynı çimen çizgisinde (temas
+  gölgesi dosyanın içinde, y 468/480), çalı katmanı kesmez. Geçici "büst çalının arkasına" düzeni bu satırla kalkar.
+  Kontak sayfası `artifacts/screens/art-review/v3-scenes.png` (sol panel) hedef düzeni gösterir.
+- [design-lead → code-lead] **`icon_kettlebell` düzeltmesi:** v3 SVG'de top gradyanı tanımsız kimliğe bakıyordu (`url(#gp22)`,
+  tanım `gKb`) — Chromium dolguyu boş bırakıp topu siyah disk gösteriyordu; r4 düzeltildi. Rozet 40 px'te arduvaz
+  dökme demir + sap halkası okunur. `icon_nextfloor` artık krem plaka + 3B yeşil ok (UX §5.9 rozeti). Prosedürel
+  yedekler (`kitIcons.ts`) değişmez.
+- [design-lead → code-lead] **Bilgi (sizin ağacınız):** çalışma ağacında `tests/assets/catalog.test.ts` "TECH 2R.6 load
+  groups" testi kırmızı — katalog `chr_dede_bust`'ı P0 boot paketine taşımış, test hâlâ P1 listesinde bekliyor; aynı
+  turda `svgV3.test.ts` "boot scene … P0" testi de `BootScene.ts`'in devam eden düzenlemesiyle kırmızıya döndü (SVG
+  değişikliğiyle ilgisi yok; `tests/theme` 455 test yeşil, `npm run assets:check` tek uyarı `chr_dede_stand`).
+- [design-lead → code-lead] `chr_tuna_cheer` eldiven siluetinin kutusu büyüdü (parmak uçları y ≈ 30, viewBox 0–400 içinde);
+  kazanma ve yükleme sahnelerinde konum değişmez. `chr_dede_bust` portre kırpımı (126, 142) r 84 aynen.
+- [design-lead → orkestratör] R2-13 madde 5 sayacı değişmez (ekran turu 2 code-lead düzeltmelerinden sonra). ÖNERİ
+  (bilgi): ART §16.2 "karakterde kontur yok" kuralı gözlük, kemer gibi **nesnelerde** tonun koyusu + spekülar ile
+  uygulanır (Dede r4); D-083/§16.2 eki olarak kaydedilebilir.

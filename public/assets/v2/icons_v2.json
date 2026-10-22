@@ -20,6 +20,26 @@
       },
       "trimmed": false
     },
+    "icon_check": {
+      "frame": {
+        "h": 128,
+        "w": 128,
+        "x": 256,
+        "y": 640
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 128,
+        "w": 128
+      },
+      "spriteSourceSize": {
+        "h": 128,
+        "w": 128,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
     "icon_chest": {
       "frame": {
         "h": 128,
@@ -346,6 +366,26 @@
         "w": 128,
         "x": 0,
         "y": 128
+      },
+      "rotated": false,
+      "sourceSize": {
+        "h": 128,
+        "w": 128
+      },
+      "spriteSourceSize": {
+        "h": 128,
+        "w": 128,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "icon_shutter": {
+      "frame": {
+        "h": 128,
+        "w": 128,
+        "x": 128,
+        "y": 640
       },
       "rotated": false,
       "sourceSize": {

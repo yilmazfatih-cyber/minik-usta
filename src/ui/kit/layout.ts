@@ -28,10 +28,13 @@ export interface HomeLayout {
   readonly artY: number;
   readonly skyBand: Rect;
   readonly groundBand: Rect;
-  /** Top bar capsules (ART_REFERENCE §9.2: h 88) and the Ø 104 settings tool. */
+  /**
+   * Top bar (ART_REFERENCE §3.4 "kapsül düzeni", DS3-02): two separate 300 × 88 capsules — lives at x 160, coins at
+   * x 500 (gap 40) — and the Ø 104 settings tool at x 936. The stars are no capsule: the count sits under the progress
+   * bar's end star (`ProgressBar` `endCount`). x 160 leaves the Faz 4 avatar square its place (§9.2, MVP hidden).
+   */
   readonly lives: Rect;
   readonly coins: Rect;
-  readonly stars: Rect;
   readonly settings: Rect;
   /** Area ribbon body: centre x, top y, body width, height (`kit.ribbon.heightPx`). */
   readonly ribbon: Rect;
@@ -104,6 +107,13 @@ const SIDE_LABEL_GAP = 8;
 const SIDE_STEP_GAP = 40;
 /** Meta progress bar top (under the area ribbon; ART_REFERENCE §9.2 keeps the v2 column). */
 const PROGRESS_Y = 300;
+/**
+ * ART_REFERENCE §3.4 "kapsül düzeni" (07/ref-03): capsule 300 × 88, lives x 160, coins x 500, settings 104 at x 936.
+ * Code constants until design-lead adds them to `kit.v3.screen.home` (tokens.json is design-lead's; REVIEW_LOG).
+ */
+export const TOP_BAR = Object.freeze({ capsuleW: 300, livesX: 160, coinsX: 500, settingsX: 936 });
+/** ART_REFERENCE §9.2: Usta Dede's full figure (`chr_dede_stand`, r4) at 0,9 of Tuna's figure, feet on her ground line. */
+export const DEDE_SCALE = 0.9;
 /** The characters' feet sit this far below the button's top edge (behind it). */
 const CHARACTER_BEHIND_PX = 24;
 
@@ -140,7 +150,8 @@ export function homeLayout(tokens: Tokens, H: number): HomeLayout {
     w: side,
     h: side + SIDE_LABEL_GAP + SIDE_LABEL_H,
   });
-  // character group (ART_REFERENCE §9.2): Tuna 300 × 480 figure at 1,1, Kepçe 300 × 206 at 0,85, Dede bust 256 × 320 at 1,25
+  // character group (ART_REFERENCE §9.2): Tuna 300 × 480 figure at 1,1, Kepçe 300 × 206 at 0,85, Dede's 300 × 480
+  // figure at 0,9 of Tuna behind at the right (DS3-03 permanent: `chr_dede_stand`, its contact shadow in the file)
   const baseY = play.y + CHARACTER_BEHIND_PX;
   const tunaH = 528;
   const tunaW = Math.round((tunaH * 300) / 480);
@@ -148,9 +159,9 @@ export function homeLayout(tokens: Tokens, H: number): HomeLayout {
   const kepceW = 255;
   const kepceH = Math.round((kepceW * 206) / 300);
   const kepce: Rect = { x: tuna.x + tunaW - 70, y: baseY + 6 - kepceH, w: kepceW, h: kepceH };
-  const dedeH = 400;
-  const dedeW = Math.round((dedeH * 256) / 320);
-  const dede: Rect = { x: W - V.characterGroupX - dedeW - 10, y: baseY - 16 - dedeH, w: dedeW, h: dedeH };
+  const dedeH = Math.round(tunaH * DEDE_SCALE);
+  const dedeW = Math.round((dedeH * 300) / 480);
+  const dede: Rect = { x: W - V.characterGroupX - dedeW - 10, y: baseY - dedeH, w: dedeW, h: dedeH };
   const character: Rect = {
     x: V.characterGroupX,
     y: baseY - V.characterGroupH,
@@ -164,11 +175,10 @@ export function homeLayout(tokens: Tokens, H: number): HomeLayout {
     artY,
     skyBand: { x: 0, y: 0, w: W, h: artY },
     groundBand: { x: 0, y: artY + BASE_H, w: W, h: Math.max(0, H - artY - BASE_H) },
-    lives: { x: L.livesX, y: capY, w: L.livesW, h: capH },
-    coins: { x: L.coinsX, y: capY, w: L.coinsW, h: capH },
-    stars: { x: L.starsX, y: capY, w: L.starsW, h: capH },
+    lives: { x: TOP_BAR.livesX, y: capY, w: TOP_BAR.capsuleW, h: capH },
+    coins: { x: TOP_BAR.coinsX, y: capY, w: TOP_BAR.capsuleW, h: capH },
     settings: {
-      x: W - L.livesX - V.settingsPx,
+      x: TOP_BAR.settingsX,
       y: capY + (capH - V.settingsPx) / 2,
       w: V.settingsPx,
       h: V.settingsPx,

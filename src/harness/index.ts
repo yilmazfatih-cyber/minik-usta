@@ -30,7 +30,9 @@ import { DEPTH } from '../scenes/level/depth.ts';
 import { HOME_SCENE_KEY, LEVEL_SCENE_KEY } from '../scenes/level/LevelScene.ts';
 import { loadLevelById, setLevelSource } from '../scenes/level/levels.ts';
 import { PROLOGUE_SCENE } from '../scenes/flow/launch.ts';
-import { gameAssets } from '../scenes/AssetLoaderScene.ts';
+import { ASSET_LOADER_KEY, gameAssets } from '../scenes/AssetLoaderScene.ts';
+import { ICON_ATLAS_KEY } from '../services/assetCatalog.ts';
+import { ArtImage } from '../ui/kit/ArtImage.ts';
 import type { LevelScene, LevelSceneData } from '../scenes/level/LevelScene.ts';
 import type { CueKind } from '../scenes/level/juice/plan.ts';
 import { tDynamic, upper } from '../services/i18n.ts';
@@ -221,6 +223,8 @@ export function installHarness(game: Phaser.Game): HarnessApi {
       gameMs: round2(gameClock),
       loopRunning: game.loop.running,
       docHidden: document.hidden,
+      artPending: ArtImage.pendingIds(),
+      iconsArt: gameAssets(game).hasArt(ICON_ATLAS_KEY),
     };
   };
 
@@ -504,6 +508,9 @@ export function installHarness(game: Phaser.Game): HarnessApi {
       await waitFor(bootDone, DEFAULT_WAIT_MS, 'the boot');
       for (const sc of game.scene.getScenes(false)) {
         const key = sc.sys.settings.key;
+        // the asset loader scene stays: stopping it mid-load (the P0 boot pack past its bounded wait) would leave the
+        // service's queue waiting for a COMPLETE that never comes — no P1 … P3 for the rest of the context
+        if (key === ASSET_LOADER_KEY) continue;
         if (key !== HOME_SCENE_KEY && game.scene.isActive(key)) game.scene.stop(key);
       }
       if (game.scene.isActive(HOME_SCENE_KEY)) game.scene.stop(HOME_SCENE_KEY);

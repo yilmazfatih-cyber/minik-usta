@@ -1,11 +1,13 @@
 /**
  * Home screen v3 (UX_FLOWS §3 "Ana ekran — ana sayfa v2", §4.1 level-start window, R2-09; ART_REFERENCE §9.2 home,
- * §3 kit; META §10 slice scope; TECH §2R.8). One screen, one primary action: the top bar (lives capsule with the count
- * inside the heart, coins + "+", stars, the purple settings tool), the area ribbon `town.ch1.title` and the meta
- * progress bar, the Renkli Tepe art with the tree house opening floor by floor (ozalit ghost + full colour, `setCrop`
- * from the bottom), the character group (Tuna full figure, Kepçe, Usta Dede), the side event bubbles (level chest
- * ring, locked Usta Ligi), the big green L "Bölüm N" button and the bottom navigation (only "Ana Sayfa" open; the
- * other tabs say "Yakında"). From level 3 on "Bölüm N" opens the level-start window (booster slots + "Oyna", K-40).
+ * §3 kit; META §10 slice scope; TECH §2R.8). One screen, one primary action: the top bar (ART_REFERENCE §3.4 "kapsül
+ * düzeni", DS3-02: two separate 300 × 88 capsules — lives with the count inside the heart, coins + "+" — and the
+ * purple settings tool; the star count sits under the progress bar's end star), the area ribbon `town.ch1.title` and
+ * the meta progress bar, the Renkli Tepe art with the tree house opening floor by floor (ozalit ghost + full colour,
+ * `setCrop` from the bottom), the character group (Tuna's and Usta Dede's full figures, Kepçe; DS3-03 closed by
+ * `chr_dede_stand`, r4), the side event bubbles (level chest ring, locked Usta Ligi), the big green L
+ * "Bölüm N" button and the bottom navigation (only "Ana Sayfa" open; the other tabs say "Yakında"). From level 3 on
+ * "Bölüm N" opens the level-start window (booster slots + "Oyna", K-40).
  *
  * Content comes from the pure meta/home.ts model; geometry from ui/kit/layout.ts; looks from the kit atlas; art from
  * the asset service (SVG raster when loaded, procedural fallback first, 200 ms cross-fade). Text from i18n — keys
@@ -360,14 +362,6 @@ export class HomeScene extends Phaser.Scene {
     coins.root.setPosition(g.coins.x + V3.capsule.iconOverhangPx, g.coins.y);
     // META §10: the shop is locked in the slice → the coin capsule and its "+" say "Yakında"
     coins.onPress(buttonFeel).onTap(() => this.comingSoon(coins.anchor(), 'up'));
-    const stars = new Capsule(this, this.icons, {
-      w: g.stars.w,
-      icon: 'icon_star',
-      value: formatCount(m.stars),
-    });
-    stars.root.setPosition(g.stars.x + V3.capsule.iconOverhangPx, g.stars.y);
-    // META §10: no task window in the slice → the structure glows for 300 ms
-    stars.onPress(buttonFeel).onTap(() => this.glow(structureRoot, colour));
     const gear = new KitButton(this, {
       color: 'purple',
       w: g.settings.w,
@@ -379,12 +373,27 @@ export class HomeScene extends Phaser.Scene {
       .setPosition(g.settings.x + g.settings.w / 2, g.settings.y + g.settings.h / 2)
       .setReduced(this.reduced);
     gear.onPress(buttonFeel).onTap(() => this.openSettings());
-    hud.push(lives.root, coins.root, stars.root, gear.root);
+    hud.push(lives.root, coins.root, gear.root);
 
-    // --- area ribbon + meta progress bar
+    // --- area ribbon + meta progress bar; the star count under the bar's end star (ART_REFERENCE §3.4, DS3-02)
     const ribbon = new Ribbon(this, { color: 'gold', text: tDynamic(KEY.area), bodyW: g.ribbon.w });
     ribbon.setPosition(g.ribbon.x + g.ribbon.w / 2, g.ribbon.y);
-    const progress = new ProgressBar(this, this.icons, g.progress.w, m.progress.value, m.progress.max);
+    const progress = new ProgressBar(
+      this,
+      this.icons,
+      g.progress.w,
+      m.progress.value,
+      m.progress.max,
+      'meta',
+      {
+        endCount: formatCount(m.stars),
+        // META §10: no task window in the slice → a tap on the stars makes the built part glow for 300 ms
+        onEndTap: () => {
+          buttonFeel('press');
+          this.glow(structureRoot, colour);
+        },
+      },
+    );
     progress.setPosition(g.progress.x, g.progress.y);
     hud.push(ribbon.root, progress.root);
 
@@ -479,22 +488,22 @@ export class HomeScene extends Phaser.Scene {
   }
 
   /**
-   * ART_REFERENCE §9.2 character group: Tuna's full figure (`chr_tuna_stand`, the cheer-figure fallback until the SVG
-   * lands — DS-04) in front at the left, Kepçe at her feet, Usta Dede's bust behind at the right; all on the ground
-   * line just behind the button's top edge, the button's own area empty.
+   * ART_REFERENCE §9.2 character group: Tuna's full figure (`chr_tuna_stand`, DS-04) in front at the left, Kepçe at
+   * her feet, Usta Dede's full figure (`chr_dede_stand`, r4 — DS3-03: the bust with its cut bottom edge is gone) at
+   * 0,9 behind at the right; all on the ground line just behind the button's top edge, the button's own area empty.
    */
   private characters(reduced: () => boolean): Phaser.GameObjects.GameObject[] {
     const g = this.geo;
     const out: Phaser.GameObjects.GameObject[] = [];
-    const dede = ArtImage.create(this, this.assets, 'chr_dede_bust', g.dede, { reduced });
+    const dede = ArtImage.create(this, this.assets, 'chr_dede_stand', g.dede, { reduced });
     out.push(dede.image.setDepth(D.stage + 1));
     const tuna = ArtImage.create(this, this.assets, 'chr_tuna_stand', g.tuna, { reduced });
     out.push(tuna.image.setDepth(D.stage + 2));
     const kepce = ArtImage.create(this, this.assets, 'chr_kepce_bust', g.kepce, { reduced });
     out.push(kepce.image.setDepth(D.stage + 3));
-    // contact shadows (ART_REFERENCE §6.1): an ellipse under each figure's feet
+    // contact shadows (ART_REFERENCE §6.1): an ellipse under Tuna's and Kepçe's feet (Dede's figure carries its own)
     const shadows = addBakedGraphics(this).setDepth(D.stage);
-    for (const r of [g.tuna, g.kepce, g.dede]) {
+    for (const r of [g.tuna, g.kepce]) {
       shadows.fillStyle(0x000000, 0.22).fillEllipse(r.x + r.w / 2, r.y + r.h - 4, r.w * 0.8, r.w * 0.16);
     }
     out.push(shadows);

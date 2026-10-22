@@ -133,6 +133,12 @@ export interface HarnessStatus {
   /** Phaser's loop is running (not paused by a hidden document) and the document is visible (stall diagnostics). */
   readonly loopRunning: boolean;
   readonly docHidden: boolean;
+  /**
+   * DS3-01 (a): live `ArtImage`s still waiting for their raster (ids), and whether the `icons_v2` atlas is in use. The
+   * screens tool shoots only when `artPending` is empty (and the icons are in where P1 was requested).
+   */
+  readonly artPending: readonly string[];
+  readonly iconsArt: boolean;
 }
 
 export interface HarnessState extends HarnessStatus {

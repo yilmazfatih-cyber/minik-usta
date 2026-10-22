@@ -8,9 +8,19 @@
 import * as z from 'zod/mini';
 
 export type AssetCategory = 'bg' | 'town' | 'chr' | 'icon' | 'logo';
-/** TECH §2R.6 load groups: P1 after level 1 is interactive, P2 after P1, P3 last. (P0 = font + intro, not art.) */
-export type AssetGroup = 'P1' | 'P2' | 'P3';
+/**
+ * TECH §2R.6 load groups: P1 after level 1 is interactive, P2 after P1, P3 last — the background chain
+ * (`ASSET_GROUPS`). P0 is the loading screen's own group, the **boot pack** (ART_REFERENCE §9.1 v1.1, DS3-01 b;
+ * `BOOT_PACK_IDS`): the four flying bricks (ASSET §16.3 ek 2026-10-20), Tuna's cheer, the Usta Dede and Kepçe busts
+ * and the logo emblem. The boot scene requests it itself and waits for it at most `BOOT_ART_WAIT_MS` (together with
+ * the font wait) so the loading screen's first frame shows the rasters; a slow network leaves the ids to their
+ * fallbacks when they arrive. P0 is ≈ 60 KB of the committed rasters (no second raster set: the existing outputs are
+ * already at or under 0,75 × their use size, ≤ 150 KB), cached by the browser after the first launch.
+ */
+export type AssetGroup = 'P0' | 'P1' | 'P2' | 'P3';
+/** The background chain (`startBackground`), in order; P0 is not in it. */
 export const ASSET_GROUPS: readonly AssetGroup[] = ['P1', 'P2', 'P3'];
+const GroupSchema = z.enum(['P0', 'P1', 'P2', 'P3']);
 
 export interface Size {
   readonly w: number;
@@ -69,7 +79,11 @@ const def = (
   ...(extra.inAtlas ? { inAtlas: true } : {}),
 });
 
-/** ASSET §16.3 icons (16 + `icon_piggy`, `icon_kettlebell`, `icon_nextfloor`) + 2 nav icons UX §3 needs. */
+/**
+ * ASSET §16.3 icons (16 + `icon_piggy`, `icon_kettlebell`, `icon_nextfloor`) + 2 nav icons UX §3 needs + the SVG v3
+ * pair of 2026-10-20 (`icon_shutter`: Açık Kepenk, the level-start window's third slot; `icon_check`: the selected
+ * slot's ✓). 23 icons → a 512 × 768 atlas (24 slots).
+ */
 export const ICON_IDS = [
   'icon_coin',
   'icon_life',
@@ -92,11 +106,35 @@ export const ICON_IDS = [
   'icon_nextfloor',
   'icon_nav_home',
   'icon_nav_album',
+  'icon_shutter',
+  'icon_check',
 ] as const;
 
 const ICON_PHASE3 = new Set(['icon_brush', 'icon_undo', 'icon_thermos']);
 const ICON_OPTIONAL = new Set(['icon_nav_home', 'icon_nav_album']);
 export const ICON_SIZE = 128;
+
+/**
+ * ASSET §16.3 ek (2026-10-20, SVG v3): the loading screen's flying bricks (UX §1.1 "8 tuğla = 4 SVG × 2 kopya"),
+ * 200 × 200 each, their own textures (no atlas), load group P0 (the boot scene's own request).
+ */
+export const BRICK_FLY_IDS = ['brick_fly_o', 'brick_fly_i2', 'brick_fly_l3', 'brick_fly_1'] as const;
+export type BrickFlyId = (typeof BRICK_FLY_IDS)[number];
+export const BRICK_FLY_PX = 200;
+
+/**
+ * ART_REFERENCE §9.1 v1.1 boot pack (tokens `check.v3Addenda.bootPack.ids`, same order): the loading screen's art, load
+ * group P0. The UX §1.1 composition: Tuna cheering, Usta Dede and Kepçe, the emblem, the eight bricks (four SVGs twice).
+ */
+export const BOOT_PACK_IDS = [
+  'chr_tuna_cheer',
+  'chr_dede_bust',
+  'chr_kepce_bust',
+  'logo_emblem',
+  ...BRICK_FLY_IDS,
+] as const;
+/** The boot scene waits this long at most for P0 (with the font wait; TECH §2R.6 "Boot paketi"). */
+export const BOOT_ART_WAIT_MS = 1200;
 
 /** The catalogue, ASSET §16.3 order. */
 export const ASSET_CATALOG: readonly AssetDef[] = Object.freeze([
@@ -109,27 +147,37 @@ export const ASSET_CATALOG: readonly AssetDef[] = Object.freeze([
   def('chr_tuna_bust', 'chr', { w: 256, h: 320 }, { w: 300, h: 375 }, 'P1', {
     signature: { who: 'tuna', keys: ['helmet', 'vest', 'gloves'] },
   }),
-  def('chr_tuna_cheer', 'chr', { w: 300, h: 400 }, { w: 300, h: 400 }, 'P3', {
+  // ART_REFERENCE §9.1 v1.1 boot pack (DS3-01): the loading screen's characters and emblem are P0 (`BOOT_PACK_IDS`);
+  // the win layer (Tuna's cheer) and the home screen (Kepçe, the emblem) find them resident
+  def('chr_tuna_cheer', 'chr', { w: 300, h: 400 }, { w: 300, h: 400 }, 'P0', {
     signature: { who: 'tuna', keys: ['helmet', 'vest', 'gloves'] },
   }),
   // DS-04 (design-lead ekran incelemesi 1): full-figure Tuna for the home character corner (thumb up, D-087
-  // proportions). Optional until design-lead delivers the SVG and its ASSET §16.3 row; the home screen keeps the bust.
+  // proportions). ASSET §16.3 row 5b since 2026-10-20 (the SVG is delivered): a required 2R row like the others.
   def('chr_tuna_stand', 'chr', { w: 300, h: 480 }, { w: 300, h: 480 }, 'P2', {
-    optional: true,
     signature: { who: 'tuna', keys: ['helmet', 'vest', 'gloves'] },
   }),
-  def('chr_dede_bust', 'chr', { w: 256, h: 320 }, { w: 256, h: 320 }, 'P1', {
+  def('chr_dede_bust', 'chr', { w: 256, h: 320 }, { w: 256, h: 320 }, 'P0', {
     signature: { who: 'dede', keys: ['cap', 'jacket'] },
   }),
-  def('chr_kepce_bust', 'chr', { w: 320, h: 220 }, { w: 300, h: 206 }, 'P2', {
+  // ASSET §16.3 row 7b (design-lead r4, 2026-10-22): full-figure Usta Dede for the home character group (DS3-03
+  // permanent fix: the bust and its bush occluder leave the home screen); the same mould as `chr_tuna_stand`
+  def('chr_dede_stand', 'chr', { w: 300, h: 480 }, { w: 300, h: 480 }, 'P2', {
+    signature: { who: 'dede', keys: ['cap', 'jacket'] },
+  }),
+  def('chr_kepce_bust', 'chr', { w: 320, h: 220 }, { w: 300, h: 206 }, 'P0', {
     signature: { who: 'kepce', keys: ['helmet', 'collar'] },
   }),
   def('chr_gribeton_bust', 'chr', { w: 256, h: 320 }, { w: 256, h: 320 }, 'P3', {
     signature: { who: 'gribeton', keys: ['suit', 'hair'] },
   }),
-  def('logo_emblem', 'logo', { w: 360, h: 360 }, { w: 360, h: 360 }, 'P2'),
+  def('logo_emblem', 'logo', { w: 360, h: 360 }, { w: 360, h: 360 }, 'P0'),
   // ASSET §16.5: the tutorial glove may be a small SVG (`public/art/icon/ui_tutorial_glove.svg`), its own image
   def('ui_tutorial_glove', 'icon', { w: 140, h: 160 }, { w: 140, h: 160 }, 'P1'),
+  // ASSET §16.3 ek 2026-10-20: the loading screen's flying bricks, own 200 × 200 textures in P0 (UX §1.1; boot pack)
+  ...BRICK_FLY_IDS.map((id) =>
+    def(id, 'icon', { w: BRICK_FLY_PX, h: BRICK_FLY_PX }, { w: BRICK_FLY_PX, h: BRICK_FLY_PX }, 'P0'),
+  ),
   ...ICON_IDS.map((id) =>
     def(id, 'icon', { w: ICON_SIZE, h: ICON_SIZE }, { w: ICON_SIZE, h: ICON_SIZE }, 'P1', {
       phase: ICON_PHASE3.has(id) ? '3' : '2R',
@@ -141,7 +189,7 @@ export const ASSET_CATALOG: readonly AssetDef[] = Object.freeze([
 
 export const ASSET_BY_ID: ReadonlyMap<string, AssetDef> = new Map(ASSET_CATALOG.map((a) => [a.id, a]));
 
-/** The packed icon atlas (TECH §2R.6 step 3): 4 columns of 128 px slots, rows as needed (19 → 512 × 640). */
+/** The packed icon atlas (TECH §2R.6 step 3): 4 columns of 128 px slots, rows as needed (23 → 512 × 768). */
 export const ICON_ATLAS_KEY = 'icons_v2';
 export const ICON_ATLAS_COLS = 4;
 
@@ -185,7 +233,7 @@ const Entry = z.object({
   bytes: z.number(),
   /** sha1 of the source SVG (staleness gate). */
   srcSha1: z.optional(z.string()),
-  group: z.enum(['P1', 'P2', 'P3']),
+  group: GroupSchema,
   status: z.enum(['ok', 'rejected']),
   /** Why the SVG was rejected (static checks, ASSET §16.2). */
   errors: z.optional(z.array(z.string())),
@@ -198,7 +246,7 @@ const AtlasEntry = z.object({
   h: z.number(),
   bytes: z.number(),
   jsonBytes: z.number(),
-  group: z.enum(['P1', 'P2', 'P3']),
+  group: GroupSchema,
   frames: z.array(z.string()),
 });
 

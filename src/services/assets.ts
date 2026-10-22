@@ -17,6 +17,9 @@ import {
   ASSET_BY_ID,
   ASSET_CATALOG,
   ASSET_GROUPS,
+  BOOT_PACK_IDS,
+  BRICK_FLY_IDS,
+  BRICK_FLY_PX,
   ICON_ATLAS_KEY,
   MANIFEST_FILE,
   OUT_URL,
@@ -34,7 +37,7 @@ import {
   uploadAtlas,
   uploadCanvasArt,
 } from '../theme/textures.ts';
-import type { FallbackArt, TextureHost } from '../theme/textures.ts';
+import type { FallbackArt, FrameSpec, TextureHost } from '../theme/textures.ts';
 import type { Tokens } from '../theme/tokens.ts';
 
 /** `art` = SVG rasters when loaded (default); `fallback` = procedural only (harness `assetMode`, TECH §2R.11). */
@@ -76,6 +79,15 @@ export const fallbackKey = (id: string): string => `fb:${id}`;
 /** Cross-fade when art replaces a fallback (UX §3 "Yükleniyor": 200 ms). */
 export const ART_FADE_MS = 200;
 
+/**
+ * ASSET §16.3 ek (2026-10-20): the loaded P0 bricks are drawn into ONE canvas atlas (`art:bricks_v2`, 200 px frames
+ * named by id) and `texture('brick_fly_*')` hands out its frames. The loading ring draws eight rotated copies of the
+ * four bricks; eight rotated quads over four image-sourced textures in one batch tore on the software GPU (one
+ * triangle of a quad sheared; Phaser 4.2.1 + SwiftShader, 2026-10-22, TECH §2R.6), while one texture — like the
+ * procedural ring before it and the canvas fallbacks — draws clean.
+ */
+export const BRICK_ATLAS_KEY = 'bricks_v2';
+
 /** URL of a file in `public/assets/v2`, relative to the page (vite `base: './'`). */
 export const assetUrl = (file: string, base = OUT_URL): string => `${base}/${file}`;
 
@@ -101,10 +113,17 @@ export function groupItems(manifest: Manifest, group: AssetGroup, base = OUT_URL
   return items.sort((x, y) => (x.key < y.key ? -1 : x.key > y.key ? 1 : 0));
 }
 
+/** Catalogue id of a texture id (`<id>_ghost` → its structure). */
+const baseId = (id: string): string => (id.endsWith('_ghost') ? id.slice(0, -'_ghost'.length) : id);
+
 /** Raster size of an id (catalogue; the ghost shares its structure's size). */
 function rasterOf(id: string): { w: number; h: number } | null {
-  const base = id.endsWith('_ghost') ? id.slice(0, -'_ghost'.length) : id;
-  return ASSET_BY_ID.get(base)?.raster ?? null;
+  return ASSET_BY_ID.get(baseId(id))?.raster ?? null;
+}
+
+/** Load group of a texture id (catalogue; the ghost's is its structure's), null for an unknown id. */
+export function groupOf(id: string): AssetGroup | null {
+  return ASSET_BY_ID.get(baseId(id))?.group ?? null;
 }
 
 type Listener = (ref: TextureRef) => void;
@@ -116,6 +135,8 @@ export class AssetService {
   private readonly base: string;
   private manifest: Manifest | null = null;
   private manifestLoad: Promise<Manifest | null> | null = null;
+  /** The manifest fetch ended without a manifest (missing / invalid): nothing will ever arrive. */
+  private manifestFailed = false;
   private readonly loaded = new Set<string>();
   private readonly failed = new Set<string>();
   private readonly baked = new Set<string>();
@@ -124,6 +145,8 @@ export class AssetService {
   private queue: Promise<unknown> = Promise.resolve();
   private mode: AssetMode = 'art';
   private background: Promise<void> | null = null;
+  /** `brick_fly_*` id → its frame of the baked `bricks_v2` atlas (null until the P0 bricks are loaded). */
+  private brickFrames: ReadonlyMap<string, { readonly key: string; readonly frame: string }> | null = null;
 
   constructor(opts: {
     readonly textures: AssetTextures;
@@ -163,31 +186,51 @@ export class AssetService {
       } catch {
         this.manifest = null;
       }
+      this.manifestFailed = this.manifest === null;
       return this.manifest;
     })();
     return this.manifestLoad;
   }
 
-  /** Loads one group (once; later calls return the same promise). Failures keep the fallback. */
+  /**
+   * Loads one group (once; later calls return the same promise). Failures keep the fallback. When the group is done —
+   * loaded, failed, or without a manifest — every listener of an id of that group hears its current reference (the
+   * raster, or the fallback), so an image that waited for art (`ArtImage` `waitArt`, the boot pack) shows something.
+   */
   loadGroup(group: AssetGroup): Promise<void> {
     let p = this.groups.get(group);
     if (!p) {
       p = this.enqueue(async () => {
         const manifest = await this.loadManifest();
-        if (!manifest) return;
-        const items = groupItems(manifest, group, this.base).filter((it) => !this.loaded.has(it.key));
-        if (items.length === 0) return;
-        const res = await (await this.port()).loadItems(items);
-        for (const k of res.failed) this.failed.add(k);
-        for (const k of res.ok) {
-          this.loaded.add(k);
-          this.emit(k.slice('art:'.length));
+        const items = manifest
+          ? groupItems(manifest, group, this.base).filter((it) => !this.loaded.has(it.key))
+          : [];
+        if (items.length > 0) {
+          const res = await (await this.port()).loadItems(items);
+          for (const k of res.failed) this.failed.add(k);
+          for (const k of res.ok) this.loaded.add(k);
+          // the bricks are announced as frames of their atlas: bake before the listeners hear of them
+          if (res.ok.some((k) => (BRICK_FLY_IDS as readonly string[]).includes(k.slice('art:'.length))))
+            this.bakeBrickAtlas();
+          if (res.ok.includes(artKey('chr_dede_bust'))) this.bakePortrait();
         }
-        if (res.ok.includes(artKey('chr_dede_bust'))) this.bakePortrait();
+        for (const id of [...this.listeners.keys()]) if (groupOf(id) === group) this.emit(id);
       });
       this.groups.set(group, p);
     }
     return p;
+  }
+
+  /**
+   * True while the raster of `id` may still arrive (mode `art`, a catalogue id, its load not failed, the manifest not
+   * known to lack it): the harness waits for such images, `ArtImage` `waitArt` keeps them hidden until then.
+   */
+  expectsArt(id: string): boolean {
+    if (this.mode !== 'art' || !ASSET_BY_ID.has(baseId(id)) || this.failed.has(artKey(id))) return false;
+    if (this.manifestFailed) return false;
+    if (!this.manifest) return true;
+    const e = this.manifest.assets[id];
+    return e?.status === 'ok' && (e.file !== undefined || e.atlas !== undefined);
   }
 
   /** TECH §2R.6: P1 → P2 → P3 in the background (call once level 1 is interactive). */
@@ -198,9 +241,16 @@ export class AssetService {
     return this.background;
   }
 
-  /** Texture of an image id (`bg_home_town`, `town_ch1_treehouse`, `…_ghost`, `chr_*`, `logo_emblem`). */
+  /**
+   * Texture of an image id (`bg_home_town`, `town_ch1_treehouse`, `…_ghost`, `chr_*`, `logo_emblem`); a loaded
+   * `brick_fly_*` is a frame of the `bricks_v2` atlas.
+   */
   texture(id: string): TextureRef | null {
-    if (this.hasArt(id)) return { key: artKey(id), art: true };
+    if (this.hasArt(id)) {
+      const f = this.brickFrames?.get(id);
+      if (f && this.textures.exists(f.key)) return { key: f.key, frame: f.frame, art: true };
+      return { key: artKey(id), art: true };
+    }
     return this.fallbackRef(id);
   }
 
@@ -245,7 +295,13 @@ export class AssetService {
       if (this.textures.exists(key)) this.textures.remove(key);
       this.loaded.delete(key);
     }
-    for (const g of ASSET_GROUPS) this.groups.delete(g);
+    if (this.brickFrames && ids.some((id) => this.brickFrames?.has(id))) {
+      for (const k of new Set([...this.brickFrames.values()].map((f) => f.key)))
+        if (this.textures.exists(k)) this.textures.remove(k);
+      this.brickFrames = null;
+    }
+    // every group may be requested again (P0 included: it is not in the background chain)
+    this.groups.clear();
   }
 
   /** Loaded art ids (harness / debug). */
@@ -263,6 +319,28 @@ export class AssetService {
       this.baked.add(key);
     }
     return { key, art: false };
+  }
+
+  /** The loaded `brick_fly_*` rasters → one canvas atlas (`art:bricks_v2`), frames named by id (see `BRICK_ATLAS_KEY`). */
+  private bakeBrickAtlas(): void {
+    const ids = BRICK_FLY_IDS.filter((id) => this.loaded.has(artKey(id)) && this.textures.exists(artKey(id)));
+    if (ids.length === 0) return;
+    const px = BRICK_FLY_PX;
+    const specs: FrameSpec[] = ids.map((id) => ({
+      name: id,
+      w: px,
+      h: px,
+      anchorX: 0,
+      anchorY: 0,
+      aliases: [],
+      draw: (ctx) => {
+        const img = this.textures.get(artKey(id)).getSourceImage() as CanvasImageSource;
+        (ctx as CanvasRenderingContext2D).drawImage(img, 0, 0, px, px);
+      },
+    }));
+    const page = { maxWidth: 2 * px + 8, maxHeight: 2 * px + 8, gutter: 2 };
+    const up = uploadAtlas(this.textures, artKey(BRICK_ATLAS_KEY), packFrames(specs, page));
+    this.brickFrames = up.index;
   }
 
   private bakePortrait(): void {
@@ -316,3 +394,7 @@ export class AssetService {
 
 /** Every catalogue id that has a load group (harness: wait for all). */
 export const ALL_ART_IDS: readonly string[] = ASSET_CATALOG.map((a) => a.id);
+
+/** The boot pack is exactly the P0 rows of the catalogue (ART_REFERENCE §9.1 v1.1; tested). */
+export const BOOT_PACK_GROUP: AssetGroup = 'P0';
+export { BOOT_PACK_IDS };

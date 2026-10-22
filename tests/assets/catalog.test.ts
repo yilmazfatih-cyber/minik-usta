@@ -8,11 +8,17 @@ import { join } from 'node:path';
 import type Phaser from 'phaser';
 import { describe, expect, it } from 'vitest';
 import tokens from '../../src/theme/tokens.json' with { type: 'json' };
-import { TOKENS } from '../../src/theme/tokens.ts';
+import { TOKENS, V3_ADDENDA } from '../../src/theme/tokens.ts';
+import { readManifest } from '../../tools/assets.ts';
 import {
   ASSET_BY_ID,
   ASSET_CATALOG,
+  ASSET_GROUPS,
+  BOOT_PACK_IDS,
+  BRICK_FLY_IDS,
+  BRICK_FLY_PX,
   ICON_ATLAS_KEY,
+  ICON_IDS,
   checkSvg,
   emptyManifest,
   iconAtlasSize,
@@ -23,9 +29,9 @@ import {
   parseManifest,
 } from '../../src/services/assetCatalog.ts';
 import type { AssetDef, Manifest } from '../../src/services/assetCatalog.ts';
-import { AssetService, artKey, fallbackKey, groupItems } from '../../src/services/assets.ts';
+import { AssetService, BRICK_ATLAS_KEY, artKey, fallbackKey, groupItems } from '../../src/services/assets.ts';
 import type { LoadItem, LoaderPort } from '../../src/services/assets.ts';
-import { ICONS_FALLBACK_KEY } from '../../src/theme/textures.ts';
+import { BRICK_FLY_FALLBACK, ICONS_FALLBACK_KEY, fallbackArt } from '../../src/theme/textures.ts';
 import { createRecorder } from '../theme/recordingContext.ts';
 
 const ROOT = join(import.meta.dirname, '..', '..');
@@ -82,30 +88,66 @@ describe('catalogue = ASSET 16.3 table', () => {
     for (const n of ['icon_brush', 'icon_undo', 'icon_thermos']) expect(def(n).phase).toBe('3');
   });
 
-  it('TECH 2R.6 load groups: P1 icons, chr_tuna_bust, chr_dede_bust, bg_level_site_edge (+ ASSET 16.5 glove); P2 home; P3 win', () => {
+  it('ASSET 16.3 ek 2026-10-20 (SVG v3): icon_shutter / icon_check in the atlas (23 icons → 512 × 768); brick_fly_* 200 × 200 own textures in P0; chr_tuna_stand required (DS-04)', () => {
+    for (const n of ['icon_shutter', 'icon_check']) {
+      expect(def(n)).toMatchObject({ category: 'icon', group: 'P1', phase: '2R', inAtlas: true });
+      expect(def(n).optional, n).toBeUndefined();
+    }
+    expect(ICON_IDS).toHaveLength(23);
+    expect(iconAtlasSize(ICON_IDS.length)).toEqual({ w: 512, h: 768 });
+    expect([...BRICK_FLY_IDS]).toEqual(['brick_fly_o', 'brick_fly_i2', 'brick_fly_l3', 'brick_fly_1']);
+    for (const id of BRICK_FLY_IDS) {
+      expect(def(id)).toMatchObject({
+        category: 'icon',
+        viewBox: { w: BRICK_FLY_PX, h: BRICK_FLY_PX },
+        raster: { w: BRICK_FLY_PX, h: BRICK_FLY_PX },
+        group: 'P0',
+        phase: '2R',
+      });
+      expect(def(id).inAtlas, id).toBeUndefined();
+      expect(def(id).optional, id).toBeUndefined();
+      // the fallback is the v2 block of the SVG's stud layout, at the raster size
+      expect(fallbackArt(id, def(id).raster, TOKENS)).toMatchObject({ w: BRICK_FLY_PX, h: BRICK_FLY_PX });
+    }
+    expect(Object.keys(BRICK_FLY_FALLBACK).sort()).toEqual([...BRICK_FLY_IDS].sort());
+    // P0 is the boot scene's own group: never part of the background chain
+    expect(ASSET_GROUPS).toEqual(['P1', 'P2', 'P3']);
+    const doc = readFileSync(join(ROOT, 'docs', 'ASSET_LIST.md'), 'utf8');
+    for (const id of [...BRICK_FLY_IDS, 'icon_shutter', 'icon_check']) expect(doc).toContain(`icon/${id}`);
+    // DS-04: the SVG is delivered (ASSET §16.3 row 5b) — a required row, the home corner draws the full figure
+    expect(def('chr_tuna_stand').optional).toBeUndefined();
+  });
+
+  it('TECH 2R.6 load groups: P0 boot pack (ART_REFERENCE 9.1 v1.1); P1 icons, chr_tuna_bust, bg_level_site_edge (+ ASSET 16.5 glove); P2 home; P3 win', () => {
     const g = (grp: string) => ASSET_CATALOG.filter((a) => a.group === grp && !a.inAtlas).map((a) => a.id);
-    expect(g('P1').sort()).toEqual([
-      'bg_level_site_edge',
-      'chr_dede_bust',
-      'chr_tuna_bust',
-      'ui_tutorial_glove',
-    ]);
+    // DS3-01 (b): the loading screen's art is the P0 boot pack — the catalogue's P0 rows are exactly its ids, in the
+    // order of tokens `check.v3Addenda.bootPack.ids`; moved there from P1 (Dede), P2 (Kepçe, emblem) and P3 (cheer)
+    expect([...BOOT_PACK_IDS]).toEqual([...V3_ADDENDA.bootPack.ids]);
+    expect(g('P0').sort()).toEqual([...BOOT_PACK_IDS].sort());
+    expect(g('P1').sort()).toEqual(['bg_level_site_edge', 'chr_tuna_bust', 'ui_tutorial_glove']);
     // ASSET §16.3 #4b town_ch1_tree (DS-02): P2 with the tree house it stands under, no ghost texture
-    // DS-04: the full-figure `chr_tuna_stand` is an optional P2 row until design-lead delivers it (home corner)
+    // DS-04: the full-figure `chr_tuna_stand` (ASSET §16.3 row 5b, delivered 2026-10-20) is a P2 row (home corner)
+    // ASSET §16.3 row 7b (r4, 2026-10-22): the full-figure Usta Dede joins the home group in P2 (DS3-03 permanent)
     expect(g('P2').sort()).toEqual([
       'bg_home_town',
-      'chr_kepce_bust',
+      'chr_dede_stand',
       'chr_tuna_stand',
-      'logo_emblem',
       'town_ch1_tree',
       'town_ch1_treehouse',
     ]);
+    expect(def('chr_dede_stand')).toMatchObject({
+      category: 'chr',
+      viewBox: { w: 300, h: 480 },
+      raster: { w: 300, h: 480 },
+      signature: { who: 'dede', keys: ['cap', 'jacket'] },
+    });
+    expect(fallbackArt('chr_dede_stand', { w: 300, h: 480 }, TOKENS)).toMatchObject({ w: 300, h: 480 });
     expect(def('chr_tuna_stand')).toMatchObject({
       category: 'chr',
       viewBox: { w: 300, h: 480 },
       raster: { w: 300, h: 480 },
-      optional: true,
     });
+    expect(def('chr_tuna_stand').optional).toBeUndefined();
     expect(def('town_ch1_tree')).toMatchObject({
       category: 'town',
       viewBox: { w: 760, h: 820 },
@@ -113,8 +155,19 @@ describe('catalogue = ASSET 16.3 table', () => {
     });
     expect(def('town_ch1_tree').ghost).toBeUndefined();
     expect(def('town_ch1_treehouse').ghost).toBe(true);
-    expect(g('P3').sort()).toEqual(['bg_win_plaza', 'chr_gribeton_bust', 'chr_tuna_cheer']);
-    expect(ASSET_CATALOG.filter((a) => a.category === 'icon').every((a) => a.group === 'P1')).toBe(true);
+    expect(g('P3').sort()).toEqual(['bg_win_plaza', 'chr_gribeton_bust']);
+    expect(ASSET_CATALOG.filter((a) => a.inAtlas).every((a) => a.group === 'P1')).toBe(true);
+    // the boot pack is small: the committed rasters of its ids stay under the §9.1 v1.1 150 KB budget (no second set)
+    const m = readManifest();
+    if (m) {
+      const bytes = BOOT_PACK_IDS.reduce((sum, id) => sum + (m.manifest.assets[id]?.bytes ?? 0), 0);
+      expect(bytes).toBeGreaterThan(0);
+      expect(bytes).toBeLessThanOrEqual(V3_ADDENDA.bootPack.maxKb * 1024);
+      for (const id of BOOT_PACK_IDS) expect(m.manifest.assets[id]?.group, id).toBe('P0');
+    }
+    expect(
+      ASSET_CATALOG.filter((a) => a.category === 'icon' && !a.inAtlas && a.group !== 'P0').map((a) => a.id),
+    ).toEqual(['ui_tutorial_glove']);
   });
 
   it('ASSET 16.2 size limits: bg 60 KB, town 40 KB, chr 20 KB, logo 15 KB, icon 6 KB', () => {
@@ -125,8 +178,9 @@ describe('catalogue = ASSET 16.3 table', () => {
     expect(def('icon_coin').maxBytes).toBe(6144);
   });
 
-  it('TECH 2R.6 icon atlas: 4 columns of 128 px; 19 icons → 512 × 640 (20 slots)', () => {
+  it('TECH 2R.6 icon atlas: 4 columns of 128 px; 19 icons → 512 × 640 (20 slots), 23 → 512 × 768', () => {
     expect(iconAtlasSize(19)).toEqual({ w: 512, h: 640 });
+    expect(iconAtlasSize(23)).toEqual({ w: 512, h: 768 });
     expect(iconSlot(5)).toEqual({ x: 128, y: 128 });
   });
 
@@ -257,6 +311,7 @@ function fakeTextures() {
     created,
     removed,
     addArt: (key: string, frames: string[] = []) => map.set(key, { frames: new Set(frames) }),
+    frames: (key: string) => [...(map.get(key)?.frames ?? [])],
   };
 }
 
@@ -296,6 +351,15 @@ function manifestWith(): Manifest {
     bytes: 0,
     srcSha1: 'd',
     group: 'P1',
+    status: 'ok',
+  };
+  m.assets['brick_fly_o'] = {
+    file: 'brick_fly_o.webp',
+    w: 200,
+    h: 200,
+    bytes: 10,
+    srcSha1: 'e',
+    group: 'P0',
     status: 'ok',
   };
   m.atlases[ICON_ATLAS_KEY] = {
@@ -347,6 +411,72 @@ describe('AssetService (TECH 2R.6 "Çalışma anı")', () => {
       },
     ]);
     expect(groupItems(m, 'P3')).toEqual([]);
+    // ASSET §16.3 ek 2026-10-20: P0 = the loading screen's bricks, own images
+    expect(groupItems(m, 'P0')).toEqual([
+      { kind: 'image', key: 'art:brick_fly_o', url: 'assets/v2/brick_fly_o.webp' },
+    ]);
+  });
+
+  it("TECH 2R.6 P0 (loading screen bricks) loads on the boot scene's own request and is never part of startBackground", async () => {
+    const { svc, loads, tx } = service(manifestWith());
+    expect(svc.texture('brick_fly_o')).toEqual({ key: fallbackKey('brick_fly_o'), art: false });
+    await svc.startBackground();
+    expect(loads.flat().map((i) => i.key)).not.toContain('art:brick_fly_o');
+    expect(svc.texture('brick_fly_o')?.art).toBe(false);
+    await svc.loadGroup('P0');
+    // the loaded bricks are frames of ONE canvas atlas (a rotated multi-texture ring tore on the software GPU)
+    expect(svc.texture('brick_fly_o')).toEqual({
+      key: artKey(BRICK_ATLAS_KEY),
+      frame: 'brick_fly_o',
+      art: true,
+    });
+    expect(tx.created).toContain(fallbackKey('brick_fly_o'));
+    expect(tx.created.filter((k) => k === artKey(BRICK_ATLAS_KEY))).toHaveLength(1);
+    expect(tx.frames(artKey(BRICK_ATLAS_KEY))).toEqual(['brick_fly_o']);
+    // the listener heard the atlas frame, never the single image
+    const heard: unknown[] = [];
+    const svc2 = service(manifestWith());
+    svc2.svc.onChange('brick_fly_o', (r) => heard.push(r));
+    await svc2.svc.loadGroup('P0');
+    expect(heard).toEqual([{ key: artKey(BRICK_ATLAS_KEY), frame: 'brick_fly_o', art: true }]);
+    // release of a brick drops the atlas with it; the next texture() falls back
+    svc.release(['brick_fly_o']);
+    expect(tx.removed).toContain(artKey(BRICK_ATLAS_KEY));
+    expect(svc.texture('brick_fly_o')?.art).toBe(false);
+  });
+
+  it('TECH 2R.6 expectsArt (DS3-01): true while the raster may still come, false after a failed load, without a manifest, in fallback mode or for an unknown id', async () => {
+    const { svc } = service(manifestWith(), ['art:chr_tuna_bust']);
+    expect(svc.expectsArt('chr_tuna_bust')).toBe(true); // manifest not fetched yet: a catalogue id may arrive
+    expect(svc.expectsArt('icon_mystery')).toBe(false);
+    await svc.loadGroup('P1');
+    expect(svc.expectsArt('chr_tuna_bust')).toBe(false); // the load failed
+    expect(svc.expectsArt('bg_home_town')).toBe(true); // P2, not loaded yet
+    expect(svc.expectsArt('bg_win_plaza')).toBe(false); // rejected in the manifest
+    expect(svc.expectsArt('chr_tuna_cheer')).toBe(false); // not in this manifest
+    svc.setMode('fallback');
+    expect(svc.expectsArt('bg_home_town')).toBe(false);
+    const none = service(null);
+    await none.svc.loadGroup('P1');
+    expect(none.svc.expectsArt('chr_tuna_bust')).toBe(false); // no manifest: nothing will come
+  });
+
+  it('TECH 2R.6 a finished group announces every listened id of the group — the raster, or the fallback of a failed / missing one (ArtImage waitArt)', async () => {
+    const { svc } = service(manifestWith(), ['art:chr_tuna_bust']);
+    const heard: Record<string, boolean[]> = {
+      chr_tuna_bust: [],
+      icon_coin: [],
+      bg_level_site_edge: [],
+      bg_home_town: [],
+    };
+    for (const id of Object.keys(heard)) svc.onChange(id, (r) => heard[id]?.push(r.art));
+    await svc.loadGroup('P1');
+    expect(heard['chr_tuna_bust']).toEqual([false]); // failed → the fallback is announced
+    expect(heard['bg_home_town']).toEqual([]); // P2: untouched
+    // bg_level_site_edge has no fallback and no manifest entry: nothing to announce
+    expect(heard['bg_level_site_edge']).toEqual([]);
+    await svc.loadGroup('P2');
+    expect(heard['bg_home_town']).toEqual([true]);
   });
 
   it('TECH 2R.6 before loading, texture() returns the procedural fallback (baked once); after P1 the raster', async () => {

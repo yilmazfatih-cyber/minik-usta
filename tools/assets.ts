@@ -123,6 +123,9 @@ export function stalenessProblems(sources: readonly SvgSource[], manifest: Manif
     const e = manifest.assets[def.id];
     if (!e) problems.push(`${src.path}: not in the manifest`);
     else if (e.srcSha1 !== src.sha1) problems.push(`${src.path}: changed since the last raster (sha1)`);
+    // the game loads by the manifest's group: a catalogue move (e.g. into the P0 boot pack) must reach it
+    else if (e.group !== def.group)
+      problems.push(`${def.id}: manifest group ${e.group} differs from the catalogue's ${def.group}`);
   }
   for (const [id, e] of Object.entries(manifest.assets)) {
     if (e.srcSha1 !== undefined && !seen.has(id)) problems.push(`${id}: in the manifest but its SVG is gone`);

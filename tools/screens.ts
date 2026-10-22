@@ -70,8 +70,10 @@ const OUT = join(ROOT, 'artifacts', 'screens', '2r');
 const SHOT_DRAG: DragPlanOptions = { speedCellsPerSec: 8, frameMs: 100, endHoldMs: 250 };
 /** Game time (ms) before a shot: the first board fall and the reduced window entries (`duration.reducedFade`). */
 const SETTLE_MS = 500;
-/** Home / win art arrives in the background (P1 → P2 → P3) and cross-fades in 200 ms. */
-const ART_MS = 2500;
+/** The art cross-fade (`ART_FADE_MS` 200) plus a frame, after `waitArt` saw every raster in. */
+const ART_FADE_SETTLE_MS = 300;
+/** DS3-01 (a): how long a shot waits for the rasters before it goes on with a note (a slow software GPU, not a gate). */
+const ART_WAIT_MS = 30_000;
 const MAX_SPEND_MOVES = 40;
 /** DS-01: a visible text that is an i18n key (the key shown instead of its text), and the debug toggle (DS-20). */
 const RAW_KEY = /^[a-z]+(\.[A-Za-z0-9_]+)+$/;
@@ -216,9 +218,36 @@ async function waitText(gp: GamePage, key: string, timeoutMs = 20_000): Promise<
   await settle(gp, 160); // the 150 ms reduced fade-in
 }
 
-async function waitHome(gp: GamePage): Promise<void> {
+/**
+ * DS3-01 (a) (ART_REFERENCE §9.1 v1.1): every live `ArtImage` shows its raster (`status().artPending` empty) and,
+ * where the icon atlas was requested (home, win: P1), the icons are in, before the shot; then the 200 ms cross-fade.
+ * A timeout is noted, not a gate (the rasters are the review's subject, their absence must show in the shot).
+ */
+async function waitArt(
+  gp: GamePage,
+  notes: string[],
+  icons: boolean,
+  timeoutMs = ART_WAIT_MS,
+): Promise<void> {
+  try {
+    await gp.page.waitForFunction(
+      (needIcons) => {
+        const s = window.__harness!.status();
+        return s.artPending.length === 0 && (!needIcons || s.iconsArt);
+      },
+      icons,
+      { timeout: timeoutMs, polling: 100 },
+    );
+  } catch {
+    const s = await status(gp.page);
+    notes.push(`art wait timed out: pending ${s.artPending.join(', ') || '-'}, icons ${s.iconsArt}`);
+  }
+  await settle(gp, ART_FADE_SETTLE_MS);
+}
+
+async function waitHome(gp: GamePage, notes: string[]): Promise<void> {
   await gp.page.waitForFunction(() => window.__harness!.status().scene === 'Home', null, { timeout: 60_000 });
-  await settle(gp, ART_MS);
+  await waitArt(gp, notes, true);
 }
 
 async function startLevel(gp: GamePage, n: number): Promise<void> {
@@ -289,11 +318,13 @@ const SCENARIOS: readonly Scenario[] = [
     shots: ['boot-v3'],
     seed: null,
     holdBoot: true,
-    run: async (gp, shoot) => {
+    run: async (gp, shoot, notes) => {
       // UX §1.1 loading screen v3: held by `__holdBoot` until the shot; the font wait draws the texts (≤ 1,5 s)
       await gp.page.waitForFunction(() => window.__harness !== undefined, null, { timeout: 30_000 });
       await waitText(gp, 'loading.text', 30_000);
-      await settle(gp, 600);
+      // the boot pack (P0) is awaited by the scene itself; the wait here only covers a timed-out slow load
+      await waitArt(gp, notes, false);
+      await settle(gp, 300);
       await shoot('boot-v3');
       await gp.page.evaluate(() => window.__harness!.releaseBoot());
       await waitReady(gp.page, 60_000);
@@ -303,9 +334,9 @@ const SCENARIOS: readonly Scenario[] = [
     id: 'level-start',
     shots: ['home-level-start'],
     seed: { won: 2 },
-    run: async (gp, shoot) => {
+    run: async (gp, shoot, notes) => {
       // UX §4.1: from level 3 on "Bölüm N" opens the level-start window (K-40 slots, "Oyna")
-      await waitHome(gp);
+      await waitHome(gp, notes);
       await tap(gp, { kind: 'text', key: 'home.play', params: { n: 3 } });
       await waitWindow(gp.page, 'levelStart');
       await settle(gp, 500);
@@ -320,9 +351,9 @@ const SCENARIOS: readonly Scenario[] = [
     id: 'reward',
     shots: ['home-reward-layer'],
     seed: { won: 4 },
-    run: async (gp, shoot) => {
+    run: async (gp, shoot, notes) => {
       // UX §6.2 "Dokun ve al" layer (no trigger in the slice: the harness opens it over the home screen)
-      await waitHome(gp);
+      await waitHome(gp, notes);
       await gp.page.evaluate(() => window.__harness!.showReward());
       await settle(gp, 300);
       await shoot('home-reward-layer');
@@ -332,8 +363,8 @@ const SCENARIOS: readonly Scenario[] = [
     id: 'home-first',
     shots: ['home-v2-first'],
     seed: { won: 0 },
-    run: async (gp, shoot) => {
-      await waitHome(gp);
+    run: async (gp, shoot, notes) => {
+      await waitHome(gp, notes);
       await shoot('home-v2-first');
     },
   },
@@ -343,7 +374,7 @@ const SCENARIOS: readonly Scenario[] = [
     seed: { won: 4 },
     permissions: ['clipboard-read', 'clipboard-write'],
     run: async (gp, shoot, notes) => {
-      await waitHome(gp);
+      await waitHome(gp, notes);
       await shoot('home-v2');
       // v3 nav: only the raised (selected) tab carries a label — the locked "Lig" tab is tapped by its cell centre
       await tap(gp, { kind: 'design', x: NAV_LEAGUE_X, y: -NAV_TAB_FROM_BOTTOM });
@@ -370,8 +401,8 @@ const SCENARIOS: readonly Scenario[] = [
     id: 'home-manual',
     shots: ['home-feedback-manual'],
     seed: { won: 4 },
-    run: async (gp, shoot) => {
-      await waitHome(gp);
+    run: async (gp, shoot, notes) => {
+      await waitHome(gp, notes);
       // no clipboard permission: the copy is refused → the read-only, selected text box (TECH §2R.16)
       await gp.page.evaluate(() => {
         Object.defineProperty(navigator, 'clipboard', {
@@ -435,11 +466,11 @@ const SCENARIOS: readonly Scenario[] = [
     id: 'win',
     shots: ['win-v2'],
     seed: { won: 0 },
-    run: async (gp, shoot) => {
+    run: async (gp, shoot, notes) => {
       await startLevel(gp, 1);
       await playMoves(gp, await golden(gp.page, 1), SHOT_DRAG);
       await waitWindow(gp.page, 'win', 300_000);
-      await settle(gp, ART_MS);
+      await waitArt(gp, notes, true);
       await shoot('win-v2');
     },
   },
@@ -447,12 +478,12 @@ const SCENARIOS: readonly Scenario[] = [
     id: 'win-loop',
     shots: ['win-v2-loop'],
     seed: { won: 10 },
-    run: async (gp, shoot) => {
+    run: async (gp, shoot, notes) => {
       // META §10: after level 10 the button replays 1–10; a replay win pays the base coins only (no star, no tutorial)
       await startLevel(gp, 1);
       await playMoves(gp, await golden(gp.page, 1), SHOT_DRAG);
       await waitWindow(gp.page, 'win', 300_000);
-      await settle(gp, ART_MS);
+      await waitArt(gp, notes, true);
       await shoot('win-v2-loop');
     },
   },
@@ -573,10 +604,10 @@ const SCENARIOS: readonly Scenario[] = [
     id: 'level2',
     shots: ['pause', 'exit-m0'],
     seed: { won: 1 },
-    run: async (gp, shoot) => {
+    run: async (gp, shoot, notes) => {
       await startLevel(gp, 2);
       await exitConfirm(gp, shoot, 'exit-m0', 'pause');
-      await waitHome(gp);
+      await waitHome(gp, notes);
     },
   },
   {

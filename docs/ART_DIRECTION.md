@@ -1300,5 +1300,20 @@ ve arka planlar 4 px tonun koyusu kontur, 8 derinlik katmanı). İki ölçü bu 
 (salt kontrol; `kit.v3` şeması değişmez). Yeni SVG'ler: `chr_tuna_stand` (ASSET §16.3 5b), `icon_shutter`, `icon_check`,
 `brick_fly_o/i2/l3/1` (yükleme). §11.7 yer tutucu iskeletleri geçmiş kayıt olarak kalır; final görünüm §17 + ART_REFERENCE §6.
 
+**ART_REFERENCE v1.1 (2026-10-21):** 25 referans ikinci kez okundu, v1 ölçüleri doğrulandı; ekler §3.4 kapsül düzeni
+(ayrı kapsüller 300 × 88, tek birleşik bar yok) + kapsül üstü rozet, §3.14 yön oku (isteğe bağlı öğretici sunumu),
+§9.1 boot paketi (yükleme ve kazanma ekranında §11.7 iskelet yer tutucu kabul edilmez), §9.2 avatar karesi (Faz 4),
+§9.10 kasaba alan penceresi + etkinlik sonu kartı, §10.1 ilk puanlama (v3 ekran seti: bölüm başı penceresi kabul;
+diğerleri REVIEW_LOG DS3-01…DS3-10 ile tur 2'ye). Token ekleri `check.v3Addenda` (şemadan düşer; code-lead
+`kit.v3.*`'e taşır).
+
+**Uygulandı — SVG v3 r4 (2026-10-22, ASSET §15.2, §16.3 7b, §16.6 r4):** tam boy Usta Dede `chr_dede_stand` (300 × 480,
+≈ 4,2 kafatası boyu; ana sayfa karakter grubunda sağ arkada 0,9, DS3-03 kalıcı çözüm); büstle ortak baş parçası, gözlük
+çerçevesi plastik (3 ton + spekülar yay — §16.2 "karakterde kontur yok" kuralı gözlük gibi nesnelerde tonun koyusu +
+parlama ile sağlanır); Tuna sevinç eldivenleri iş eldiveni anatomisi (4 parmak ±12° + başparmak + manşet); Kepçe ≈ 43
+kürk yumrusu (ART_REFERENCE §6.2 madde 7); Gribeton kumaş ince çizgisi + koyu yaka + mendil; `icon_kettlebell` (gradyan
+hatası) ve `icon_nextfloor` (3B ok) yeniden. Yeni tonlar `check.svgTonesV3` (dede `trousers*` kum, `boot*`, `frame*`; icon
+`slate*`). Öz puan: karakter/sahne 4, ikon/rozet 4 (ASSET §16.6 r4).
+
 **Okuma sırası (v3):** ART_REFERENCE §1 → §2 → §3 → §4 → §5 → §6 → §9 → §10; bu belgede §17 → §3A (değişmeyen blok
 geometrisi) → §11 (karakter tanımları) → §9 (ikon dili).

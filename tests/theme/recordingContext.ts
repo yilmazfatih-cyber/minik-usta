@@ -31,6 +31,7 @@ const METHODS = new Set([
   'rotate',
   'setLineDash',
   'fillText',
+  'drawImage',
 ]);
 
 /** Gradient factories: they return a recorded gradient whose `addColorStop` calls land in the op log. */

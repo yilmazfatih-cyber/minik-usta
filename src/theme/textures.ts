@@ -134,6 +134,8 @@ import {
   drawPortraitRingV3,
   drawProgressV3Fill,
   drawProgressV3Track,
+  drawRadialGlowV3,
+  drawStarV3,
   drawToggleV3,
   highlightV3Pad,
   highlightV3Slices,
@@ -151,6 +153,7 @@ import {
   progressV3FillSlices,
   progressV3Height,
   progressV3Slices,
+  starV3FrameSize,
   toggleV3Size,
 } from './draw/kitV3.ts';
 import type { ButtonV3State, KitV3ButtonColor, TailDirV3 } from './draw/kitV3.ts';
@@ -756,7 +759,14 @@ export const KIT = Object.freeze({
   blocksLeft: 'ui_blocks_left_icon',
   blocksLeftCompact: 'ui_blocks_left_icon_72',
   yardFrame: 'yard_frame',
+  /** Visual v3 round 2: the reward glow disc (ADD, tinted) and the 168 px win star. */
+  glow: 'ui_glow_radial',
+  winStar: 'ui_star_win',
 });
+
+/** Sizes of the round-2 frames: glow disc 256 (scaled to 1,6 × the object), win star 168 (ART §15). */
+export const KIT_GLOW_PX = 256;
+export const KIT_WIN_STAR_PX = 168;
 
 export const ribbonFrameName = (color: (typeof KIT_RIBBON_COLORS)[number]): string => `ui_ribbon_${color}`;
 export const bubbleTailFrameName = (dir: TailDirV3): string => `ui_tutorial_bubble_tail_${dir}`;
@@ -935,6 +945,10 @@ export function kitAtlasFrames(tokens: Tokens): FrameSpec[] {
       drawBlocksLeftIcon(ctx, blCompact, tokens),
     ),
     frame(KIT.yardFrame, yardFrameSize(tokens), (ctx) => drawYardFrameV2(ctx, yardFrameSize(tokens), tokens)),
+    frame(KIT.glow, { w: KIT_GLOW_PX, h: KIT_GLOW_PX }, (ctx) => drawRadialGlowV3(ctx, { d: KIT_GLOW_PX })),
+    frame(KIT.winStar, starV3FrameSize(KIT_WIN_STAR_PX), (ctx) =>
+      drawStarV3(ctx, { sizePx: KIT_WIN_STAR_PX }, tokens),
+    ),
     frame(FX.sparkle, FX_SIZE.sparkle, (ctx) => drawSparkle(ctx)),
     frame(FX.star, FX_SIZE.star, (ctx) => drawSmallStar(ctx, tokens)),
     frame(FX.ring, FX_SIZE.ring, (ctx) => drawRing(ctx)),
@@ -952,7 +966,7 @@ export const highlightInset = (tokens: Tokens): number => highlightV3Pad(tokens)
 // ---------------------------------------------------------------------------------------------------------------
 // (d) Procedural fallbacks of the SVG art (ASSET §16.3 "Prosedürel yedek"; baked on demand by services/assets.ts)
 
-/** `icons_fallback`: the 21 procedural icons, 128 px each, frame names `icon_<name>` like `icons_v2`. */
+/** `icons_fallback`: one procedural icon per catalogue icon, 128 px each, frame names `icon_<name>` like `icons_v2`. */
 export const ICONS_FALLBACK_KEY = 'icons_fallback';
 export const ICON_PAGE: PageLimits = Object.freeze({ maxWidth: 1024, maxHeight: 1024, gutter: 2 });
 
@@ -970,6 +984,18 @@ export interface FallbackArt {
 }
 
 /**
+ * ASSET §16.3 ek (2026-10-20): the loading screen's flying bricks (`brick_fly_*`, UX §1.1) — the v2 block each SVG
+ * shows (its stud layout and colour), drawn as the fallback until the P0 raster arrives. Keys = the catalogue's
+ * `BRICK_FLY_IDS` (tests/assets); the table lives here so theme/ stays free of services/.
+ */
+export const BRICK_FLY_FALLBACK: Readonly<Record<string, BlockSpec>> = Object.freeze({
+  brick_fly_o: { shape: 'O4_0', color: 'R' },
+  brick_fly_i2: { shape: 'D2_0', color: 'B' },
+  brick_fly_l3: { shape: 'C3_0', color: 'Y' },
+  brick_fly_1: { shape: 'B1_0', color: 'G' },
+});
+
+/**
  * Fallback of one ASSET §16.3 image key at its raster size, or null when the art has no procedural version
  * (`bg_level_site_edge`: the scene simply has no edge silhouettes, ART §7.1).
  */
@@ -979,14 +1005,33 @@ export function fallbackArt(
   tokens: Tokens,
 ): FallbackArt | null {
   const { w, h } = raster;
+  const brick = BRICK_FLY_FALLBACK[key];
+  if (brick) {
+    // the v2 block at k 1, fitted and centred in the square box (the SVG fills its 200 × 200 the same way)
+    const f = blockFrame(brick, tokens, { variant: 'v2', k: 1 });
+    const s = Math.min(w / f.w, h / f.h);
+    return {
+      w,
+      h,
+      draw: (ctx) => {
+        ctx.save();
+        ctx.translate((w - f.w * s) / 2, (h - f.h * s) / 2);
+        ctx.scale(s, s);
+        f.draw(ctx);
+        ctx.restore();
+      },
+    };
+  }
   if ((CHARACTER_IDS as readonly string[]).includes(key)) {
     const id = key as CharacterId;
     return { w, h, draw: (ctx) => drawCharacter(ctx, id, { w, h }, tokens) };
   }
   switch (key) {
-    case 'chr_tuna_stand': {
-      // DS-04 (optional until the SVG arrives): the cheer figure standing on the box's bottom edge
-      const vb = CHARACTER_VIEWBOX.chr_tuna_cheer;
+    case 'chr_tuna_stand':
+    case 'chr_dede_stand': {
+      // the full figures' fallbacks: the cheer figure / the Dede bust standing on the box's bottom edge
+      const src = key === 'chr_tuna_stand' ? 'chr_tuna_cheer' : 'chr_dede_bust';
+      const vb = CHARACTER_VIEWBOX[src];
       const fh = Math.min(h, (w * vb.h) / vb.w);
       return {
         w,
@@ -994,7 +1039,7 @@ export function fallbackArt(
         draw: (ctx) => {
           ctx.save();
           ctx.translate(0, h - fh);
-          drawCharacter(ctx, 'chr_tuna_cheer', { w, h: fh }, tokens);
+          drawCharacter(ctx, src, { w, h: fh }, tokens);
           ctx.restore();
         },
       };

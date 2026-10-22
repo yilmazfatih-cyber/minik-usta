@@ -24,7 +24,7 @@ import { KIT } from '../theme/textures.ts';
 import { buttonV3PlateRect } from '../theme/draw/kitV3.ts';
 import type { KitV3ButtonColor } from '../theme/draw/kitV3.ts';
 import { addBakedGraphics } from './BakedGraphics.ts';
-import { drawBuildIcon, drawOk } from './icons.ts';
+import { drawBuildIcon } from './icons.ts';
 import { Popup } from './Popup.ts';
 import type { PopupOption } from './Popup.ts';
 import { hex } from './text.ts';
@@ -37,12 +37,15 @@ import type { KitButton, PressVariant } from './kit/KitButton.ts';
 const V = TOKENS.kit.v3;
 const LS = V.screen.levelStart;
 
-/** Icon of each pre-level booster slot (ART §9 icon set; the open-shutter slot uses the "next floor" arrow). */
+/** Icon of each pre-level booster slot (ART §9 icon set; `icon_shutter` = Açık Kepenk, ASSET §16.3 ek 2026-10-20). */
 export const PRE_SLOT_ICON: Readonly<Record<PreBooster, string>> = {
   thermos: 'icon_thermos',
   trowelStart: 'icon_gold_trowel',
-  openShutter: 'icon_nextfloor',
+  openShutter: 'icon_shutter',
 };
+/** The selected slot's ✓ (`icon_check`, 40 px at the upper right; ASSET §16.3 ek 2026-10-20). */
+const CHECK_ICON = 'icon_check';
+const CHECK_PX = 40;
 
 export interface LevelStartInput {
   readonly level: CompiledLevel;
@@ -68,17 +71,22 @@ interface SlotView {
   readonly root: Phaser.GameObjects.Container;
   readonly face: Phaser.GameObjects.NineSlice;
   readonly ring: Phaser.GameObjects.Graphics;
-  readonly ok: Phaser.GameObjects.Graphics;
+  readonly ok: Phaser.GameObjects.Image;
   readonly badge: Phaser.GameObjects.Image;
   readonly count: Phaser.GameObjects.Text;
 }
 
-/** Plate content rhythm (ART_REFERENCE §9.3: goal row 716–876, label 1016, squares 1052–1236 under a 684 plate top). */
+/**
+ * Plate content rhythm (ART_REFERENCE §9.3: goal row 716–876, streak row 892–972, label 1016, squares 1052–1236 in the
+ * 684–1244 plate). Without the streak row (before level 15, UX §4; DS3-08) the plate is 480 high (684–1164), the label
+ * centre at 976 and the squares at 1012: offsets from the plate top below. The squares ride the plate's bottom edge
+ * then (their lower 32 px and the count badges on the window body), the streak row brings the 560 plate back.
+ */
 const PLATE_PAD = 32;
-/** Without the streak row (before level 15, UX §4) the label and the squares move up 52 px. */
-const LABEL_Y = 300;
-const SQUARES_Y = 336;
-const PLATE_H = SQUARES_Y + LS.boosterPx + PLATE_PAD;
+const STREAK_ROW_PX = LS.plateH - 480;
+const LABEL_Y = LS.labelY - LS.plateY - STREAK_ROW_PX;
+const SQUARES_Y = LS.boosterY - LS.plateY - STREAK_ROW_PX;
+const PLATE_H = LS.plateH - STREAK_ROW_PX;
 const BADGE_PX = V.badge.sizePx;
 
 export class LevelStartWindow {
@@ -324,9 +332,7 @@ export class LevelStartWindow {
     ring
       .lineStyle(V.effects.selectGlowPx, hex(V.effects.selectGlow), 0.9)
       .strokeRoundedRect(-px / 2 - 6, -px / 2 - 6, px + 12, px + 12, 46);
-    const ok = addBakedGraphics(scene).setVisible(false);
-    drawOk(ok, 40);
-    ok.setPosition(px / 2 - 14, -px / 2 + 14);
+    const ok = this.icons.add(scene, px / 2 - 14, -px / 2 + 14, CHECK_ICON, CHECK_PX).setVisible(false);
     // count badge riding the lower-right corner (grey while locked, UX §4)
     const bref = kitRef(scene.game, KIT.badge);
     const bx = px / 2 - 8;

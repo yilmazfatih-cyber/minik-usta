@@ -25,6 +25,7 @@ import { planMove } from '../../src/scenes/level/juice/plan.ts';
 import type { PlanContext } from '../../src/scenes/level/juice/plan.ts';
 import type { GameEvent } from '../../src/core/types.ts';
 import { JUICE_VIEW, VIEW } from '../../src/scenes/level/viewConstants.ts';
+import { ASSET_BY_ID } from '../../src/services/assetCatalog.ts';
 import { boardTray, createLayout } from '../../src/theme/layout.ts';
 import { TOKENS } from '../../src/theme/tokens.ts';
 import { DEBUG_ROOT_ID, LABEL } from '../../src/debug/labels.ts';
@@ -192,6 +193,21 @@ describe('design-lead screens review 1 — code-lead findings', () => {
     );
     expect(tool).toMatch(/\[g\.underlay, 1\],\s+\[g\.fill, g\.fillAlpha\],/);
     expect(TOKENS.color.board.planUnderlay).toBe('#BCCADD');
+  });
+  it('UX 3 home character corner (DS-04): chr_tuna_stand is a required ASSET §16.3 row (5b, delivered 2026-10-20) and HomeScene draws the full figure', () => {
+    // code-lead share closed in two steps: the optional catalogue row (2026-10-14), then the SVG arrived → required
+    const row = ASSET_BY_ID.get('chr_tuna_stand');
+    expect(row).toMatchObject({
+      category: 'chr',
+      viewBox: { w: 300, h: 480 },
+      raster: { w: 300, h: 480 },
+      group: 'P2',
+    });
+    expect(row?.optional).toBeUndefined();
+    const home = src('src/scenes/HomeScene.ts');
+    expect(home).toMatch(/ArtImage\.create\(this, this\.assets, 'chr_tuna_stand', g\.tuna, \{ reduced \}\)/);
+    expect(home).not.toMatch(/'chr_tuna_bust'/); // the bust corner (and its hedge patch) is gone
+    expect(home).not.toMatch(/drawHedge/);
   });
   it('UX 3 locked tab balloon (DS-06): never over the "Bölüm N" button — above the tab only with an 8 px clearance, else inside the nav bar and on screen', () => {
     const balloonH = hintBubbleHeight(); // HomeScene: the v3 hint bubble with its tail (ART_REFERENCE §3.14)

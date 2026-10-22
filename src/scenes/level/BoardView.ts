@@ -5,7 +5,8 @@
  * kit atlas); nothing here decides a rule.
  *
  * Static part (rebuilt on a level change or a resize), UX §5.8 region table:
- * - sky (`board.craneSky` α `alpha.craneSky`): the crane area (rows h, h+1) over the whole board, the yard air (rows
+ * - sky (DS3-05: the crane area floor gradient `crane_area_v3_<h>`, the bands under it its bottom tone): the crane
+ *   area (rows h, h+1) over the whole board, the yard air (rows
  *   hy … h−1 over the yard columns) and the wall air (rows height … h−1 over the wall strip) — one "air" language;
  *   the dashed crane line on the board top;
  * - the yard ("malzeme sandığı"): pegboard cells (`board_yard_floor` v2) over wy × hy and the wooden `yard_frame`
@@ -32,6 +33,8 @@ import { COLOR_CODES } from '../../core/types.ts';
 import type { At } from '../../core/types.ts';
 import type { Layout, Rect } from '../../theme/layout.ts';
 import { ART } from '../../theme/draw/art.ts';
+import { toHex } from '../../theme/draw/color.ts';
+import { craneAreaTones, drawCraneAreaV3 } from '../../theme/draw/kitV3.ts';
 import {
   FRAME,
   KIT,
@@ -39,6 +42,7 @@ import {
   gridFrameName,
   planFrameName,
   planFrontFrameName,
+  uploadCanvasArt,
 } from '../../theme/textures.ts';
 import type { FrameRef } from '../../theme/textures.ts';
 import { TOKENS } from '../../theme/tokens.ts';
@@ -63,6 +67,10 @@ export const RAIL_GLOW_DEPTH = RAIL_DEPTH + 1;
 
 /** UX §5.2 "seçilemeyenler %50 soluklaşır". */
 export const PICK_DIM_ALPHA = 0.5;
+
+/** DS3-05: the crane area floor texture, baked per area height (8 px wide, stretched in x). */
+export const craneAreaKey = (h: number): string => `crane_area_v3_${Math.round(h)}`;
+const CRANE_AREA_BAKE_W = 8;
 
 /** Rails of one static gap (W1), for the #22 light flow. */
 export interface RailSet {
@@ -147,7 +155,6 @@ export class BoardView {
     const geo = g.geo;
     const c = g.cellPx;
     const k = g.k;
-    const board = TOKENS.color.board;
     const siteW = geo.ws * c;
     const px = f.ref(FRAME.whitePixel);
     const add = (depth: number): Phaser.GameObjects.Image => {
@@ -160,23 +167,32 @@ export class BoardView {
       this.scaffoldImgs.push(img);
       return img;
     };
+    // DS3-05 (ART_REFERENCE §5.3 / §7.2): the crane area is a recessed floor — the frame face's dark end → 40 % towards
+    // `floorDark` top → bottom with a 12 px inner shadow along the top; the air bands under it take the bottom tone
+    const tones = craneAreaTones(TOKENS);
     const sky = (r: Rect): void => {
       if (r.w <= 0 || r.h <= 0) return;
-      setRect(
-        add(DEPTH.boardGround),
-        px,
-        r.x,
-        r.y,
-        r.w,
-        r.h,
-        hexColor(board.craneSky),
-        TOKENS.alpha.craneSky,
-      );
+      setRect(add(DEPTH.boardGround), px, r.x, r.y, r.w, r.h, hexColor(toHex(tones.bottom)), 1);
     };
 
     // UX §5.8: one "air" band — crane area over the whole board, yard air over the yard, wall air over the wall strip
     const crane = layout.board.crane;
-    sky(crane);
+    // the texture manager is absent on the recording fake scene of tests/scenes/boardView.test.ts: flat tone there
+    const textures = (this.scene as { textures?: Phaser.Textures.TextureManager }).textures;
+    if (crane.w > 0 && crane.h > 0 && textures) {
+      const key = craneAreaKey(crane.h);
+      if (!textures.exists(key)) {
+        const h = Math.round(crane.h);
+        uploadCanvasArt(textures, key, {
+          w: CRANE_AREA_BAKE_W,
+          h,
+          draw: (ctx) => drawCraneAreaV3(ctx, { w: CRANE_AREA_BAKE_W, h }, TOKENS),
+        });
+      }
+      const floor = this.scene.add.image(crane.x, crane.y, key).setOrigin(0, 0).setDepth(DEPTH.boardGround);
+      floor.setDisplaySize(crane.w, crane.h);
+      this.staticImgs.push(floor);
+    } else sky(crane);
     sky(layout.board.yardAir);
     const wallH = Math.min(lvl.wallHeight, geo.h);
     sky({ x: g.wallX, y: g.boardTopY, w: g.wallW, h: (geo.h - wallH) * c });

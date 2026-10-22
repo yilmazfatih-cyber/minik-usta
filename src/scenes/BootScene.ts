@@ -1,29 +1,41 @@
 /**
- * Boot / loading screen v3 (UX_FLOWS §1.1; ART_REFERENCE §9.1, §7.4; TECH §10.2 (a), §11.1; STORY §7.8
- * `loading.text`): the `load*` sky with 18 slowly turning white rays and three cloud layers, the logo (emblem art +
- * the game name as 3D letters — one colour per letter from the block palette, a dark extrusion and the #4F1E9C
- * contour), eight flying v3 bricks on a ring around it, the character group (Tuna cheering in the middle, Kepçe at the
- * left, Usta Dede behind at the right), "Yükleniyor" (`plain` 64) with the 400 × 12 progress bar and the version.
+ * Boot / loading screen v3 (UX_FLOWS §1.1; ART_REFERENCE §9.1 v1.1, §7.4; TECH §10.2 (a), §11.1; STORY §7.8
+ * `loading.text`): the `load*` sky with 18 slowly turning white rays and three cloud layers, the logo (the game name
+ * as a two-line block of 3D letters — one colour per letter from the block palette, a dark extrusion and the #4F1E9C
+ * contour — with the 240 px emblem riding its top-left corner at (−40, −60), DS3-07), eight flying bricks on a ring
+ * around it (ASSET §16.3 ek: the four `brick_fly_*` SVGs twice), the character group (Tuna cheering in the middle,
+ * Kepçe at the left, Usta Dede behind at the right), "Yükleniyor" (`plain` 64) with the 400 × 12 progress bar and the
+ * version.
+ *
+ * Boot pack (ART_REFERENCE §9.1 v1.1, DS3-01): the sky, rays, sparkles and the bar come up at once; the art of the
+ * screen is load group P0 (`BOOT_PACK_IDS`), requested here and awaited together with the font wait for at most
+ * `BOOT_ART_WAIT_MS`, so the characters, the emblem and the bricks show their rasters from their first frame (no
+ * skeleton placeholder on the loading screen). Past the wait the images stay hidden until their raster lands; the
+ * procedural fallback appears only when the art cannot come (`ArtImage` `waitArt`). The FTUE path loses nothing: the
+ * wait overlaps the font wait and `duration.splashMin`.
  * Behind it the boot atlas is baked once, the save is opened (recovery, K-43 launch decision) and the route chosen:
  * resume a saved attempt on the level screen, the 3-panel intro on first launch (then Level 1 directly), else home.
  *
- * Progress bar steps: font 0,3 → boot atlas 0,7 → route 1,0; the screen stays at least `duration.splashMin`. The
- * middle group (logo, bricks, characters) shifts by half the EXPAND surplus; the text and the bar stay bottom-anchored.
- * A Playwright run may hold the screen (`window.__holdBoot`, a plain page flag the screens tool sets before load).
+ * Progress bar steps: font + boot pack 0,3 → boot atlas 0,7 → route 1,0; the screen stays at least
+ * `duration.splashMin`. The middle group (logo, bricks, characters) shifts by half the EXPAND surplus; the text and
+ * the bar stay bottom-anchored. A Playwright run may hold the screen (`window.__holdBoot`, a plain page flag the
+ * screens tool sets before load).
  */
 import Phaser from 'phaser';
 import { DESIGN_WIDTH, scaleMode } from '../config/display.ts';
 import { RULES_VERSION, levelHash } from '../core/session.ts';
 import { COLOR_CODES } from '../core/types.ts';
-import type { ColorCode, ShapeId } from '../core/types.ts';
+import { BOOT_ART_WAIT_MS } from '../services/assetCatalog.ts';
+import type { BrickFlyId } from '../services/assetCatalog.ts';
 import { t } from '../services/i18n.ts';
 import type { LevelIdentity } from '../services/save.ts';
 import { designHeight } from '../theme/layout.ts';
-import { TOKENS } from '../theme/tokens.ts';
+import { TOKENS, V3_ADDENDA } from '../theme/tokens.ts';
 import { drawLoadingSkyV3 } from '../theme/draw/kitV3.ts';
-import { blockFrame, packFrames, uploadAtlas, uploadCanvasArt } from '../theme/textures.ts';
+import { uploadCanvasArt } from '../theme/textures.ts';
 import { hex } from '../ui/text.ts';
 import { ArtImage } from '../ui/kit/ArtImage.ts';
+import { logoLines } from '../ui/kit/logoLines.ts';
 import { addKitText, kitTextStyle } from '../ui/kit/text.ts';
 import { appSave, appTrack, applySettings, reducedMotion } from './appServices.ts';
 import { gameAssets } from './AssetLoaderScene.ts';
@@ -39,32 +51,44 @@ import { gameAudio } from './level/sceneServices.ts';
 const FONT_WAIT_MS = 1500;
 const V3 = TOKENS.kit.v3;
 const LD = V3.screen.loading;
+/** ART_REFERENCE §9.1 v1.1 logo group (`check.v3Addenda.bootPack`): emblem 240 at (−40, −60) of the letter block. */
+const BP = V3_ADDENDA.bootPack;
 /** Sky bake width (the gradient and the clouds scale cleanly). */
 const SKY_BAKE_W = 270;
 const SKY_KEY = 'boot_sky_v3';
-const BRICK_ATLAS_KEY = 'boot_bricks_v3';
-/** The eight bricks (ART_REFERENCE §9.1): ring angle (°), size share of `brickMaxPx`, tilt (°), shape, colour. */
-const BRICKS: readonly (readonly [number, number, number, ShapeId, ColorCode])[] = [
-  [20, 1, 18, 'D2_0', 'R'],
-  [70, 0.62, -24, 'B1_0', 'G'],
-  [110, 0.8, 10, 'I3_90', 'B'],
-  [160, 0.55, -30, 'D2_90', 'Y'],
-  [200, 0.9, 26, 'C3_0', 'P'],
-  [250, 0.6, -12, 'B1_0', 'O'],
-  [290, 0.75, 30, 'D2_0', 'C'],
-  [340, 0.5, -18, 'I3_0', 'W'],
+/**
+ * The eight bricks (ART_REFERENCE §9.1; ASSET §16.3 ek "8 kopya 96–200 px, ±30°, uzaktakiler 0,7 ölçek α 0,85"): ring
+ * angle (°), size share of `brickMaxPx` (< 0,7 = far), tilt (°), SVG id — the four P0 bricks twice.
+ */
+const BRICKS: readonly (readonly [number, number, number, BrickFlyId])[] = [
+  // the slot next to the title's right edge (20°) holds the single stud: a full 200 px square there met "Land"
+  [20, 0.75, 18, 'brick_fly_1'],
+  [70, 0.62, -24, 'brick_fly_l3'],
+  [110, 1, 10, 'brick_fly_o'],
+  [160, 0.55, -30, 'brick_fly_i2'],
+  // the upper-left slot (200°) sits behind the emblem's corner: a far brick, drawn under the logo group
+  [200, 0.55, 26, 'brick_fly_l3'],
+  [250, 0.6, -12, 'brick_fly_1'],
+  [290, 0.8, 30, 'brick_fly_i2'],
+  [340, 0.5, -18, 'brick_fly_o'],
 ];
 /** Logo letters: dark contour, extrusion (8, 12) in the letter tone × 0,6 (ART_REFERENCE §9.1 "3B harf"). */
 const LOGO_STROKE = '#4F1E9C';
-const LOGO_FONT_PX = 132;
-const EMBLEM_PX = 300;
+/** Letter size = the line height (150); the two lines sit `titleBlockH` / 2 apart (360 → pitch 180). */
+const LOGO_FONT_PX = BP.titleLineH;
+const LOGO_LINE_PITCH = BP.titleBlockH / 2;
+/** Advance between the per-letter texts (Baloo 2 glyph boxes are wide; the letters tuck together). */
+const LETTER_ADVANCE = 0.84;
+/** Baloo 2 cap top above the text centre (em) and the first glyph's left bearing (px): the block's visual corner. */
+const LOGO_CAP_RATIO = 0.38;
+const LOGO_BEARING_PX = 10;
 /** Bob of the bricks (3 s, ± 8 px) and the rays' turn (`scene.loadRayTurnsPerSecond`). */
 const BOB_MS = 3000;
 const BOB_PX = 8;
 
 export class BootScene extends Phaser.Scene {
   private rays: Phaser.GameObjects.Graphics | null = null;
-  private bricks: { img: Phaser.GameObjects.Image; y: number; phase: number }[] = [];
+  private bricks: { root: Phaser.GameObjects.Container; y: number; phase: number }[] = [];
   private bar: Phaser.GameObjects.Graphics | null = null;
   private barRect = { x: 0, y: 0, w: 0, h: 0 };
   private reduced = false;
@@ -78,8 +102,9 @@ export class BootScene extends Phaser.Scene {
     this.reduced = reducedMotion();
     this.cameras.main.setBackgroundColor(V3.palette.loadTop);
     this.shownAt = this.time.now;
-    this.buildScene();
-    // Let the sky frame render, then wait for the font, bake and route (the bake blocks the main thread ≈ tens of ms).
+    this.buildSky();
+    // Let the sky frame render, then wait for the font + boot pack, build the art, bake and route (the bake blocks the
+    // main thread ≈ tens of ms).
     this.time.delayedCall(0, () => void this.boot());
   }
 
@@ -87,7 +112,7 @@ export class BootScene extends Phaser.Scene {
     if (this.reduced) return;
     const turns = V3.scene.loadRayTurnsPerSecond;
     if (this.rays) this.rays.rotation = ((time / 1000) * turns * Math.PI * 2) % (Math.PI * 2);
-    for (const b of this.bricks) b.img.y = b.y + BOB_PX * Math.sin((2 * Math.PI * time) / BOB_MS + b.phase);
+    for (const b of this.bricks) b.root.y = b.y + BOB_PX * Math.sin((2 * Math.PI * time) / BOB_MS + b.phase);
   }
 
   /** The screen's geometry: the middle group shifts by half the EXPAND surplus, text and bar are bottom-anchored. */
@@ -108,7 +133,8 @@ export class BootScene extends Phaser.Scene {
     };
   }
 
-  private buildScene(): void {
+  /** The procedural ground of the screen, up at once: sky + clouds, rays, sparkles, the progress bar. */
+  private buildSky(): void {
     const W = DESIGN_WIDTH;
     const { H, shift, textY, barY, versionY } = this.geometry();
     // sky + clouds (baked small, stretched)
@@ -149,28 +175,47 @@ export class BootScene extends Phaser.Scene {
       sp.fillTriangle(x, y - s, x - s / 4, y, x, y + s);
       sp.fillTriangle(x, y - s, x + s / 4, y, x, y + s);
     }
-    // bricks on a ring around the logo (v3 blocks baked once at k 0,6)
-    this.bakeBricks();
+    // text, bar, version (texts appear after the font wait; the bar first)
+    this.bar = this.add.graphics();
+    this.barRect = { x: (W - LD.barW) / 2, y: barY - LD.barH / 2, w: LD.barW, h: LD.barH };
+    this.setProgress(0.1);
+    this.texts = { textY, versionY };
+  }
+
+  /**
+   * The art of the screen (after the boot pack wait): the brick ring, the character group and the logo. Every image is
+   * an `ArtImage` with `waitArt` (ART_REFERENCE §9.1 v1.1: the raster from the first frame, hidden until it lands past
+   * the wait, the fallback only when the art cannot come).
+   */
+  private buildArt(assets: ReturnType<typeof gameAssets>): void {
+    const { shift } = this.geometry();
+    const reduced = (): boolean => this.reduced;
+    // bricks on a ring around the logo; each brick sits in a container so the tilt turns its centre
     const ringR = (LD.ringMinPx + LD.ringMaxPx) / 2;
-    BRICKS.forEach(([deg, share, tilt, shape, color], i) => {
+    BRICKS.forEach(([deg, share, tilt, id], i) => {
       const a = (deg * Math.PI) / 180;
       const far = share < 0.7;
       const x = LD.logoCx + ringR * Math.cos(a);
       const y = LD.logoCy + shift + ringR * 0.72 * Math.sin(a);
-      const img = this.add.image(x, y, BRICK_ATLAS_KEY, `blk_${shape}_${color}`);
       const px = LD.brickMinPx + (LD.brickMaxPx - LD.brickMinPx) * share;
-      const k = px / Math.max(img.width, img.height);
-      img
-        .setScale(k * (far ? 0.7 : 1))
+      const root = this.add
+        .container(x, y)
         .setAngle(tilt)
+        .setScale(far ? 0.7 : 1)
         .setAlpha(far ? 0.85 : 1);
-      this.bricks.push({ img, y, phase: i * 0.8 });
+      const art = ArtImage.create(
+        this,
+        assets,
+        id,
+        { x: -px / 2, y: -px / 2, w: px, h: px },
+        { reduced, waitArt: true },
+      );
+      root.add(art.image);
+      this.bricks.push({ root, y, phase: i * 0.8 });
     });
     // characters (ART_REFERENCE §9.1 group 840 × 720 centred on (540, 1060))
-    const assets = gameAssets(this.game);
     const gcx = LD.groupCx;
     const gcy = LD.groupCy + shift;
-    const reduced = (): boolean => this.reduced;
     const dedeH = 400 * 0.9;
     const dedeW = (dedeH * 256) / 320;
     ArtImage.create(
@@ -178,7 +223,7 @@ export class BootScene extends Phaser.Scene {
       assets,
       'chr_dede_bust',
       { x: gcx + 120, y: gcy + 300 - dedeH, w: dedeW, h: dedeH },
-      { reduced },
+      { reduced, waitArt: true },
     );
     const tunaH = 540;
     const tunaW = (tunaH * 300) / 400;
@@ -187,7 +232,7 @@ export class BootScene extends Phaser.Scene {
       assets,
       'chr_tuna_cheer',
       { x: gcx - tunaW / 2 - 20, y: gcy + 340 - tunaH, w: tunaW, h: tunaH },
-      { reduced },
+      { reduced, waitArt: true },
     );
     const kepceW = 300 * 0.8;
     const kepceH = (kepceW * 206) / 300;
@@ -196,15 +241,10 @@ export class BootScene extends Phaser.Scene {
       assets,
       'chr_kepce_bust',
       { x: gcx - 400, y: gcy + 340 - kepceH, w: kepceW, h: kepceH },
-      { reduced },
+      { reduced, waitArt: true },
     );
-    // logo: emblem + 3D letters
+    // logo: the letter block with the emblem riding its corner (the letters themselves come with the font)
     this.logo(LD.logoCx, LD.logoCy + shift, assets, reduced);
-    // text, bar, version (texts appear after the font wait; the bar first)
-    this.bar = this.add.graphics();
-    this.barRect = { x: (W - LD.barW) / 2, y: barY - LD.barH / 2, w: LD.barW, h: LD.barH };
-    this.setProgress(0.1);
-    this.texts = { textY, versionY };
   }
 
   private texts: { textY: number; versionY: number } | null = null;
@@ -224,35 +264,40 @@ export class BootScene extends Phaser.Scene {
     ).setAlpha(0.85);
   }
 
-  /** ART_REFERENCE §9.1 logo: the emblem at the left, the game name as 3D letters at the right (640 × 360 box). */
+  /**
+   * ART_REFERENCE §9.1 v1.1 logo (DS3-07): the game name as a two-line block of 3D letters centred on (cx, cy)
+   * (2 × 150 px lines, 360 px block) and the 240 px emblem riding the block's top-left corner — its centre at
+   * (−40, −60) of that corner, behind the letters, so the two read as one mark. The emblem is placed once the letters
+   * are measured (`addLogoLetters`, after the font wait).
+   */
   private logo(cx: number, cy: number, assets: ReturnType<typeof gameAssets>, reduced: () => boolean): void {
-    const left = cx - LD.logoW / 2;
-    ArtImage.create(
-      this,
-      assets,
-      'logo_emblem',
-      { x: left, y: cy - EMBLEM_PX / 2, w: EMBLEM_PX, h: EMBLEM_PX },
-      { reduced },
-    );
-    this.logoText = { x: left + EMBLEM_PX + 24, cy, w: LD.logoW - EMBLEM_PX - 24 };
+    this.logoText = { cx, cy, w: LD.logoW, assets, reduced };
   }
 
-  private logoText: { x: number; cy: number; w: number } | null = null;
+  private logoText: {
+    cx: number;
+    cy: number;
+    w: number;
+    assets: ReturnType<typeof gameAssets>;
+    reduced: () => boolean;
+  } | null = null;
 
   /** The name's letters (after the font wait): one Text per letter, colour by index, extrusion + contour. */
   private addLogoLetters(): void {
     const lt = this.logoText;
     if (!lt) return;
-    const words = t('app.title').split(' ');
-    const colors = COLOR_CODES.filter((c) => c !== 'W').map((c) => TOKENS.color.block[c]);
-    const lineH = LOGO_FONT_PX * 0.98;
-    const totalH = words.length * lineH;
+    const lines = logoLines(t('app.title'));
+    // one block colour per letter; wood and concrete (W, C) are no logo colours
+    const colors = COLOR_CODES.filter((c) => c !== 'W' && c !== 'C').map((c) => TOKENS.color.block[c]);
+    const blockTop = lt.cy - (LOGO_LINE_PITCH * lines.length) / 2;
     let ci = 0;
-    words.forEach((word, wi) => {
-      const y = lt.cy - totalH / 2 + lineH * (wi + 0.5);
-      const letters = [...word].map((ch) => {
-        const color = colors[ci % colors.length] ?? '#FFFFFF';
-        ci += 1;
+    let blockLeft = lt.cx;
+    const letterObjs: Phaser.GameObjects.Text[] = [];
+    lines.forEach((line, li) => {
+      const y = blockTop + LOGO_LINE_PITCH * (li + 0.5);
+      const letters = [...line].map((ch) => {
+        const color = ch === ' ' ? '#FFFFFF' : (colors[ci % colors.length] ?? '#FFFFFF');
+        if (ch !== ' ') ci += 1;
         const tone = Phaser.Display.Color.HexStringToColor(color).darken(40).rgba;
         return this.add
           .text(0, y, ch, {
@@ -261,31 +306,29 @@ export class BootScene extends Phaser.Scene {
           })
           .setOrigin(0, 0.5);
       });
-      const total = letters.reduce((s, l) => s + l.width * 0.84, 0);
+      const total = letters.reduce((s, l) => s + l.width * LETTER_ADVANCE, 0);
       const k = Math.min(1, lt.w / total);
-      let x = lt.x + (lt.w - total * k) / 2;
+      let x = lt.cx - (total * k) / 2;
+      blockLeft = Math.min(blockLeft, x);
       for (const l of letters) {
         l.setScale(k).setX(x);
-        x += l.width * 0.84 * k;
+        x += l.width * LETTER_ADVANCE * k;
       }
+      letterObjs.push(...letters);
     });
-  }
-
-  /** The 8 bricks of the ring, baked once (v3 blocks at k 0,6, no symbols needed: the frames carry their own). */
-  private bakeBricks(): void {
-    if (this.textures.exists(BRICK_ATLAS_KEY)) return;
-    const seen = new Set<string>();
-    const frames = BRICKS.flatMap(([, , , shape, color]) => {
-      const key = `blk_${shape}_${color}`;
-      if (seen.has(key)) return [];
-      seen.add(key);
-      return [blockFrame({ shape, color }, TOKENS, { variant: 'v2', k: 0.6 })];
-    });
-    uploadAtlas(
-      this.textures,
-      BRICK_ATLAS_KEY,
-      packFrames(frames, { maxWidth: 1024, maxHeight: 1024, gutter: 2 }),
+    // the emblem behind the letters, its centre at (−40, −60) of the block's top-left corner — the corner of the
+    // glyphs (cap top ≈ 0,38 em above the first line's centre, the first letter's left bearing), not of the line box
+    const e = BP.emblemPx;
+    const ex = blockLeft + LOGO_BEARING_PX + BP.emblemOffsetX;
+    const ey = blockTop + LOGO_LINE_PITCH / 2 - LOGO_FONT_PX * LOGO_CAP_RATIO + BP.emblemOffsetY;
+    const emblem = ArtImage.create(
+      this,
+      lt.assets,
+      'logo_emblem',
+      { x: ex - e / 2, y: ey - e / 2, w: e, h: e },
+      { reduced: lt.reduced, waitArt: true },
     );
+    for (const l of letterObjs) this.children.moveAbove(l, emblem.image);
   }
 
   /** Progress bar 400 × 12 (UX §1.1: track `#0A1F4A` α 0,4, fill white α 0,9). */
@@ -303,8 +346,17 @@ export class BootScene extends Phaser.Scene {
     // the save's language (and the other settings) before the first text; opening the save is synchronous and small
     const save = appSave();
     applySettings();
-    // ART §8 / D-046: no Text before the Baloo 2 weights are loaded (a fallback rasterisation would stay)
-    await waitForFont();
+    const assets = gameAssets(this.game);
+    // ART §8 / D-046: no Text before the Baloo 2 weights are loaded (a fallback rasterisation would stay); and the
+    // boot pack (P0) with it, at most BOOT_ART_WAIT_MS (ART_REFERENCE §9.1 v1.1: the rasters from the first frame)
+    await Promise.all([
+      waitForFont(),
+      Promise.race([
+        assets.loadGroup('P0'),
+        new Promise<void>((resolve) => setTimeout(resolve, BOOT_ART_WAIT_MS)),
+      ]),
+    ]);
+    this.buildArt(assets);
     this.addLogoLetters();
     this.addTexts();
     this.setProgress(0.3);

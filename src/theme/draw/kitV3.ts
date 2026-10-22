@@ -12,7 +12,7 @@
  */
 import type { KitV3ButtonColor, KitV3ButtonSize, Tokens } from '../tokens.ts';
 import { KIT_V3_BUTTON_COLORS } from '../tokens.ts';
-import { BLACK, WHITE, css, mix, parseHex, shade } from './color.ts';
+import { BLACK, WHITE, css, lstar, mix, parseHex, shade } from './color.ts';
 import type { Rgb } from './color.ts';
 import type { DrawContext, Size } from './context.ts';
 import { roundRect } from './blockV2.ts';
@@ -1137,6 +1137,132 @@ export function drawLoadingSkyV3(ctx: DrawContext, size: Size, tokens: Tokens): 
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// Visual v3 round 2 (DS3-04 … DS3-06): glow, crane area, win star
+
+/** `ui_glow_radial`: a white radial disc α 1 → 0 (the scene tints it; ART_REFERENCE §8 "Parlama" #FFE7A3 α 0,55 → 0). */
+export function drawRadialGlowV3(ctx: DrawContext, spec: { readonly d: number }): void {
+  const R = spec.d / 2;
+  const g = ctx.createRadialGradient(R, R, 0, R, R, R);
+  g.addColorStop(0, css(WHITE, 1));
+  g.addColorStop(0.3, css(WHITE, 0.8));
+  g.addColorStop(0.65, css(WHITE, 0.3));
+  g.addColorStop(1, css(WHITE, 0));
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, spec.d, spec.d);
+}
+
+/** Crane area floor tones (ART_REFERENCE §5.3 / §7.2, DS3-05): the frame face's dark end → 40 % towards `floorDark`. */
+export function craneAreaTones(tokens: Tokens): {
+  readonly top: Rgb;
+  readonly bottom: Rgb;
+  readonly shadow: Rgb;
+} {
+  const b = tokens.kit.v3.board;
+  const top = rgb(b.frameBottom);
+  return { top, bottom: mix(top, rgb(b.floorDark), 0.4), shadow: rgb(b.edge) };
+}
+
+/** The crane area's top inner shadow (DS3-05 "üst kenarda 12 px #221B66 iç gölge"). */
+export const CRANE_AREA_SHADOW_PX = 12;
+
+/**
+ * DS3-05 crane area floor: a vertical gradient (frame face dark end #3F35A0 → #352C8E) with a 12 px inner shadow of
+ * the frame's edge colour along the top. Baked narrow at the area's height and stretched in x (the shadow keeps its
+ * height); the yard-air and wall-air bands take the bottom tone flat.
+ */
+export function drawCraneAreaV3(
+  ctx: DrawContext,
+  spec: { readonly w: number; readonly h: number },
+  tokens: Tokens,
+): void {
+  const t = craneAreaTones(tokens);
+  const { w, h } = spec;
+  ctx.fillStyle = vGradient(ctx, 0, h, [
+    [0, t.top],
+    [1, t.bottom],
+  ]);
+  ctx.fillRect(0, 0, w, h);
+  const sh = Math.min(CRANE_AREA_SHADOW_PX, h);
+  ctx.fillStyle = vGradient(ctx, 0, sh, [
+    [0, t.shadow, 0.9],
+    [1, t.shadow, 0],
+  ]);
+  ctx.fillRect(0, 0, w, sh);
+}
+
+/** Five-point star path centred on (cx, cy): outer radius `R`, inner `R × inner`. */
+function starPath(ctx: DrawContext, cx: number, cy: number, R: number, inner = 0.5): void {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? R : R * inner;
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const x = cx + Math.cos(a) * r;
+    const y = cy + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+/** Star frame: the star plus its lip and shadow below. */
+export function starV3FrameSize(sizePx: number): Size {
+  return { w: sizePx, h: sizePx + 10 };
+}
+
+/**
+ * DS3-06 win star (ART_REFERENCE §2.4 `gold` three tones + #B8430A contour + lip): shadow → contour (6, round joins)
+ * → lip (the contour tone's light, 6 px lower) → face gradient #FFE96A (0) → #FFD119 (0,5) → #FFAD00 (1) → the
+ * upper-left gloss. `sizePx` = the star's outer diameter (168 on the win card).
+ */
+export function drawStarV3(ctx: DrawContext, spec: { readonly sizePx: number }, tokens: Tokens): void {
+  const p = tokens.kit.v3.palette;
+  const s = spec.sizePx;
+  const k = s / 168;
+  const stroke = Math.max(3, Math.round(6 * k));
+  const lip = Math.max(3, Math.round(6 * k));
+  const R = s / 2 - stroke;
+  const cx = s / 2;
+  const cy = s / 2 + 2;
+  ctx.save();
+  ctx.lineJoin = 'round';
+  // shadow
+  starPath(ctx, cx, cy + 8 * k, R);
+  ctx.fillStyle = css(BLACK, 0.3);
+  ctx.fill();
+  // contour (fill + stroke so the points stay round), then the lip 6 px lower inside it
+  const strokeC = rgb(p.goldStroke);
+  starPath(ctx, cx, cy + lip, R);
+  ctx.lineWidth = stroke * 2;
+  ctx.strokeStyle = css(strokeC);
+  ctx.stroke();
+  ctx.fillStyle = css(strokeC);
+  ctx.fill();
+  starPath(ctx, cx, cy, R);
+  ctx.stroke();
+  starPath(ctx, cx, cy + lip, R);
+  ctx.fillStyle = css(shade(rgb(p.goldDark), 0.85));
+  ctx.fill();
+  // face
+  starPath(ctx, cx, cy, R);
+  ctx.fillStyle = vGradient(ctx, cy - R, cy + R, [
+    [0, rgb(p.goldLight)],
+    [0.5, rgb(p.gold)],
+    [1, rgb(p.goldDark)],
+  ]);
+  ctx.fill();
+  // upper-left gloss (ART_REFERENCE §1-4: light from the upper left)
+  ctx.save();
+  starPath(ctx, cx, cy, R);
+  ctx.clip();
+  ctx.beginPath();
+  ctx.ellipse(cx - R * 0.28, cy - R * 0.3, R * 0.34, R * 0.2, -0.6, 0, Math.PI * 2);
+  ctx.fillStyle = css(WHITE, 0.4);
+  ctx.fill();
+  ctx.restore();
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 // Frame catalogue helpers (names the kit atlas and the components share)
 
 /** Button bakes made at boot: the (colour, height) pairs the v3 screens use; other heights bake on demand. */
@@ -1175,6 +1301,9 @@ export function kitButtonV3States(color: KitV3ButtonColor): readonly ButtonV3Sta
 
 // ---------------------------------------------------------------------------------------------------------------
 // Text looks (ART_REFERENCE §4) — plain numbers for Phaser Text (`stroke`, `strokeThickness`, `shadow`)
+
+/** Button labels darker than this L* (the cream quadruple's brown) are embossed instead of contoured (see `button`). */
+export const DARK_LABEL_LSTAR = 50;
 
 export type TextRoleV3 =
   | 'button'
@@ -1220,8 +1349,23 @@ export function textLookV3(
     case 'button': {
       const b = T.button;
       const stroke = colors?.stroke ?? tokens.kit.v3.buttonColor.green.textStroke;
+      const fill = colors?.fill ?? '#FFFFFF';
+      // a dark label (the cream quadruple's #3B2A1A, ART_REFERENCE §2.3) takes no dark contour: at 56 px the 0,06 em
+      // contour + shadow closed the counters of the rounded glyphs into a blob (visual v3 round 2, pause / settings);
+      // the label reads as pressed into the plastic instead — a 1 px white emboss under the glyphs
+      if (lstar(rgb(fill)) < DARK_LABEL_LSTAR) {
+        return {
+          fill,
+          stroke: null,
+          strokePx: 0,
+          shadow: '#FFFFFF',
+          shadowDy: 2,
+          shadowAlpha: 0.45,
+          weight: 800,
+        };
+      }
       return {
-        fill: colors?.fill ?? '#FFFFFF',
+        fill,
         stroke,
         strokePx: 2 * Math.max(b.strokeMinPx, b.strokeEm * sizePx),
         shadow: stroke,
