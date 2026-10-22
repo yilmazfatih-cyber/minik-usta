@@ -1012,7 +1012,8 @@ export class LevelScene extends Phaser.Scene {
     well
       .fillStyle(0xffffff, CP.topLineAlpha)
       .fillRect(p.x + WELL_RADIUS_PX, p.y + 3, p.w - 2 * WELL_RADIUS_PX, 2);
-    // ART_REFERENCE §9.4 row 1: the "Bölüm {n}" capsule (rebuilt per layout; the text follows `levelId`)
+    // ART_REFERENCE §9.4 row 1: the "Bölüm {n}" capsule (rebuilt per layout; the text follows `levelId`); DS3-09:
+    // its icon rides the pill (Ø 72, 28 px out — `VIEW.hudLevelIcon*`)
     this.levelCapsule?.destroy();
     const lc = L.top.levelCapsule;
     const cap = new Capsule(this, this.hudIcons, {
@@ -1020,8 +1021,10 @@ export class LevelScene extends Phaser.Scene {
       icon: 'icon_star',
       value: t('home.play', { n: this.levelId }),
       variant: 'hud',
+      iconPx: VIEW.hudLevelIconPx,
+      iconOverhangPx: VIEW.hudLevelIconOverhangPx,
     });
-    cap.root.setPosition(lc.x + CP.iconOverhangPx, lc.y).setDepth(DEPTH.hud);
+    cap.root.setPosition(lc.x + VIEW.hudLevelIconOverhangPx, lc.y).setDepth(DEPTH.hud);
     cap.root.disableInteractive();
     this.levelCapsule = cap;
   }

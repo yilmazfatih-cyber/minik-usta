@@ -51,6 +51,7 @@ import {
   launchBrowser,
   loadLevel,
   openGame,
+  planDrag,
   playMove,
   playMoves,
   state,
@@ -312,6 +313,9 @@ const SHORT_STARTS: readonly Scenario[] = LEVEL_STARTS.slice(0, 5).map((sc) => (
   },
 }));
 
+/** The mid-drag shot holds the finger at this share of the golden move's path (over the wall, ART_REFERENCE §9.4). */
+const DRAG_SHOT_SHARE = 0.55;
+
 const SCENARIOS: readonly Scenario[] = [
   {
     id: 'boot',
@@ -420,6 +424,27 @@ const SCENARIOS: readonly Scenario[] = [
     },
   },
   ...LEVEL_STARTS,
+  {
+    id: 'drag',
+    shots: ['level-01-drag'],
+    seed: { won: 0 },
+    run: async (gp, shoot) => {
+      await startLevel(gp, 1);
+      // the signature move mid-air ("sürükleme anı"): the golden first move's finger path is played up to the node
+      // over the wall and held there for the shot (lift glow, dragged block, fall ghost); then the finger goes back
+      // along the path and lifts on the start node (K-07 row 1: nothing spent, the tutorial step only faded).
+      const move = (await golden(gp.page, 1))[0];
+      if (!move) throw new Error('level-01-drag: level 1 has no golden move');
+      const plan = await planDrag(gp.page, move, SHOT_DRAG);
+      const held = Math.max(1, Math.ceil(plan.moves.length * DRAG_SHOT_SHARE));
+      const moves = plan.moves.slice(0, held);
+      const last = moves[moves.length - 1] as (typeof plan.moves)[number];
+      await gp.touch.gesture({ ...plan, moves, upAtMs: last.atMs + 300 }, false);
+      await settle(gp, 400);
+      await shoot('level-01-drag');
+      await gp.touch.cancel({ ...plan, back: [...plan.back.slice(plan.back.length - held), plan.down] });
+    },
+  },
   {
     id: 'tutorial',
     shots: ['tutorial-shown', 'tutorial-hidden'],

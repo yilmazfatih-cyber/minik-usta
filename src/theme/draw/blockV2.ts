@@ -1,16 +1,20 @@
 /**
- * Candy block v2 (ART_DIRECTION §2.5, §3A, §3A.5, §6 Ağır Yük; TECH_DESIGN §2R.7, R2-12).
+ * Candy block v2 → v3 (ART_DIRECTION §2.5, §3A, §3A.5, §6 Ağır Yük; ART_REFERENCE §5.2; TECH_DESIGN §2R.7, R2-12).
  *
  * One texture per piece (shape × colour), drawn at the origin in a `w·c × h·c` box, `c = cellPx · k` (k = TECH §2R.1
- * cell scale; every `blockV2.*Px` value is multiplied by k). Draw order ART §3A.4:
+ * cell scale; every px value is multiplied by k). The numbers come from a `BlockRecipe`: ART §3A's v2 values
+ * (`tokens.blockV2`) with ART_REFERENCE §5.2's v3 differences on top (`kit.v3.block`, the default). Draw order ART
+ * §3A.4:
  *   S = outline polygon inset `insetPx` → filled with the outline tone (it stays a ring under B)
- *   B = S inset `outlinePx`            → side-wall tone (visible only as the 12 px lip under open bottom edges)
+ *   B = S inset `outlinePx`            → side-wall tone (visible only as the lip under open bottom edges)
  *   F = B with its bottom edges lifted `lipPx` → groove tone (between and around the pillows)
- *   per cell: pillow P (gradient light → base → bottom, inner shade, gloss ellipse) → ONE stud (side crescent, flat
- *   base face, rim) → the colour symbol on the stud's top with an emboss copy.
- * The stud's gloss arc + dot is NOT part of the block: it is a separate colourless texture (`drawBlockGlossV2`) that
- * the scene puts only on holdable pieces (K-09, DL-2R-17). Also here: blurred v2 silhouettes, fall-shadow ghosts on
- * the v2 outline, the lift glow ring (#91), the neutral "blocks left" icon (ART §14.9) and the Heavy Load (Y5, ART §6).
+ *   per cell: pillow P (gradient light → base → bottom, inner shade, v3 top bevel band, gloss ellipse) → ONE stud
+ *   (side crescent, flat base face, v3 bottom shade crescent, rim) → the colour symbol on the stud's top with an
+ *   emboss copy.
+ * The stud's highlight (v3 top-left crescent, the v2 arc) + dot is NOT part of the block: it is a separate colourless
+ * texture (`drawBlockGlossV2`) that the scene puts only on holdable pieces (K-09, DL-2R-17; ART_REFERENCE §5.2
+ * "tutulamaz blok: hilal parlamaları yok"). Also here: blurred v2 silhouettes, fall-shadow ghosts on the outline,
+ * the lift glow ring (#91), the neutral "blocks left" icon (ART §14.9) and the Heavy Load (Y5, ART §6).
  *
  * Pure Canvas2D calls on a `DrawContext`; same input → same call sequence (tests/theme/blockV2.test.ts).
  */
@@ -29,6 +33,82 @@ import type { Corner, Point } from './path.ts';
 import { drawSymbol } from './symbols.ts';
 
 export { GHOST_STYLES };
+
+// ---------------------------------------------------------------------------------------------------------------
+// Recipe (ART §3A v2 → ART_REFERENCE §5.2 v3)
+
+export type BlockVariant = 'v2' | 'v3';
+
+/**
+ * The block recipe. `v3` (default, ART_REFERENCE §5.2 on top of ART §3A): contour 4 px × 0,50, side wall 20 px ×
+ * 0,74, a top bevel band on every pillow (0,20 h, base × 1,28 → α 0), the gloss ellipse at α 0,30 / rx 0,18 w, the
+ * stud's bottom shade crescent (8 px × 0,80) and top-left highlight crescent (6 px, holdable gloss layer), 4 px inset.
+ * `v2` = the plain `tokens.blockV2` numbers (ART §3A traceability, `check.v2`).
+ */
+export interface BlockRecipe {
+  readonly variant: BlockVariant;
+  readonly insetPx: number;
+  readonly outlinePx: number;
+  readonly lipPx: number;
+  readonly darkFactor: number;
+  readonly outlineFactor: number;
+  readonly glossAlpha: number;
+  /** Gloss ellipse rx as a fraction of the pillow width. */
+  readonly glossRxRatio: number;
+  /** Top bevel band of every pillow: its top `heightRatio`, base × `lighten` → α 0 (null: none). */
+  readonly bevel: { readonly heightRatio: number; readonly lighten: number } | null;
+  /** Bottom shade crescent of the stud: `px` wide, base × `factor` (null: none). */
+  readonly studShade: { readonly px: number; readonly factor: number } | null;
+  /** Top-left highlight crescent of the stud in the HOLDABLE gloss layer (DL-2R-17): `px` wide, white α `alpha`. */
+  readonly studHighlight: { readonly px: number; readonly alpha: number } | null;
+}
+
+/**
+ * ART_REFERENCE §5.2 measures the highlight crescent as base × 1,25 at α 0,7 and keeps it off a not-holdable block,
+ * so it lives in the colourless holdable gloss layer as white: on a mid tone (v ≈ 140) white at this alpha lightens
+ * as much as × 1,175 (= 1 + 0,25 · 0,7) does (a = 0,175 · v / (255 − v)).
+ */
+export const STUD_HIGHLIGHT_WHITE_ALPHA = 0.3;
+
+export function blockRecipe(tokens: Tokens, variant: BlockVariant = 'v3'): BlockRecipe {
+  const v = tokens.blockV2;
+  if (variant === 'v2') {
+    return {
+      variant,
+      insetPx: v.insetPx,
+      outlinePx: v.outlinePx,
+      lipPx: v.lipPx,
+      darkFactor: v.darkFactor,
+      outlineFactor: v.outlineFactor,
+      glossAlpha: v.glossAlpha,
+      glossRxRatio: v.glossEllipse[2],
+      bevel: null,
+      studShade: null,
+      studHighlight: null,
+    };
+  }
+  const b = tokens.kit.v3.block;
+  return {
+    variant,
+    insetPx: b.insetPx,
+    outlinePx: b.outlinePx,
+    lipPx: b.lipPx,
+    darkFactor: b.darkFactor,
+    outlineFactor: b.outlineFactor,
+    glossAlpha: b.glossAlpha,
+    glossRxRatio: b.glossRxRatio,
+    bevel: { heightRatio: b.bevelHeightRatio, lighten: b.bevelLighten },
+    studShade: { px: b.studShadePx, factor: b.studShadeFactor },
+    studHighlight: { px: b.studHighlightPx, alpha: STUD_HIGHLIGHT_WHITE_ALPHA },
+  };
+}
+
+/** `base × f` with every channel capped at 255 (the bevel band of a light colour). */
+const scaleCapped = (c: Rgb, f: number): Rgb => [
+  Math.min(255, c[0] * f),
+  Math.min(255, c[1] * f),
+  Math.min(255, c[2] * f),
+];
 
 // ---------------------------------------------------------------------------------------------------------------
 // Colours (ART §2.5)
@@ -58,16 +138,20 @@ export interface BlockV2Palette extends BlockV2Tones {
   readonly embossOffsetPx: number;
 }
 
-/** ART §2.5 tones of any base colour (blocks, the cream kit icon …). */
-export function blockV2Tones(tokens: Tokens, base: Rgb): BlockV2Tones {
+/** ART §2.5 tones of any base colour (blocks, the cream kit icon …); side wall and contour factors from the recipe. */
+export function blockV2Tones(
+  tokens: Tokens,
+  base: Rgb,
+  recipe: BlockRecipe = blockRecipe(tokens),
+): BlockV2Tones {
   const v = tokens.blockV2;
   return {
     base,
     light: mix(base, WHITE, v.lightMix),
     bottom: shade(base, v.bottomFactor),
     groove: shade(base, v.grooveFactor),
-    dark: shade(base, v.darkFactor),
-    outline: shade(base, v.outlineFactor),
+    dark: shade(base, recipe.darkFactor),
+    outline: shade(base, recipe.outlineFactor),
     glow: mix(base, WHITE, v.glowMix),
   };
 }
@@ -94,9 +178,10 @@ export function blockV2Palette(
   tokens: Tokens,
   color: ColorCode,
   mode: DrawMode = DEFAULT_MODE,
+  recipe: BlockRecipe = blockRecipe(tokens),
 ): BlockV2Palette {
   const v = tokens.blockV2;
-  const tones = blockV2Tones(tokens, blockBase(tokens, color));
+  const tones = blockV2Tones(tokens, blockBase(tokens, color), recipe);
   const dark = hasDarkInk(tokens, color);
   return {
     ...tones,
@@ -203,15 +288,20 @@ export interface BlockV2Geometry {
   readonly studs: readonly Stud[];
 }
 
-/** ART §3A.1 geometry of a shape at scale k (pure; the drawers and tests share it). */
-export function blockV2Geometry(shape: ShapeDef, tokens: Tokens, k = 1): BlockV2Geometry {
+/** ART §3A.1 geometry of a shape at scale k (pure; the drawers and tests share it); inset / contour / lip from the recipe. */
+export function blockV2Geometry(
+  shape: ShapeDef,
+  tokens: Tokens,
+  k = 1,
+  recipe: BlockRecipe = blockRecipe(tokens),
+): BlockV2Geometry {
   const v = tokens.blockV2;
   const c = cellPxOf(tokens, k);
   const cells = canvasCells(shape.cells, shape.h);
   const poly = polyominoOutline(cells, c);
-  const ins = v.insetPx * k;
-  const out = v.outlinePx * k;
-  const lip = v.lipPx * k;
+  const ins = recipe.insetPx * k;
+  const out = recipe.outlinePx * k;
+  const lip = recipe.lipPx * k;
   const S = offsetEdges(poly, ins, ins, ins, ins);
   const B = offsetEdges(S, out, out, out, out);
   const F = offsetEdges(B, 0, 0, lip, 0);
@@ -293,6 +383,9 @@ export function roundRectSub(ctx: DrawContext, x: number, y: number, w: number, 
 
 const rad = (deg: number): number => (deg * Math.PI) / 180;
 
+/** ART_REFERENCE §5.2 stud bottom shade crescent: the lower arc of the face (canvas angles, 90° = down). */
+export const STUD_SHADE_ARC: readonly [number, number] = [20, 160];
+
 // ---------------------------------------------------------------------------------------------------------------
 // Block
 
@@ -318,17 +411,23 @@ export function drawBlockV2(ctx: DrawContext, spec: BlockV2Spec, tokens: Tokens)
     throw new Error(`drawBlockV2: flag layers ${spec.flags.join(',')} are Phase 3 (ART §3A.2 layer 8)`);
   }
   const mode = spec.mode ?? DEFAULT_MODE;
-  drawCandyBody(ctx, shapeById(spec.shape), blockV2Palette(tokens, spec.color, mode), tokens, spec.k ?? 1, {
-    color: spec.color,
-    scale: mode.colorBlind ? tokens.a11y.colorBlindSymbolScale : 1,
-  });
+  const recipe = blockRecipe(tokens);
+  drawCandyBody(
+    ctx,
+    shapeById(spec.shape),
+    blockV2Palette(tokens, spec.color, mode, recipe),
+    tokens,
+    spec.k ?? 1,
+    { color: spec.color, scale: mode.colorBlind ? tokens.a11y.colorBlindSymbolScale : 1 },
+    recipe,
+  );
 }
 
 /** The cream, symbol-less "blocks left" goal icon (ART §14.9): C3 at the scale that fits `sizePx`. */
 export function drawBlocksLeftIcon(ctx: DrawContext, sizePx: number, tokens: Tokens): void {
   const shape = shapeById('C3_0');
   const k = sizePx / (Math.max(shape.w, shape.h) * tokens.layout.grid.cellPx);
-  drawCandyBody(ctx, shape, creamBlockPalette(tokens), tokens, k, null);
+  drawCandyBody(ctx, shape, creamBlockPalette(tokens), tokens, k, null, blockRecipe(tokens));
 }
 
 /**
@@ -343,9 +442,10 @@ function drawCandyBody(
   tokens: Tokens,
   k: number,
   symbol: { readonly color: ColorCode; readonly scale: number } | null,
+  recipe: BlockRecipe,
 ): void {
   const v = tokens.blockV2;
-  const g = blockV2Geometry(shape, tokens, k);
+  const g = blockV2Geometry(shape, tokens, k, recipe);
   const c = g.c;
 
   // 1–3: contour ring, side wall, face (one continuous body per piece, ART §3A.3)
@@ -359,7 +459,7 @@ function drawCandyBody(
   ctx.fillStyle = css(pal.groove);
   ctx.fill();
 
-  const [ex, ey, erx, ery] = v.glossEllipse;
+  const [ex, ey, , ery] = v.glossEllipse;
   const [dx, dy, dr] = v.glossDot;
   for (let i = 0; i < g.pillows.length; i++) {
     const P = g.pillows[i] as Rect;
@@ -380,11 +480,29 @@ function drawCandyBody(
     shade5.addColorStop(1, css(pal.dark, v.innerShadeAlpha));
     ctx.fillStyle = shade5;
     ctx.fillRect(P.x, P.y + P.h - sh, P.w, sh);
+    // 5b (v3, ART_REFERENCE §5.2 item 2): top bevel band, the pillow's top `heightRatio`, base × lighten → α 0
+    if (recipe.bevel) {
+      const bh = P.h * recipe.bevel.heightRatio;
+      const lit = scaleCapped(pal.base, recipe.bevel.lighten);
+      const band = ctx.createLinearGradient(0, P.y, 0, P.y + bh);
+      band.addColorStop(0, css(lit));
+      band.addColorStop(1, css(lit, 0));
+      ctx.fillStyle = band;
+      ctx.fillRect(P.x, P.y, P.w, bh);
+    }
     ctx.restore();
-    // 6: gloss ellipse (+ the pillow dot only without studs)
+    // 6: gloss ellipse (+ the pillow dot only without studs); v3: rx 0,18 w, α 0,30 (mat plastic)
     ctx.beginPath();
-    ctx.ellipse(P.x + ex * P.w, P.y + ey * P.h, erx * P.w, ery * P.h, rad(v.glossRotDeg), 0, Math.PI * 2);
-    ctx.fillStyle = css(WHITE, v.glossAlpha);
+    ctx.ellipse(
+      P.x + ex * P.w,
+      P.y + ey * P.h,
+      recipe.glossRxRatio * P.w,
+      ery * P.h,
+      rad(v.glossRotDeg),
+      0,
+      Math.PI * 2,
+    );
+    ctx.fillStyle = css(WHITE, recipe.glossAlpha);
     ctx.fill();
     if (!v.studEnabled) {
       ctx.beginPath();
@@ -407,6 +525,17 @@ function drawCandyBody(
       ctx.arc(s.cx, s.cy, s.d / 2, 0, Math.PI * 2);
       ctx.fillStyle = css(pal.base);
       ctx.fill();
+      // 6c (v3, ART_REFERENCE §5.2 item 5): bottom shade crescent inside the face, base × factor
+      if (recipe.studShade) {
+        const w = recipe.studShade.px * k;
+        ctx.beginPath();
+        ctx.arc(s.cx, s.cy, s.d / 2 - w / 2, rad(STUD_SHADE_ARC[0]), rad(STUD_SHADE_ARC[1]));
+        ctx.lineWidth = w;
+        ctx.strokeStyle = css(shade(pal.base, recipe.studShade.factor));
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(s.cx, s.cy, s.d / 2, 0, Math.PI * 2);
+      }
       ctx.lineWidth = v.studRimPx * k;
       ctx.strokeStyle = css(pal.outline, v.studRimAlpha);
       ctx.stroke();
@@ -427,8 +556,9 @@ function drawCandyBody(
 
 /**
  * Holdable gloss layer `blk_gloss_<shape>` (ART §3A.5 6e + 6f, DL-2R-17): white, colourless, one arc + dot per stud,
- * in the block box. The scene places it over holdable pieces only; a not-holdable piece shows no stud gloss and is
- * tinted `blockV2.notHoldableTint`.
+ * in the block box. v3 (ART_REFERENCE §5.2 item 5): the arc is the stud's top-left highlight crescent — `studHighlight.px`
+ * wide at the face's edge, white α `studHighlight.alpha` — over the same 205° → 285° span. The scene places it over
+ * holdable pieces only; a not-holdable piece shows no stud highlight and is tinted `blockV2.notHoldableTint`.
  */
 export function drawBlockGlossV2(
   ctx: DrawContext,
@@ -437,16 +567,18 @@ export function drawBlockGlossV2(
 ): void {
   const v = tokens.blockV2;
   const k = spec.k ?? 1;
-  const g = blockV2Geometry(shapeById(spec.shape), tokens, k);
+  const recipe = blockRecipe(tokens);
+  const g = blockV2Geometry(shapeById(spec.shape), tokens, k, recipe);
   const [arcR, a0, a1] = v.studGlossArc;
   const [dotR, dotA, dotPx] = v.studDot;
+  const hl = recipe.studHighlight;
   ctx.save();
   ctx.lineCap = 'round';
-  ctx.lineWidth = v.studGlossWidthPx * k;
-  ctx.strokeStyle = css(WHITE, v.studGlossAlpha);
+  ctx.lineWidth = (hl ? hl.px : v.studGlossWidthPx) * k;
+  ctx.strokeStyle = css(WHITE, hl ? hl.alpha : v.studGlossAlpha);
   for (const s of g.studs) {
     ctx.beginPath();
-    ctx.arc(s.cx, s.cy, arcR * s.d, rad(a0), rad(a1));
+    ctx.arc(s.cx, s.cy, hl ? s.d / 2 - (hl.px * k) / 2 : arcR * s.d, rad(a0), rad(a1));
     ctx.stroke();
   }
   ctx.fillStyle = css(WHITE, v.studDotAlpha);
@@ -683,7 +815,7 @@ export function drawCargo(
   const dark = parseHex(o.cargoDark);
   const buckle = parseHex(o.cargoBuckle);
   const black = parseHex(tokens.color.ui.hazardBlack);
-  const ins = tokens.blockV2.insetPx * k;
+  const ins = blockRecipe(tokens).insetPx * k;
   const line = 6 * k;
   const corner = 18 * k;
   const x0 = ins;

@@ -1228,6 +1228,19 @@ Görsel sonradan gelirse 200 ms'lik çapraz solmayla değişir (UX §3 "Yükleni
     `holdable` parçaların üstüne konur (§2R.15); tutulamaz parça `setTint` × 0,92 (`blockV2.notHoldableTint`).
   - Mevcut bölüm pişirmesi (§10.2) aynı atlas sayfalarına yazar. `textures.ts` geçiş süresince `variant: 'v1' | 'v2'`
     taşır; testler v2'ye geçince v1 çizici silinir.
+  - **Blok v3 (ART_REFERENCE §5.2, 2026-10-22, görsel v3 paket A):** çizici bir `BlockRecipe` okur —
+    `blockRecipe(tokens, 'v3')` (varsayılan) `tokens.blockV2` üstüne `kit.v3.block` farklarını koyar: iç pay 4, kontur
+    4 px × 0,50, yan duvar 20 px × 0,74, yastık parlaması α 0,30 / rx 0,18 w, her yastığın üst 0,20 h'sinde bevel bandı
+    (taban × 1,28 → α 0; iç gölgeyle aynı kırpmada), çıkıntı yüzünde 8 px alt hilal (20°→160°, taban × 0,80; kenar
+    halkası için yüz yeniden izlenir). Üst-sol hilal (6 px) **tutulabilir parlama katmanındadır** (`blk_gloss`, beyaz
+    α 0,30 = orta tonda taban × 1,25 α 0,7'nin beyaz karşılığı): tutulamaz blokta hilal parlaması yok (§5.2 kuralı), ×
+    0,92 tint aynen. `blockRecipe(tokens, 'v2')` ART §3A sayılarını (3 / 6 / 12, × 0,68 / × 0,42) izlenebilirlik ve
+    `check.v2` testleri için taşır; `blockV2Geometry` / `blockV2Palette` / `blockV2Tones` tarifi isteğe bağlı son
+    parametre alır. Geometri sonucu: 1×1 yastık 14,4–85,6, çıkıntı Ø 53,2 (= 0,44 c, referans çıkıntı oranı; dikey I4 iç
+    hücrede 64,8 kalır), sembol kutusu 43,6. ART §2.5 ölçümü yeniden (`tests/theme/blockV3.test.ts`): sembol / çıkıntı
+    yüzü tablosu değişmedi (en düşük B 3,51); kontur / saha zemini #E9C891 en düşük Y 3,06 (v2 4,01), hepsi ≥ 3;
+    duvar / taban ≥ 1,37; bevel / taban ≥ 1,21. `kit.v3.board.floorDark` (#2C2670) açılırsa kontur 1,12'ye düşer —
+    o varyantta kontur zeminden alınmalı (ART_REFERENCE §5.3 notu), bu yüzden `floorDarkEnabled` false kalır.
 - **Saha zemini:** `yard_floor` v2 delikli pano (hücre merkezinde Ø 12·k delik), sahaya bırakma önizlemesi 4 px beyaz α
   0,6 noktalı kontur (DL-2R-18).
 - **Işıltı halkası:** şekil başına bir genişletilmiş siluet karesi; renkten bağımsızdır, ışıltı tonu `tint` ile verilir.

@@ -4,6 +4,13 @@
  * changes. Do not add values here that tokens.json already has.
  */
 export const VIEW = Object.freeze({
+  /**
+   * ART_REFERENCE §3.4 HUD capsule icon, DS3-09: the "Bölüm N" capsule's icon takes the raw measurement (Ø 72, 28 px
+   * out of the pill's left end) instead of `kit.v3.capsule.hudIconPx` 64 / `iconOverhangPx` 20, so it rides the
+   * 60 px pill instead of sitting inside it (design-lead's token change folds these two in).
+   */
+  hudLevelIconPx: 72,
+  hudLevelIconOverhangPx: 28,
   /** TECH §4.4: a non-adjacent node change is followed along the BFS path at 12 ms per cell, at most 120 ms. */
   pathMsPerCell: 12,
   pathMaxMs: 120,

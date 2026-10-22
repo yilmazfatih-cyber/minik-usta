@@ -32,6 +32,12 @@ export interface CapsuleSpec {
   readonly inIcon?: string | null;
   /** Text colour role of the capsule text (default: cream on home, lavender in the HUD). */
   readonly role?: Extract<TextRole, 'counterCream' | 'counterLavender'>;
+  /**
+   * Icon diameter and left overhang overrides (default `capsule.homeIconPx` / `hudIconPx`, `iconOverhangPx`). DS3-09:
+   * the HUD "Bölüm N" capsule takes the raw 72 / 28 so the icon reads as riding the pill, not sitting inside it.
+   */
+  readonly iconPx?: number;
+  readonly iconOverhangPx?: number;
 }
 
 /** Number inside the heart (ART_REFERENCE §3.4 "beyaz 36 px, #B80E12 kontur 0,08 em"). */
@@ -45,6 +51,7 @@ export class Capsule {
   private readonly h: number;
   private readonly variant: CapsuleV3Variant;
   private readonly iconPx: number;
+  private readonly overhangPx: number;
   private readonly fontPx: number;
   private readonly role: TextRole;
   private readonly value: Phaser.GameObjects.Text;
@@ -62,7 +69,8 @@ export class Capsule {
     this.variant = variant;
     const h = capsuleV3Height(variant, TOKENS);
     this.h = h;
-    this.iconPx = variant === 'home' ? CP.homeIconPx : CP.hudIconPx;
+    this.iconPx = spec.iconPx ?? (variant === 'home' ? CP.homeIconPx : CP.hudIconPx);
+    this.overhangPx = spec.iconOverhangPx ?? CP.iconOverhangPx;
     this.fontPx = variant === 'home' ? CP.homeFontPx : CP.hudFontPx;
     this.role = spec.role ?? (variant === 'home' ? 'counterCream' : 'counterLavender');
     const name = variant === 'home' ? KIT.capsule : KIT.capsuleHud;
@@ -87,7 +95,7 @@ export class Capsule {
     }
     this.plus = plus;
     this.plusPressed = plusPressed;
-    const ix = -CP.iconOverhangPx + this.iconPx / 2;
+    const ix = -this.overhangPx + this.iconPx / 2;
     // the icon's own soft shadow (a darker copy 4 px lower)
     const shadow = icons
       .add(scene, ix, h / 2 + 4, spec.icon, this.iconPx)
@@ -101,7 +109,7 @@ export class Capsule {
     this.root = scene.add.container(0, 0, parts);
     this.setValue(spec.value, spec.inIcon ?? null);
     const hit = hitArea(
-      { x: -CP.iconOverhangPx, y: 0, w: spec.w + CP.iconOverhangPx + (spec.plus ? PL.overhangPx : 0), h },
+      { x: -this.overhangPx, y: 0, w: spec.w + this.overhangPx + (spec.plus ? PL.overhangPx : 0), h },
       TOKENS.touch.minTargetPx,
     );
     this.root.setInteractive(
@@ -138,7 +146,7 @@ export class Capsule {
 
   /** Room for the number: from the icon's right edge to the "+" (or the pill's end). */
   private textBox(): { cx: number; w: number } {
-    const left = -CP.iconOverhangPx + this.iconPx + 6;
+    const left = -this.overhangPx + this.iconPx + 6;
     const right = this.plus ? this.w - PL.diameterPx / 2 - 10 : this.w - this.h / 3;
     return { cx: (left + right) / 2, w: Math.max(40, right - left) };
   }

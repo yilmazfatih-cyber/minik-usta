@@ -11,6 +11,7 @@ import type { ColorCode, ShapeId } from '../../src/core/types.ts';
 import { TOKENS, parseTokens } from '../../src/theme/tokens.ts';
 import type { Tokens } from '../../src/theme/tokens.ts';
 import {
+  blockRecipe,
   blockV2Geometry,
   blockV2Palette,
   blockV2Size,
@@ -28,7 +29,7 @@ import {
   liftGlowSize,
   offsetEdges,
 } from '../../src/theme/draw/blockV2.ts';
-import { css, parseHex, toHex } from '../../src/theme/draw/color.ts';
+import { css, parseHex, shade, toHex } from '../../src/theme/draw/color.ts';
 import type { Rgb } from '../../src/theme/draw/color.ts';
 import { canvasCells, polyominoOutline } from '../../src/theme/draw/path.ts';
 import type { Corner } from '../../src/theme/draw/path.ts';
@@ -36,6 +37,8 @@ import { STICKY_KEYS, createRecorder, isGradient, opsOf, record, styleAt } from 
 import type { Op } from './recordingContext.ts';
 
 const xy = (cs: readonly Corner[]): [number, number][] => cs.map((p) => [p.x, p.y]);
+/** ART §3A's own numbers (inset 3, contour 6, lip 12, × 0,68 / × 0,42): the v2 recipe; v3 is tests/theme/blockV3.test.ts. */
+const V2 = blockRecipe(TOKENS, 'v2');
 const outline = (id: ShapeId): Corner[] => {
   const s = shapeById(id);
   return polyominoOutline(canvasCells(s.cells, s.h), 120);
@@ -162,7 +165,7 @@ describe('offsetEdges (ART 3A.1, 3A.4; TECH 2R.7 unit test)', () => {
   });
 
   it('TECH 2R.1 geometry scales with k (c = 120·k, every px value × k)', () => {
-    const g = blockV2Geometry(shapeById('L4_0'), TOKENS, 1.2);
+    const g = blockV2Geometry(shapeById('L4_0'), TOKENS, 1.2, V2);
     expect(g.c).toBe(144);
     expect(g.S[0]?.x).toBeCloseTo(3.6, 9);
     expect(g.S[0]?.y).toBeCloseTo(3.6, 9);
@@ -172,7 +175,7 @@ describe('offsetEdges (ART 3A.1, 3A.4; TECH 2R.7 unit test)', () => {
 
 describe('pillows and studs (ART 3A.1 item 4, 3A.5)', () => {
   it('ART 3A.1 1×1 pillow x 14.4–105.6, y 14.4–93.6 (open sides 0.12c, open bottom +12)', () => {
-    const g = blockV2Geometry(shapeById('B1_0'), TOKENS);
+    const g = blockV2Geometry(shapeById('B1_0'), TOKENS, 1, V2);
     const P = g.pillows[0];
     expect(P?.x).toBeCloseTo(14.4, 9);
     expect(P?.y).toBeCloseTo(14.4, 9);
@@ -193,12 +196,12 @@ describe('pillows and studs (ART 3A.1 item 4, 3A.5)', () => {
   });
 
   it('ART 3A.5 one stud per cell: d = 61.2 on a 1×1 (height bound), 64.8 = 0.54c on a vertical I4 inner cell', () => {
-    const one = blockV2Geometry(shapeById('B1_0'), TOKENS);
+    const one = blockV2Geometry(shapeById('B1_0'), TOKENS, 1, V2);
     expect(one.studs).toHaveLength(1);
     expect(one.studs[0]?.d).toBeCloseTo(61.2, 9);
     expect(one.studs[0]?.cx).toBeCloseTo(60, 9);
     expect(one.studs[0]?.cy).toBeCloseTo(14.4 + (79.2 - 6) / 2, 9);
-    const i4 = blockV2Geometry(shapeById('I4_0'), TOKENS);
+    const i4 = blockV2Geometry(shapeById('I4_0'), TOKENS, 1, V2);
     expect(i4.studs).toHaveLength(4);
     expect(Math.max(...i4.studs.map((s) => s.d))).toBeCloseTo(64.8, 9);
   });
@@ -207,7 +210,7 @@ describe('pillows and studs (ART 3A.1 item 4, 3A.5)', () => {
 describe('tones and contrast (ART 2.5; tokens check.v2)', () => {
   for (const c of COLOR_CODES) {
     it(`ART 2.5 ${c}: light / bottom / groove / side wall / outline / glow = check.v2 ±1`, () => {
-      const p = blockV2Palette(TOKENS, c);
+      const p = blockV2Palette(TOKENS, c, undefined, V2);
       withinOne(p.light, checkV2.light[c], `light ${c}`);
       withinOne(p.bottom, checkV2.bottom[c], `bottom ${c}`);
       withinOne(p.groove, checkV2.groove[c], `groove ${c}`);
@@ -240,12 +243,12 @@ describe('tones and contrast (ART 2.5; tokens check.v2)', () => {
     // ART's "sembol üst kenarı" column (B 3.2 …) was measured a few px lower than the symbol box top used here (0.22h of
     // the 1×1 pillow); this test takes the stricter top edge: B 3.13, R 3.74, every colour ≥ 3:1.
     const v = TOKENS.blockV2;
-    const P = blockV2Geometry(shapeById('B1_0'), TOKENS).pillows[0];
+    const P = blockV2Geometry(shapeById('B1_0'), TOKENS, 1, V2).pillows[0];
     const ph = P?.h ?? 0;
     const top = (v.symbolCenterYRatio * ph - (v.symbolSizeRatio * 120) / 2) / ph;
     expect(top).toBeLessThan(v.gradientStop);
     const all = COLOR_CODES.map((c) => {
-      const p = blockV2Palette(TOKENS, c);
+      const p = blockV2Palette(TOKENS, c, undefined, V2);
       const t = top / v.gradientStop;
       const bg = [0, 1, 2].map((i) => (p.light[i] ?? 0) * (1 - t) + (p.base[i] ?? 0) * t) as unknown as Rgb;
       return { c, cr: contrast(over(p.symbol, bg), bg) };
@@ -296,28 +299,37 @@ describe('draw order and layers (ART 3A.2, 3A.4, 3A.5)', () => {
     ]);
     const f = fills(ops);
     expect(f).toContain(css(W.dark));
-    expect(styleAt(ops, 'stroke', 'strokeStyle')[0]).toBe(css(W.outline, 0.45));
-    expect(styleAt(ops, 'stroke', 'lineWidth')[0]).toBe(2);
+    // the rim; v3 (ART_REFERENCE 5.2) strokes the 8 px bottom shade crescent (base × 0,80) right before it
+    const strokes = styleAt(ops, 'stroke', 'strokeStyle');
+    const widths = styleAt(ops, 'stroke', 'lineWidth');
+    const rim = widths.indexOf(2);
+    expect(rim).toBeGreaterThan(0);
+    expect(strokes[rim]).toBe(css(W.outline, 0.45));
+    expect(widths[rim - 1]).toBe(8);
+    expect(strokes[rim - 1]).toBe(css(shade(W.base, 0.8)));
   });
 
   it('DL-2R-17 the stud gloss arc and dot are NOT in the block (holdable layer is separate)', () => {
     const ops = record((ctx) => drawBlockV2(ctx, { shape: 'O4_0', color: 'G' }, TOKENS));
-    const glossArcs = opsOf(ops, 'arc').filter((a) => a[4] !== 0);
+    const glossArcs = opsOf(ops, 'arc').filter((a) => a[4] === (205 * Math.PI) / 180);
     expect(glossArcs).toEqual([]);
+    expect(styleAt(ops, 'stroke', 'strokeStyle')).not.toContain(css([255, 255, 255], 0.5));
     expect(fills(ops)).not.toContain(css([255, 255, 255], TOKENS.blockV2.studDotAlpha));
   });
 
-  it('DL-2R-17 blk_gloss: colourless white arc 205°→285° (r 0.42d, 5 px, α 0.5) + dot (225°, 0.30d, 4 px, α 0.8) per stud', () => {
+  it('DL-2R-17 blk_gloss: colourless white arc 205°→285° (v3: the 6 px α 0,3 highlight crescent at the face edge) + dot (225°, 0.30d, 4 px, α 0.8) per stud', () => {
     const ops = record((ctx) => drawBlockGlossV2(ctx, { shape: 'O4_0' }, TOKENS));
     const arcs = opsOf(ops, 'arc');
     expect(arcs).toHaveLength(8);
     const g = blockV2Geometry(shapeById('O4_0'), TOKENS);
     const s = g.studs[0];
-    expect(arcs[0]?.[3]).toBeCloseTo(0.42 * (s?.d ?? 0), 9);
+    const hl = blockRecipe(TOKENS).studHighlight;
+    expect(hl).toEqual({ px: 6, alpha: 0.3 });
+    expect(arcs[0]?.[3]).toBeCloseTo((s?.d ?? 0) / 2 - 3, 9);
     expect(arcs[0]?.[4]).toBeCloseTo((205 * Math.PI) / 180, 9);
     expect(arcs[0]?.[5]).toBeCloseTo((285 * Math.PI) / 180, 9);
-    expect(styleAt(ops, 'stroke', 'strokeStyle')).toEqual(Array(4).fill(css([255, 255, 255], 0.5)));
-    expect(styleAt(ops, 'stroke', 'lineWidth')).toEqual(Array(4).fill(5));
+    expect(styleAt(ops, 'stroke', 'strokeStyle')).toEqual(Array(4).fill(css([255, 255, 255], 0.3)));
+    expect(styleAt(ops, 'stroke', 'lineWidth')).toEqual(Array(4).fill(6));
     expect(styleAt(ops, 'fill', 'fillStyle')).toEqual(Array(4).fill(css([255, 255, 255], 0.8)));
     const dot = arcs[4];
     expect(dot?.[1]).toBeCloseTo((s?.cx ?? 0) + Math.cos((225 * Math.PI) / 180) * 0.3 * (s?.d ?? 0), 9);
@@ -381,9 +393,10 @@ describe('silhouettes, glow, ghosts, Heavy Load, kit icon (ART 3A.2, 6, 14.9)', 
     const ops = record((ctx) => drawLiftGlowV2(ctx, { shape: 'D2_0' }, TOKENS));
     expect(styleAt(ops, 'fill', 'fillStyle')).toEqual(['#FFFFFF']);
     const first = opsOf(ops, 'arcTo')[0];
-    // the ring's first corner: S (3, 3) grown 10 → (−7, −7), shifted by pad and thrown off-frame
-    expect(first?.[1]).toBeCloseTo(-7 + pad - 8192, 9);
-    expect(first?.[2]).toBeCloseTo(-7 + pad, 9);
+    // the ring's first corner: S (inset, inset) grown 10 → (inset − 10, …), shifted by pad and thrown off-frame
+    const inset = blockRecipe(TOKENS).insetPx;
+    expect(first?.[1]).toBeCloseTo(inset - 10 + pad - 8192, 9);
+    expect(first?.[2]).toBeCloseTo(inset - 10 + pad, 9);
   });
 
   it('UX 5.4 v2 ghosts keep the v1 styles (valid solid + glow, invalid / neutral dashed) on the S outline', () => {

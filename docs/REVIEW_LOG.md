@@ -1725,3 +1725,58 @@ puanları aşağıda (§10; her boyut ≥ 4 hedefi). Kapılar: `npm run check`, 
   (07/ref-03) 4/4/4/4/4/4, bölüm başı (07/ref-02) 4/4/4/4/—/4, ödül katmanı (07/ref-06) 4/4/4/4/—/4, oyun HUD +
   öğretici (07/ref-01) 4/4/4/4/4/4, kazanma 4/4/4/4/4/4. Açık: DS3-09 (HUD kapsül ikonu "içeride" okunuyor; token
   kararı design-lead'in).
+
+## Görsel v3 paket A — kit v3 + oyun ekranı (code-lead, 2026-10-22; ART_REFERENCE §3.1–§3.5, §3.7, §5.2, §9.4; R2-13 madde 5)
+
+Set: `artifacts/screens/v3/level-01 | level-01-drag | level-04 | level-08 | level-10 -<profil>.png` (390 × 844 ve 360 × 800;
+`node tools/screens.ts --profile <p> --only level-01,level-04,level-08,level-10 --flat artifacts/screens/v3`; 14/14 kare
+ok, konsol hatası yok). Kapılar: `npm run check` (109 dosya / 2113 test, +22), `npm run build` (first load 606,5 / 620 KB),
+`npm run levels:check` (10/10 solved) yeşil.
+
+- [code-lead → design-lead] **Blok v3 (§5.2) UYGULANDI.** `theme/draw/blockV2.ts` artık bir `BlockRecipe` okur:
+  `blockRecipe(tokens, 'v3')` (varsayılan) = `tokens.blockV2` üstüne `kit.v3.block` — iç pay 4, kontur 4 px × 0,50, yan
+  duvar 20 px × 0,74, yastık parlaması α 0,30 / rx 0,18 w, her yastığın üst 0,20 h'sinde bevel bandı (taban × 1,28 → α 0),
+  çıkıntıda 8 px alt hilal (20°→160°, taban × 0,80). Üst-sol hilal (6 px) **tutulabilir parlama katmanında** (`blk_gloss`,
+  DL-2R-17): tutulamaz blokta hilal parlaması yok (sizin §5.2 kuralınız), × 0,92 tint aynen. Renk notu: hilal katmanı
+  renksiz olduğu için beyaz α 0,30 kullandım (orta tonda taban × 1,25 α 0,7'nin beyaz karşılığı); tonlu istiyorsanız blok
+  dokusuna taşırım ama o zaman tutulamaz blokta da görünür — karar sizin. Geometri sonucu: 1×1 çıkıntı Ø 61,2 → **53,2**
+  (= 0,44 c, referans çıkıntı oranı), sembol kutusu 50,2 → 43,6 (dikey I4 iç hücrede 64,8 / 50,4 kalır); 20 px duvar
+  bunu zorunlu kılıyor, §5.2 madde 5 "Ø 0,54 c kalır" yalnız iç hücrelerde tutuyor — kabul ediyorsanız ART_REFERENCE'a
+  not düşün. v2 tarifi (`'v2'`) ART §3A testleri ve `check.v2` için duruyor.
+- [code-lead → design-lead] **ART §2.5 kontrast ölçümü yeniden (`tests/theme/blockV3.test.ts`):** sembol / çıkıntı yüzü
+  tablosu değişmedi (B 3,51 en düşük, hepsi ≥ 3); kontur / saha zemini #E9C891 en düşük **Y 3,06** (v2 4,01), hepsi ≥ 3;
+  duvar / taban ≥ 1,37 (W en düşük); bevel / taban ≥ 1,21 (Y). `kit.v3.board.floorDark` #2C2670 açılırsa kontur / zemin
+  **1,12**'ye (W) düşer: o varyantta kontur zeminden alınmalı (sizin §5.3 notunuz), `floorDarkEnabled` false kalıyor.
+- [code-lead → design-lead] **DS3-09 KAPANDI (kod sabitiyle).** "Bölüm N" HUD kapsülünün ikonu ham ölçüm **Ø 72, sol
+  uçtan 28 px dışarı** (`VIEW.hudLevelIconPx / hudLevelIconOverhangPx`; `Capsule` `iconPx` / `iconOverhangPx` seçenekleri):
+  ikon 60 px kapsülün üstünden ve altından 6'şar px taşıyor, "biniyor" okunuyor. `kit.v3.capsule.hudIconPx` 64 /
+  `iconOverhangPx` 20'yi 72 / 28 yaparsanız sabitler kalkar. Hedef çiplerinde (yapı 0/1, blok) Ø 64 / 20 bıraktım — satır
+  1'de iki boy yan yana; isterseniz onları da 72 / 28'e çekerim (tek sabit).
+- [code-lead → design-lead] **Sürükleme anı karesi:** yeni `drag` senaryosu (`level-01-drag`): B1 altın hamlesinin parmak
+  yolu %55'ine kadar oynanıp tutuluyor (blok duvarın üstünden geçmiş, şantiyede yeşil hayalet, kaldırma parlaması,
+  öğretici balonu solmuş); sonra yol geri sarılıp başlangıçta bırakılıyor (K-07 satır 1, hamle harcanmaz).
+- [code-lead → design-lead, product-lead] **§9.4 "Geri Al" sol üst aracı — AÇIK SORU, uygulamadım.** §9.4 satır 2'de sol
+  yuva Geri Al 136 `purple`; ama (a) K-06 panoraması §9.4'te hiç yok ve bugün o yuvada (300 × 136 koyu kuyu), (b) Geri Al
+  zaten K-39 / K-54 güçlendirici yuvası (alt çubuk 4 × 160, §9.4 ve UX §5.1 ile aynı), ikisi birden iki Geri Al demek.
+  Seçenekler: (1) referanstaki gibi Geri Al üste, alt çubuk 3 kare (UX §5.1 yuva sırası + K-54 testleri + harness
+  `slot:undo` değişir; product-lead onayı), panorama "Bölüm N" kapsülüne dokununca açılan büyük önizlemeye (UX §5.1
+  MVP-lite) iner; (2) bugünkü düzen kalır, §9.4 "Geri Al" satırı "panorama kuyusu" olarak güncellenir. Kararınızı
+  bekliyorum; (1) bir paket işi.
+- [code-lead → design-lead] **§9.4 satır 1 sağ (Usta Serisi 260 × 60) ve satır 3 hedef çipleri (y 264–344):** bu turda da
+  dokunmadım — Usta Serisi durum şeridinde (mala + kamyon çipiyle, UX §5.8 madde 10), hedef çipleri satır 1 sağda; üst
+  grup alt kenarı 264 (tahta bütçesi, öğretici üst yuvası) değişmedi. DS3-05 notunuz "tahta grubu dikey dengesi doğru;
+  değişmez" bu düzen üstüne verilmişti.
+- [code-lead → design-lead] **Düzen puanı B8 / B10'da 3 — nedeni UX §5.8 madde 2 (DS-10):** 8 sütunlu bölümlerde öğretici
+  balonu yokken HUD altı ile vinç alanı tepesi arasında 390 × 844'te ≈ 520 px boş çivit bant kalıyor (referansta ≈ 310);
+  tahta alt çapalı ve EXPAND fazlasının yarısı üste gidiyor (`board.expandShare` 0,5, "tahta yukarı çekilmez", ilke 3
+  başparmak bölgesi). Kendi sahipliğimde değil; öneri: (a) §9.4 satır 3 hedef çipleri o banda insin (üst grup 344) ya da
+  (b) `expandShare` öğretici adımı olmayan bölümlerde 0,35 (tahta 60 px yukarı). Seçerseniz tek token / tek sabit.
+- [code-lead → design-lead] **Kit §3.1–§3.5, §3.7 doğrulaması:** `kitV3.ts` çiziciler tariflerle birebir
+  (`tests/theme/kitV3.test.ts`: düğme 3 boy + basılı hâl, × ve +, kapsül iki boy + koyu iç halka, rozet 72 / 68 / 56,
+  pencere 7 katman); bu pakette değişmedi, ekranlarda duraklat `purple` 136, güçlendirici kareleri yeşil + kırmızı rozet
+  68 (B8 çekiç "3", B10 çekiç "3" + vinç "2"), kilitli gri + altın kilit + "Bölüm N" doğrulandı.
+- [code-lead → orkestratör] **Öz puan (§10, 07/ref-01 ile yan yana; 390 × 844 = 360 × 800):** B1 4/4/4/4/4/4 · B1
+  sürükleme anı 4/4/4/4/4/4 · B4 4/4/4/4/4/4 · B8 4/4/4/**3**/4/4 · B10 4/4/4/**3**/4/4. Düşük boyut (düzen, B8/B10) UX
+  §5.8 madde 2'ye bağlı; yukarıdaki seçenekle kapanır. Paket A'nın görsel kodu: `blockV2.ts` (v3 tarifi), `Capsule.ts`
+  (ikon seçenekleri), `LevelScene.ts` / `viewConstants.ts` (DS3-09), `tools/screens.ts` (drag senaryosu); kit çiziciler
+  ve HUD düzeni değişmedi.
