@@ -571,3 +571,27 @@ Durum: KABUL (orkestratör, 2026-10-08)     Sahip: product-lead (kural) + code-l
 Karar: (1) D3b tablosu olmayan bölümde solver'ın bütün keşif uzayında D1/D2/D3a'nın yakalamadığı çıkmaz durum olamaz (GDD K-51 madde 2, error). (2) Çok dilimli bölümde en kısa çözüm gelecek kamyon partisini bilmeyi gerektiremez: önsezi kazancı ve şans farkı 0 (GDD K-51 madde 5, warn `delivery_foresight`). (3) Bölüm 4, 5, 7, 10 bu kurallar ve "Bölüm 4'ten itibaren en az 2 kazı" ile yeniden tasarlandı; Bölüm 10'un bilinçli kamyon kuyruğu kaldırıldı (LEVELS §2.11).
 Gerekçe: Eski Bölüm 10'da `trapCount` 0 iken 338 Söküm'süz çıkmaz vardı (WP-E); kamyon içeriği oyuncuya gösterilmediği için önsezi isteyen en kısa çözüm "bilgi gizlenmez" ilkesini bozar.
 Etkilenen: GDD K-51, K-50 madde 8, E-54; LEVELS §2.0 madde 9–11, §2.11; tools/solver (code-lead)
+
+### D-091 — Unity taşıması: mevcut mekanik birebir, match-3 yok
+Durum: KABUL     Sahip: proje sahibi + orkestratör     Tarih: 2026-10-30
+Karar: Minik Usta Unity 6 (URP) ile yeniden yazılır; blok yerleştirme mekaniği, 10 bölüm, çözücü ve K-01…K-54 kuralları birebir taşınır. Brifteki match-3 maddeleri (takas, eşleşme, cascade, refill, booster oluşumu, ipucu) karşılıklarına çevrilir: sürükleme hissi, kötü geçiş geri sekmesi, şantiye düşüşü squash & bounce, kilit parlaması, Altın Mala kazanımı, kamyon teslimatı, takılma nabzı, kalan blok çipine uçuş, Bonus İnşaat.
+Gerekçe: Brif 'mevcut davranışı birebir taşı' der; proje sahibi raporun 1. seçeneğini onayladı (docs/UNITY_PORT_FAZ1.md §4/1).
+Etkilenen: Unity çekirdeği, UX, JUICE eşlemesi
+
+### D-092 — Kahraman Tuna kalır
+Durum: KABUL     Sahip: proje sahibi     Tarih: 2026-10-30
+Karar: Unity sürümünde kahraman Tuna'dır (D-044, D-087); brifteki 'genç kral' uygulanmaz. Bloklu, eklemli oyuncak figür stili Tuna'ya uygulanır (parça adlandırma sözleşmesi Unity reposunda).
+Gerekçe: Hikâye, kasaba, 41 SVG ve karakter kararları korunur; kral kahraman Royal Match benzerliği riski taşırdı (R2-13).
+Etkilenen: STORY, ART_DIRECTION §11, Unity karakter prefab'ı
+
+### D-093 — Unity derleme ve test yeri
+Durum: KABUL     Sahip: proje sahibi + code-lead     Tarih: 2026-10-30
+Karar: Çekirdek saf C# (UnityEngine bağımlılığı yok) olduğu için bulut oturumunda .NET SDK + NUnit ile derlenir ve test edilir; aynı test dosyaları Unity Test Framework (EditMode) altında da çalışır. Görünüm katmanı (URP, DOTween, TMP) proje sahibinin Unity kurulumunda derlenir; sonuç bu oturuma bildirilir.
+Gerekçe: Bulut konteynerinde Unity Editor yok; Remote Control bağlı klasör yok.
+Etkilenen: Unity repo yapısı: Assets/MinikUsta/Core (asmdef) + dotnet/ çözümü aynı .cs dosyalarını derler
+
+### D-094 — Unity projesi ayrı repoda; Phaser görsel v3 dondurulur
+Durum: KABUL     Sahip: proje sahibi + orkestratör     Tarih: 2026-10-30
+Karar: Unity projesi `yilmazfatih-cyber/minik-usta-unity` reposunda yaşar. Web (Phaser) sürümü `main` = de6f16c olarak yayında kalır; görsel v3'ün kalan paketleri (C, D, eleştiri turları) web'de yapılmaz, stil kitabı (ART_REFERENCE) ve SVG'ler Unity'de kullanılır. `wip/phase-2r` dalı A/B paketleri ve C'nin yarımıyla arşiv olarak kalır.
+Gerekçe: Kredi ve süreyi tek hedefe toplamak; Unity projeleri web reposunu büyütür.
+Etkilenen: CLAUDE.md (Unity repo notu), TECH_DESIGN, BUSINESS takvimi (entrepreneur güncellemesi bekler)
