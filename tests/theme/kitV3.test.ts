@@ -139,6 +139,16 @@ describe('capsule, badge, window, progress, nav, bubble, lock (ART_REFERENCE 3.4
     expect(K3.capsuleV3Slices('home', TOKENS).left).toBeGreaterThanOrEqual(44);
   });
 
+  it('ART_REFERENCE 3.12 win reward capsule: the home pill (88) with the darker #14113A fill, baked as ui_capsule_win', () => {
+    const c = V.capsule;
+    expect(K3.capsuleV3Height('win', TOKENS)).toBe(c.homeH);
+    const win = record((ctx) => K3.drawCapsuleV3(ctx, { w: 280, variant: 'win' }, TOKENS));
+    expect(styleAt(win, 'fill', 'fillStyle')[0]).toBe(css(parseHex(c.hudFill), c.fillAlpha));
+    expect(K3.capsuleV3Slices('win', TOKENS)).toEqual(K3.capsuleV3Slices('home', TOKENS));
+    expect(kitAtlasFrames(TOKENS).some((f) => f.name === KIT.capsuleWin)).toBe(true);
+    expect(kitSlices(TOKENS).get(KIT.capsuleWin)).toEqual(K3.capsuleV3Slices('win', TOKENS));
+  });
+
   it('ART_REFERENCE 3.5 badge 72: shadow → contour #9C0B00 → lip → face gradient top / 0,45 / bottom → bevel α 0,22', () => {
     const b = V.badge;
     const ops = record((ctx) => K3.drawBadgeV3(ctx, { sizePx: 72 }, TOKENS));

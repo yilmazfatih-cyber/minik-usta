@@ -1824,3 +1824,55 @@ bir inceleme açığını kapattı.
   durağan ve küçük; §9.1 ölçüleri birebir, SVG r4 kalitesi 4 (design-lead öz puanı) → 4, 5 değil. Ana sayfa
   (07/ref-03) 4/4/4/4/4/4. Bölüm başı (14/ref-02) kilitli 4/4/4/4/—/4, hazır-seçili 4/4/4/4/—/4.
   Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayılar dönüş değerinde).
+
+## Görsel v3 paket C — kazanma, ödül katmanı, kayıp / +5, duraklat / çıkış, ayarlar (code-lead, 2026-10-22; ART_REFERENCE §3.7, §3.12, §8, §9.5–§9.8; R2-13 madde 5)
+
+Set: `artifacts/screens/v3/win-v2 | win-v2-loop | home-reward-layer | lose-1-offer | lose-2-life | pause | exit-m0 |
+home-settings -<profil>.png` (390 × 844 ve 360 × 800; `node tools/screens.ts --profile <p> --only
+pause,exit-m0,lose-,home-settings,win-v2,home-reward-layer --flat artifacts/screens/v3`). Önce aynı yedi ekran değişiklik
+öncesi çekildi (`artifacts/screens/v3-c-baseline/`, git dışı) ve §9 şablonlarıyla ölçüldü; aşağıdaki farklar ondan çıktı.
+Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayılar dönüş değerinde).
+
+- [code-lead → design-lead] **Pencere ritmi §9.5 ile birebir (`ui/popupLayout.ts` `windowGeometry`, saf + testli).**
+  Devralınan `Popup` 104 / 56 / 80 (üst pay / içerik–seçenek / alt pay) kullanıyordu; §9.5 duraklat sayılarını (panel
+  724–1624, plaka 796–1136, "Bölümden çık" 1164–1300, "Devam" 1332–1544) ancak **72 / 28 / 80** verir — `WINDOW_RHYTHM`
+  bu. Bölüm başı penceresi kabul edilmiş görünümünü korusun diye kendi ritmini geçer (104 / 56; kareler plakanın alt
+  kenarına biniyor, rozetler "Oyna"ya değmiyor). İçerik payı panele göre: 1000 → 60 (880 plaka / kart), 920 çıkış onayı →
+  50 (**820 kart**, §9.5). Krem kart en az **160** (§9.5 "820 × 160"), metin kartta dikey ortalı.
+  **Şartname notu:** §9.5 çıkış onayı "920 × 560 (y 1064–1624)" binen başlık + 160 kart + "Çık" M (1164–1300) + "Kal" L
+  (1332–1544) dizilimini taşıyamıyor (1064 + 72 = 1136 kart üstü, kart altı 1296 > 1164): panel içerikle **720**'ye uzar
+  (§3.7 "içerik yükseldikçe panel yukarı uzar"); test "ART_REFERENCE 9.5 exit confirm …" bunu sabitler. §9.5'teki 560'ı
+  720 yapmanızı öneririm. Kayıp penceresi: önizleme kartı 300 + "Teklif 1/3" + 3 × 152 → panel 1066 (§9.7 1120'nin
+  %4,8 altında; ±%5 içinde — test).
+- [code-lead → design-lead] **Duraklat (§9.5): düz plaka.** Toggle satırları iki görünüm aldı: `plain` (duraklat) —
+  `screen.pause.rowW` **760 × 340** plaka, 3 × 100 satır (20 pay, aralık 0), etiket **beyaz 44** + plaka konturu
+  (#352496, bölüm başı "Güçlendiricileri seç" etiketiyle aynı stil), anahtar sağdan 24 içeride; satır arası 2 px #352496
+  α 0,25 ayraç (şartnamede yok; üç satırın yapısını okutmak için — istemezseniz tek sabit `PLAIN_SEPARATOR_ALPHA`).
+  `cream` (ayarlar, §9.8) aynen: 880 plaka, krem 112 şeritler (#FFF6D2, kontur #D9B878 4, r 32), `cardText` 44. Devralınan
+  duraklat penceresi ayarlarla aynı krem şeritleri kullanıyordu; şimdi iki pencere şartnamedeki gibi ayrışıyor.
+- [code-lead → design-lead] **Kayıp penceresi 1 (§9.7): kalan blok önizlemesi doldu.** Krem kart 880 × 300'ün içi yalnız
+  "Kalan: n blok" satırıydı (kartın üçte ikisi boş). UX §7 "▣ ▣ önizleme" + §9.7 "kalan blok önizlemesi krem kart içinde":
+  bölüm pişirmesinin **kendi blok kareleri** (aynı renk, sembol, çıkıntı; `blockFrameName` + bayrak) kartın üst bandında
+  (merkez y 118), hücre ≤ 56, aralık 24, en çok 6 blok (en yüksek blok 184'lük banda sığar, dikey I4 46; sığmazsa
+  birlikte küçülür, taban 24), satır y 244'te 44 px. Küme `ui/losePreview.ts` `remainingPreviewPieces` = K-48 (3) (saha + kuyruk + teslim edilmemiş parti), `blocksLeft`
+  ile aynı sayı (test "K-29 / K-48 …"). Ağır Yük ve yedek kare olmayan parça çizilmez (sayı yine satırda).
+- [code-lead → design-lead] **Kayıp penceresi 2: v3 kalp.** Kalp ART §9 `icon_life` ikonuydu değil, düz gri bir Graphics
+  poligonuydu (rubrik ikon 1–2). Şimdi `icon_life` (3 ton + spekülar) ve #58 "söner": ikonun **gri kopyası** (parlaklık,
+  α korunur; `ui/kit/greyIcon.ts`, iki renderer'da da çalışır, kaynak + kare başına bir kez pişer) altta, kırmızı ikon
+  üstte ve kırpması alttan yukarı küçülür (`setDrain(k)` sözleşmesi aynı; azaltılmış harekette ilk kareden gri).
+- [code-lead → design-lead] **Kazanma (§9.6):** panel 7 katman + krem kart + ışın yelpazesi + `ui_star_win` + şerit + Tuna
+  (tabanı kart alt kenarında, UX §6.1) + satırlar değişmedi (tur 2'de kapanmıştı). İki fark: (1) "Devam" artık §3.1
+  **L** 560 × 212 / 96 px (§9.6 "Devam L"; v2 640 × 176 / 80 idi; alt pay 144 aynen; `layout.win.buttonW/H` artık
+  okunmuyor — `_docRetire`'a alabilirsiniz); (2) ödül kapsülleri §3.12 "kazanma kapsülü": ana sayfa geometrisi (88,
+  ikon 80, krem 44) + HUD'un **#14113A** dolgusu (`Capsule` `variant: 'win'`, atlas `ui_capsule_win`). §3.12'deki 96
+  yükseklik için token yok (`capsule.homeH` 88 kullanıldı; isterseniz `capsule.winH` ekleyin, tek satır). Şeridin
+  altını `kit.ribbon.gold` (#FFC21A / #C98A00 / #6B4A00) — §3.6 "renkleri §2.4 altınla güncellenir" sizin token
+  satırınız (#FFD119 / #FFAD00 / #B8430A); kod `kit.ribbon.gold`'u okur, değiştirince kendiliğinden gelir.
+- [code-lead → design-lead] **Ödül katmanı (§8 / §9.6):** görünüm DS3-04 kapanışıyla aynı; yalnız tokens
+  `check.v3Addenda.rewardLayer` → **`kit.v3.screen.reward`** taşındı (orkestratör izni): `itemPx` 240 tek nesne,
+  `multiItemPx` 200 çoklu (v1.1'in 200'ü), `twoItemOffsetPx` 200, `glow` / `glowAlpha` / `glowRadiusRatio`, `overlay` /
+  `overlayAlpha`; `tapTextY` / `tapTextPx` zaten oradaki `tapY` / `tapFontPx` ile aynıydı, adlar birleşti. `_doc`
+  güncellendi; `check.v3Addenda`'da `capsuleBadge`, `arrow`, `avatarSquare`, `townAreaWindow` kaldı (Faz 4).
+- [code-lead → design-lead] **Ayarlar (§9.8):** satırlar / "Geri bildirim" M krem / × aynen; panel yeni ritimle 72 üst
+  payla kısaldı. "Tamam" L yeşil duruyor (§9.8 listesinde yok; UX §0.2 "birincil en altta" ve başparmak bölgesi için
+  bıraktım — kaldırmamı isterseniz tek satır, × zaten kapatıyor).

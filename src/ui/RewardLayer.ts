@@ -7,15 +7,15 @@
  * (`plain` 72, y 1540 FIT) after 400 ms, pulsing 1,0 ↔ 1,04 every 1,2 s. The whole screen is the tap target: a tap
  * flies the objects to their capsules (`targets`, 600 ms arc) and fades the layer; without a tap it closes itself
  * after 6 s (the reward is already granted — the caller writes it before opening the layer). Reduced motion: the
- * overlay at its final alpha at once, 150 ms fades, no pop, steady glow, no pulse. Values: `check.v3Addenda.rewardLayer`
- * (`V3_ADDENDA`) over `kit.v3.screen.reward`.
+ * overlay at its final alpha at once, 150 ms fades, no pop, steady glow, no pulse. Values: `kit.v3.screen.reward`
+ * (the v1.1 `check.v3Addenda.rewardLayer` addenda live there since visual v3 package C).
  *
  * In the Faz 2R slice nothing opens it yet (the level chest window and the daily gift are Faz 4, UX §3.1); the
  * Playwright harness opens it for the screen set (`__harness.showReward`).
  */
 import Phaser from 'phaser';
 import { t } from '../services/i18n.ts';
-import { TOKENS, V3_ADDENDA } from '../theme/tokens.ts';
+import { TOKENS } from '../theme/tokens.ts';
 import { KIT } from '../theme/textures.ts';
 import { hex } from './text.ts';
 import { kitRef } from './kit/atlas.ts';
@@ -23,10 +23,9 @@ import type { IconBinder } from './kit/icons.ts';
 import { addKitText, addTitleGold } from './kit/text.ts';
 
 const V3 = TOKENS.kit.v3;
+/** ART_REFERENCE §8 / §9.6 (DS3-04): title, object, glow, two-object geometry, flat overlay, tap line. */
 const RW = V3.screen.reward;
 const FX = V3.effects;
-/** ART_REFERENCE v1.1 §9.6 (DS3-04): glow, two-object geometry, flat overlay, tap line. */
-const RL = V3_ADDENDA.rewardLayer;
 
 export interface RewardItem {
   /** Icon id (`icon_coin`, `icon_hammer` …). */
@@ -44,8 +43,8 @@ export interface RewardLayerSpec {
 }
 
 /** Several objects: 200 px each, centres `twoItemOffsetPx` apart from the middle (DS3-04: 540 ∓ 200 for two). */
-const MULTI_PX = RL.itemPx;
-const MULTI_STEP = 2 * RL.twoItemOffsetPx;
+const MULTI_PX = RW.multiItemPx;
+const MULTI_STEP = 2 * RW.twoItemOffsetPx;
 const MULTI_STAGGER_MS = 120;
 /** Count line: `bigNumber` 72, its centre 40 px under the object's bottom edge plus half its own height. */
 const COUNT_GAP_PX = 40;
@@ -83,9 +82,9 @@ export class RewardLayer {
     const parts: Phaser.GameObjects.GameObject[] = [];
     // the flat overlay (reduced motion: at its alpha from the first frame)
     this.dim = scene.add
-      .rectangle(0, 0, W, H, hex(RL.overlay), 1)
+      .rectangle(0, 0, W, H, hex(RW.overlay), 1)
       .setOrigin(0, 0)
-      .setAlpha(spec.reduced ? RL.overlayAlpha : 0)
+      .setAlpha(spec.reduced ? RW.overlayAlpha : 0)
       .setInteractive();
     parts.push(this.dim);
     const title = addTitleGold(scene, W / 2, RW.titleY + shift, spec.title, V3.text.titleGold.fontPx);
@@ -98,12 +97,12 @@ export class RewardLayer {
       const cx = W / 2 + (i - (n - 1) / 2) * MULTI_STEP;
       const cy = RW.itemY + shift;
       // ART_REFERENCE §8 "Parlama": radial #FFE7A3 α 0,55 → 0, radius 1,6 × the object's, additive
-      const glowD = px * RL.glowRadiusRatio * 2;
+      const glowD = px * RW.glowRadiusRatio * 2;
       const glow = scene.add
         .image(cx, cy, glowRef.key, glowRef.frame)
         .setDisplaySize(glowD, glowD)
-        .setTint(hex(RL.glow))
-        .setAlpha(RL.glowAlpha)
+        .setTint(hex(RW.glow))
+        .setAlpha(RW.glowAlpha)
         .setBlendMode(Phaser.BlendModes.ADD);
       const obj = icons.add(scene, cx, cy, it.icon, px);
       const count = addKitText(
@@ -119,7 +118,7 @@ export class RewardLayer {
       this.counts.push(count);
       parts.push(glow, obj, count);
     });
-    this.tap = addKitText(scene, W / 2, RL.tapTextY + surplus, t('reward.tap'), 'plain', RL.tapTextPx);
+    this.tap = addKitText(scene, W / 2, RW.tapY + surplus, t('reward.tap'), 'plain', RW.tapFontPx);
     parts.push(this.tap);
     this.root = scene.add.container(0, 0, parts).setDepth(depth);
     this.enter();
@@ -138,7 +137,7 @@ export class RewardLayer {
   private enter(): void {
     const tw = this.scene.tweens;
     const fade = this.reduced ? TOKENS.duration.reducedFade : FX.overlayMs;
-    if (!this.reduced) tw.add({ targets: this.dim, alpha: RL.overlayAlpha, duration: fade });
+    if (!this.reduced) tw.add({ targets: this.dim, alpha: RW.overlayAlpha, duration: fade });
     this.objects.forEach((obj, i) => {
       const glow = this.glows[i];
       const count = this.counts[i];
@@ -155,7 +154,7 @@ export class RewardLayer {
       count?.setAlpha(0);
       tw.add({ targets: obj, scale: s * 1.15, duration: FX.popMs * 0.7, delay, ease: 'Back.easeOut' });
       tw.add({ targets: obj, scale: s, duration: FX.popMs * 0.3, delay: delay + FX.popMs * 0.7 });
-      if (glow) tw.add({ targets: glow, alpha: RL.glowAlpha, duration: FX.popMs, delay });
+      if (glow) tw.add({ targets: glow, alpha: RW.glowAlpha, duration: FX.popMs, delay });
       if (count) tw.add({ targets: count, alpha: 1, duration: 200, delay: delay + FX.popMs });
     });
     this.tap.setAlpha(0);

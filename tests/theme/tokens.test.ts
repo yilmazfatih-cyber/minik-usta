@@ -241,8 +241,8 @@ describe('tokens v2 schema (TECH 2R.7; ART 3A, 7.1, 14; UX 3, 5.8, 5.9, 6.1, 13.
     for (const g of CHECK_TYPED_GROUPS) expect(raw.check[g], g).toBeDefined();
     // addenda: a missing value is a boot error that names the path
     const a = structuredClone(raw.check.v3Addenda) as Record<string, Record<string, unknown>>;
-    delete (a.rewardLayer as Record<string, unknown>).itemPx;
-    expect(() => parseV3Addenda(a)).toThrow(/rewardLayer\.itemPx/);
+    delete (a.arrow as Record<string, unknown>).gapPx;
+    expect(() => parseV3Addenda(a)).toThrow(/arrow\.gapPx/);
     expect(Object.isFrozen(V3_ADDENDA.arrow)).toBe(true);
     // the boot pack (§9.1) lives under kit.v3.screen.loading since 2026-10-22: typed, frozen, a missing value named
     expect('bootPack' in a).toBe(false);

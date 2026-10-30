@@ -143,6 +143,9 @@ export class LevelStartWindow {
         options,
         close: true,
         titlePx: V.text.titleTwoRing.fontPx,
+        // ART_REFERENCE §9.3: plate 100 under the top edge; the squares' badges ride the plate's bottom edge and need
+        // the room over "Oyna" (the §9.5 default rhythm would put them on the button)
+        rhythm: { topPadPx: 104, contentGapPx: 56 },
       },
       depth,
       {

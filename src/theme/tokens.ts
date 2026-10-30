@@ -1099,7 +1099,27 @@ const KitV3 = z.object({
       ),
       ...shapeOf(['toggleOn', 'toggleOff'] as const, hex),
     }),
-    reward: nums(['titleY', 'itemPx', 'itemY', 'countY', 'countFontPx', 'tapY', 'tapFontPx'] as const),
+    // ART_REFERENCE §8 / §9.6 reward layer (DS3-04; `check.v3Addenda.rewardLayer` moved here 2026-10-22)
+    reward: z.object({
+      ...shapeOf(
+        [
+          'titleY',
+          'itemPx',
+          'multiItemPx',
+          'twoItemOffsetPx',
+          'itemY',
+          'countY',
+          'countFontPx',
+          'glowAlpha',
+          'glowRadiusRatio',
+          'overlayAlpha',
+          'tapY',
+          'tapFontPx',
+        ] as const,
+        num,
+      ),
+      ...shapeOf(['glow', 'overlay'] as const, hex),
+    }),
     lose: nums([
       'panelW',
       'panelH',
@@ -1865,21 +1885,6 @@ const V3Addenda = z.object({
       num,
     ),
     ...shapeOf(['cardFill', 'cardStroke', 'divider', 'shortageText'] as const, hex),
-  }),
-  rewardLayer: z.object({
-    ...shapeOf(
-      [
-        'glowAlpha',
-        'glowRadiusRatio',
-        'itemPx',
-        'twoItemOffsetPx',
-        'overlayAlpha',
-        'tapTextY',
-        'tapTextPx',
-      ] as const,
-      num,
-    ),
-    ...shapeOf(['glow', 'overlay'] as const, hex),
   }),
 });
 

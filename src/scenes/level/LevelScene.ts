@@ -79,6 +79,7 @@ import { Capsule } from '../../ui/kit/Capsule.ts';
 import { HintBubble } from '../../ui/kit/HintBubble.ts';
 import { IconBinder } from '../../ui/kit/icons.ts';
 import { GoalsPanel } from '../../ui/GoalsPanel.ts';
+import { remainingPreviewPieces } from '../../ui/losePreview.ts';
 import { MovesCounter } from '../../ui/MovesCounter.ts';
 import { offerModel } from '../../ui/offer.ts';
 import type { OfferModel } from '../../ui/offer.ts';
@@ -1719,6 +1720,10 @@ export class LevelScene extends Phaser.Scene {
     this.windows.openOffer({
       model,
       remaining: blocksLeft(game.state), // STORY 7.7 lose.blocksLeft (PL-2R-06)
+      // ART_REFERENCE §9.7: the remaining blocks from the level bake in the card
+      preview: this.frames
+        ? { pieces: remainingPreviewPieces(game.state), frames: this.frames, k: this.layoutNow.grid.k }
+        : null,
       entry,
       onCoins: () => this.takeOffer(model),
       onAd: () => {},

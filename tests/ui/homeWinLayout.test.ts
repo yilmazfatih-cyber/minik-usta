@@ -108,7 +108,8 @@ describe('UX 6.1 win v2 layout', () => {
     // with the trowel row the capsules move down 80 px (1180 → 1260)
     expect(g.starCapsule).toEqual({ x: 220, y: 1260, w: 300, h: 88 });
     expect(g.coinCapsule).toEqual({ x: 560, y: 1260, w: 300, h: 88 });
-    expect(g.button).toEqual({ x: 220, y: 1600, w: 640, h: 176 });
+    // ART_REFERENCE §9.6 "Devam L" (§3.1 560 × 212) on the v2 bottom inset 144
+    expect(g.button).toEqual({ x: 260, y: 1920 - 144 - 212, w: 560, h: 212 });
     // Tuna covers the card's left edge by 60 px
     expect(g.character.x + g.character.w - g.card.x).toBe(60);
   });

@@ -13,11 +13,13 @@
  */
 import type Phaser from 'phaser';
 import { getLocale, t } from '../../services/i18n.ts';
+import type { Frames } from '../atlas.ts';
 import type { I18nKey } from '../../services/i18n.ts';
 import type { Layout } from '../../theme/layout.ts';
 import { TOKENS } from '../../theme/tokens.ts';
-import { KIT } from '../../theme/textures.ts';
-import { drawHeart } from '../../ui/icons.ts';
+import { KIT, bakedFlagsOf, blockFrameName } from '../../theme/textures.ts';
+import { previewRow } from '../../ui/losePreview.ts';
+import type { PreviewPiece } from '../../ui/losePreview.ts';
 import type { OfferModel } from '../../ui/offer.ts';
 import { Popup } from '../../ui/Popup.ts';
 import type { PopupOption, PopupRow, PopupSpec } from '../../ui/Popup.ts';
@@ -25,9 +27,9 @@ import { realMoneyText } from '../../ui/price.ts';
 import type { WinRewards } from '../../ui/rewards.ts';
 import { UI } from '../../ui/uiConstants.ts';
 import { WinScreen } from '../../ui/WinScreen.ts';
-import { addBakedGraphics } from '../../ui/BakedGraphics.ts';
 import { gameAssets } from '../AssetLoaderScene.ts';
 import { kitRef, kitSlice } from '../../ui/kit/atlas.ts';
+import { greyIconFrame } from '../../ui/kit/greyIcon.ts';
 import { IconBinder } from '../../ui/kit/icons.ts';
 import type { KitButton } from '../../ui/kit/KitButton.ts';
 import type { PressVariant } from '../../ui/kit/KitButton.ts';
@@ -58,8 +60,30 @@ interface Open {
   readonly reopen: () => void;
 }
 
-/** ART_REFERENCE §9.7: the out-of-moves preview card 880 × 300 ("Kalan: n blok" in it). */
+/** ART_REFERENCE §9.7: the out-of-moves preview card 880 × 300 (the remaining blocks + "Kalan: n blok" in it). */
 const LOSE_PREVIEW_H = TOKENS.kit.v3.screen.lose.previewH;
+/**
+ * Preview row inside the 300 card: the blocks in the upper band (y 26–210, centre 118; a vertical I4 still clears the
+ * count line at 244), at most 56 px per cell, 24 apart, at most 6 shown.
+ */
+const PREVIEW_CELL_MAX = 56;
+const PREVIEW_GAP = 24;
+const PREVIEW_MAX_SHOWN = 6;
+const PREVIEW_PAD_X = 48;
+const PREVIEW_ROW_CY = 118;
+const PREVIEW_BAND_H = 184;
+const PREVIEW_TEXT_Y = 244;
+
+/** UX §7 window 2 heart: the lives icon of the home capsule (ART §9 icon set). */
+const HEART_ICON = 'icon_life';
+
+/** The blocks the out-of-moves window previews, drawn from the level bake at its cell scale `k`. */
+export interface LosePreview {
+  readonly pieces: readonly PreviewPiece[];
+  readonly frames: Frames;
+  /** Level cell scale (`layout.grid.k`): the baked block is `cellPx × k` per cell. */
+  readonly k: number;
+}
 
 export class LevelWindows {
   private readonly scene: Phaser.Scene;
@@ -103,8 +127,9 @@ export class LevelWindows {
         ['music', 'settings.music'],
         ['haptics', 'settings.haptics'],
       ];
+      // ART_REFERENCE §9.5: the 760 × 340 plate, white labels straight on it (no cream strips)
       for (const [id, key] of toggles)
-        rows.push({ kind: 'toggle', id, label: t(key), on: opts.settings()[id] });
+        rows.push({ kind: 'toggle', id, label: t(key), on: opts.settings()[id], look: 'plain' });
       // ART_REFERENCE §9.5: "Bölümden çık" M cream above, "Devam" L green lowest; the × continues too
       const spec: PopupSpec = {
         rows,
@@ -165,6 +190,8 @@ export class LevelWindows {
   openOffer(opts: {
     readonly model: OfferModel;
     readonly remaining: number;
+    /** The remaining blocks in the card (UX §7 "▣ ▣ önizleme"); null = the count line alone. */
+    readonly preview?: LosePreview | null;
     readonly entry: 'offer' | 'resume' | 'none';
     readonly onCoins: () => void;
     readonly onAd: () => void;
@@ -206,7 +233,8 @@ export class LevelWindows {
         {
           kind: 'custom',
           h: LOSE_PREVIEW_H,
-          build: (scene, w) => this.previewCard(scene, w, t('lose.blocksLeft', { n: opts.remaining })),
+          build: (scene, w) =>
+            this.previewCard(scene, w, t('lose.blocksLeft', { n: opts.remaining }), opts.preview ?? null),
         },
         { kind: 'text', text: t(m.counterKey, { n: m.n, max: m.max }), look: 'plain', size: 34 },
       ];
@@ -224,7 +252,10 @@ export class LevelWindows {
     build(opts.entry);
   }
 
-  /** UX §7 window 2 (life lost): the heart greys out (#58), `lose.life` (+ `lose.streak`), retry L green / home M. */
+  /**
+   * UX §7 window 2 (life lost): the v3 heart (`icon_life`) greys out bottom → top (#58: a greyscale copy under the red
+   * icon, whose crop shrinks from the bottom), `lose.life` (+ `lose.streak`), retry L green / home M.
+   */
   openLoss(opts: {
     readonly lines: readonly I18nKey[];
     readonly lifeLost: boolean;
@@ -232,15 +263,25 @@ export class LevelWindows {
     readonly onHome: () => void;
   }): void {
     const build = (animate: boolean): void => {
-      let heart: Phaser.GameObjects.Graphics | null = null;
+      let drain: ((k: number) => void) | null = null;
       const rows: PopupRow[] = [
         {
           kind: 'custom',
           h: UI.heartPx + 16,
           build: (scene) => {
-            heart = addBakedGraphics(scene).setPosition(0, UI.heartPx / 2 + 8);
-            drawHeart(heart, UI.heartPx, animate || !opts.lifeLost ? 0 : 1);
-            return [heart];
+            const cy = UI.heartPx / 2 + 8;
+            const grey = greyIconFrame(scene, this.icons.frame(HEART_ICON));
+            const back = scene.add.image(0, cy, grey.key, grey.frame).setDisplaySize(UI.heartPx, UI.heartPx);
+            const front = this.icons.add(scene, 0, cy, HEART_ICON, UI.heartPx);
+            drain = (k) => {
+              const fw = front.frame.width;
+              const fh = front.frame.height;
+              const keep = Math.max(0, Math.min(1, 1 - k));
+              if (keep >= 1) front.isCropped = false;
+              else front.setCrop(0, 0, fw, fh * keep);
+            };
+            drain(animate || !opts.lifeLost ? 0 : 1);
+            return [back, front];
           },
         },
         ...opts.lines.map((k, i): PopupRow => ({ kind: 'text', text: t(k), size: i === 0 ? 48 : 40 })),
@@ -258,9 +299,8 @@ export class LevelWindows {
       this.set('loss', popup, () => build(false));
       if (!animate) return;
       this.host.player.play(70, { window: popup.target });
-      const g = heart as Phaser.GameObjects.Graphics | null;
-      if (g && opts.lifeLost)
-        this.host.player.play(58, { heart: { setDrain: (k: number) => drawHeart(g, UI.heartPx, k) } });
+      const d = drain as ((k: number) => void) | null;
+      if (d && opts.lifeLost) this.host.player.play(58, { heart: { setDrain: d } });
     };
     build(true);
   }
@@ -366,15 +406,54 @@ export class LevelWindows {
     this.host.player.play(69, { button: b, variant });
   }
 
-  /** UX §7 window 1 preview card (ART_REFERENCE §9.7): cream card with the neutral "Kalan: n blok" line (R-15). */
-  private previewCard(scene: Phaser.Scene, w: number, text: string): Phaser.GameObjects.GameObject[] {
+  /**
+   * UX §7 window 1 preview card (ART_REFERENCE §9.7): the cream card with the remaining blocks (the level bake's own
+   * block frames, shrunk to the row) over the neutral "Kalan: n blok" line (R-15). Without a preview (no bake yet) the
+   * line sits in the middle.
+   */
+  private previewCard(
+    scene: Phaser.Scene,
+    w: number,
+    text: string,
+    preview: LosePreview | null,
+  ): Phaser.GameObjects.GameObject[] {
     const h = LOSE_PREVIEW_H;
     const cr = kitRef(scene.game, KIT.card);
     const cs = kitSlice(KIT.card);
     const card = scene.add
       .nineslice(0, 0, cr.key, cr.frame, w, h, cs?.left, cs?.right, cs?.top, cs?.bottom)
       .setOrigin(0.5, 0);
-    const label = addKitText(scene, 0, h / 2, text, 'cardText', TOKENS.kit.v3.text.cardText.fontPx);
-    return [card, label];
+    const out: Phaser.GameObjects.GameObject[] = [card];
+    const pieces = preview?.pieces ?? [];
+    if (!preview || pieces.length === 0) {
+      out.push(addKitText(scene, 0, h / 2, text, 'cardText', TOKENS.kit.v3.text.cardText.fontPx));
+      return out;
+    }
+    const row = previewRow(
+      pieces,
+      w - 2 * PREVIEW_PAD_X,
+      PREVIEW_CELL_MAX,
+      PREVIEW_GAP,
+      PREVIEW_MAX_SHOWN,
+      PREVIEW_BAND_H,
+    );
+    const bakedCell = TOKENS.layout.grid.cellPx * preview.k;
+    row.items.forEach((it, i) => {
+      const p = pieces[i];
+      if (!p) return;
+      const flagged = blockFrameName(p.shape, p.color, bakedFlagsOf(p.flags));
+      const plain = blockFrameName(p.shape, p.color);
+      const name = preview.frames.has(flagged) ? flagged : preview.frames.has(plain) ? plain : null;
+      if (!name) return;
+      const ref = preview.frames.ref(name);
+      out.push(
+        scene.add
+          .image(it.cx, PREVIEW_ROW_CY, ref.key, ref.frame)
+          .setOrigin(0.5, 0.5)
+          .setScale(row.cell / bakedCell),
+      );
+    });
+    out.push(addKitText(scene, 0, PREVIEW_TEXT_Y, text, 'cardText', TOKENS.kit.v3.text.cardText.fontPx - 4));
+    return out;
   }
 }

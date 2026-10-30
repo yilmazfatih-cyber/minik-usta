@@ -738,9 +738,10 @@ export const KIT = Object.freeze({
   badgeHud: 'ui_badge_hud',
   badgeSmall: 'ui_badge_small',
   truckSubBadge: 'ui_truck_subbadge',
-  /** §3.4 capsules: home 88, HUD 60. */
+  /** §3.4 capsules: home 88, HUD 60; §3.12 win reward capsule (home size, HUD fill). */
   capsule: 'ui_capsule',
   capsuleHud: 'ui_capsule_hud',
+  capsuleWin: 'ui_capsule_win',
   /** §3.8 progress: meta 84 and compact 48. */
   progressTrack: 'ui_progress_track',
   progressFill: 'ui_progress_fill',
@@ -808,6 +809,7 @@ export function kitSlices(tokens: Tokens): ReadonlyMap<string, Slices> {
   for (const c of KIT_RIBBON_COLORS) m.set(ribbonFrameName(c), ribbonSlices(tokens));
   m.set(KIT.capsule, capsuleV3Slices('home', tokens));
   m.set(KIT.capsuleHud, capsuleV3Slices('hud', tokens));
+  m.set(KIT.capsuleWin, capsuleV3Slices('win', tokens));
   m.set(KIT.progressTrack, progressV3Slices('meta', tokens));
   m.set(KIT.progressFill, progressV3FillSlices('meta', tokens));
   m.set(KIT.progressTrackCompact, progressV3Slices('compact', tokens));
@@ -888,6 +890,7 @@ export function kitAtlasFrames(tokens: Tokens): FrameSpec[] {
   for (const [name, variant] of [
     [KIT.capsule, 'home'],
     [KIT.capsuleHud, 'hud'],
+    [KIT.capsuleWin, 'win'],
   ] as const) {
     out.push(
       frame(name, { w: KIT_SRC.capsuleW, h: capsuleV3Height(variant, tokens) }, (ctx) =>

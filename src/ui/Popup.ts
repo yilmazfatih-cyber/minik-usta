@@ -6,9 +6,13 @@
  * Anatomy: `overlay` dim (α `overlayAlpha`) → the 9-sliced indigo panel (`ui_panel`, 1000 wide) → content rows →
  * option buttons (`KitButton` v3: L 560 × 212, M 360 × 136 or the full 920 × 152 option row) → the two-ring title
  * mounted on the panel's top edge (centre = edge − 20) → the Ø 120 × overhanging the top-right corner (−60, +50).
- * Rows: consecutive `text` rows share one cream card (`ui_card`, card text #1A467B); `toggle` rows share one lavender
- * plate (`ui_plate`) with cream row strips and the 176 × 88 switch pill; `custom` rows draw themselves (centred on
- * x = 0, top at y = 0). The dim layer takes every touch under the window. The window opens / closes through the
+ * Rows: consecutive `text` rows share one cream card (`ui_card`, card text #1A467B, at least 160 high — §9.5 exit
+ * confirm); `toggle` rows share one lavender plate (`ui_plate`): `cream` look (§9.8 settings: 880 plate, cream 112
+ * row strips) or `plain` look (§9.5 pause: 760 × 340 plate, three 100 px rows, white 44 labels, faint separators),
+ * both with the 176 × 88 switch pill at the right; `custom` rows draw themselves (centred on x = 0, top at y = 0).
+ * Geometry is ui/popupLayout.ts `windowGeometry` (pure, tested): the panel grows upward from the anchored bottom
+ * edge with the §9.5 rhythm (72 over the content, 28 between content and options, 80 under the lowest option) unless
+ * the spec passes its own. The dim layer takes every touch under the window. The window opens / closes through the
  * EventPlayer (JUICE #70 / #71, or #52 for the out-of-moves offer) via `target`; options press with #69 / #97.
  */
 import Phaser from 'phaser';
@@ -31,11 +35,11 @@ const CL = V3.close;
 
 export type OptionTone = 'primary' | 'secondary' | 'neutral' | 'disabled' | 'text';
 /** Option button sizes: L / M (ART_REFERENCE §3.1) or the full 920 × 152 option row (UX §7 equal options). */
-import type { OptionSize } from './popupLayout.ts';
-import { optionRects } from './popupLayout.ts';
+import type { OptionSize, WindowRhythm } from './popupLayout.ts';
+import { WINDOW_RHYTHM, contentInset, windowGeometry } from './popupLayout.ts';
 
-export type { OptionSize } from './popupLayout.ts';
-export { OPTION_SIZE, optionRects, pairRects } from './popupLayout.ts';
+export type { OptionSize, WindowRhythm } from './popupLayout.ts';
+export { OPTION_SIZE, WINDOW_RHYTHM, optionRects, pairRects, windowGeometry } from './popupLayout.ts';
 
 export interface PopupOption {
   readonly id: string;
@@ -62,7 +66,14 @@ export type PopupRow =
       readonly look?: 'card' | 'plain';
     }
   | { readonly kind: 'gap'; readonly h: number }
-  | { readonly kind: 'toggle'; readonly id: string; readonly label: string; readonly on: boolean }
+  | {
+      readonly kind: 'toggle';
+      readonly id: string;
+      readonly label: string;
+      readonly on: boolean;
+      /** `cream` (default; §9.8 settings strips) or `plain` (§9.5 pause: white labels on the 760 plate). */
+      readonly look?: 'cream' | 'plain';
+    }
   | {
       readonly kind: 'custom';
       readonly h: number;
@@ -83,6 +94,8 @@ export interface PopupSpec {
   readonly panelW?: number;
   /** Inline `{coin}` icons of the option labels / price lines. */
   readonly icons?: IconBinder | null;
+  /** Vertical rhythm override (ART_REFERENCE §9.3: the level-start window's 104 / 56). */
+  readonly rhythm?: Partial<WindowRhythm>;
 }
 
 export interface PopupHandlers {
@@ -93,19 +106,21 @@ export interface PopupHandlers {
   button?(b: KitButton, variant: PressVariant): void;
 }
 
-/** Vertical rhythm of the window (ART_REFERENCE §9.3 / §9.5: Oyna altı boşluk 80, kareler üstü 88). */
-const OPTIONS_BOTTOM_INSET = 80;
-const CONTENT_TO_OPTIONS = 56;
-const PANEL_TOP_PAD = 104;
 const ROW_GAP = 24;
-/** Content inset inside the panel (plate 880 wide in the 1000 window, ART_REFERENCE §9.3). */
-const CONTENT_INSET = 60;
-/** Cream card and plate paddings. */
+/** Cream card paddings and its least height (ART_REFERENCE §9.5: the exit lines' card 820 × 160). */
 const CARD_PAD_X = 48;
 const CARD_PAD_Y = 36;
+const CARD_MIN_H = 160;
+/** Settings plate (§9.8): cream 112 strips with 24 padding, 16 apart. */
 const PLATE_PAD = 24;
 const TOGGLE_ROW_H = V3.screen.settings.rowH;
 const TOGGLE_ROW_GAP = 16;
+/** Pause plate (§9.5): 760 × 340 = 20 + 3 × 100 + 20, rows edge to edge, label 32 in from the left. */
+const PLAIN_PLATE_PAD = 20;
+const PLAIN_LABEL_INSET = 32;
+const PLAIN_SEPARATOR_ALPHA = 0.25;
+/** Switch pill inset from the row's right edge. */
+const TOGGLE_RIGHT_INSET = 24;
 
 /** Tone → v3 button colour (ART_REFERENCE §2.3). */
 const TONE_COLOR: Readonly<Record<OptionTone, KitV3ButtonColor>> = {
@@ -145,10 +160,8 @@ export class Popup {
     this.scene = scene;
     const W = layout.W;
     const panelW = spec.panelW ?? PN.w;
-    const innerW = panelW - 2 * CONTENT_INSET;
-    const bottom = layout.popup.panelBottomY;
-    const rects = optionRects(W, bottom - OPTIONS_BOTTOM_INSET, spec.options);
-    const optionsTop = rects.length > 0 ? Math.min(...rects.map((r) => r.y)) : bottom - OPTIONS_BOTTOM_INSET;
+    const innerW = panelW - 2 * contentInset(panelW);
+    const rhythm: WindowRhythm = { ...WINDOW_RHYTHM, ...spec.rhythm };
 
     // rows → objects with heights (measured), laid out top → bottom later (titles are mounted, not in the flow)
     const built: { objs: Phaser.GameObjects.GameObject[]; h: number; place: (top: number) => void }[] = [];
@@ -191,9 +204,10 @@ export class Popup {
       });
     }
     const contentH = built.reduce((s, b) => s + b.h, 0) + Math.max(0, built.length - 1) * ROW_GAP;
-    const top = optionsTop - CONTENT_TO_OPTIONS - contentH - PANEL_TOP_PAD;
-    const h = Math.min(PN.maxH + 200, bottom - top);
-    this.rect = { x: (W - panelW) / 2, y: bottom - h, w: panelW, h };
+    const geo = windowGeometry(W, layout.popup.panelBottomY, panelW, contentH, spec.options, rhythm);
+    const rects = geo.options;
+    this.rect = geo.rect;
+    const h = geo.rect.h;
     const cx = W / 2;
     const cy = this.rect.y + h / 2;
 
@@ -212,7 +226,7 @@ export class Popup {
       .setOrigin(0.5, h / 2 / frameH);
     const children: Phaser.GameObjects.GameObject[] = [body];
 
-    let y = -h / 2 + PANEL_TOP_PAD;
+    let y = -h / 2 + (geo.contentTop - geo.rect.y);
     for (const b of built) {
       b.place(y);
       children.push(...b.objs);
@@ -360,7 +374,7 @@ export class Popup {
     }
     const gap = 12;
     const textH = texts.reduce((s, t) => s + t.h, 0) + gap * Math.max(0, texts.length - 1);
-    const h = textH + 2 * CARD_PAD_Y;
+    const h = Math.max(CARD_MIN_H, textH + 2 * CARD_PAD_Y);
     const cr = kitRef(scene.game, KIT.card);
     const cs = kitSlice(KIT.card);
     const card = scene.add
@@ -371,7 +385,7 @@ export class Popup {
       h,
       place: (top) => {
         card.setY(top);
-        let y = top + CARD_PAD_Y;
+        let y = top + (h - textH) / 2;
         for (const t of texts) {
           // inline containers are centred on their line; plain texts hang from their top
           t.obj.y = t.obj instanceof Phaser.GameObjects.Container ? y + t.h / 2 : y;
@@ -381,7 +395,10 @@ export class Popup {
     };
   }
 
-  /** Lavender plate with cream row strips and the switch pills (ART_REFERENCE §9.5, §9.8). */
+  /**
+   * Lavender plate with the switch pills (ART_REFERENCE §9.5, §9.8): `cream` look = cream row strips (settings),
+   * `plain` look = white labels straight on the 760 plate, faint separators between the rows (pause).
+   */
   private togglePlate(
     rows: readonly Extract<PopupRow, { kind: 'toggle' }>[],
     innerW: number,
@@ -389,36 +406,54 @@ export class Popup {
   ): { objs: Phaser.GameObjects.GameObject[]; h: number; place: (top: number) => void } {
     const scene = this.scene;
     const S = V3.screen.settings;
-    const rowW = innerW - 2 * PLATE_PAD;
-    const h = 2 * PLATE_PAD + rows.length * TOGGLE_ROW_H + (rows.length - 1) * TOGGLE_ROW_GAP;
+    const P = V3.screen.pause;
+    const plain = rows[0]?.look === 'plain';
+    const plateW = plain ? Math.min(P.rowW, innerW) : innerW;
+    const rowH = plain ? P.rowH : TOGGLE_ROW_H;
+    const pad = plain ? PLAIN_PLATE_PAD : PLATE_PAD;
+    const gap = plain ? 0 : TOGGLE_ROW_GAP;
+    const rowW = plain ? plateW : innerW - 2 * PLATE_PAD;
+    const h = 2 * pad + rows.length * rowH + (rows.length - 1) * gap;
     const pr = kitRef(scene.game, KIT.plate);
     const ps = kitSlice(KIT.plate);
     const plate = scene.add
-      .nineslice(0, 0, pr.key, pr.frame, innerW, h, ps?.left, ps?.right, ps?.top, ps?.bottom)
+      .nineslice(0, 0, pr.key, pr.frame, plateW, h, ps?.left, ps?.right, ps?.top, ps?.bottom)
       .setOrigin(0.5, 0);
     const objs: (Phaser.GameObjects.GameObject & { y: number })[] = [plate];
     const strips = scene.add.graphics();
     objs.push(strips);
     rows.forEach((row, i) => {
-      const ry = PLATE_PAD + i * (TOGGLE_ROW_H + TOGGLE_ROW_GAP);
-      strips
-        .fillStyle(hex(S.rowStroke), 1)
-        .fillRoundedRect(-rowW / 2, ry, rowW, TOGGLE_ROW_H, S.rowRadiusPx)
-        .fillStyle(hex(S.rowFill), 1)
-        .fillRoundedRect(
-          -rowW / 2 + S.rowStrokePx,
-          ry + S.rowStrokePx,
-          rowW - 2 * S.rowStrokePx,
-          TOGGLE_ROW_H - 2 * S.rowStrokePx,
-          S.rowRadiusPx - S.rowStrokePx,
-        );
-      const label = addKitText(scene, 0, 0, row.label, 'cardText', V3.text.cardText.fontPx - 4);
-      label.setOrigin(0, label.originY).setPosition(-rowW / 2 + 32, ry + TOGGLE_ROW_H / 2);
+      const ry = pad + i * (rowH + gap);
+      if (plain) {
+        if (i > 0) {
+          strips
+            .fillStyle(hex(PN.plateStroke), PLAIN_SEPARATOR_ALPHA)
+            .fillRect(-rowW / 2 + PLAIN_LABEL_INSET, ry - 1, rowW - 2 * PLAIN_LABEL_INSET, 2);
+        }
+      } else {
+        strips
+          .fillStyle(hex(S.rowStroke), 1)
+          .fillRoundedRect(-rowW / 2, ry, rowW, rowH, S.rowRadiusPx)
+          .fillStyle(hex(S.rowFill), 1)
+          .fillRoundedRect(
+            -rowW / 2 + S.rowStrokePx,
+            ry + S.rowStrokePx,
+            rowW - 2 * S.rowStrokePx,
+            rowH - 2 * S.rowStrokePx,
+            S.rowRadiusPx - S.rowStrokePx,
+          );
+      }
+      // §9.5 "etiket beyaz 44 solda" (white + plate contour, as the level-start label) / §9.8 `cardText` on cream
+      const label = plain
+        ? addKitText(scene, 0, 0, row.label, 'button', V3.text.rowText.fontPx, PN.plateStroke, '#FFFFFF')
+        : addKitText(scene, 0, 0, row.label, 'cardText', V3.text.cardText.fontPx - 4);
+      label.setOrigin(0, label.originY).setPosition(-rowW / 2 + PLAIN_LABEL_INSET, ry + rowH / 2);
+      fitWidth(label, rowW - 2 * PLAIN_LABEL_INSET - TOGGLE_RIGHT_INSET - P.toggleW - 16);
       const ref = kitRef(scene.game, row.on ? KIT.toggleOn : KIT.toggleOff);
       const pill = scene.add
-        .image(rowW / 2 - 24 - V3.screen.pause.toggleW / 2, ry + TOGGLE_ROW_H / 2, ref.key, ref.frame)
-        .setOrigin(0.5, V3.screen.pause.toggleH / 2 / ref.h);
-      const zone = scene.add.zone(0, ry + TOGGLE_ROW_H / 2, rowW, TOGGLE_ROW_H).setInteractive();
+        .image(rowW / 2 - TOGGLE_RIGHT_INSET - P.toggleW / 2, ry + rowH / 2, ref.key, ref.frame)
+        .setOrigin(0.5, P.toggleH / 2 / ref.h);
+      const zone = scene.add.zone(0, ry + rowH / 2, rowW, rowH).setInteractive();
       zone.on('pointerup', (p: Phaser.Input.Pointer) => {
         if (!p.wasCanceled) handlers.toggle?.(row.id);
       });

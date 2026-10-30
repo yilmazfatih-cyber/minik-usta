@@ -252,6 +252,7 @@ export interface WinLayout {
 
 export function winLayout(tokens: Tokens, H: number, rows: WinRows): WinLayout {
   const L = tokens.layout.win;
+  const B = tokens.kit.v3.button.L;
   const W = tokens.meta.designWidth;
   const shift = Math.max(0, H - BASE_H) * L.expandShare;
   const capH = tokens.kit.v3.capsule.homeH;
@@ -281,6 +282,7 @@ export function winLayout(tokens: Tokens, H: number, rows: WinRows): WinLayout {
     coinCapsule: rows.star
       ? { x: pairX + L.rewardCapsuleW + L.rewardGapPx, y: capY, w: L.rewardCapsuleW, h: capH }
       : { x: (W - L.rewardCapsuleW) / 2, y: capY, w: L.rewardCapsuleW, h: capH },
-    button: { x: (W - L.buttonW) / 2, y: H - L.buttonBottomPx - L.buttonH, w: L.buttonW, h: L.buttonH },
+    // ART_REFERENCE §9.6 "Devam L": the §3.1 L button (560 × 212) on the v2 bottom inset
+    button: { x: (W - B.w) / 2, y: H - L.buttonBottomPx - B.h, w: B.w, h: B.h },
   };
 }

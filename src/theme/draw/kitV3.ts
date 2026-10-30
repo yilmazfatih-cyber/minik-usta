@@ -383,11 +383,12 @@ export function drawPlusV3(ctx: DrawContext, spec: { readonly state?: ButtonV3St
 // ---------------------------------------------------------------------------------------------------------------
 // Capsule (§3.4), badge (§3.5)
 
-export type CapsuleV3Variant = 'home' | 'hud';
+/** `win` (ART_REFERENCE §3.12 "kazanma kapsülü"): the home pill's size with the HUD's darker #14113A fill. */
+export type CapsuleV3Variant = 'home' | 'hud' | 'win';
 
 export function capsuleV3Height(variant: CapsuleV3Variant, tokens: Tokens): number {
   const c = tokens.kit.v3.capsule;
-  return variant === 'home' ? c.homeH : c.hudH;
+  return variant === 'hud' ? c.hudH : c.homeH;
 }
 
 export function capsuleV3Slices(variant: CapsuleV3Variant, tokens: Tokens): Slices {

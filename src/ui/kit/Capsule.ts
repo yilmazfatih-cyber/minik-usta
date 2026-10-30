@@ -26,7 +26,7 @@ export interface CapsuleSpec {
   readonly icon: string;
   readonly value: string;
   readonly plus?: boolean;
-  /** `home` (88, cream 44) or `hud` (60, lavender 40). */
+  /** `home` (88, cream 44), `hud` (60, lavender 40) or `win` (88, cream 44, the §3.12 darker fill). */
   readonly variant?: CapsuleV3Variant;
   /** Number drawn inside the icon (the lives heart, ART_REFERENCE §3.4) instead of the capsule text. */
   readonly inIcon?: string | null;
@@ -69,11 +69,12 @@ export class Capsule {
     this.variant = variant;
     const h = capsuleV3Height(variant, TOKENS);
     this.h = h;
-    this.iconPx = spec.iconPx ?? (variant === 'home' ? CP.homeIconPx : CP.hudIconPx);
+    const hud = variant === 'hud';
+    this.iconPx = spec.iconPx ?? (hud ? CP.hudIconPx : CP.homeIconPx);
     this.overhangPx = spec.iconOverhangPx ?? CP.iconOverhangPx;
-    this.fontPx = variant === 'home' ? CP.homeFontPx : CP.hudFontPx;
-    this.role = spec.role ?? (variant === 'home' ? 'counterCream' : 'counterLavender');
-    const name = variant === 'home' ? KIT.capsule : KIT.capsuleHud;
+    this.fontPx = hud ? CP.hudFontPx : CP.homeFontPx;
+    this.role = spec.role ?? (hud ? 'counterLavender' : 'counterCream');
+    const name = variant === 'home' ? KIT.capsule : hud ? KIT.capsuleHud : KIT.capsuleWin;
     const pill = kitRef(scene.game, name);
     const s = kitSlice(name);
     const body = scene.add

@@ -4,7 +4,8 @@
  * turning sunburst, the gold "KAZANDIN!" ribbon, the wood-framed card with the tree house as it stands after this win
  * (built part in colour, the rest as ozalit ghost) and the big star of the win, Tuna's cheer pose overlapping the
  * card's left edge, the Bonus İnşaat row and the leftover Golden Trowel row (panel wells), the reward capsules
- * (★ +1, coins) and the single primary action "Devam" (green, bottom-anchored).
+ * (★ +1, coins; ART_REFERENCE §3.12 `win` capsules — the home pill with the darker #14113A fill) and the single
+ * primary action "Devam" (green, bottom-anchored).
  *
  * Rows follow the rewards (ui/rewards.ts or meta/home.ts `sliceWinRewards`): Bonus row when moves turned into coins,
  * trowel row when n ≥ 1, star capsule when a star was earned. The META §10 loop replay (no star, base coins only)
@@ -57,8 +58,8 @@ export const WIN_ENTRY = Object.freeze({
 /** UX §6.1: Tuna comes up 40 px (#95); "Devam" 0.9 → 1.0. */
 const TUNA_RISE_PX = 40;
 const BUTTON_FROM = 0.9;
-/** Label of the 176 px primary button: the same 80 px "Parlak başlık" as "Bölüm N" (UX §3). */
-const PRIMARY_LABEL_PX = 80;
+/** "Devam" is the §3.1 L button (ART_REFERENCE §9.6): its own 96 px label. */
+const PRIMARY_LABEL_PX = TOKENS.kit.v3.button.L.fontPx;
 /** Row text size (64 px capsules, UX §6.1). */
 const ROW_TEXT_PX = 36;
 /** Big star of the card (ART §15; DS3-06: the baked §2.4 gold star, three tones + #B8430A contour + lip, not the 128 px icon scaled). */
@@ -191,6 +192,7 @@ export class WinScreen {
         w: g.starCapsule.w - CP.iconOverhangPx,
         icon: 'icon_star',
         value: t('common.plus', { n: rewards.stars }),
+        variant: 'win',
       });
       s.root.setPosition(g.starCapsule.x + CP.iconOverhangPx, g.starCapsule.y);
       s.root.disableInteractive();
@@ -200,6 +202,7 @@ export class WinScreen {
       w: g.coinCapsule.w - CP.iconOverhangPx,
       icon: 'icon_coin',
       value: `+${formatCount(rewards.totalCoins)}`,
+      variant: 'win',
     });
     coin.root.setPosition(g.coinCapsule.x + CP.iconOverhangPx, g.coinCapsule.y);
     coin.root.disableInteractive();

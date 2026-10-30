@@ -1349,6 +1349,32 @@ Görsel sonradan gelirse 200 ms'lik çapraz solmayla değişir (UX §3 "Yükleni
   kendi 200 ms soluşunu, Tuna'nın 40 px yükselişini, şerit / satır / kapsül 150 ms soluşlarını ve ışın dönüşünü oynar.
   Satırlar ödülden okunur (`winRows`): Bonus `bonusMoves > 0`, mala `trowels > 0`, ★ kapsülü `stars > 0` — döngü
   tekrarında yalnız altın kapsülü ortada kalır.
+- **Görsel v3 paket C (2026-10-22; ART_REFERENCE §9.5–§9.8, §3.12; pencereler + kazanma + ödül katmanı):**
+  - `ui/popupLayout.ts` `windowGeometry(W, panelBottomY, panelW, contentH, options, rhythm)` (saf, testli): panel alta
+    çapalı (`layout.popup.panelBottomPx`), seçenekler alttan üste (en alttaki `optionsBottomInsetPx` 80 yukarıda),
+    içerik seçeneklerin `contentGapPx` 28 üstünde, panel üst kenarı içeriğin `topPadPx` 72 üstünde (`WINDOW_RHYTHM`,
+    §9.5 duraklat: panel 724–1624, plaka 796–1136, "Bölümden çık" 1164, "Devam" 1332–1544 birebir). Bölüm başı
+    penceresi kendi ritmini geçer (`rhythm: { topPadPx: 104, contentGapPx: 56 }`; kareler plakanın alt kenarına
+    bindiği için rozetler "Oyna"ya değmez). `contentInset(panelW)`: 1000 panelde 60 (880 plaka / kart), 920 çıkış
+    onayında 50 (820 kart). Krem kart en az 160 (§9.5 çıkış satırları), metin kartta dikey ortalı. **Not:** §9.5'teki
+    çıkış onayı "920 × 560" sayısı binen başlık + 160 kart + M + L dizilimini taşıyamaz (72 + 160 + 28 + 136 + 32 +
+    212 + 80 = 720); panel içerikle uzar (§3.7), test "ART_REFERENCE 9.5 exit confirm …" bunu sabitler.
+  - `Popup` toggle satırları iki görünüm: `cream` (varsayılan; §9.8 ayarlar: 880 plaka, krem 112 şerit, `cardText`)
+    ve `plain` (§9.5 duraklat: `screen.pause.rowW` 760 × 340 plaka, 3 × 100 satır, beyaz 44 `button` etiket + plaka
+    konturu, satır arası 2 px #352496 α 0,25 ayraç, anahtar sağda 24 içeride). `LevelWindows.openPause` `plain`.
+  - "Hamleler bitti!" önizleme kartı (§9.7, UX §7 "▣ ▣ önizleme"): `ui/losePreview.ts` (saf) `remainingPreviewPieces`
+    (K-48 (3) kümesi: sahada, kuyrukta, teslim edilmemiş partide kalan malzeme blokları; `blocksLeft` ile aynı sayı,
+    test "K-29 / K-48 …") + `previewRow` (en çok 6 blok, hücre ≤ 56, aralık 24, en yüksek blok kartın 184'lük üst
+    bandına sığar — dikey I4 46'ya iner — sığmazsa birlikte küçülür, taban 24);
+    `LevelWindows.previewCard` bölüm pişirmesinin kendi blok karelerini (`blockFrameName` + `bakedFlagsOf`, yoksa
+    bayraksız ad) `cell / (cellPx · k)` ölçeğinde kartın üst bandına (merkez y 118) çizer, "Kalan: n blok" 44 krem
+    kartta y 244. `openOffer` `preview: { pieces, frames, k }` alır; pişirme yokken (olmaz) yalnız satır ortada.
+  - Kazanma: "Devam" §3.1 **L** (560 × 212, 96 px etiket; `winLayout.button` `kit.v3.button.L`, alt pay `layout.win.
+    buttonBottomPx` 144 aynen; `layout.win.buttonW/H` artık okunmuyor, design-lead `_docRetire`'a alabilir); ödül
+    kapsülleri `Capsule` `variant: 'win'` = ana sayfa geometrisi (88, ikon 80, krem 44) + HUD'un koyu #14113A dolgusu
+    (§3.12 "kazanma kapsülü"; kit atlasında `ui_capsule_win`). Panel 7 katman + krem kart + ışın yelpazesi, köşe
+    yıldızı `ui_star_win`, Tuna tabanı kart alt kenarında (UX §6.1) değişmedi.
+  - Ödül katmanı: değerler yalnız `kit.v3.screen.reward` (yukarıdaki taşıma); davranış DS3-04 ile aynı.
 - **Ölçüm (scratch, 390 × 844, DPR 3, headless SwiftShader):** ana sayfa ve kazanma katmanında CPU adımı (Phaser
   `prestep` → `postrender`) 1×'te p50 ≈ 0,6 ms, 4× CPU'da p50 3 ms / p95 ≤ 16 ms; rAF hızı SwiftShader dolum hızıyla
   sınırlı (3 M piksel, tam ekran 3–4 katman), gerçek GPU kapısı `tools/perf.ts`'tedir (WP-K). İlk yük 564 KB / 620 KB.
@@ -3619,7 +3645,10 @@ bloğunun üstüne, sembolün altına) pişirilir; ıslak sayacı ayrı görünt
   anahtar çalışma zamanına ulaşır" testi bu iki alt grubu anahtar anahtar `V3_ADDENDA` / `SVG_TONES_V3` ile karşılaştırır;
   `tests/assets/svgTonesV3.test.ts` tablodaki her tonun bir `public/art` SVG'sinde geçtiğini ve `paletteOf`'un kabul
   ettiğini sabitler. design-lead değerleri `kit.v3.<grup>` hedeflerine taşıdığında yalnız `addendaRaw` / `svgTonesRaw`
-  yolu değişir.
+  yolu değişir. Taşınanlar (orkestratör izni): `bootPack` → `kit.v3.screen.loading.bootPack` (paket B), `rewardLayer`
+  → `kit.v3.screen.reward` (paket C, 2026-10-22: `itemPx` 240 tek nesne, `multiItemPx` 200 çoklu, `twoItemOffsetPx`,
+  `glow*`, `overlay*`; `tapTextY` / `tapTextPx` zaten oradaki `tapY` / `tapFontPx` ile aynıydı — `RewardLayer` tek
+  kaynaktan okur). Kalanlar (`capsuleBadge`, `arrow`, `avatarSquare`, `townAreaWindow`) Faz 4 bileşenleriyle taşınır.
 - WebGL bağlam kaybı: Phaser 4 kaynakları kendisi yeniden kurar, yalnızca dinamik (GPU'da çizilmiş) dokuları kullanıcıya
   bırakır (`Phaser.Renderer.Events.RESTORE_WEBGL`). Atlas ve bölüm sayfaları kaynak tuvali olan `CanvasTexture`
   olduğundan tuvaller bellekte tutulur ve bu olayda savunma amaçlı `tex.refresh()` çağrılır.
