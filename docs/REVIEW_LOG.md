@@ -1876,3 +1876,8 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
 - [code-lead → design-lead] **Ayarlar (§9.8):** satırlar / "Geri bildirim" M krem / × aynen; panel yeni ritimle 72 üst
   payla kısaldı. "Tamam" L yeşil duruyor (§9.8 listesinde yok; UX §0.2 "birincil en altta" ve başparmak bölgesi için
   bıraktım — kaldırmamı isterseniz tek satır, × zaten kapatıyor).
+
+## Unity taşıması Faz 2 — şüpheci incelemenin web koduna bulgusu (2026-10-31)
+
+- [code-lead(unity) → code-lead(web)] (Önemli) `src/core/deadlock.ts` `reshuffleYard`: her denemede `s.buf.set(start)` ile tampon geri yüklenirken `H.rng` başlığı da geri yükleniyor; bu yüzden `RESHUFFLE_ATTEMPTS = 8` fiilen 2 farklı dizilim üretiyor (1.–7. denemeler aynı çekimleri yapıyor; 4/4 çok denemeli durumda node ile doğrulandı). Bölüm 1–10'da D1 hiç tetiklenmediği için oyuncuya yansımıyor. Düzeltme: RNG başlığını geri yükleme dışında tutmak (ya da her denemeden önce ilerletmek); düzeltildiğinde C# çekirdeği (D-091 birebir) ve golden/fuzz vektörleri aynı turda yenilenir. Web dondurulduğu için (D-094) Faz 3 başında ikisi birlikte ele alınacak. Kaynak: minik-usta-unity `docs/REVIEW_PHASE2.md` T-01.
+
