@@ -602,3 +602,9 @@ Karar: Orkestratör (Fable) planlar, iş akışlarını kurar, sonuçları birle
 Gerekçe: Proje sahibi isteği ("tüm her şeyi Fable'la yapma; işi Opus/Sonnet/Haiku yapsın, Fable yönetsin"); kullanım sınırlarını ve maliyeti dengeler.
 Etkilenen: bütün sonraki Workflow betikleri; Unity Faz 2 P3–P6 (Opus/Sonnet)
 
+### D-096 — Unity Faz 2 kabul; Faz 3'te yerleşik tween (DOTween sonra)
+Durum: KABUL     Sahip: proje sahibi + orkestratör     Tarih: 2026-10-31
+Karar: Unity Faz 2 (saf C# çekirdek) kabul edildi: 1455 test yeşil, 10/10 altın eşdeğerlik, 10 374 eylemlik TS-kâhinli fuzz'da 0 sapma, 76/76 kural kapsamı (minik-usta-unity `docs/PHASE2_REPORT.md`). Faz 3 başlar. Brifteki DOTween yerine bağımlılıksız yerleşik tween (easing + sekans, Presentation.Core'da motor-bağımsız) kullanılır; DOTween'e geçiş tek adaptörle sonraya bırakılır. Metin için yer tutucu aşamada uGUI `Text` (LegacyRuntime fontu); TextMeshPro + Baloo 2 Faz 4'te, TMP kaynakları projeye eklendiğinde. Bölüm JSON'ları `Resources/levels` olarak gömülür (WebGL'de StreamingAssets dosya okuması çalışmadığı için).
+Gerekçe: DOTween Asset Store'dan elle indirilir, CI'da kurulamaz; Pages'te hemen oynanabilir olmak öncelik. Proje sahibi onayladı.
+Etkilenen: minik-usta-unity Assets/MinikUsta/Presentation*, docs/CI.md, D-093
+
