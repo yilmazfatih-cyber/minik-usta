@@ -595,3 +595,10 @@ Durum: KABUL     Sahip: proje sahibi + orkestratör     Tarih: 2026-10-30
 Karar: Unity projesi `yilmazfatih-cyber/minik-usta-unity` reposunda yaşar. Web (Phaser) sürümü `main` = de6f16c olarak yayında kalır; görsel v3'ün kalan paketleri (C, D, eleştiri turları) web'de yapılmaz, stil kitabı (ART_REFERENCE) ve SVG'ler Unity'de kullanılır. `wip/phase-2r` dalı A/B paketleri ve C'nin yarımıyla arşiv olarak kalır.
 Gerekçe: Kredi ve süreyi tek hedefe toplamak; Unity projeleri web reposunu büyütür.
 Etkilenen: CLAUDE.md (Unity repo notu), TECH_DESIGN, BUSINESS takvimi (entrepreneur güncellemesi bekler)
+
+### D-095 — Model dağılımı: orkestratör yönetir, işi diğer modeller yapar
+Durum: KABUL     Sahip: proje sahibi + orkestratör     Tarih: 2026-10-31
+Karar: Orkestratör (Fable) planlar, iş akışlarını kurar, sonuçları birleştirir ve kararları yazar; ajan işleri ihtiyaca göre dağıtılır: zor/kesin kod taşıma, şüpheci inceleme ve mimari → Opus; orta ölçekli uygulama, düzeltme turları, belge ve test yazımı → Sonnet; mekanik işler (kopyalama, biçimlendirme, basit kontrol) → Haiku. Her Workflow ajanında `model` açıkça verilir; Fable yalnız orkestrasyon için kullanılır.
+Gerekçe: Proje sahibi isteği ("tüm her şeyi Fable'la yapma; işi Opus/Sonnet/Haiku yapsın, Fable yönetsin"); kullanım sınırlarını ve maliyeti dengeler.
+Etkilenen: bütün sonraki Workflow betikleri; Unity Faz 2 P3–P6 (Opus/Sonnet)
+
