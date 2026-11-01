@@ -1,6 +1,6 @@
 # Engel kütüphanesi
 
-Sahip: product-lead · Sürüm: Faz 2R (2026-10-07; R2-01 tam örtü, R2-02 değişken boyut, R2-05 çelişen sistemler; çapraz inceleme kapanışı: Y5 saha içinde kalır, W1/Y5 kartları, W6 jokerli D3a, S9 ilk bölüm 12, veri imzası tablosu) · Önceki: Faz 1 revizyonu (2026-10-04; R-08, R-10, R-21; tutarlılık denetimi tur 1, 2026-10-05) · Kaynak: `docs/BRIEF.md` §7, `docs/GDD.md`
+Sahip: product-lead · Sürüm: D-099 sabit saha notları (2026-11-01; GDD K-55: S1 kamyonsuz, kamyona bağlı notlar yalnız `schemaVersion` 1) · Önceki: Faz 2R (2026-10-07; R2-01 tam örtü, R2-02 değişken boyut, R2-05 çelişen sistemler; çapraz inceleme kapanışı: Y5 saha içinde kalır, W1/Y5 kartları, W6 jokerli D3a, S9 ilk bölüm 12, veri imzası tablosu) · Önceki: Faz 1 revizyonu (2026-10-04; R-08, R-10, R-21; tutarlılık denetimi tur 1, 2026-10-05) · Kaynak: `docs/BRIEF.md` §7, `docs/GDD.md`
 
 Her engel: kimlik, bölge, kural (kodlanabilir), veri parametreleri, ilk bölüm, bilgi kartı metni (TR/EN, en çok 12 kelime).
 Genel kurallar (yol, düşüş, doğrulama, hamle sonu hattı) GDD'dedir; burada yalnızca engele özel olan yazılır.
@@ -49,6 +49,12 @@ sütunu: kural sabit koordinata bağlı mı? Uyumsuzlar yeniden tanımlandı ya 
 | S8 Balonlu Blok | ✓ | ✓ | Değişmedi; S2 olmadan şantiyedeki anlamı daralır (yalnız sütun tepesine doğru), Faz 3'te yeniden değerlendirilir |
 | S9 Geniş Şantiye (yeni) | ✓ | Ws ≥ 3 | **Yeni imza**; ilk bölüm 12 (Faz 3); kapsam MVP (Faz 3), yalnız veri |
 | G-H, G-L | ✓ | ✓ (yönlendirme şantiye sütunları içinde) | Değişmedi (Faz 3) |
+
+**D-099 uyumu (sabit saha, GDD K-55; `schemaVersion` 2):** bütün bloklar ilk andan sahadadır, dilim geçişinde kamyon
+teslimatı yoktur. Engel kuralları değişmez; değişen yalnız kamyona dayanan etkileşimlerdir: S1 kayması sahayı oynatmaz,
+N28, N42, N43 ve N45 yalnız `schemaVersion` 1 verisi içindir, Y5 + S1'de kuyruk yoktur ve Ağır Yük bir kat için bir yana,
+sonraki kat için öbür yana kayabilir (LEVELS §6.1 T9). Yerinde kalan engeller (Y1, Y2, Y5) zaten sahadadır; v2'de
+kuyruğa yalnız S3 kırılması (GDD K-17 adım 3) ve S4 molozun Çekiç'le inmesi (K-36) blok ekler.
 
 ---
 
@@ -248,6 +254,12 @@ sütunu: kural sabit koordinata bağlı mı? Uyumsuzlar yeniden tanımlandı ya 
 - **Bölge:** şantiye · **İlk bölüm:** 5
 - **Kural:** `build.mode = "segments"`, 2–5 dilim (GDD K-22, K-25). Dilim bitince kayma ve kamyon teslimatı.
 - **Veri:** `build.segments[]`, `yard.batches[]` (`forSegment` = dilim indeksi).
+- **D-099 (GDD K-55, `schemaVersion` 2):** dilim bitince yalnız kayma; tamamlanan dilim panoramaya (kasabaya) gider,
+  sıradaki dilim boş gelir, saha aynen kalır; kamyon teslimatı yoktur (yukarıdaki iki satır `schemaVersion` 1 içindir).
+  Veri: tek parti `yard.batches[0]` (`forSegment: 0`). İlk bölüm D-099 eğrisinde 1'dir (LEVELS §6.6); "Veri imzası"
+  tablosundaki 5 değeri, kod tablosuyla (`mechanics.ts` `firstLevel`) birlikte yeni Bölüm 1 verisi yazıldığında 1 olur.
+  Bilgi kartı için D-099 metni (i18n dosyalarıyla aynı commit'te geçerli olur; anahtar `obs.s1.desc` aynı): TR «Bu kat
+  bitince şantiye kayar; kalan bloklar sahada bekler.» · EN «Finish this floor; the site slides, your blocks wait.»
 - **Bilgi kartı** (`obs.s1.desc`): TR "Bu kat bitince şantiye kayar, kamyon malzeme getirir." · EN "Finish this floor; the site slides and the truck delivers."
 
 ### S2 — Plan Boşluğu — **MVP DIŞI (Faz 2R, R2-01)**
@@ -415,6 +427,10 @@ alanlarıyla birebir. Faz 2R Bölüm 1–10 türetilen yeni mekanikler: 4 → W1
 yeni imza içermez (öğretimleri `tutorial` ile: kaldır–taşı–indir, şekil/gölge, kazı, taşınan malzeme, final). Bölüm
 4'ün geçidi boy 2'dir, bu yüzden W3 ilk kez 9'da görünür (R-21). Bölüm 10'da W1/W3 yoktur (LEVELS §4).
 
+**D-099 eğrisi (LEVELS §6.6):** bütün bölümler 2–3 dilimli olduğundan S1 imzası Bölüm 1'de doğar; türetilen yeni
+mekanikler 1 → S1, 4 → W1, 6 → W2, 8 → Y5, 9 → W3 olur. Tablodaki S1 "İlk bölüm" değeri, yeni Bölüm 1 verisi ve koddaki
+`firstLevel` ile aynı commit'te 5 → 1 değişir (iki tablo testle eşit tutulur; LEVELS §7 U-2).
+
 ## Aynı bloktaki bayrak birleşimleri
 
 | | glass | balloon | mortar | chained | wet | debris | ağır şekil |
@@ -493,7 +509,7 @@ tasarım notu, test gerektirmez.
 - **N25** [kural] — Kasa düşmez ve destektir; saha yerçekiminde kasa üstündeki bloklar yerinde kalır.
 - **N26** [kural] — Düşen torba komşu etkisi üretmez (yalnızca düşen bloklar üretir).
 - **N27** [kural] — Zincirli ve ıslak bloklar saha yerçekimiyle düşer; düşmeleri zinciri çözmez, sayacı değiştirmez.
-- **N28** [kural] — Kamyonla gelen ıslak blok geldiği hamlede sayaç kaybetmez (E-31).
+- **N28** [kural] — (D-099: yalnız `schemaVersion` 1) Kamyonla gelen ıslak blok geldiği hamlede sayaç kaybetmez (E-31).
 - **N29** [kural] — Harçlı blok `.` (pencere) hücresine yapışabilir; dilim tamamlanamaz, 2 hamlelik çekme ya da Çekiç gerekir (E-24).
 - **N30** [kural] — Harçlı cam: önce kırılma denetlenir; kırılırsa sahaya döner, yapışmaz.
 - **N31** [kural] — Yapışmış harç kendi dilimiyle birlikte döner/kayar; asansörde çerçeveyle oynar. Yalnızca plan alanında yapıştığı için tahtadan taşmaz (E-08, E-32).
@@ -507,12 +523,12 @@ tasarım notu, test gerektirmez.
 - **N39** [kural] — G-L yönlendirmesi balonun yükselişinde de kullanılabilir.
 - **N40** [kural] — Kilitli geçidin anahtarı saha yerçekimiyle açığa çıkabilir (N4).
 - **N41** [kural] — Gizli `?` hücresine düşecek gölge her zorlukta nötrdür; Boya Kapısı rengi ipucu olarak tasarlanabilir.
-- **N42** [kural] — Döner platform ve kayan şantiyede teslim partisi dilim tamamlanma sayısına bağlıdır (K-23, K-25).
-- **N43** [kural] — Saha yerçekimi açıkken kamyon blokları da oturmuş sahaya düşer; teslimat sahayı yeniden oynatmaz.
+- **N42** [kural] — (D-099: yalnız `schemaVersion` 1) Döner platform ve kayan şantiyede teslim partisi dilim tamamlanma sayısına bağlıdır (K-23, K-25).
+- **N43** [kural] — (D-099: yalnız `schemaVersion` 1) Saha yerçekimi açıkken kamyon blokları da oturmuş sahaya düşer; teslimat sahayı yeniden oynatmaz.
 - **N44** [kural] (Faz 2R) — S9 Geniş Şantiye matriste ayrı satır/sütun almaz: bütün engellerle `·`'dır (kuralları
   sütun sayısından bağımsızdır), şu iki not dışında: W8 ve G-L kaymaları şantiye sütunları (x = Wy … Wy+Ws−1) içinde
   kalır; genişliği Ws olan blok kaymaz.
-- **N45** [kural] (Faz 2R) — Y5 Ağır Yük + kamyon (S1): parti bloğu Ağır Yük yüzünden sahaya düşemezse kuyrukta bekler
+- **N45** [kural] (Faz 2R) — (D-099: yalnız `schemaVersion` 1) Y5 Ağır Yük + kamyon (S1): parti bloğu Ağır Yük yüzünden sahaya düşemezse kuyrukta bekler
   (GDD E-54); Ağır Yük kaydırılınca o hamlenin 9. adımında düşer. Tasarım notu (solver turu): kuyruktaki blok, yer açan
   hamleye göre başka bir gereken bloğun üstüne düşebilir; bilinçli kuyruk yalnız GDD K-51 madde 2'nin bütün uzay
   çıkmaz kapısından geçen bölümde kullanılır (Bölüm 10'un eski taslağı geçemedi, LEVELS §2.11). Y5 + S1'de partinin

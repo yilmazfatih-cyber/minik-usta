@@ -1,6 +1,6 @@
 # 50 bölüm planı
 
-Sahip: product-lead · Sürüm: Faz 2R solver turu (2026-10-07; Bölüm 1–10 JSON'ları `levels/` altında, resmî solver
+Sahip: product-lead · Sürüm: D-099 bulmaca zekâsı şartnamesi (2026-11-01; yeni §6 ölçütler, hedef aralıklar ve Bölüm 1–10 eğrisi, §7 code-lead uygulama notları; §1–§2 Faz 2R verisini anlatmaya devam eder) · Önceki: Faz 2R solver turu (2026-10-07; Bölüm 1–10 JSON'ları `levels/` altında, resmî solver
 `levels:solve` ile doğrulandı; Bölüm 4, 5, 7 ve 10 yeniden tasarlandı — §2.11) · Önceki: Faz 2R (2026-10-07; R2-01…R2-06, R2-10 — `docs/review_inbox/_orchestrator_rulings_2R.md`; çapraz inceleme kapanışı: tanıtım bölümü tamponu, öğretici yolları ve süzgeçleri, Bölüm 4 adı, Faz 3 kuralları) · Faz 1 revizyonu (2026-10-04; R-01, R-08, R-18, R-21; tutarlılık denetimi tur 1, 2026-10-05; F-3 çıkmaz taraması, 2026-10-05) · Kaynak: `docs/BRIEF.md` §8, `docs/GDD.md` (Faz 2R), `docs/OBSTACLES.md`
 
 Bu belge 50 bölümün taslağıdır. **Faz 2R dikey dilimi Bölüm 1–10'dur (R2-06):** §2'de her biri yeni kurallarla (tam örtü
@@ -11,6 +11,13 @@ kanonik çözüm (hamle hamle) ve ölçüt hedefleri JSON'a doğrudan çevrilebi
 `npm run levels:check` 10/10 geçerli, 10/10 çözüldü, 0 hata, 0 uyarı. §2'deki ASCII taslaklar, kanonik çözümler, ölçütler
 ve hamleler solver çıktısıdır; doğrulama özeti §2.11'dedir. 11–50. bölümler (§3) eski kurallarla yazılmış tek satırlık
 kayıtlardır; Faz 3'te §2.0 yöntemiyle yeniden tasarlanır (§3 başındaki Faz 2R notu).
+
+**D-099 (2026-11-01, sabit saha, GDD K-55):** bölümün bütün blokları ilk andan sahadadır; dilim geçişinde sahaya parti ya
+da kamyon dolumu gelmez. Bulmaca zekâsı şartnamesi (ölçütler, hedef aralıklar, ölü masa kapısı, D-099 hamle bütçesi,
+Bölüm 1–10 eğrisi ve öğretici taslakları) **§6**'da, code-lead uygulama notları (şema, doğrulayıcı, çözücü ölçütleri,
+ölçek, üretici tarifi) **§7**'dedir. §1 tablosu, §2 kayıtları ve `levels/level_001…010.json` Faz 2R (`schemaVersion` 1)
+verisidir; D2 paketinde §6.6'ya göre `schemaVersion` 2 olarak yeniden yazılır ve üçü aynı commit'te değişir (testler bu
+belgeyi JSON'larla karşılaştırır, §7 U-7).
 
 ## 0. Kurallar ve yöntem
 
@@ -1142,3 +1149,373 @@ güvencesi GDD §14.1 madde 4b).
       adı ve "parça" yok; Ağır Yük'e "blok" denmez.
 - [ ] Resmî solver (`npm run levels:check`) 0 hata, 0 uyarı; LEVELS §2 ASCII, kanonik çözüm, ölçüt ve hamleleri solver
       çıktısıyla aynı; karalama çözücüsüyle fark varsa solver esastır ve taslak yinelenir (§0 doğrulama notu).
+
+---
+
+## 6. Bulmaca zekâsı şartnamesi (D-099, sabit saha)
+
+Sahip: product-lead · 2026-11-01 · Kaynak: proje sahibinin isteği ("ilk tahtaya yeni brick ekleme; yandaki ekran geçse de
+ilk tahtanın puzzle'ını daha fazla düşün"), orkestratör kararı D-099, GDD K-55 (sabit saha), K-50 madde 11–19, K-51 madde
+6–9, K-52 D-099 bütçesi. Bu bölüm `schemaVersion` 2 içeriğinin tasarım sözleşmesidir; §1–§2 Faz 2R (`schemaVersion` 1)
+verisini anlatmaya devam eder ve D2 paketinde JSON'larla aynı commit'te bu bölüme göre yenilenir.
+
+### 6.0 Değişen bulmaca
+
+Faz 2R'de her dilimin malzemesi kamyonla geliyordu; bulmaca "gereken bloğu bul, önünü aç" düzeyindeydi: §2.0 madde 11'deki
+kazıcı vekil 1–10'un hepsini en kısa yoldan kazanıyordu (açgözlü oyun en iyi oyundu). D-099'da bölümün **bütün katları
+tek sahada, ilk andan** durur. Bulmaca artık şudur: (1) hangi bloğun hangi kata gideceğine karar vermek (blok dilime bağlı
+değildir, GDD K-55 madde 4); (2) sonraki katın bloklarını bu katın yolundan, sonraki katın da yolunu kapatmayacak yere
+park etmek; (3) park yeri yoksa önce bir yerleşimle yer açmak; (4) bazen yerleşebilecek bir bloğu bekletmek. Bu kararlar
+ölçülür (§6.2) ve her bölümde tek bir fikir öğretilir (§6.6).
+
+**İlkeler (değişmez):** tam örtü ve tam kullanım (K-47, K-48); imza hareket YAO ≥ 0,60 (K-46); bilgi gizlenmez (bütün
+katlar panoramada, bütün bloklar sahada görünür; gölge her zaman doğru, K-18); şansa bağlı hiçbir şey yok (teslimat yok,
+yeniden dizme yok); bölüm başına en çok 1 yeni mekanik (K-45 madde 10); testere dişi (§0).
+
+### 6.1 Bulmaca kaynakları (D-099 kataloğu)
+
+Her kaynak bir ölçütü oynatır; bölümün "tek fikri" bu kaynaklardan biridir (§6.6 "Fikir" sütunu).
+
+| Kod | Kaynak | Tanım (kodlanabilir) | Oynattığı ölçüt (GDD K-50) | İlk bölüm |
+|---|---|---|---|---|
+| T1 | Kat arası örtü | Sonraki katın bloğu (`seg` büyük) bu katın gereken bloğunun üstünde; önce park edilir | `depLater` ≥ 1, `carryShifts` ≥ 1 | 3 |
+| T2 | Doğal açılış | Bu katın blokları sonraki katlarınkinin üstünde; kat bitince alttakiler açılır | `depEarlier` ≥ 1 | 1 |
+| T3 | Park yeri seçimi | Kapak bloğun en az iki park yeri var; yalnız biri sonraki katın ilk bloğunu örtmez | `forced` ≥ 1 (park anında), `reparks` (yanlış cepte) | 5 |
+| T4 | Takas (eşdeğer döşeme) | Aynı renk bölgesini farklı şekil kümeleri doldurur (`O4` X = iki `D2` X); açıkta duran "sonraki kat" bloklarını şimdi kullanmak gömülü olanı sonraya bırakır | `min` düşer, `depLater` düşer (K-50 madde 13 örneği) | 7 |
+| T5 | Bekletme | Şimdi doğru yerleşebilen blok kenara alınır; altındaki önce gerekir | `ahaMin` ≥ 1 (`hold`) | 5 |
+| T6 | Yer açmak için yerleştir | Park için yeterli boş hücre yok; önce bir yerleşim yer açar | `parkSlack` < 1 | 7 |
+| T7 | Yükseğe park | Cebe ilk giren blok üstte kalmalı; alçağa konursa ikincisi sığmaz | `forced`, `greedyWin` düşer | 6 |
+| T8 | Geçit kestirmesi | Derindeki blok geçitten yatay çıkar (W1, W3) | varyant `geçitsiz min − min` | 4 |
+| T9 | Ağır Yük iki kez | Yük bir kat için bir yana, sonraki kat için öbür yana kayar (yalnız saha içinde, K-44) | `reparks` ≥ 1 (yük), varyant `min − Çekiç'le min` | 8 |
+| T10 | Takas tuzağı | Açgözlü takas kalan katı döşenemez bırakır → D3a → Söküm (yalnız Zor/Çok Zor) | `trapCount`, `greedyTrap` | 10 |
+
+**Tuzak kaynağı kuralı (§2.0 madde 4) D-099'da dilimler arasına genişler:** bir renk bölgesini dolduran şekil
+kombinasyonları **bütün dilimlerdeki** aynı renkli bloklarla sayılır, çünkü her blok her dilimde kullanılabilir (K-55
+madde 4). Kolay ve Normal'de bir takas (T4) yalnız **her ara durumda** kalan aynı renkli bloklar kalan bölgeleri
+döşeyebiliyorsa kullanılır. Güvenli örüntü: bir renk için 2×2 bölgeler ve tek satırlık bölgeler, arzda `O4` X + yeterli
+`D2_90` X; **2×2 bölge ile aynı renkten tek satır aynı dilimde birlikte bulunmaz** ya da o dilime kalan `D2_90` X sayısı
+her yolda yeter. Karşı örnek (§6.8 P5, solver): dilim 2'de 2×2 Y bölgesi ile YY satırı birlikteydi; dilim 1 kendi 2×2
+Y'sini iki `D2_90` Y ile doldurunca dilim 2'de kalan tek `D2_90` Y'yi 2×2 bölgenin tabanına koymak döşenemez bir durum
+üretti (103 ✓-tuzağı geçişi; aynı taslağın W tarafı — dilim 2'de yalnız 2×2 W — güvenliydi). Solver her bölümde
+`trapCount` 0 ve `greedyTrap` yok ile kanıtlar. Zor ve Çok Zor'da tek yollu takas T10'dur ve her tuzak Söküm'le kurtarılır
+(§6.3).
+
+**Yasak (her zorlukta):** şaşırtma blok (K-47); oyuncunun göremediği bilgiye dayanan en kısa çözüm (gelecek teslimat yoktur
+ama gizli `?` hücresi Faz 3'te yalnız K-32 kuralıyla çözülür); hiçbir hamle dizisiyle kurtarılamayan çıkmaz (§6.3); her
+ölçütü tek bir bloğun derinliğiyle şişirmek (`maxDigRun` sınırı, §6.2).
+
+### 6.2 Ölçütler ve hedef aralıkları (zorluk başına)
+
+Tanımlar GDD K-50'dedir (madde numarası "K-50/n"); solver hesaplar (§7 U-3). Bantlar **ilk tahmindir**: D2 paketinde
+üretici + solver + orta bot ile kalibre edilir ve bölüm bazındaki son değerler §6.6 tablosuna, makine okunur kopyası JSON
+`targets` alanına yazılır. Bir bölüm bandın dışındaysa `metric_out_of_band` (warn) ile product-lead'e döner.
+
+| Ölçüt | Tanım | Ne ölçer | Kolay | Normal | Zor | Çok Zor |
+|---|---|---|---|---|---|---|
+| `min` | K-50/2 | en kısa çözüm (hamle) | 6–12 | 10–16 | 16–26 | 20–30 |
+| YAO | K-46 | imza hareket (duvar üstü / bütün yerleşim) | ≥ 0,75 | ≥ 0,70 | ≥ 0,60 | ≥ 0,60 |
+| `minShifts` | K-50/3 | toplam kazı ve park | 0–3 | 2–5 | 5–9 | 6–10 |
+| `firstNeedDepth` | K-50/5 | açılış derinliği (ilk yerleşime kadar kaydırma) | 0–1 | 1–2 | 2–3 | 2–4 |
+| `firstNeedCover` | K-50/6 | ilk gereken bloğun üstündeki parça sayısı | 0–1 | 1–2 | 1–3 | 2–3 |
+| `maxCover` | K-50/11 | en derin gereken bloğun üstündeki parça sayısı | ≤ 2 | 2–3 | 3–4 | 3–5 |
+| `maxDigRun` | K-50/12 | art arda en uzun kazı | ≤ 2 | ≤ 3 | ≤ 4 | ≤ 5 |
+| `reparks` | K-50/12 | iki kez taşınan blok | 0 | 0–1 | 1–2 | ≥ 1 |
+| `depLater` | K-50/13 | sonraki katın bloğu önceki katınkinin üstünde (çift) | 0–1 | 1–3 | 2–5 | 3–6 |
+| `crossDeps` | K-50/13 | toplam kat arası örtü (çift) | ≥ 1 | ≥ 2 | ≥ 3 | ≥ 4 |
+| `carryShifts` | K-50/13 | sonraki kat için park hamlesi | 0–1 | 1–2 | 2–4 | 2–5 |
+| `parkSlack` | K-50/14 | boş hücre / en çok park hücresi (küçük = park baskısı) | park yok ya da ≥ 1,5 | 1,0–2,0 | 0,6–1,2 | 0,5–1,0 |
+| `forced` | K-50/15 | tek doğru sıralı karar noktası | 0–2 | 2–4 | 4–7 | 5–9 |
+| `trapCount` / `deadRate` | K-50/7–8 | ✓-tuzağı | 0 / 0 | 0 / 0 | 0–4 / ≤ 0,05 | 0–8 / ≤ 0,10 |
+| `greedyTrap` | K-50/16 | açgözlünün ölü masaya düştüğü ilk hamle | yok | yok | yok ya da ≥ 4 | yok ya da ≥ 3 |
+| `greedyExcess` | K-50/16 | en şanslı açgözlünün fazladan hamlesi | 0 | 0–2 | ≥ 2 ya da ∞ | ≥ 2 ya da ∞ |
+| `greedyWin` | K-50/16 | rastgele açgözlünün bütçe içinde kazanma olasılığı | ≥ 0,80 | 0,30–0,70 (tanıtım 0,50–0,90) | 0,05–0,25 | ≤ 0,10 |
+| `ahaMin` | K-50/17 | her en kısa çözümün istediği görünüşte ters hamle | 0 | 1–2 (tanıtım 0–1) | 2–3 | ≥ 3 |
+| `branch3` | K-50/18 | ilk üç hamlede doğru bloğa dokunma oranı | ≥ 0,35 | 0,15–0,35 | 0,08–0,20 | ≤ 0,15 |
+| `choices@0` | K-50/9 | açılışta oynanabilir seçenek | ≥ 3 | ≥ 4 | ≥ 5 | ≥ 5 |
+| P (bütçe payı) | K-52 | `moves − min − a` | 4 | 2 | 1 | 1 |
+| Kazanma (orta bot) | §0 | hedef bant | ≥ %90 | %65–80 (tanıtım %80–90) | %40–55 | %25–40 |
+| `complete` | K-50/19 | çıkmazlık denetimi tam | evet | evet | evet | evet |
+
+**Yorum kuralları:** (1) Normal ve üstünde zorluğu **önce** `ahaMin`, `greedyWin`, `forced`, `parkSlack` ve `depLater`
+taşır; `minShifts` ve `maxCover` yalnız eşlik eder (derin ama tek yollu kazı sıkıcıdır, `maxDigRun` sınırı bu yüzden
+var). (2) Tanıtım bölümünde yeni mekanik dışındaki ölçütler bir alt zorluğun bandına çekilir (`greedyWin`, `ahaMin`
+tanıtım değerleri tabloda). (3) Nefes bölümü (§0, Zor/Çok Zor'dan sonraki) Normal bandının kolay ucundadır (`ahaMin` 1,
+`greedyWin` 0,60–0,70). (4) Kolay/Normal'de `trapCount` 0, `deadRate` 0 ve `greedyTrap` yok zorunludur (K-51 madde 2, 6).
+
+### 6.3 Ölü masa kapısı (D-090, GDD K-51 madde 7)
+
+Kural (bütün zorluklar, `schemaVersion` 2): **geri alınamaz ölü durum yoktur.** Erişilebilir her çıkmaz durum ya hiç
+oluşmaz ya da oluştuğu hamlenin 12. adımında D2/D3a (ya da bölümün D3b tablosu) tarafından bulunur ve Söküm oyuncuyu
+**tek adımda** çıkmaz olmayan son duruma döndürür. Solver bunu bölüm başına kanıtlar: `complete` = evet,
+`undetectedDead` = 0, D1 erişilemez (`d1_reachable` yok). Bir tuzağın bedeli yalnız harcanan hamledir (Söküm hamle iade
+etmez) ve tuzak yalnız Zor/Çok Zor'da tasarlanır (T10). Kanıt verilemeyen bölüm (tarama bütçesi aşıldı, makro çizge
+yöntemi uygulanamadı) yayına girmez: önce saha küçültülür (Hy, sonra N), sonra araç ölçeklenir (§7 U-4). Geri Al (K-39)
+bu kapının parçası değildir.
+
+### 6.4 Hamle bütçesi (GDD K-52, D-099 tablosu)
+
+`moves = min + P + a`; P: Kolay 4, Normal 2, Zor 1, Çok Zor 1; tanıtım bölümünde P bir alt zorluktan (Normal tanıtım 4,
+Zor tanıtım 2, Çok Zor tanıtım 1). `a` = orta bot ayarı, **0 ile** üst sınır arasında (Kolay/Normal max(2, ⌈0,15·min⌉),
+Zor/Çok Zor max(1, ⌈0,10·min⌉)). Bot `a = 0`'da bandın üstündeyse bulmaca zorlaştırılır (bütçe kısılmaz); `a` üst
+sınırında bandın altındaysa bulmaca kolaylaştırılır. Örnek: Bölüm 7 (Normal) `min` 15 → 17 … 20 (aMax 3); Bölüm 10 (Zor)
+`min` 24 → 25 … 28 (aMax = max(1, ⌈2,4⌉) = 3).
+
+### 6.5 Boyut ve geometri (K-49, K-02, K-55)
+
+**Doluluk:** plan toplamı `Σ = S·Ws·Hs`, yük ve engel hücreleri `F₀` → `Σ + F₀ + 2 ≤ Wy·Hy ≤ ⌊(Σ + F₀) / 0,6⌋`
+(K-02 bandının sabit sahadaki karşılığı). **Her blok kalkar** (Bölüm 1–5 ilkesi: duvar = saha tepesi, şantiye sahadan en
+az 1 satır uzun): `Hs = Hy + 1`, duvar `height = Hy < H`; iki dilim için `4·(Hy + 1) ≤ Wy·Hy − 2` → Ws = 2'de yalnız
+Wy = 6 (Hy 4–7) sağlar; üç dilim hiçbir Wy ≤ 6 ile sağlamaz. Bu yüzden üç katlı ve dar sahalı bölümler Yüksek Duvar (W2,
+`height = H`, Bölüm 6'dan sonra) kullanır: her blok Vinç Alanı'na kalkar. **Yükseklik:** H ≤ 8, Hy ve Hs 4–8 (K-49).
+
+| Düzen | Saha (C) | Σ (+ yük) | E | H / duvar | Not |
+|---|---|---|---|---|---|
+| S=2 · 2×5 | 6×4 (24) | 20 | 4 | 5 / 4 | her blok kalkar; Bölüm 1–5 |
+| S=2 · 2×6 | 6×5 (30) | 24 | 6 | 6 / 5 | her blok kalkar; durum uzayı büyük (§6.8 P3) |
+| S=2 · 2×5 | 4×6 (24) | 20 | 4 | 6 / 6 (W2) | dar ve yüksek; Bölüm 6, 9 |
+| S=2 · 2×6 | 4×7 (28) | 24 | 4 | 7 / 7 (W2) | Bölüm 7 |
+| S=2 · 2×4 + Q9 | 6×5 (30) | 16 + 9 | 5 | 5 / 5 (W2) | Bölüm 8 |
+| S=3 · 2×4 | 5×6 (30) | 24 | 6 | 6 / 6 (W2) | üç kat, yüksüz |
+| S=3 · 2×5 + Q9 | 6×8 (48) | 30 + 9 | 9 | 8 / 8 (W2) | varsayılan 6×8 saha; Bölüm 10 |
+
+**Durum uzayı bütçesi:** bugünkü solver tam taramayı en çok 3 000 000 durumda keser (`DEFAULT_MAX_STATES`); 6 genişlikli
+sabit sahada 8 blok sınırdadır, 10 blok aşar (§6.8). §7 U-4 gelene kadar 6 genişlikli bölümlerde N ≤ 8 tutulur; Bölüm 8 ve
+10'un tam kanıtı U-4'e bağlıdır.
+
+### 6.6 Bölüm 1–10 zorluk eğrisi (D-099)
+
+Her bölüm **tek bir fikir** öğretir (§6.1 kodu); fikir ya bir veri imzası (OBSTACLES, `teaches`) ya da bir bulmaca
+kaynağıdır. Bütün bölümler 2–3 dilimlidir (D-099: tek sahada birden çok kat). Zorluk etiketleri ve testere dişi §0–§1
+ile aynıdır; Bölüm 5 artık tanıtım değildir (S1 imzası 2+ dilimle Bölüm 1'e geldi). Türetilen yeni mekanikler: 1 → S1,
+4 → W1, 6 → W2, 8 → Y5, 9 → W3 (K-45 madde 10; OBSTACLES "Veri imzası" tablosundaki S1 ilk bölüm değeri D2 paketinde
+koddaki `firstLevel` ile birlikte 5 → 1 olur, §7 U-2).
+
+**Tablo A — yapı, fikir, geometri**
+
+| # | Ad (TR / EN) | Zorluk | Tek fikir (öğretilen) | Kaynak | Yeni imza | Saha Wy×Hy | Şantiye Ws×Hs × S | H / duvar / geçit | E | Renkler | Şekiller | N |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Ağaç Basamakları / Tree Steps | Kolay (tanıtım) | Kaldır, duvarı aş, bırak; kat bitince kalan bloklar sonraki kat için sahada bekler | T2 | S1 | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | W, Y | D2, O4 | 8–9 |
+| 2 | Platform / Platform | Kolay | Şekil ve gölge: `C3` çifti; yanlış zamanda gelen blok kaybolmaz, sırası gelince kullanılır | T2 | — | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | G, W, Y | O4, C3, D2 | 6–8 |
+| 3 | Ön Duvar / Front Wall | Kolay | Kazı: sonraki katın bloğu bu katın bloğunun üstünde; önce kenara çek | T1 | — | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | G, W, Y | D2, O4 | 7–8 |
+| 4 | Pencere Pervazı / Window Sill | Kolay (tanıtım) | Geçit derindeki bloğa kestirmedir | T8 | W1 | 6×4 | 2×5 × 2 | 5 / 4 / y0 boy 2 | 4 | G, W, Y | D2, O4 | 7–8 |
+| 5 | İki Odalı Ev / Two-Room House | Normal | Park yeri seçimi: kapağı sonraki katın ilk bloğunu örtmeyen cebe koy; bazen yerleşebilecek bloğu beklet | T3 (+T5) | — | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | R, W, Y | D2, O4 | 8 |
+| 6 | Uzun Gövde / Tall Trunk | Normal (tanıtım) | Yüksek duvar: her blok Vinç Alanı'na kalkar; cebe ilk gireni yükseğe park et | T7 | W2 | 4×6 | 2×5 × 2 | 6 / 6 / — | 4 | G, W, Y | D2, O4, C3 | 7–8 |
+| 7 | Çatı Altı / Under the Roof | Normal | Takas: açıkta duran sonraki kat bloklarını şimdi kullan, gömülü olanı sonraki kata bırak; yer yoksa önce yerleştir | T4 (+T6) | — | 4×7 | 2×6 × 2 | 7 / 7 / — | 4 | G, R, W | D2, O4 | 9–10 |
+| 8 | Bahçe Çiti / Garden Fence | Normal (tanıtım) | Ağır Yük kapaktır, yalnız saha içinde kayar; Çekiç onu kırar | T9 (ilk yarı) | Y5 | 6×5 | 2×4 × 2 (+ Q9) | 5 / 5 / — | 5 | R, W, Y | D2, O4, Q9 | 6–7 |
+| 9 | İp Merdiven / Rope Ladder | Normal (tanıtım) | Dar geçitten yalnız tek sıra boyundaki blok geçer | T8 | W3 | 4×6 | 2×5 × 2 | 6 / 6 / y0 boy 1 | 4 | G, R, W | D2, O4 | 8 |
+| 10 | Ağaç Ev Tamam! / Treehouse Done! | **Zor** | Final: üç kat tek sahada; yük iki kez kayar; açgözlü takas tuzaktır (Söküm); Vinç açılır | T9 + T10 | — | 6×8 | 2×5 × 3 (+ Q9) | 8 / 8 / — | 9 | G, R, W | D2, O4, Q9 | 12–15 |
+
+Geometri gerekçeleri (§6.5): 1–5 "her blok kalkar" düzenidir (6×4, duvar = saha tepesi, şantiye bir satır yüksek; E 4 ile
+6 genişlikte N ≤ 9 bugünkü tarama bütçesine sığar, §6.8 P5–P6). 6, 7, 9 dar ve yüksek sahada Yüksek Duvar kullanır: dar
+saha kazıyı derinleştirir, durum uzayını küçültür (§6.8 P2). 8 ve 10 Ağır Yük için 6 genişlik ister (Q9 3×3 ve yanında
+kayma sütunu); 10 varsayılan 6×8 sahayı ilk kez tam kullanır (bölüm finali: "bütün şantiye malzemesi tek yığında") ve
+tam kanıtı §7 U-4'e bağlıdır.
+
+**Tablo B — hedef ölçüt aralıkları** (GDD K-50 tanımları; `—` = uygulanmaz/yok; bantlar §6.2'nin bölüm bazındaki
+inceltmesidir, D2 paketinde JSON `targets`'a kopyalanır)
+
+| # | min | YAO | minShifts | firstNeedDepth | maxCover | depLater | crossDeps | parkSlack | forced | trapCount | greedyTrap | greedyExcess | greedyWin | ahaMin | branch3 | P | Hamle | Kazanma (orta bot) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 8–9 | 1,00 | 0 | 0 | ≤ 1 | 0 | ≥ 1 | — | 0–2 | 0 | — | 0 | ≥ 0,95 | 0 | ≥ 0,40 | 4 | min + 4 | ≥ %95 |
+| 2 | 6–8 | 1,00 | 0–1 | 0 | ≤ 1 | 0 | ≥ 1 | — ya da ≥ 2,0 | 0–2 | 0 | — | 0 | ≥ 0,90 | 0 | ≥ 0,35 | 4 | min + 4 | ≥ %92 |
+| 3 | 9–11 | 1,00 | 2–3 | 1 | 1–2 | 1–2 | ≥ 2 | ≥ 1,5 | 1–3 | 0 | — | 0 | ≥ 0,85 | 0 | 0,25–0,45 | 4 | min + 4 | ≥ %92 |
+| 4 | 10–12 | ≥ 0,75 (1–2 ray) | 2–3 | 1–2 | 2 | 1–2 | ≥ 2 | ≥ 1,0 | 1–3 | 0 | — | 0 | ≥ 0,75 | 0 | 0,20–0,40 | 4 | min + 4 | ≥ %90 |
+| 5 | 12–14 | 1,00 | 3–4 | 1–2 | 2–3 | 2–3 | ≥ 3 | 1,0–2,0 | 2–4 | 0 | — | 1–2 | 0,40–0,70 | 1 | 0,15–0,35 | 2 | min + 2 | %75 |
+| 6 | 11–13 | 1,00 | 3 | 2 | 2–3 | 1–2 | ≥ 2 | 1,0–1,5 | 2–4 | 0 | — | 0–1 | 0,50–0,85 | 0–1 | 0,20–0,40 | 4 | min + 4 | %85 |
+| 7 | 14–16 | 1,00 | 4–5 | 2 | 2–3 | 2–3 | ≥ 3 | 0,8–1,5 | 3–5 | 0 | — | 1–3 | 0,30–0,60 | 1–2 | 0,15–0,30 | 2 | min + 2 | %70 |
+| 8 | 11–13 | 1,00 | 3–4 | 2–3 | 2 | 1–2 | ≥ 2 | 1,0–2,0 | 2–4 | 0 | — | 0–1 | 0,40–0,80 | 0–1 | 0,15–0,35 | 4 | min + 4 | %85 |
+| 9 | 11–13 | ≥ 0,85 (1 ray) | 3–4 | 1–2 | 2 | 1–2 | ≥ 2 | ≥ 1,0 | 2–4 | 0 | — | 0–1 | 0,50–0,85 | 0–1 | 0,20–0,40 | 4 | min + 4 | %85 |
+| 10 | 22–26 | 1,00 | 7–9 | 2–3 | 3–4 | 3–5 | ≥ 5 | 0,6–1,2 | 5–8 | 0–3 | — ya da ≥ 4 | ≥ 2 | 0,05–0,25 | ≥ 2 | ≤ 0,20 | 1 | min + 1 | %45 |
+
+Bütün satırlarda: `deadRate` Kolay/Normal 0, Bölüm 10 ≤ 0,05; ölü masa kapısı (§6.3) geçer; `complete` evet; kanonik
+çözümde kuyruk yok. **Varyant ölçütleri** (§2'deki gibi, `levels:solve --variant`): Bölüm 4 `geçitsiz min − min ≥ 2`,
+Bölüm 9 `≥ 1`; Bölüm 8 ve 10 `min − Çekiç'le min ≥ 2`. **Eğri okuması:** `ahaMin` ilk kez 5'te 1 olur (park yeri ve
+bekletme), 7'de takasla 1–2'ye, 10'da ≥ 2'ye çıkar; tanıtım bölümleri (4, 6, 8, 9) yeni mekaniğe yer açmak için 0–1'de
+kalır. `greedyWin` 1–4'te ≥ 0,75 (açgözlü oyun yeter), 5 ve 7'de 0,30–0,70 (plan gerekir), 10'da ≤ 0,25 (plan şart).
+`depLater` 3'te ilk kez ≥ 1 (D-099'un özü: "sonraki katın bloğu yolu keser"), 10'da 3–5.
+
+### 6.7 Öğretici taslakları (GDD K-53: en çok 2 yumuşak adım; adım yalnız `done` olayıyla biter)
+
+Biçim §0'daki gibidir (`adım · vurgu · el · textKey · done (· startOn)`); eldiven yolu kanonik çözümün ilgili hamlesidir
+ve D2 paketinde JSON'la birlikte `tut_hand_invalid` denetiminden geçer. Konuşan karakter sunumdur (D-101: Usta Kral;
+design-lead). **Yeni anahtarlar** (design-lead yazar, STORY §6A; en çok 6 kelime, renk adı yok): `tut.m.nextfloor` (niyet:
+"Kalan bloklar sonraki kat için."), `tut.m.parkfar` (niyet: "Kenara al, yolu kapatma."), `tut.m.swap` (niyet: "Bu ikisi
+de o yere uyar."). Kullanılmayan (D-099): `tut.m.segments` ve `tut.m.truck` (kamyon yok; anahtarlar arşiv verisi için
+kalır).
+
+| # | Adım 1 | Adım 2 |
+|---|---|---|
+| 1 | ilk gereken blok · drag (kanonik hamle 1; tutulan hücre bloğun üst hücresi, yol saha üstü havadan duvar üstüne) · `tut.m.lift` · `{ event: placementCorrect, count: 1 }` | `startOn: { event: segmentDone }` · `panorama`, `goals` · — · `tut.m.nextfloor` · `{ event: placementCorrect, count: 1 }` |
+| 2 | `panorama`, `build` · — · `tut.m.pattern` · `{ event: placementCorrect, count: 1 }` | üstteki `C3` · hold (gölge "!" gösterir) · `tut.m.shadow` · `{ event: placementCorrect, count: 1 }` |
+| 3 | sonraki katın kapak bloğu · drag (kanonik ilk kaydırma) · `tut.m.dig` · `{ event: yardMove, count: 1, piece: <kapak> }` | `startOn: { event: yardMove, piece: <kapak> }` · kapak, `panorama` · — · `tut.m.carry` · `{ event: segmentDone, count: 1 }` |
+| 4 | tıkaç · drag (kanonik ilk kaydırma) · `tut.m.dig` · `{ event: yardMove, count: 1, piece: <tıkaç> }` | `startOn: { event: yardMove, piece: <tıkaç> }` · derindeki blok, `gap:0` · drag (raya) · `tut.m.gap` · `{ event: gapPass, count: 1 }` |
+| 5 | kapak, `cell:<iyi cep>` · drag (kanonik ilk kaydırma, iyi cebe) · `tut.m.parkfar` · `{ event: yardMove, count: 1, at: <iyi cep çapası> }` (yanlış cep adımı bitirmez) | — (Normal bölüm sade kalır) |
+| 6 | cebe ilk girecek blok, `cell:<yüksek cep>` · drag · `tut.m.park` · `{ event: yardMove, count: 1, at: <yüksek cep çapası> }` | `crane`, `wall` · — · `tut.m.highwall` · `{ event: overWall, count: 1 }` |
+| 7 | açıktaki iki `D2`, `build` · — (eldiven yok) · `tut.m.swap` · `{ event: segmentDone, count: 1 }` | `startOn: { event: segmentDone }` · gömülü `O4` · — · `tut.m.carryNow` · `{ event: placementCorrect, count: 1 }` |
+| 8 | Ağır Yük ve yolunu tıkayan blok · drag (kanonik ilk kaydırma) · `tut.m.heavy` · `{ event: yardMove, count: 1 }` | `booster:hammer`, Ağır Yük · tap (yuva) · `tut.m.hammer` · `{ event: placementCorrect, count: 1 }` |
+| 9 | tıkaç · drag (kanonik ilk kaydırma) · `tut.m.dig` · `{ event: yardMove, count: 1, piece: <tıkaç> }` | derindeki tek sıralı blok, `gap:0` · drag (dar geçitten raya) · `tut.m.narrow` · `{ event: gapPass, count: 1 }` |
+| 10 | `startOn: { event: segmentDone }` · `booster:crane` · tap (yuva) · `tut.m.cranebooster` · `{ event: boosterUsed, count: 1 }` | — (Söküm ilk kez görülürse bağlamsal `tut.ctx.teardown`, K-30) |
+
+### 6.8 Kalibrasyon ölçümleri (2026-11-01, resmî solver, `levels:solve --dir`, önbelleksiz, varyantsız)
+
+Taslaklar oturum scratchpad'inde `schemaVersion` 1 biçiminde tek partiyle yazıldı (bugünkü çekirdek tek partiyi K-55
+anlamında oynatır); depoya girmez. Amaç ölçek ve tuzak davranışını görmekti, bölüm tasarımı değil.
+
+| Taslak | Saha / şantiye × S | N (ikiz) | Sonuç | Durum | Süre / bellek |
+|---|---|---|---|---|---|
+| P1 | 6×4 / 2×5 × 2 | 8 (az) | `min` 9, `minShifts` 1, takas kendiliğinden (K-55 madde 4 örneği), trap 0 | 2 379 724 (tam) | 117 sn / 513 MB |
+| P2 | 4×5 / 2×4 × 2 | 8 (`D2`) | `min` 17, `minShifts` 9, `firstNeedDepth` 9: dar sahada derin kayar-blok bulmacası | 754 098 (tam) | 26 sn / 126 MB |
+| P3 | 6×5 / 2×6 × 2 | 10 | bilinmiyor | > 3 000 000 (kesildi) | 56 sn / 431 MB |
+| P4 | 6×4 / 2×5 × 2 | 10 (`D2`) | bilinmiyor | > 3 000 000 (kesildi) | 78 sn / 758 MB |
+| P5 | 6×4 / 2×5 × 2 | 8 (çok) | `min` 8, `minShifts` 0; 103 ✓-tuzağı geçişi, `deadRate` 0,052 (2×2 Y + YY satırı aynı dilimde, §6.1 karşı örnek); 1 404 çıkmazın hepsi D1/D2/D3a ile yakalanır | 900 998 (tam) | 38 sn / 242 MB |
+| P6 | 6×4 / 2×5 × 2 | 9 (çok) | **Bölüm 1 gri kutu adayı** (aşağıda): `min` 9, `minShifts` 0, `firstNeedDepth` 0, trap 0, bütün uzayda çıkmaz 0, choices 11·18·27 / best 2·1·4, YAO 9/9; D-099 bütçesi 9 + 4 = 13 | 525 552 (tam) | 27 sn / 149 MB |
+
+**P6 — Bölüm 1 gri kutu adayı** (§6.1 güvenli örüntü: W yalnız 2×2 bölgelerde, arzda `O4` W + iki `D2_90` W; Y yalnız
+satırlarda ve hepsi özdeş `D2_90` Y). Dilim 1 `["YY","YY","YY","WW","WW"]`, dilim 2 `["YY","WW","WW","YY","YY"]`; duvar 4,
+geçit yok. Dilim 1 başlangıcı:
+
+```
+       x: 0 1 2 3 4 5   D   6 7
+   y=6:  · · · · · ·   :   · ·  ← Vinç Alanı
+   y=5:  · · · · · ·   :   · ·
+   y=4:  · · · · · ·   :   Y Y
+   y=3:  a a b b . .   #   Y Y
+   y=2:  a a c c . .   #   Y Y
+   y=1:  d d e e f f   #   W W
+   y=0:  g g h h i i   #   W W
+```
+
+`a` `O4_0` W (0,2) · `b` `D2_90` Y (2,3) · `c` `D2_90` Y (2,2) · `d` `D2_90` Y (0,1) · `e` `D2_90` Y (2,1) · `f` `D2_90` W
+(4,1) · `g` `D2_90` Y (0,0) · `h` `D2_90` Y (2,0) · `i` `D2_90` W (4,0). Kanonik çözüm (solver): `f` → (6,0), `i` → (6,1),
+`h` → (6,2), `g` → (6,3), `d` → (6,4) (dilim 1 tamam; `d` alttan boşalan tünelden çıkar), `e` → (6,0), `c` → (6,1), `a`
+→ (6,2), `b` → (6,4); hepsi duvar üstü. Kanonik çözüm takası kendiliğinden yapar: dilim 1'in 2×2 W tabanını iki `D2_90` W
+doldurur, `O4` W dilim 2'nin ortasına gider; ters atama da çözülür (trap 0). Öğretici adım 1'in eldiveni `f`'nin kalkışıdır
+(`piece:5`). D2 paketinde §6.6 Tablo B'ye göre ölçülür ve JSON'a çevrilir (yeni ölçütler U-3 gelince).
+
+**Sonuçlar:** (1) Sabit sahada durum uzayı, sahada serbestçe asılı duran blokların konum sayısıyla büyür; genişlik 6'da 10
+blok bugünkü 3 000 000 sınırını aşar (P3, P4). Bölüm 1–7 bu yüzden ya 6×4'te N ≤ 9 ve ikiz ağırlıklı ya da 4 genişlikte
+tasarlanır; 8 ve 10 için §7 U-4 gereklidir. (2) Dar ve sıkı saha (P2: 4×5, E 4) çok derin bulmaca üretir; bant tavanları
+(`maxDigRun`) bu yüzden vardır. (3) Takas tuzakları yalnız dilimler arası sayımla görünür (P5); §6.1 güvenli örüntüsü
+ve solver kanıtı zorunludur. (4) P1 ve P5'te bütün çıkmazlar D1/D2/D3a ile yakalandı (Söküm'süz çıkmaz 0): kamyon
+dökümünün kalkması Faz 2R'de görülen tek Söküm'süz çıkmaz kaynağını (eski Bölüm 10, 338 durum) ortadan kaldırdı.
+
+### 6.9 Kontrol listesi ekleri (D-099; §5'e ek)
+
+- [ ] `schemaVersion: 2`, `yard.batches` tek parti, `forSegment: 0`, `dropColumns` yok (K-55 madde 1).
+- [ ] 2–3 dilim; her dilimin planı okunur desen (K-31); renk ve şekil açılışları §0.
+- [ ] §6.1 tuzak kaynağı kuralı dilimler arası sayımla denetlendi; Kolay/Normal'de `trapCount` 0, `greedyTrap` yok.
+- [ ] Ölü masa kapısı (§6.3): `complete` evet, `undetectedDead` 0, D1 erişilemez.
+- [ ] Tablo B bantları tutuyor; dışındaki her ölçüt için gerekçe bölüm kaydında.
+- [ ] Hamle `min + P + a`, `a ≥ 0` (K-52 D-099); bot ölçümü LEVEL_REPORT'ta.
+- [ ] Öğretici ≤ 2 yumuşak adım, eldiven yolu kanonik hamle (`tut_hand_invalid` yok).
+- [ ] ASCII gri kutu taslak → JSON → `levels:check` → LEVEL_REPORT → hamle ayarı sırası izlendi (brif ilkesi 6).
+
+---
+
+## 7. Uygulama notları (code-lead'e; D-099)
+
+Bu notlar product-lead'in istedikleridir; kesin tasarım, adlar ve dosya yolları code-lead'in TECH_DESIGN'ıdır. TS çekirdeği
+ve Unity C# çekirdeği birlikte değişir (D-091: golden + TS-kâhinli fuzz eşdeğerliği korunur).
+
+**U-1 Şema (geriye dönük uyumlu).** Önerilen yol A: `schemaVersion` alanı `1 | 2` olur (yoksa 1). v2'de `yard.batches`
+dizisi **biçim olarak kalır** ama tam 1 eleman, `forSegment: 0`, `dropColumns` yok (doğrulayıcı `fixed_yard_batches`,
+GDD K-45 madde 11). Böylece derleyici (`compile.ts`), durum tamponu, Zobrist ve C# ayrıştırıcı değişmez; v1 dosyaları
+(Faz 2R arşivi, `tests/golden/**`) aynen yüklenir. Yol B (sonra, isteğe bağlı): v2'de `yard.pieces` dizisi, derleyici
+onu `batches[0]`'a çevirir; bütün fixture'ları ve iki ayrıştırıcıyı değiştirdiği için D-099 kapsamında önerilmez.
+`targets` şemasına isteğe bağlı bantlar eklenir (GDD §14): `min`, `maxCover`, `depLater`, `crossDeps`, `parkSlack`,
+`forced`, `greedyExcess`, `greedyWin`, `ahaMin`, `branch3` (tamsayı ölçütler `[alt, üst]` tamsayı, oranlar 0–1 sayı;
+`parkSlack` için üst sınır 9,99 "park yok" yerine geçmez: park yoksa ölçüt bant dışı sayılmaz).
+
+**U-2 Doğrulayıcı.** v1/v2 ayrımı `schemaVersion`'a göre; v2'de K-45 madde 11 kodları. K-02 bandı kodu değişmez (tek
+partide F zaten bütün bloklardır). K-52 bandı v2'de D-099 tablosuyla (`min + P ≤ moves ≤ min + P + aMax`). Mekanik
+imzaları: S1 imzası değişmez (`segments` ve dilim sayısı ≥ 2); `MECHANICS` tablosundaki `firstLevel` S1 = 5 değeri ile
+OBSTACLES "Veri imzası" satırı D2 paketinde, yeni Bölüm 1 JSON'uyla aynı commit'te 1 olur (`mechanics.test` ikisini eşit
+ister).
+
+**U-3 Çözücü ölçütleri (GDD K-50 madde 11–19).** Hepsi bugünkü keşif çizgesi ya da U-4 yapıları üzerinde hesaplanır:
+- `maxCover`: başlangıç durumunda `coverOf` (metrics.ts) en büyüğü. `canonShifts`, `parkedBlocks`, `reparks`,
+  `maxDigRun`, `carryShifts`, `parkPeak`/`parkSlack`: kanonik adımlar (`CanonicalStep`) üzerinde tek geçiş; `seg(b)` =
+  bloğun yerleşim adımındaki `segment`.
+- `depLater`/`depEarlier`/`crossDeps`: başlangıç saha doluluğundan sütun bazlı örtü ilişkisi (madde 6 ile aynı), `seg`
+  kanonik atamadan.
+- `choices@k`/`bestChoices@k` bütün k için (bugün k ≤ 2): kanonik yol boyunca aynı hesap; `forced`, `decisionPoints`.
+- `dig(s)`: kaydırma kenarlarının tersinde, "doğru yerleşim kenarı olan durumlar"dan çok kaynaklı BFS. G-uygun kenar
+  kümesi buradan çıkar. `greedyMin`: G-alt çizgesinde (DAG) en kısa yol; `greedyTrap`: G-alt çizgesinde çıkmaz duruma en
+  kısa yol; `greedyWin`: G-DAG üzerinde (durum, kalan bütçe) DP — olasılık = G-uygun hamlelerin ortalaması (birim K-50
+  madde 9 (a): farklı sonraki durum); G-alt çizgesi solver sınırını aşarsa bölüm tohumundan (`seed`) türeyen belirlenimci
+  PRNG ile 2 000 oyunluk örneklem ve raporda `greedyWin~` işareti.
+- `ahaMin`: en kısa çözüm DAG'ında (`dist(s) = c(e) + dist(s')` kenarları) G-uygun olmayan kenarlar 1, diğerleri 0
+  ağırlıklı en kısa yol (0-1 BFS). Kanonik çözümün aha hamleleri (`hold` / `prep`) raporlanır.
+- `branch3`: kanonik yolun k = 0…2 durumlarında giden kenarlar parça kimliğine göre gruplanır; "iyi" = en az bir kenarı
+  en kısa çözüm DAG'ında.
+- LEVEL_REPORT sütunları: yukarıdakiler + `complete` + `undetectedDead` + D1 erişilebilirliği; `metric_out_of_band`
+  bunları `targets` ile karşılaştırır. SOLVER_VERSION artar (önbellek geçersizleşir).
+
+**U-4 Ölçek (engelleyici bağımlılık).** §6.8: sabit sahada 6 genişlik + 10 blok 3 000 000 durumu aşıyor. İstenen: Bölüm
+1–10'un hepsi için `complete` evet, bir bölüm ≤ 120 sn ve ≤ 2 GB (CI'da `levels:check` ≤ 20 dk). Önerilen yöntemler
+(code-lead seçer, kanıtı testle verir):
+1. **`min`, `minShifts`, kanonik çözüm:** A* (h = kalan malzeme bloğu sayısı; her yerleşim en az 1 hamle, kabul edilebilir)
+   ve kaydırma sayısı sınırlı 0-1 BFS; bu, K-50 madde 8 kapsamı K'yı (≤ `minShifts` + 1 kaydırma) zaten kapsar.
+   `trapCount`, `deadRate`, `choices@k` kapsam K ile sınırlıdır; bütün uzayı gerektirmez.
+2. **Çıkmazlık ve D1 için saha sıfırlama eşdeğerliği (önerilen kanıt, testle doğrulanmalı):** saha yerçekimi kapalı
+   (`gravity.yard = false`), zamanlayıcısız (W4, W5, S5, S6, Y4 yok) ve komşu etkili saha engelleri olmayan (Y1, Y2, Y3,
+   Y7 yok) bir v2 bölümünde, erişilebilir her s durumundan sahadaki kalan blokların hepsi **başlangıç çapalarına** geri
+   götürülebilir: s'ye giden geçmişteki kaydırmalar ters sırayla geri oynatılır, yerleşmiş blokların kaydırmaları atlanır
+   (onlar artık yoktur ve yalnız yer açarlar; kalan blokların ara konumları geçmişteki ile aynıdır). Ters yön de geçerlidir.
+   Sonuç: s ile s\* (aynı şantiye, kalan bloklar başlangıç çapalarında) aynı kaydırma bileşenindedir; **çıkmazlık yalnız
+   şantiye durumunun (hangi blok sınıfının nereye yerleştiğinin) fonksiyonudur.** Böylece çıkmaz ve D1 denetimi "makro
+   durum" çizgesinde yapılır: düğüm = geçerli kısmi şantiye dolumu; kenar = s\*'den kaydırmalarla çıkarılıp doğru yere
+   bırakılabilen blok (tek kaynaklı erişim araması, erken çıkışlı). Çizge küçük (kısmi döşeme sayısı) ve kesin.
+   **Kanıtın dışında kalan yol:** kaydırma yolunun bir geçidin rayından geçip sahaya dönmesi (K-12); sonradan o raya yerleşen
+   blok yolun tersini kapatabilir. Geçitli bölümde (4, 9) bu kenarlar ya tam tarama ile ya da kaydırma yolu raya girmeyen
+   alternatif yolla denetlenir. Doğrulama: makro yöntem ile tam taramanın çıkmaz kümeleri bugünkü tam taranabilen bütün
+   bölümlerde (Faz 2R 1–10, §6.8 P1, P2, P5, P6) eşit olmalıdır.
+3. **Bellek ve hız:** ikiz bloklar zaten tek sınıftır (hash.ts); ek olarak ölçüt geçişleri kenar listesini saklamadan
+   yeniden üretebilir; işçi iş parçacıkları bölüm başına.
+U-4 gelene kadar: 6 genişlikli v2 bölümünde N ≤ 8–9 (P1, P5, P6 tam tarandı); Bölüm 8 ve 10 yalnız U-4 ile kanıtlanır.
+
+**U-5 Üretici (generator) tarifi — belirlenimci arama.** Komut önerisi `npm run levels:gen -- --level N` (ad code-lead'in).
+1. **Girdi:** §6.6 Tablo A + B satırı (boyut, S, duvar/geçit, renkler, şekiller, N aralığı, hedef bantlar, zorluk, P) ve
+   tohum `seed` (yoksa `id × 1000 + id`). Plan desenleri ya product-lead'in yazdığı plan listesinden (yapı parçası adlarıyla)
+   ya da desen ailelerinden (K-31: şerit, çapraz şerit, dama, simetri) seçilir.
+2. **Parça kümesi:** her dilimin planı, izinli şekillerle **tam örtü** olarak döşenir (renk tutar, K-34 alttan üste
+   sırası vardır); bütün dilimlerin döşemeleri birleşik parça çok kümesini verir. §6.1 tuzak kaynağı kuralı burada
+   süzgeçtir: Kolay/Normal adayında, dilimler arası sayımla her ara durumda döşenebilirlik bozulmamalıdır (D3a ile hızlı
+   ön sınama; kesin karar solver'da).
+3. **Sahaya diz:** parçalar Wy × Hy sahaya **yerçekimiyle** (saha yerçekimi kapalı olsa da başlangıçta her blok tabana ya da
+   başka bir bloğa oturur; asılı başlangıç yok — okunabilirlik ve D1 güvenliği) ve "ters istif" sırasıyla konur: önce
+   gereken bloklar üstte, sonraki katlarınkiler altta (T2), sonra Tablo B'nin `depLater`'ı kadar sonraki kat bloğu üste
+   alınır (T1); E boş hücre bir ya da iki "cep" olarak bırakılır (yeri zorluk değişkenidir).
+4. **Ölç:** solver (U-3) bütün ölçütleri hesaplar. Uygunluk = sert kısıtlar (çözülür, `complete`, `undetectedDead` 0, D1
+   yok, YAO ≥ 0,60, Kolay/Normal'de `trapCount` 0 ve `greedyTrap` yok, K-02 bandı, tam örtü) + yumuşak kısıtlar (Tablo B
+   bantlarına ağırlıklı uzaklık; önce `ahaMin`, `greedyWin`, `forced`, `depLater`, `parkSlack`, sonra `min`, `minShifts`,
+   `maxCover`, `branch3`).
+5. **Ara:** tavlama ya da tepe tırmanma; komşuluk işlemleri: iki parçanın saha yerini takas, bir parçayı başka bir oturak
+   yere taşı, cebi taşı, bir bölgenin döşemesini eşdeğeriyle değiştir (`O4` X ↔ iki `D2` X), iki dilimin renk bölgelerini
+   desen korunarak değiştir, yük (Q9) konumunu değiştir. Her yineleme önce ucuz ölçütleri (A* `min`, `minShifts`,
+   `firstNeedDepth`) hesaplar; pahalılar (G-ölçütleri, makro çıkmaz) yalnız eşiği geçen adayda.
+6. **Belirlenimcilik:** bütün rastgelelik tek PRNG'den (tohum = `seed`; çekirdeğin `rng.ts` üreteci) ve sabit sırayla;
+   sabit yineleme sayısı ya da sabit "iyileşmesiz adım" sınırı (duvar saati yok); eşitlikte K-50 madde 4 demeti. Aynı
+   tohum + aynı girdi + aynı SOLVER_VERSION → bit bit aynı bölüm. Aday sonuçları `levelHash` ile önbelleğe alınır.
+7. **Çıktı:** en iyi 3 aday JSON (`schemaVersion: 2`, `targets` dolu) + ölçüt raporu + ASCII önizleme
+   (`levels:preview`). Seçim ve ASCII kaydı product-lead'indir (LEVELS §2 biçiminde); hamle ayarı `a` bot ölçümünden sonra
+   (K-52).
+
+**U-6 Çekirdek (TS + C#).** (1) K-55 madde 1 yükleme denetimi (v2'de tek parti; çekirdek zaten parti 0'ı başta yerleştirir,
+parti k ≥ 1 yoksa teslimat imleci hiç ilerlemez — davranış değişikliği yok). (2) K-30 D1: yeniden dizme yerine zincir/ıslaklık
+kaldırma + Söküm (`cause: access`); `RULES_VERSION` 2 → 3 (K-43 madde 4 eski kayıtları cezasız kapatır, E-67). (3) Olaylar:
+v2'de dilim geçişi `deliveryDone` üretmez; bu olay ve kamyon göstergesi yalnız K-55 madde 5 kuyruğuyla oluşur. (4) Golden kayıtlar:
+Faz 2R 1–10 (v1) aynen kalır; D2 paketinde yeni v2 bölümlerinin golden'ı eklenir. (5) Unity: aynı değişiklikler C#
+çekirdeğinde, TS-kâhinli fuzz v1 ve v2 bölümleriyle.
+
+**U-7 Belge senkronu ve testler.** Bu paket (D0) GDD'ye K-55 başlığı ve E-62…E-67 ekledi; `npm run test:rules` bu yüzden
+TECH §12.4'te **K-55 satırı** ister (önerim: F sütunu `3` — D-099 içerik fazı; böylece `--phase 2R` kapısı yeni testleri
+şimdi istemez) ve `tests/tools/ruleCoverage.test.ts`'deki K sayısı 54 → 55 olur. K-55 ve E-62…E-67 için testler ("K-55 …",
+"E-62 …") D1 paketinde. GDD'de var olan E satırlarına eklenen D-099 notları K/engel kimliği içermez (faz hesapları
+değişmez). D2 paketinde: §1 tablosu, §2 kayıtları ve `levels/*.json` aynı commit'te değişir
+(`tests/review/data.review.test.ts`, `tests/level/drafts.test.ts` bunları karşılaştırır); OBSTACLES `obs.s1.desc` metni
+ve `src/i18n/*.json` birlikte değişir (`tests/services/i18n.test.ts`).
+
+**U-8 Sıra önerisi.** D1 (code-lead): U-1, U-2, U-6 + U-3'ün ucuz ölçütleri + U-4 madde 1–2 + testler (TECH §12.4 dahil).
+D2 (product-lead + code-lead): U-5 üretici, Bölüm 1–10 v2 (§6.6), §1/§2/JSON/golden birlikte. D3: orta bot (WP-N) ve `a`
+ayarı, LEVEL_REPORT, Unity'ye taşıma. Her pakette kapı: `npm run check`, `levels:check`.
