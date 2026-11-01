@@ -608,3 +608,17 @@ Karar: Unity Faz 2 (saf C# çekirdek) kabul edildi: 1455 test yeşil, 10/10 alt�
 Gerekçe: DOTween Asset Store'dan elle indirilir, CI'da kurulamaz; Pages'te hemen oynanabilir olmak öncelik. Proje sahibi onayladı.
 Etkilenen: minik-usta-unity Assets/MinikUsta/Presentation*, docs/CI.md, D-093
 
+### D-097 — Unity Faz 3 kabul (2026-11-01)
+Durum: KABUL. Faz 3 (Q0–Q5, Unity reposu commit 5c15573) kabul edildi: motor-bağımsız sunum çekirdeği (tween, planlayıcı, yerleşim, sürükleme),
+oynanabilir yer tutucu tahta, his katmanı, şüpheci inceleme (18 bulgu; 1 Engel + 4 Önemli kapatıldı) ve belgeler. Unity Editor / GameCI doğrulaması lisans
+gizli değerleri (UNITY_EMAIL, UNITY_PASSWORD, UNITY_LICENSE) girilince yapılır; Öneri düzeyi bulgular (P3-06…P3-18) Faz 4–5'te ele alınır.
+
+### D-098 — Program yönetimi: orkestratör yalnız yönetir, fazlar otonom, Royal Match çıtası (2026-11-01)
+Durum: KABUL. Proje sahibi talimatı ("fable sadece ceoluk yapsın… royal match seviyesinde… geri kalan işleri opus sonnet haiku yapsın"): orkestratör (Fable)
+yalnız planlar, dağıtır, inceler ve karar yazar; tüm üretim işi Opus (mimari, zor port, şüpheci inceleme, sanat yönü), Sonnet (uygulama, düzeltme) ve Haiku
+(belge, kopya, mekanik iş) ajanlarına gider (D-095'i genişletir). Faz sonunda onay beklenmez: faz raporu yazılır, bir sonraki faz başlar. Durma koşulları yalnız
+proje sahibine bağlı girdiler (Unity lisans gizli değerleri, mağaza hesapları, imza anahtarları, ücretli hizmetler) ve geri alınamaz dış eylemlerdir. Kalite çıtası:
+ART_REFERENCE §10 rubriğinde her ekranın her boyutu ≥ 4/5 (iki bağımsız puanlayıcı), CLAUDE.md "Bitti tanımı", R2-12/R2-13 sınırları (referanslar yalnız stil
+rehberi), ücretsiz ve üretken yapay zekâsız görsel üretim. Program: Faz 4 görsel ve his yükseltmesi (Unity); Faz 5 içerik ve meta (50 bölüm, 5 hikâye bölümü,
+kasaba, ekonomi, 2 etkinlik, sahte mağaza); Faz 6 yayın hazırlığı (performans, Android/WebGL derlemeleri, mağaza metinleri, gizlilik).
+
