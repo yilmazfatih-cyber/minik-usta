@@ -635,3 +635,14 @@ Durum: ÖNERİ. D-099 bütçesinde Normal P = 2 iken Bölüm 5, 7, 9'da bekletme
 1–3 fazla hamleyle yine kazanır (`greedyWin` 1,00); aha anı kazanmayı değil payı belirler. Orta bot (WP-N) gelince bu
 bölümlerde kazanma oranı %80'in üstündeyse önce `a` ve bulmaca ayarı, sonra Normal P'nin 1'e indirilmesi değerlendirilir
 (K-52 tablosu, entrepreneur ile birlikte; ekonomi ve +5 talebi etkilenir).
+
+### ÖNERİ P-F1-1 — Tablo B'nin ölçeğe bağlı sütunları revize edilir; Normal P = 2 kalır (code-lead, 2026-11-02)
+Durum: ÖNERİ (P-A2-2'yi ölçümle tamamlar; karar product-lead + orkestratör, proje sahibine "Bölüm 1–9 açgözlü oyunla
+kazanılabilir" açıkça sorulur). Ölçüm (LEVELS §6.11, `levels:solve`, beceri botu vekili ε 0,12, Bölüm 1–10 orta-bot hedefleriyle
+kalibre): Normal P 2 → 1, Bölüm 5 ve 7'de orta vekil kazanma oranını 0,72/0,73'ten 0,51/0,52'ye indirir (hedef %65–80) ve Normal
+bütçesini Zor ile eşitler; bu yüzden **P = 2 kalır**. Bölüm 10 `moves` 14'te 0,41 (hedef %40–55), 15'te 0,62: `a` = 0 kalır. Tablo B'nin
+`min`, `maxCover`, `forced`, `parkSlack` sütunları bugünkü ölçek sınırında (A2: 4×5–6×5 saha, 7–8 blok, U-4 yok) tutturulamaz;
+`greedyWin` neredeyse ikilidir (0 ya da 1) ve Tablo B'nin ara bantlarını (0,30–0,85) üretemez. Öneri: (1) `greedyWin` sütunu
+`greedyExcess > P` (açgözlü en iyi yolda bile kaybeder) ya da beceri botu bandı olarak yeniden tanımlanır; (2) ölçek sütunları
+Bölüm 1–4 için revize edilir; (3) Bölüm 5, 7, 10 U-4 (makro çizge) sonrası Tablo B'ye çekilir. O güne kadar `puzzle_greedy_easy`
+uyarıları (Bölüm 5, 7) bilinçli ve görünür kalır. Yazıldığı yer: `docs/LEVELS.md` §6.11.
