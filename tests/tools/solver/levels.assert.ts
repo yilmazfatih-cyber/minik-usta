@@ -16,9 +16,18 @@ import { LEVELS_2 } from './levels.expected.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
-/** The raw JSON of levels/level_NNN.json. */
+/**
+ * The raw JSON of the Faz 2R level NNN (tests/fixtures/levels-2r/level_NNN.json, P4B-01). The shipped D-099 levels are
+ * `schemaVersion` 2 and have their own solver tests (shipped.test.ts); this suite keeps the `schemaVersion` 1 solver paths
+ * (truck batches, delivery fairness K-51/5; GDD K-55 item 9) on the archive.
+ */
 export function levelJsonFile(n: number): unknown {
-  return JSON.parse(readFileSync(join(ROOT, 'levels', `level_${String(n).padStart(3, '0')}.json`), 'utf8'));
+  return JSON.parse(
+    readFileSync(
+      join(ROOT, 'tests', 'fixtures', 'levels-2r', `level_${String(n).padStart(3, '0')}.json`),
+      'utf8',
+    ),
+  );
 }
 
 /** `extra` registers more tests in the same describe; `report()` is the solved level. */
@@ -29,7 +38,7 @@ export function describeLevel(
 ): void {
   const exp = LEVELS_2[n];
   if (!exp) throw new Error(`no LEVELS 2 expectation for level ${n}`);
-  describe(`level ${n} (levels/level_${String(n).padStart(3, '0')}.json)`, () => {
+  describe(`level ${n} (Faz 2R archive level_${String(n).padStart(3, '0')}.json)`, () => {
     let r: SolveReport;
     beforeAll(() => {
       r = solveLevelData(LevelSchema.parse(levelJsonFile(n)), { fileId: n });

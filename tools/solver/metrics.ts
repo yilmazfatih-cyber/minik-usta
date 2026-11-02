@@ -607,7 +607,7 @@ export interface CheckInput {
   readonly complete: boolean;
 }
 
-const BAND_KEYS = [
+export const BAND_KEYS = [
   'minShifts',
   'firstNeedDepth',
   'choices0',
@@ -623,13 +623,13 @@ const BAND_KEYS = [
   'ahaMin',
   'branch3',
 ] as const;
-type BandKey = (typeof BAND_KEYS)[number];
+export type BandKey = (typeof BAND_KEYS)[number];
 
 /**
  * The value a `targets` band is compared with (L-33). `undefined` = never out of band (`parkSlack` without a park,
  * LEVELS §7 U-1); `Infinity` = `greedyExcess` without a greedy win (in band only when the high bound is 99).
  */
-function bandValue(m: PuzzleMetrics, k: BandKey): number | null | undefined {
+export function bandValue(m: PuzzleMetrics, k: BandKey): number | null | undefined {
   const d = m.d099;
   switch (k) {
     case 'minShifts':

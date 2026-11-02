@@ -69,7 +69,7 @@ import {
 import type { PresenceInputKind, PresenceState } from '../../src/scenes/level/tutorial/TutorialPresence.ts';
 import { moveMatches } from '../../src/scenes/level/tutorial/tutorialEvents.ts';
 import { loadBoosterUnlock } from '../../tools/lib/levels.ts';
-import { loadLevelJson } from '../fixtures/builders.ts';
+import { loadArchive2rJson as loadLevelJson } from '../fixtures/builders.ts';
 import { LEVELS_1_10, handSteps } from '../core/moves.fixtures.ts';
 
 const ROOT = join(import.meta.dirname, '..', '..');
@@ -672,9 +672,10 @@ describe('K-53/4 contextual lines tut.ctx.* (UX 13.1, 13.2; GDD 14.1/2, K-34 hoo
     );
     expect(topics).toEqual(['streak', 'goldtrowel', 'lastmoves', 'queue']);
     expect(ctxFromMove([ev({ t: 'truckHelp', kind: 'unchain' }, 12)], 9, 3, 5)).toEqual(['truckhelp.free']);
-    expect(ctxFromMove([ev({ t: 'truckHelp', kind: 'reshuffle', moves: [] }, 12)], 9, 3, 5)).toEqual([
-      'reshuffle',
-    ]);
+    // P4B-07: the core never reshuffles any more (RULES_VERSION 3, K-55 item 8); an old reshuffle / reshape cue opens no line
+    expect(ctxFromMove([ev({ t: 'truckHelp', kind: 'reshuffle', moves: [] }, 12)], 9, 3, 5)).toEqual([]);
+    expect(ctxFromMove([ev({ t: 'truckHelp', kind: 'reshape', moves: [] }, 12)], 9, 3, 5)).toEqual([]);
+    expect(CTX_TOPICS).not.toContain('reshuffle');
     expect(CTX_TOPICS).not.toContain('truckhelp.material');
     expect(CTX_TOPICS).toContain('teardown');
   });

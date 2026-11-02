@@ -1977,3 +1977,22 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
   Bölüm 8'de `ahaMin` 0 (yük tanıtımı sade; yük + bekletme birleşimi bugünkü ölçek sınırında bulunamadı); 9'da 2, 10'da
   1, 5'te 1, 7'de 2. DECISIONS'a iki ÖNERİ yazıldı (P-A2-1, P-A2-2). Unity: yeni `levels/*.json` ve
   `tests/golden/*.json` code-lead(unity) tarafından C# fikstürlerine taşınmalı (D-091).
+
+## D-099 paket F1 — code-lead (web) inceleme bulgularını kapatma (P4B-01/02/03/07, 2026-11-02)
+
+- [code-lead → orkestratör] **P4B-01 kapandı.** `wip/a2-levels` (`e80a318`) + Faz 2R arşivi (`tests/fixtures/levels-2r/`, web
+  `c1facf4`; Unity `Archive2R` ile aynı 30 dosya) + A2'nin test paketi A/B/C: 160 kırmızı → 0 (vitest 2 200+ test yeşil).
+  Yayın verisi için yeni testler: `tests/level/shipped.test.ts`, `tests/tools/solver/shipped*.test.ts`, `spec.test.ts`.
+  `wip/a2-levels`, `npm run check` yeşilken `wip/phase-2r`'ye birleştirildi (ayrıntı TECH_DESIGN §D99.6).
+- [code-lead → product-lead] **P4B-02/03: ölçüm ve açık soru (LEVELS §6.11 eklendi, veri değişmedi).** Tablo B ile gerçek arasındaki
+  fark artık araçla görünür (`targets_diverge_from_spec`, LEVEL_REPORT "Şartname sapması"). `puzzle_greedy_easy` `ahaMin`'den
+  bağımsız oldu: Bölüm 5 ve 7 uyarı alır (GDD K-51/9 metnini güncelleyin ya da kuralı geri aldırın). Beceri botu vekiliyle
+  (ε 0,12; orta-bot hedefleriyle kalibre) Normal P 2 → 1 denemesi Bölüm 5/7'yi 0,72/0,73 → 0,51/0,52'ye düşürür (Normal hedefi
+  %65–80'in altı), bu yüzden reddedildi; Bölüm 10 `moves` 14'te 0,41 (hedef %40–55), 15'te 0,62 ve açgözlü oyun kazanır,
+  bu yüzden `a` = 0 kaldı. Karar bekleyen soru LEVELS §6.11 madde 7: Tablo B'yi revize et (a) ya da bölümleri çek (b, U-4 ister).
+- [code-lead → design-lead] **P4B-07 (D-101):** `obs.s1.desc` OBSTACLES S1 D-099 metnine, `lose.offer.gift` «Usta Kral'dan hediye» /
+  «a gift from the King», prolog panel 2 konuşmacısı `story.prologue.p2.king` oldu; `tut.ctx.reshuffle` silindi. STORY.md'de
+  yalnız bu satırlara dokundum (prolog panel 2, `lose.offer.gift`, `tut.ctx.reshuffle` üstü çizili), UX_FLOWS satır 1083 ve
+  OBSTACLES S1 bilgi kartı satırı. **STORY.md'de §4.1 sonrası ~8 «Usta Dede» konuşma satırı kaldı** (i18n anahtarı yok; D-101
+  tonuyla yeniden yazılmalı) ve JUICE #21c «reshuffle» satırı ölü. İstemezseniz geri alın.
+- [code-lead → design-lead] `tokens.json` `drag.tiltMaxDeg` (P4B-10) ve boş saha hücresi dokusu (P4B-16) bu pakette değil.

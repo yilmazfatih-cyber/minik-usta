@@ -138,15 +138,14 @@ describe('design-lead screens review 1 — code-lead findings', () => {
     expect(view).toMatch(/const trail = this\.ghostPath\.length > 0 \? this\.ghostPath : this\.path;/);
   });
 
-  it('UX 13.1 locked-sequence lines (DS-14): Söküm, truckhelp.free and reshuffle stay duration.teardownLine (2400 ms), queued lines 4000', () => {
+  it('UX 13.1 locked-sequence lines (DS-14): Söküm and truckhelp.free stay duration.teardownLine (2400 ms), queued lines 4000', () => {
     expect(TOKENS.duration.teardownLine).toBe(2400);
     expect(TEARDOWN_LINE_MS).toBe(2400);
-    expect([...LOCKED_LINE_TOPICS].sort()).toEqual(['reshuffle', 'teardown', 'truckhelp.free']);
+    expect([...LOCKED_LINE_TOPICS].sort()).toEqual(['teardown', 'truckhelp.free']);
     const seen = new Set<string>();
     const tips = new ContextTips({ seen: (t) => seen.has(t), markSeen: (t) => void seen.add(t) });
     const open = { stepActive: false, blocked: false };
     for (const [topic, ms] of [
-      ['reshuffle', 2400],
       ['truckhelp.free', 2400],
       ['queue', TOKENS.tutorial.visibleMs],
     ] as const) {

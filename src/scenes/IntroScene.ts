@@ -49,7 +49,7 @@ const VEIL_DEPTH = 100;
 /** STORY §4.0 balloons per panel: speaker key + text key. */
 const LINES: readonly (readonly I18nKey[])[] = [
   ['story.prologue.p1.tuna'],
-  ['story.prologue.p2.dede'],
+  ['story.prologue.p2.king'],
   ['story.prologue.p3.tuna', 'story.prologue.p3.kepce'],
 ];
 

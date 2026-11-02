@@ -106,7 +106,10 @@ function toSite(
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 function levelFile(id: number): CompiledLevel {
   const json: unknown = JSON.parse(
-    readFileSync(join(ROOT, 'levels', `level_${String(id).padStart(3, '0')}.json`), 'utf8'),
+    readFileSync(
+      join(ROOT, 'tests', 'fixtures', 'levels-2r', `level_${String(id).padStart(3, '0')}.json`),
+      'utf8',
+    ),
   );
   const loaded = loadLevel(json);
   if (!loaded.ok) throw new Error(`level ${id} does not load: ${JSON.stringify(loaded.issues)}`);

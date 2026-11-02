@@ -125,7 +125,7 @@ içinde soluk, kırık köşeli bir tabela. Kepçe sandığın kenarından burnu
 
 **Panel 2** — Arka avlu. Tabela iki sehpanın üstünde; Tuna rengârenk boyuyor, Kepçe'nin kuyruğu boyalı. Usta Dede
 gözlüğünü burnuna itmiş, gülümsüyor.
-- Usta Dede: "Bizim firma! Yıllardır kapalıydı." / "Our old company! Closed for years."
+- Usta Kral: "Bizim firma! Yıllardır kapalıydı." / "Our old company! Closed for years."
 
 **Panel 3** — Evin önü. Boyanmış tabela kapının üstünde (yazı i18n katmanı: "MİNİK USTA İNŞAAT" / EN `{company}`). Tuna kaskını iki eliyle düzeltiyor, Kepçe zıplıyor.
 - Tuna: "Minik Usta İnşaat yeniden açıldı!" / "{company} is open again!"
@@ -462,7 +462,7 @@ hangi adımda çıktığı LEVELS §2 `tutorial[]` verisindedir (Faz 2R: yalnız
 | `tut.ctx.tootall` | Bu blok çok uzun, üstten geçemez. | Too tall to pass over. | K-05 |
 | `tut.ctx.lastmoves` | Hamleler azaldı, sakin düşün. | Few moves left. Think it through. | UX §5.1 az hamle uyarısı (DL-2R-19; eski "Son beş hamle!" tetik değiştiği için kalktı) |
 | `tut.ctx.queue` | Sahada yer aç, kamyon boşaltsın. | Make room for the truck. | K-26 |
-| `tut.ctx.reshuffle` | Sıkıştık! Kamyon sahayı yeniden diziyor. | Stuck! The truck reshuffles the yard. | K-30 D1 (zincir/ıslaklık yok ya da kalktıktan sonra hâlâ D1) |
+| `tut.ctx.reshuffle` | ~~Sıkıştık! Kamyon sahayı yeniden diziyor.~~ | ~~Stuck! The truck reshuffles the yard.~~ | **D-099'da kaldırıldı** (K-55 madde 8: D1 yeniden dizmez, Söküm `access`; `RULES_VERSION` 3 çekirdekten `truckHelp{reshuffle}` hiç gelmez; code-lead P4B-07 ile i18n'den ve `contextTips`'ten sildi) |
 | `tut.ctx.truckhelp.material` | ~~Malzeme eksikti. Kamyon getirdi!~~ | ~~We were short on material. The truck brought more!~~ | **Faz 2R'de kaldırıldı** (R2-05, K-30: Kamyon Yardımı blok yaratmaz); i18n'den code-lead siler |
 | `tut.ctx.truckhelp.free` | Kamyon yardım etti, bloklar serbest. Devam! | Truck helped. Blocks are free! | K-30 D1 (yalnız zincir/ıslaklık kalkıp D1 çözüldüyse) |
 | `tut.ctx.teardown` | Çıkmaz oldu, son bloğu söktük. | Dead end, so we undid that. | K-30 Söküm (her Söküm'de `duration.teardownLine` 2,4 s; "bir kez" kuralının istisnası; UX §13.1, JUICE #107) |
@@ -603,7 +603,7 @@ değilse `league.bonus.levels.some` (`{list}` = `difficulty.*` adları "/" ile, 
 | `lose.offer.moves` | +{n} hamle | +{n} moves |
 | `lose.offer.count` | Teklif {n}/{max} | Offer {n}/{max} |
 | `lose.offer.last` | Teklif {n}/{max} · son teklif | Offer {n}/{max} · last offer |
-| `lose.offer.gift` | +{n} hamle · Usta Dede'den hediye | +{n} moves · a gift from Grandpa |
+| `lose.offer.gift` | +{n} hamle · Usta Kral'dan hediye | +{n} moves · a gift from the King |
 | `lose.ad` | Reklam izle · +{n} hamle | Watch an ad · +{n} moves |
 | `lose.adToday` | bugün {n}/{max} | today {n}/{max} |
 | `lose.decline` | Hayır, teşekkürler | No thanks |

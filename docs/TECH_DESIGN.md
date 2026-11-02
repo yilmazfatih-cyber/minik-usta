@@ -1977,6 +1977,31 @@ error); üretici varsayılan bütçesi 400 000 durumdur (`--max-states`). Bölü
   sorunlar, ASCII, arama izi). Çıkış 1: hatasız aday yok.
 - Testler: `tests/tools/levelsGen.test.ts` (döşeme sayımı, yerçekimi bırakma, belirlenimcilik, hedefe yaklaşma, CLI).
 
+### D99.6 İnceleme turu F1 (P4B-01/02/03/07, 2026-11-02)
+
+- **Faz 2R arşivi (P4B-01).** `tests/fixtures/levels-2r/` web `c1facf4`'teki Faz 2R verisidir: `level_NNN.json`,
+  `level_NNN.hand.json`, `level_NNN.solver.json` (30 dosya; elle düzenlenmez, oyun okumaz, Unity'deki
+  `Core.Tests/Archive2R` ile bayt bayt aynı). `tests/fixtures/builders.ts` `ARCHIVE_2R_DIR`, `archive2rPath`,
+  `loadArchive2rJson`; `tests/core/moves.fixtures.ts` `levelFile`, `handMoves`, `handSteps`, `craneMoves` arşivi, `shippedLevelFile`
+  ve `shippedHandMoves` yayın verisini (`levels/`, `tests/golden/`) okur. K-25…K-27 (parti, kamyon, kuyruk) ve `schemaVersion` 1
+  yolları arşiv üzerinde sınanır (GDD K-55 madde 9); yayın verisi `tests/level/shipped.test.ts` (doğrulayıcı, mekanik
+  imzaları, LEVELS §6.6 Tablo A ↔ JSON) ve `tests/tools/solver/shipped*.test.ts` (çözücü, K-51/K-52, golden, beceri botu) ile
+  sınanır. `MECHANICS` S1 `firstLevel` 5 → 1 (OBSTACLES "Veri imzası" ile eşit).
+- **Şartname karşılaştırması (P4B-02).** `tools/solver/spec.ts` LEVELS §6.6 Tablo B'yi veri olarak taşır (`SPEC_BANDS`, `choices0`
+  alt sınırı §6.2) ve `tests/tools/solver/spec.test.ts` tabloyu LEVELS.md'den ayrıştırıp eşitler. `specGaps(level, metrics)` gerçek
+  değer ya da JSON `targets` bandı Tablo B dışındaysa `SpecGap` döndürür; `solveLevelData` bunu `SolveReport.specGaps` ve
+  `targets_diverge_from_spec` notu olarak yazar (hata değil), `LEVEL_REPORT` "Şartname sapması" tablosunu üretir.
+  `puzzle_greedy_easy` (K-51/9, L-39) Normal (tanıtım hariç) ve Zor'da `greedyWin > 0,70` iken `ahaMin`'den bağımsız uyarır.
+- **Beceri botu vekili (P4B-03).** `d099Metrics.skillWin` = `{novice, mid, expert}`: oyuncu her hamlede olasılıkla 1 − ε en kısa
+  yoldaki bir hamleyi (`dist(t) + maliyet = dist(s)`), ε olasılıkla çizgenin herhangi bir kenarını eşit olasılıkla seçer; kazanma
+  olasılığı `moves` içinde tam DP (`skillWinProbability`, durum × kalan hamle, `Float32Array`). ε = 0,25 / 0,12 / 0,06
+  (`SKILL_MISTAKE`); 0,12, Bölüm 1–10'un LEVELS §0 orta-bot hedefleriyle en iyi örtüşendir (kalibrasyon: ε 0,06…0,25 koşuldu).
+  WP-N playtest botu değildir ve insan kazanma oranı ölçümü sayılmaz; bölümleri birbirine göre kıyaslar ve `a` seçiminde
+  (K-52) gösterge olarak kullanılır. `SOLVER_VERSION` değişmedi (golden dosyaları aynı).
+- **i18n (P4B-07).** `obs.s1.desc`, `lose.offer.gift` (Usta Kral), `story.prologue.p2.king`; `tut.ctx.reshuffle` ve bağlamsal
+  `reshuffle` konusu silindi (`RULES_VERSION` 3 çekirdekten `truckHelp{reshuffle}` göndermez). Testler: `tests/services/i18n.test.ts`
+  ("v2 bölümlerinin gösterdiği metinlerde kamyon malzeme getirir geçmez", "Usta Kral Usta Dede'nin yerini aldı").
+
 
 ## 3. Şekiller
 

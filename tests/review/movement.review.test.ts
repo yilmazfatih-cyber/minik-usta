@@ -1310,10 +1310,13 @@ describe('round 2 — GDD §14.1 drag signals with a debris rail start', () => {
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-/** levels/level_00N.json through the game load path (schema + runtime logic). */
+/** The Faz 2R level 00N (tests/fixtures/levels-2r/, P4B-01) through the game load path (schema + runtime logic). */
 function levelState(id: number): GameState {
   const json: unknown = JSON.parse(
-    readFileSync(join(ROOT, 'levels', `level_${String(id).padStart(3, '0')}.json`), 'utf8'),
+    readFileSync(
+      join(ROOT, 'tests', 'fixtures', 'levels-2r', `level_${String(id).padStart(3, '0')}.json`),
+      'utf8',
+    ),
   );
   const loaded = loadLevel(json);
   if (!loaded.ok) throw new Error(`level ${id} does not load: ${JSON.stringify(loaded.issues)}`);
@@ -1733,7 +1736,10 @@ describe('round 3 — Bölüm 1–10 start boards (level data)', () => {
       const { wy, hy, cols, rows } = s.lvl.geo;
       const gaps = (
         JSON.parse(
-          readFileSync(join(ROOT, 'levels', `level_${String(id).padStart(3, '0')}.json`), 'utf8'),
+          readFileSync(
+            join(ROOT, 'tests', 'fixtures', 'levels-2r', `level_${String(id).padStart(3, '0')}.json`),
+            'utf8',
+          ),
         ) as { wall: { gaps: { y: number; size: number }[] } }
       ).wall.gaps;
       const n = s.lvl.layout.counts.pieces;
@@ -1809,7 +1815,7 @@ describe('round 3 — Bölüm 1–10 start boards (level data)', () => {
       const s = levelState(c.level);
       const golden = JSON.parse(
         readFileSync(
-          join(ROOT, 'tests', 'golden', `level_${String(c.level).padStart(3, '0')}.hand.json`),
+          join(ROOT, 'tests', 'fixtures', 'levels-2r', `level_${String(c.level).padStart(3, '0')}.hand.json`),
           'utf8',
         ),
       ) as { log: { kind: string }[] };

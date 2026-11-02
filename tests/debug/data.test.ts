@@ -15,7 +15,7 @@ import {
 import { applyGravityOverride, overrideLevelData } from '../../src/debug/levelOverride.ts';
 import { NO_DEBUG_RULES } from '../../src/debug/rules.ts';
 import { loadLevelById } from '../../src/scenes/level/levels.ts';
-import { HAND } from '../core/moves.fixtures.ts';
+import { shippedHandMoves } from '../core/moves.fixtures.ts';
 
 afterEach(async () => {
   await applyGravityOverride(NO_DEBUG_RULES);
@@ -30,7 +30,7 @@ describe('debug golden solutions (TECH 12.3, 9.5)', () => {
       const g = await loadGolden(id);
       if (!g.ok) throw new Error(g.reason);
       expect(g.log[0]).toEqual({ kind: 'start', preBoosters: [], streakTier: 0 });
-      expect(g.log.slice(1)).toEqual(HAND[id]);
+      expect(g.log.slice(1)).toEqual(shippedHandMoves(id));
     }
     expect(await loadGolden(999)).toMatchObject({ ok: false });
   });

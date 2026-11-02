@@ -66,6 +66,15 @@ function readLevelJson(n: number): LevelInput {
   return JSON.parse(readFileSync(join(ROOT, 'levels', `level_${pad(n)}.json`), 'utf8')) as LevelInput;
 }
 
+/**
+ * The Faz 2R level `n` (tests/fixtures/levels-2r/, P4B-01): the GDD worked examples written for `schemaVersion` 1 (truck batches,
+ * the Faz 2R sizes) read this archive; the shipped `levels/` are `schemaVersion` 2 since the D-099 level round (paket A2).
+ */
+const ARCHIVE_2R = join(ROOT, 'tests', 'fixtures', 'levels-2r');
+function readArchiveJson(n: number): LevelInput {
+  return JSON.parse(readFileSync(join(ARCHIVE_2R, `level_${pad(n)}.json`), 'utf8')) as LevelInput;
+}
+
 const codes = (list: readonly Issue[]): string[] => [...new Set(list.map((i) => i.code))].sort();
 const errorCodes = (list: readonly Issue[]): string[] => codes(list.filter((i) => i.severity === 'error'));
 
@@ -86,7 +95,7 @@ function batchOf(json: LevelInput, k: number): LevelInput['yard']['batches'][num
 
 type Step = NonNullable<LevelInput['tutorial']>[number];
 function withTutorial(n: number, steps: readonly Step[]): LevelInput {
-  return { ...readLevelJson(n), tutorial: [...steps] };
+  return { ...readArchiveJson(n), tutorial: [...steps] };
 }
 const soft = (highlight: string[], done: Step['done'], extra: Partial<Step> = {}): Step => ({
   step: 1,
@@ -316,7 +325,7 @@ describe('review K-01 board and K-44 shapes', () => {
 
 describe('review K-44 K-45/5 shapes and flags in level data', () => {
   it('K-44 GDD example: I3_0 in level 5 is shape_locked (also when it only arrives by truck)', () => {
-    const json = readLevelJson(5);
+    const json = readArchiveJson(5);
     batchOf(json, 1).pieces.push({ shape: 'I3_0', color: 'R', x: 0, y: 8 });
     const hit = runJson(json).filter((i) => i.code === 'shape_locked');
     expect(hit.map((i) => [i.rule, i.path])).toEqual([['K-45/5', 'yard.batches[1].pieces[4]']]);
@@ -1106,7 +1115,7 @@ describe('review K-45/7 debris (L-13)', () => {
 
 describe('review K-27 material and K-25 truck batches', () => {
   it('K-27 GDD example (Faz 2R, K-47): level 5 segment 2 has R 4, W 2, Y 4 and batch 1 brings O4 Y, D2_0 R × 2, D2_90 W → valid; a C3 W added to the batch is cover_mismatch (no decoys)', () => {
-    const json = readLevelJson(5);
+    const json = readArchiveJson(5);
     expect(runJson(json, ['L-10', 'L-30'])).toEqual([]);
     expect(batchOf(json, 1).pieces.map((p) => [p.shape, p.color])).toEqual([
       ['O4_0', 'Y'],
@@ -1226,7 +1235,7 @@ describe('review K-45/9 mechanics derived from data', () => {
       10: [['S1', 'W2', 'Y5'], undefined],
     };
     for (const n of LEVEL_IDS) {
-      const res = validateLevelJson(readLevelJson(n), {
+      const res = validateLevelJson(readArchiveJson(n), {
         only: ['L-16', 'L-22'],
         previousMechanics: new Set(previous),
       });
@@ -1535,7 +1544,7 @@ describe('review LEVELS §0 sawtooth (L-18), K-24 (L-24), K-23 (L-25), Y4 (L-26)
 
 describe('review K-03 plan rows of the level data', () => {
   it('K-03 GDD example (Faz 2R, level 1 plan `["WW","YY","WW","YW","YW"]`): rows top → bottom, (4,0) Y (5,0) W, (4,1) Y (5,1) W, (4,2)…(5,2) W, (4,3)…(5,3) Y, (4,4)…(5,4) W; the plan covers the whole 2 × 5 site', () => {
-    const loaded = loadLevel(readLevelJson(1));
+    const loaded = loadLevel(readArchiveJson(1));
     if (!loaded.ok) throw new Error('level 1 does not load');
     const seg = loaded.level.segments[0];
     const at = (sx: number, sy: number): number | undefined => seg?.planColors[sy * 2 + sx];
@@ -1578,12 +1587,16 @@ describe('review K-45 levels 1–10 through the whole validator', () => {
     }
   });
 
-  it('K-45/9 npm run levels:validate on levels/ exits 0; --level 4 still uses levels 1–3 as mechanic history (only W1 is new)', () => {
+  it('K-45/9 npm run levels:validate on the Faz 2R archive exits 0; --level 4 still uses levels 1–3 as mechanic history (only W1 is new)', () => {
     const cli = (...args: string[]): { code: number | null; out: string } => {
-      const r = spawnSync(process.execPath, [join(ROOT, 'tools', 'validate-levels.ts'), ...args], {
-        cwd: ROOT,
-        encoding: 'utf8',
-      });
+      const r = spawnSync(
+        process.execPath,
+        [join(ROOT, 'tools', 'validate-levels.ts'), '--dir', ARCHIVE_2R, ...args],
+        {
+          cwd: ROOT,
+          encoding: 'utf8',
+        },
+      );
       return { code: r.status, out: `${r.stdout}${r.stderr}` };
     };
     const all = cli();
@@ -1822,12 +1835,12 @@ describe('review round 2: gaps of round 1 (K-45/9, K-32, K-25, GDD 14.1/5, K-45/
   it('K-45/10 GDD example (Faz 2R): a size-1 gap in level 4 makes the derived new mechanics {W1, W3} → too_many_new_mechanics', () => {
     const history = new Set<MechanicId>();
     for (const n of [1, 2, 3]) {
-      const lvl = validateLevelJson(readLevelJson(n)).level;
+      const lvl = validateLevelJson(readArchiveJson(n)).level;
       if (!lvl) throw new Error(`level ${n} fails the schema`);
       for (const m of deriveMechanics(lvl)) history.add(m);
     }
     expect([...history]).toEqual([]);
-    const json = readLevelJson(4);
+    const json = readArchiveJson(4);
     const gap = json.wall.gaps[0];
     if (!gap) throw new Error('level 4 has no gap');
     gap.size = 1;
@@ -1930,7 +1943,7 @@ describe('review round 2: gaps of round 1 (K-45/9, K-32, K-25, GDD 14.1/5, K-45/
   it('GDD 14.1 TECH L-17 piece:k<p>_<i> needs 1 ≤ p < batch count and i < that batch size (level 5: k1_3 valid; k1_4 and k2_0 invalid)', () => {
     const one = (h: string): string[] =>
       l17(withTutorial(5, [soft([h], { event: 'turnEnd' }, { startOn: { event: 'deliveryDone' } })]));
-    expect(batchOf(readLevelJson(5), 1).pieces.length).toBe(4);
+    expect(batchOf(readArchiveJson(5), 1).pieces.length).toBe(4);
     expect(one('piece:k1_0')).toEqual([]);
     expect(one('piece:k1_3')).toEqual([]);
     expect(one('piece:k1_4')).toEqual(['tut_highlight_invalid']);
@@ -2657,16 +2670,14 @@ describe.each(LEVEL_IDS)('review LEVELS §2 Bölüm %i ↔ levels JSON (Faz 2R)'
     expect(json.name.tr.length).toBeGreaterThan(0);
   });
 
-  it(`K-25 level ${n}: truck batch 1 equals LEVELS "Kamyon partisi 1" (array order, shape, colour, x; y written as Hy)`, () => {
-    const trucks = json.yard.batches.slice(1);
-    expect(trucks.length).toBe(doc.trucks.length > 0 ? 1 : 0);
-    expect(json.build.segments.length).toBe(trucks.length + 1);
-    if (doc.trucks.length === 0) return;
-    expect(trucks[0]?.forSegment).toBe(1);
-    expect(doc.trucks.map((t) => t.ref)).toEqual(doc.trucks.map((_, i) => `k1_${i}`));
-    expect(trucks[0]?.pieces.map((p) => [p.shape, p.color, p.x, p.y])).toEqual(
-      doc.trucks.map((t) => [t.shape, t.color, t.x, json.yard.rows]),
-    );
+  // D-099 (K-55, P4B-01): the shipped levels are schemaVersion 2 — one batch, every block in the yard from the start, no truck batch.
+  // The Faz 2R form of this check (batch 1 = LEVELS "Kamyon partisi 1") ran on tests/fixtures/levels-2r/ and is covered by the
+  // K-25 tests of tests/core/delivery.test.ts on the same archive.
+  it(`K-55 level ${n}: a single batch for segment 0 (no truck batch), the LEVELS record names no truck block, two floors or more`, () => {
+    expect(json.yard.batches.length).toBe(1);
+    expect(json.yard.batches[0]?.forSegment).toBe(0);
+    expect(doc.trucks.length).toBe(0);
+    expect(json.build.segments.length).toBeGreaterThanOrEqual(2);
   });
 
   it(`GDD 14.1 K-53 level ${n}: tutorial[] equals the LEVELS step list (startOn, highlight, hand kind + path, textKey, done; count 1 when not written)`, () => {
@@ -2774,7 +2785,7 @@ describe('review LEVELS §0–§1 tables (Faz 2R)', () => {
     }
   });
 
-  it('K-45/10 LEVELS §0 "JSON eşlemesi" teaches list (4 → W1, 5 → S1, 6 → W2, 8 → Y5, 9 → W3) is exactly the derived new mechanic of each level 1–10', () => {
+  it('K-45/10 LEVELS §0 "JSON eşlemesi" teaches list (1 → S1, 4 → W1, 6 → W2, 8 → Y5, 9 → W3) is exactly the derived new mechanic of each level 1–10', () => {
     const list =
       match(
         /`teaches` yalnızca veri imzası olan\s+mekanik için yazılır \(OBSTACLES "Veri imzası": ([^)]*)\)/,
@@ -2784,7 +2795,7 @@ describe('review LEVELS §0–§1 tables (Faz 2R)', () => {
     const listed = new Map(
       [...list.matchAll(/(\d+) → ([A-Z][\w-]*)/g)].map((m) => [Number(m[1]), m[2] ?? '']),
     );
-    expect([...listed.keys()]).toEqual([4, 5, 6, 8, 9]);
+    expect([...listed.keys()]).toEqual([1, 4, 6, 8, 9]);
     const history = new Set<MechanicId>();
     for (const n of LEVEL_IDS) {
       const res = validateLevelJson(readLevelJson(n));

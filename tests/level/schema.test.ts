@@ -71,10 +71,19 @@ describe('K-45/1 level schema (TECH §8.2, §2R.2)', () => {
     expect(ok({ ...json, schemaVersion: 2 })).toBe(true);
     expect(ok({ ...json, schemaVersion: 3 })).toBe(false);
     for (let n = 1; n <= 10; n++) {
+      // the Faz 2R archive (tests/fixtures/levels-2r/, P4B-01) has no schemaVersion field = 1 …
+      const old = JSON.parse(
+        readFileSync(
+          join(DOCS, '..', 'tests', 'fixtures', 'levels-2r', `level_${String(n).padStart(3, '0')}.json`),
+          'utf8',
+        ),
+      ) as Record<string, unknown>;
+      expect(schemaVersionOf(LevelSchema.parse(old)), `archive level ${n}`).toBe(1);
+      // … and the shipped levels 1–10 (D-099 level round) are schemaVersion 2 (K-55 fixed yard)
       const file = JSON.parse(
         readFileSync(join(DOCS, '..', 'levels', `level_${String(n).padStart(3, '0')}.json`), 'utf8'),
       ) as Record<string, unknown>;
-      expect(schemaVersionOf(LevelSchema.parse(file)), `level ${n}`).toBe(1);
+      expect(schemaVersionOf(LevelSchema.parse(file)), `level ${n}`).toBe(2);
     }
     const targets = {
       min: [8, 9],

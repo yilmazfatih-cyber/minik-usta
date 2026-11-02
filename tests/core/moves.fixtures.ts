@@ -59,8 +59,25 @@ export function expectConsistent(s: GameState): void {
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-/** `levels/level_NNN.json`, loaded like the game does (schema + runtime checks). */
+/**
+ * The Faz 2R level NNN (`tests/fixtures/levels-2r/level_NNN.json`, P4B-01), loaded like the game does (schema + runtime checks). The
+ * shipped `levels/` are `schemaVersion` 2 since the D-099 level round (paket A2); the movement, delivery and session tests below
+ * exercise the `schemaVersion` 1 paths (several batches, truck deliveries; GDD K-55 item 9) and keep the archive as their data.
+ */
 export function levelFile(id: number): CompiledLevel {
+  const json: unknown = JSON.parse(
+    readFileSync(
+      join(ROOT, 'tests', 'fixtures', 'levels-2r', `level_${String(id).padStart(3, '0')}.json`),
+      'utf8',
+    ),
+  );
+  const loaded = loadLevel(json);
+  if (!loaded.ok) throw new Error(`level ${id} does not load: ${JSON.stringify(loaded.issues)}`);
+  return loaded.level;
+}
+
+/** The SHIPPED level NNN (`levels/level_NNN.json`, D-099 `schemaVersion` 2), loaded like the game does. */
+export function shippedLevelFile(id: number): CompiledLevel {
   const json: unknown = JSON.parse(
     readFileSync(join(ROOT, 'levels', `level_${String(id).padStart(3, '0')}.json`), 'utf8'),
   );
@@ -71,18 +88,18 @@ export function levelFile(id: number): CompiledLevel {
 
 /**
  * The canonical solutions of the Faz 2R levels 1–10 (LEVELS §2 "Kanonik çözüm" = solver, GDD K-50 item 4) as drag
- * moves, read from the golden files (tests/golden/level_NNN.hand.json, TECH §2R.10): one transcription for the golden
+ * moves, read from the archived golden files (tests/fixtures/levels-2r/level_NNN.hand.json, TECH §2R.10): one transcription for the golden
  * replays and the pipeline tests. A move is a release node: a site placement (FREE node above the column, or a rail
  * node through a gap) or a yard shift (FREE yard node, K-10). Piece ids: batch 0 in table order, then truck batches
  * (`k1_i`; level 5: 4 = k1_0 … 7 = k1_3).
  */
 export function handMoves(id: number): Move[] {
-  const file = join(ROOT, 'tests', 'golden', `level_${String(id).padStart(3, '0')}.hand.json`);
+  const file = join(ROOT, 'tests', 'fixtures', 'levels-2r', `level_${String(id).padStart(3, '0')}.hand.json`);
   const { log } = JSON.parse(readFileSync(file, 'utf8')) as { log: SessionAction[] };
   return log.filter((a): a is Move => a.kind !== 'start' && a.kind !== 'undo');
 }
 
-/** One step of a golden (tests/golden/level_NNN.hand.json `steps`). */
+/** One step of an archived golden (tests/fixtures/levels-2r/level_NNN.hand.json `steps`). */
 export interface HandStep {
   readonly piece: string;
   readonly ref: string;
@@ -99,8 +116,18 @@ export interface HandStep {
 
 /** The described steps of the golden of level `id` (same order as `handMoves(id)`). */
 export function handSteps(id: number): HandStep[] {
-  const file = join(ROOT, 'tests', 'golden', `level_${String(id).padStart(3, '0')}.hand.json`);
+  const file = join(ROOT, 'tests', 'fixtures', 'levels-2r', `level_${String(id).padStart(3, '0')}.hand.json`);
   return (JSON.parse(readFileSync(file, 'utf8')) as { steps: HandStep[] }).steps;
+}
+
+/**
+ * The drag moves of the SHIPPED golden of level `id` (tests/golden/level_NNN.hand.json: the D-099 levels, `schemaVersion` 2). The
+ * Faz 2R equivalent is `handMoves`.
+ */
+export function shippedHandMoves(id: number): Move[] {
+  const file = join(ROOT, 'tests', 'golden', `level_${String(id).padStart(3, '0')}.hand.json`);
+  const { log } = JSON.parse(readFileSync(file, 'utf8')) as { log: SessionAction[] };
+  return log.filter((a): a is Move => a.kind !== 'start' && a.kind !== 'undo');
 }
 
 /** Faz 2R vertical slice levels with a golden (EN-2R-17). */

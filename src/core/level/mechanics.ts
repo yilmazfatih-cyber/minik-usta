@@ -69,7 +69,7 @@ export const MECHANICS: readonly MechanicSignature[] = [
   { id: 'Y6', firstLevel: 14, detect: (l) => l.gravity.yard },
   { id: 'Y7', firstLevel: 19, detect: (l) => anyObstacle(l, 'screw') },
   { id: 'Y8', firstLevel: 35, detect: (l) => anyFlag(l, 'mortar') },
-  { id: 'S1', firstLevel: 5, detect: (l) => l.build.mode === 'segments' && l.build.segments.length >= 2 },
+  { id: 'S1', firstLevel: 1, detect: (l) => l.build.mode === 'segments' && l.build.segments.length >= 2 },
   { id: 'S3', firstLevel: 21, detect: (l) => anyFlag(l, 'glass') },
   { id: 'S4', firstLevel: 17, detect: (l) => (l.build.debris?.length ?? 0) > 0 },
   { id: 'S5', firstLevel: 31, detect: (l) => l.build.mode === 'carousel' },

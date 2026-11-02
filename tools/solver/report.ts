@@ -74,7 +74,7 @@ export function levelText(r: SolveReport, name: string, allowed: (i: SolveIssue)
       `  D-099: forced ${d.forced} / decision points ${d.decisionPoints} (choices ${d.choicesAll.join('·')} / best ${d.bestChoicesAll.join('·')}) · branch3 ${d.branch3 ?? '–'} (${d.goodPieces3.join('·')} / ${d.pieces3.join('·')})`,
     );
     lines.push(
-      `  D-099: dig(start) ${d.digStart ?? '∞'} · greedyMin ${d.greedyMin ?? '∞'} (excess ${d.greedyExcess ?? '∞'}) · greedyTrap ${d.greedyTrap ?? '–'} · greedyWin ${d.greedyWin.toFixed(2)} (${fmtNum(d.greedyStates)} greedy states) · ahaMin ${d.ahaMin}${aha ? ` (canonical: ${aha})` : ''} · undetectedDead ${d.undetectedDead} · D1 states ${d.d1States}`,
+      `  D-099: dig(start) ${d.digStart ?? '∞'} · greedyMin ${d.greedyMin ?? '∞'} (excess ${d.greedyExcess ?? '∞'}) · greedyTrap ${d.greedyTrap ?? '–'} · greedyWin ${d.greedyWin.toFixed(2)} (${fmtNum(d.greedyStates)} greedy states) · skill-bot win ${d.skillWin ? `novice ${d.skillWin.novice.toFixed(2)} / mid ${d.skillWin.mid.toFixed(2)} / expert ${d.skillWin.expert.toFixed(2)}` : '–'} · ahaMin ${d.ahaMin}${aha ? ` (canonical: ${aha})` : ''} · undetectedDead ${d.undetectedDead} · D1 states ${d.d1States}`,
     );
     if (m.delivery.length > 0)
       lines.push(
@@ -155,12 +155,12 @@ export function summaryTable(reports: readonly SolveReport[]): string {
 /** Markdown table of the D-099 puzzle metrics (GDD K-50 items 11–19; LEVELS §6.6 Tablo B columns). */
 export function puzzleTable(reports: readonly SolveReport[]): string {
   const head =
-    '| # | şema | min | minShifts | firstNeedDepth | maxCover | depLater | crossDeps | carryShifts | parkSlack | forced | trapCount | greedyTrap | greedyExcess | greedyWin | ahaMin | branch3 | complete | yakalanmayan çıkmaz | D1 |';
-  const sep = '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|';
+    '| # | şema | min | minShifts | firstNeedDepth | maxCover | depLater | crossDeps | carryShifts | parkSlack | forced | trapCount | greedyTrap | greedyExcess | greedyWin | beceri botu a/o/u | ahaMin | branch3 | complete | yakalanmayan çıkmaz | D1 |';
+  const sep = '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|';
   const rows = reports.map((r) => {
     const m = r.metrics;
     const d = m?.d099;
-    if (!m || !d) return [r.level, '–', r.status, ...Array.from({ length: 17 }, () => '–')].join(' | ');
+    if (!m || !d) return [r.level, '–', r.status, ...Array.from({ length: 18 }, () => '–')].join(' | ');
     return [
       r.level,
       r.schemaVersion ?? 1,
@@ -177,6 +177,9 @@ export function puzzleTable(reports: readonly SolveReport[]): string {
       d.greedyTrap ?? '–',
       d.greedyExcess ?? '∞',
       d.greedyWin.toFixed(2),
+      d.skillWin
+        ? `${d.skillWin.novice.toFixed(2)} / ${d.skillWin.mid.toFixed(2)} / ${d.skillWin.expert.toFixed(2)}`
+        : '–',
       d.ahaMin,
       d.branch3 ?? '–',
       d.complete ? 'evet' : 'hayır',
@@ -185,6 +188,27 @@ export function puzzleTable(reports: readonly SolveReport[]): string {
     ].join(' | ');
   });
   return [head, sep, ...rows.map((x) => `| ${x} |`)].join('\n');
+}
+
+/** P4B-02: the metrics outside the LEVELS §6.6 Tablo B specification (`targets_diverge_from_spec`), one row per level and metric. */
+export function specGapTable(reports: readonly SolveReport[]): string {
+  const band = (b: readonly [number, number] | null): string =>
+    b === null ? '–' : `${b[0]}–${b[1] >= 99 ? '∞' : b[1]}`;
+  const head = '| # | ölçüt | gerçek | şartname (Tablo B) | JSON `targets` | durum |';
+  const sep = '|---|---|---|---|---|---|';
+  const rows: string[] = [];
+  for (const r of reports)
+    for (const g of r.specGaps ?? [])
+      rows.push(
+        `| ${r.level} | ${g.metric} | ${g.actual === null ? '∞' : g.actual} | ${band(g.spec)} | ${band(g.targets)} | ${
+          g.actualOut && g.targetsOut
+            ? 'gerçek ve hedef bant dışı'
+            : g.actualOut
+              ? 'gerçek bant dışı'
+              : 'hedef bant şartname dışında'
+        } |`,
+      );
+  return rows.length === 0 ? '_Şartname dışı ölçüt yok._' : [head, sep, ...rows].join('\n');
 }
 
 // --- files ---------------------------------------------------------------------------------------------------------
@@ -222,6 +246,12 @@ export function writeLevelReportSection(path: string, reports: readonly SolveRep
     '### D-099 bulmaca zekâsı (GDD K-50 madde 11–19, K-51 madde 6–9)',
     '',
     puzzleTable(reports),
+    '',
+    '### Şartname sapması (`targets_diverge_from_spec`, LEVELS §6.6 Tablo B)',
+    '',
+    'Gerçek değer ya da JSON `targets` bandı Tablo B dışındaysa listelenir (JSON bantları ölçülen değerin çevresine yazıldığı için `metric_out_of_band` bunu göremez; P4B-02).',
+    '',
+    specGapTable(reports),
     REPORT_END,
   ].join('\n');
   const old = existsSync(path) ? readFileSync(path, 'utf8') : '# Bölüm raporu\n';

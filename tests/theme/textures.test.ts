@@ -39,7 +39,10 @@ const ROOT = join(import.meta.dirname, '..', '..');
 
 function level(n: number): CompiledLevel {
   const json: unknown = JSON.parse(
-    readFileSync(join(ROOT, 'levels', `level_${String(n).padStart(3, '0')}.json`), 'utf8'),
+    readFileSync(
+      join(ROOT, 'tests', 'fixtures', 'levels-2r', `level_${String(n).padStart(3, '0')}.json`),
+      'utf8',
+    ),
   );
   const res = loadLevel(json);
   if (!res.ok) throw new Error(`level ${n} failed to load: ${JSON.stringify(res.issues)}`);

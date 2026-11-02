@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { LevelSchema } from '../../../src/core/level/schema.ts';
 import { solveLevelData } from '../../../tools/solver/solveLevel.ts';
 import { refLabel, solverGolden, writeLevelReportSection } from '../../../tools/solver/report.ts';
-import { loadLevelJson } from '../../fixtures/builders.ts';
+import { loadArchive2rJson as loadLevelJson } from '../../fixtures/builders.ts';
 
 describe('levels:solve output files', () => {
   it('K-50 the LEVEL_REPORT "Bulmaca ölçütleri" section is replaced between its markers, the rest is kept', () => {

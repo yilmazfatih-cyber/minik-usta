@@ -31,7 +31,7 @@ import { LevelSchema } from '../../src/core/level/schema.ts';
 import { COLOR_CODES, Zone } from '../../src/core/types.ts';
 import type { GameEvent, GameEventType, Move, PieceId, SessionAction } from '../../src/core/types.ts';
 import { SessionActionSchema, asSessionActions } from '../../src/services/save.ts';
-import { levelFile } from '../core/moves.fixtures.ts';
+import { shippedLevelFile as levelFile } from '../core/moves.fixtures.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const GOLDEN_DIR = dirname(fileURLToPath(import.meta.url));

@@ -39,7 +39,6 @@ export const CTX_TOPICS = [
   'lastmoves',
   'queue',
   'truckhelp.free',
-  'reshuffle',
   'teardown',
   'blocked',
   'resume',
@@ -61,7 +60,6 @@ export const CTX_HIGHLIGHT: Readonly<Record<CtxTopic, readonly string[]>> = {
   lastmoves: ['moves'],
   queue: ['truck'],
   'truckhelp.free': [],
-  reshuffle: [],
   teardown: [],
   blocked: [],
   resume: [],
@@ -155,9 +153,9 @@ export function ctxFromMove(
         if (e.to === 'queue') add('queue');
         break;
       case 'truckHelp':
-        // K-30 D1 (Faz 2R): unchain → `truckhelp.free`, a reshuffle → `reshuffle`; the truck never brings blocks (R2-05)
+        // K-30 D1: unchain → `truckhelp.free`. A reshuffle / reshape never comes from the core any more (RULES_VERSION 3, K-55
+        // item 8: D1 is a Söküm, `teardown` cause `access`); the old `tut.ctx.reshuffle` line was removed (P4B-07).
         if (e.kind === 'unchain') add('truckhelp.free');
-        else if (e.kind === 'reshuffle' || e.kind === 'reshape') add('reshuffle');
         break;
       default:
         break;
@@ -194,13 +192,9 @@ export const TEARDOWN_LINE_MS = TOKENS.duration.teardownLine;
 
 /**
  * UX §13.1 "kilitli dizi satırları" (DS-14): the lines that open inside a locked sequence — the Söküm (#107) and the
- * truck help D1 (#21a `truckhelp.free`, #21c `reshuffle`) — stay `duration.teardownLine` instead of `visibleMs`.
+ * truck help D1 (#21a `truckhelp.free`) — stay `duration.teardownLine` instead of `visibleMs`.
  */
-export const LOCKED_LINE_TOPICS: ReadonlySet<CtxTopic> = new Set<CtxTopic>([
-  'teardown',
-  'truckhelp.free',
-  'reshuffle',
-]);
+export const LOCKED_LINE_TOPICS: ReadonlySet<CtxTopic> = new Set<CtxTopic>(['teardown', 'truckhelp.free']);
 
 interface Showing {
   readonly topic: CtxTopic;

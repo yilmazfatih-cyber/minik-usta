@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { SolveReport } from '../../../tools/solver/solveLevel.ts';
-import { LEVELS_DIR, fixturePath } from '../../fixtures/builders.ts';
+import { ARCHIVE_2R_DIR as LEVELS_DIR, fixturePath } from '../../fixtures/builders.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const OUT = mkdtempSync(join(tmpdir(), 'minik-usta-solve-'));

@@ -7,7 +7,7 @@ import { level } from '../../fixtures/builders.ts';
 import type { LevelSpec } from '../../fixtures/builders.ts';
 import { solveLevelData } from '../../../tools/solver/solveLevel.ts';
 import { movesBand } from '../../../tools/solver/metrics.ts';
-import { d099AMax, d099Band, d099Checks } from '../../../tools/solver/puzzle.ts';
+import { SKILL_MISTAKE, d099AMax, d099Band, d099Checks } from '../../../tools/solver/puzzle.ts';
 import type { D099Metrics } from '../../../tools/solver/puzzle.ts';
 import { MICRO } from './micro.ts';
 
@@ -112,7 +112,10 @@ describe('D-099 solver gates (K-51 items 6–9, schemaVersion 2)', () => {
     expect(check({ undetectedDead: 3 })).toContain('undetected_dead');
     expect(check({ crossDeps: 0 })).toContain('puzzle_no_cross');
     expect(check({ ahaMin: 0, greedyWin: 0.9 })).toContain('puzzle_greedy_easy');
-    expect(check({ ahaMin: 1, greedyWin: 0.9 })).not.toContain('puzzle_greedy_easy');
+    // P4B-02: an aha move does not excuse a level that greedy play wins; the rule no longer depends on ahaMin
+    expect(check({ ahaMin: 1, greedyWin: 0.9 })).toContain('puzzle_greedy_easy');
+    expect(check({ ahaMin: 2, greedyWin: 0.7 })).not.toContain('puzzle_greedy_easy');
+    expect(check({ ahaMin: 0, greedyWin: 0.7 })).not.toContain('puzzle_greedy_easy');
     expect(check({ greedyMin: 5, greedyTrap: null, greedyWin: 0.5 })).toContain('puzzle_greedy_wins');
     expect(check({ greedyMin: 5, greedyTrap: 4, greedyWin: 0.5 })).not.toContain('puzzle_greedy_wins');
     expect(check({ greedyMin: 99, greedyTrap: null, greedyWin: 0.5 })).not.toContain('puzzle_greedy_wins');
@@ -163,5 +166,32 @@ describe('D-099 solver gates (K-51 items 6–9, schemaVersion 2)', () => {
     );
     expect(d.choicesAll).toHaveLength(r.steps.length);
     expect(d.forced).toBeLessThanOrEqual(d.decisionPoints);
+  });
+});
+
+describe('K-50 skill-bot proxy (P4B-03, a stand-in for the WP-N playtest bot)', () => {
+  it('K-50 skillWin is exact and monotone: ε grows → the win probability does not grow; a budget below min is 0; a perfect player (ε 0) wins at min', () => {
+    const r = solveLevelData(level(MICRO.floors ?? {}), {}, { variants: false });
+    const d = r.metrics?.d099 as D099Metrics;
+    expect(r.status).toBe('solved');
+    expect(d.skillWin.expert).toBeGreaterThanOrEqual(d.skillWin.mid);
+    expect(d.skillWin.mid).toBeGreaterThanOrEqual(d.skillWin.novice);
+    for (const v of Object.values(d.skillWin)) {
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(1);
+    }
+    // the budget `moves` is at least min here, so the best player wins with a probability above 0
+    expect(d.skillWin.expert).toBeGreaterThan(0);
+    // a budget of min − 1 cannot be won by anyone
+    const tooShort = solveLevelData(
+      level({ ...(MICRO.floors ?? {}), moves: Math.max(1, (r.metrics?.min ?? 2) - 1) }),
+      {},
+      { variants: false },
+    );
+    expect(tooShort.metrics?.d099.skillWin).toEqual({ novice: 0, mid: 0, expert: 0 });
+  });
+
+  it('K-50 the proxy ε values are novice 0.25, mid 0.12, expert 0.06 (calibrated on levels 1–10 against the LEVELS §0 orta-bot targets)', () => {
+    expect(SKILL_MISTAKE).toEqual({ novice: 0.25, mid: 0.12, expert: 0.06 });
   });
 });

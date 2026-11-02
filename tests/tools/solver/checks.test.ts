@@ -8,7 +8,7 @@ import type { LevelData } from '../../../src/core/level/schema.ts';
 import { solveLevelData, solveLevelJson } from '../../../tools/solver/solveLevel.ts';
 import type { SolveReport } from '../../../tools/solver/solveLevel.ts';
 import { movesBand } from '../../../tools/solver/metrics.ts';
-import { level, loadLevelJson } from '../../fixtures/builders.ts';
+import { level, loadArchive2rJson as loadLevelJson } from '../../fixtures/builders.ts';
 import { MICRO } from './micro.ts';
 
 const draft = (n: number): LevelData => LevelSchema.parse(loadLevelJson(n));

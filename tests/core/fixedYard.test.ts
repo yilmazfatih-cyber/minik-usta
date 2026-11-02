@@ -27,7 +27,7 @@ import {
 import type { GameState } from '../../src/core/state.ts';
 import { Zone } from '../../src/core/types.ts';
 import type { GameEvent, Move, PieceId } from '../../src/core/types.ts';
-import { initialState, loadFixture, loadLevelJson } from '../fixtures/builders.ts';
+import { initialState, loadArchive2rJson, loadFixture } from '../fixtures/builders.ts';
 import { dragTo, find, run, types } from './moves.fixtures.ts';
 
 const P1_JSON = (): Record<string, unknown> => loadFixture('v2', 'p1_two_floors') as Record<string, unknown>;
@@ -214,7 +214,7 @@ describe('K-55 sabit saha (D-099, schemaVersion 2)', () => {
   });
 
   it('E-65 K-55 a Faz 2R multi-batch level written as schemaVersion 2 → fixed_yard_batches (error, not loaded); as schemaVersion 1 it stays valid', () => {
-    const v1 = loadLevelJson(5) as Record<string, unknown>;
+    const v1 = loadArchive2rJson(5) as Record<string, unknown>; // the Faz 2R archive (P4B-01): the shipped level 5 is schemaVersion 2
     expect(validateLevelJson(v1, { fileId: 5 }).issues.filter((i) => i.severity === 'error')).toEqual([]);
     const v2 = { ...v1, schemaVersion: 2 };
     const issues = validateLevelJson(v2, { fileId: 5 }).issues;

@@ -761,7 +761,7 @@ describe('i18n Phase 2 keys and texts (TECH 11.5, 14.1)', () => {
       'Reklam izle · +5 hamle',
     );
     expect(en.t('lose.offer.gift', { n: economy.outOfMoves.extraMoves })).toBe(
-      '+5 moves · a gift from Grandpa',
+      '+5 moves · a gift from the King',
     );
   });
 

@@ -1080,7 +1080,7 @@ y  456 ┌───────────────────────�
   dizildikleri için 1232–1560'ta, panel üst kenarı aynı oranda iner. Giriş
   animasyonu üçünde aynı; "+5" çipi pencere açılırken **bir kez** zıplar, sonra durur (JUICE #52).
 - **Ömür ilk teklifi (META §3.2):** oyuncunun hayatındaki ilk "Hamleler bitti" penceresinde turuncu düğme fiyatsızdır:
-  `lose.offer.gift` "+5 hamle · Usta Dede'den hediye" (PriceLabel yok, reklam düğmesi yok, "Teklif 1/3" görünür; teklif
+  `lose.offer.gift` "+5 hamle · Usta Kral'dan hediye" (PriceLabel yok, reklam düğmesi yok, "Teklif 1/3" görünür; teklif
   1'e sayılır). Sonraki bütün denemelerde normal eskalasyon.
 - **Eskalasyon:** 1. teklif ● 900 (+ reklam alternatifi) · 2. teklif ● 1.350 ("Teklif 2/3") · 3. teklif ● 1.800
   ("Teklif 3/3 · son teklif"). 2. ve 3. teklifte reklam düğmesi yoktur, iki seçenek kalır (eşit boy). Reklamla alınan +5

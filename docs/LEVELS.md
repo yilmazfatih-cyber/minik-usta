@@ -1370,6 +1370,38 @@ blok yandan kaçıyordu); geçidi ikinci katın tabanına taşıyan aday seçild
 taşınıyordu; iki kaydırmalı aday seçildi. (3) Bölüm 9'un ikinci adımı başlangıçta yer değiştiren bir bloğa eldiven
 koyuyordu (`tut_highlight_invalid`); eldiven kaldırıldı, vurgu ve metin kaldı.
 
+### 6.11 İnceleme turu (code-lead, P4B-02 / P4B-03, 2026-11-02): ölçülen sapma ve karar bekleyen soru
+
+Sahip: product-lead. Bu bölümü code-lead ekledi (orkestratör "veri bulgusu varsa düzeltmeyi yine yap, LEVELS'e not düş"
+dedi); bölüm verisi ve bantlar değişmedi, yalnız ölçüm ve araç eklendi. Ayrıntı: `docs/LEVEL_REPORT.md` "Şartname sapması".
+
+1. **Sapma artık görünür.** `levels:solve` her v2 bölümü için Tablo B ile karşılaştırır (`tools/solver/spec.ts`; tablo bu
+   dosyanın Tablo B'sine `tests/tools/solver/spec.test.ts` ile eşitlenir) ve gerçek değer ya da JSON `targets` bandı Tablo B
+   dışındaysa `targets_diverge_from_spec` notu yazar (hata değil). 10/10 bölümde en az 4 ölçüt dışındadır. En ağırı: Bölüm
+   10 `min` 13 (22–26), `forced` 13 (5–8), `ahaMin` 1 (≥ 2), `choices@0` 2 (≥ 5); Bölüm 2 `choices@0` 1 (≥ 3); Normal 5–9'da
+   `greedyWin` 1,00 (0,30–0,85).
+2. **`puzzle_greedy_easy` sıkılaştı** (GDD K-51/9 metni «`ahaMin ≥ 1` ya da `greedyWin ≤ 0,70`» diyordu; kod artık `ahaMin`'e
+   bakmaz): Normal (tanıtım hariç) ve Zor'da `greedyWin > 0,70` uyarır. Bölüm 5 ve 7 uyarı alır (susturulmadı). **GDD K-51/9
+   metnini buna göre güncelleyin** (ya da kuralı geri alın).
+3. **`greedyWin` neredeyse ikilidir** (0 ya da 1): bu küçük çizgelerde açgözlü politikanın bütün eşit seçimleri aynı maliyeti
+   verir; Tablo B'nin 0,40–0,70 gibi ara bantları bu ölçekte üretilemez. Bu yüzden Tablo B'nin `greedyWin` sütunu ya
+   `greedyExcess > P` (açgözlü en iyi yolda bile kaybeder) biçiminde yeniden yazılmalı ya da beceri botuyla (madde 4) ölçülmelidir.
+4. **Beceri botu vekili** (`skillWin`, ε = 0,25 / 0,12 / 0,06; WP-N botu gelene kadar): ε = 0,12 Bölüm 1–10'un orta-bot
+   hedefleriyle örtüşür. Orta: 1 → 1,00 · 2 → 1,00 · 3 → 0,96 · 4 → 0,98 · **5 → 0,72** · 6 → 0,96 · **7 → 0,73** · 8 → 0,96 ·
+   9 → 0,88 · **10 → 0,41** (hedefler %90+, %75, %70, %45). Yani eğri oyuncuyu ayırt ediyor; açgözlü politika ise bölüm 1–9'da
+   fark yaratmıyor.
+5. **Normal P 2 → 1 denemesi (ucuz yol) ölçüldü ve reddedildi.** Bölüm 5 ve 7 `moves` 12'ye çekilince orta vekil 0,72 → 0,51 ve
+   0,73 → 0,52 olur (Normal hedefi %65–80'in altı); Bölüm 7'de açgözlü oyun kaybeder (`greedyMin` 13 > 12) ama Bölüm 5'te
+   kazanmaya devam eder (12 = 12). Normal P = 1 ayrıca Normal ile Zor bütçesini eşitler (K-52 tablosu). **Veri değişmedi.**
+6. **Bölüm 10 duvar değildir (vekil ölçümü):** `moves` 14 (a = 0) orta vekil 0,41 (hedef %40–55); `moves` 15 (a = 1) 0,62 olur
+   (bandın üstü) ve açgözlü oyun 15'te kesin kazanır (`greedyWin` 1,00, `puzzle_greedy_wins` uyarısı). Bu yüzden `a` = 0 kaldı.
+   Gerçek insan kazanma oranı için WP-N botu ve oynatma gerekir.
+7. **Karar bekleyen soru (product-lead + orkestratör, proje sahibine):** (a) Tablo B DECISIONS'ta resmen revize edilir
+   (`min`, `maxCover`, `forced`, `parkSlack`, `greedyWin` ölçek sınırına göre; bölüm 1–9 açgözlü oyunla kazanılabilir kalır) ya
+   da (b) bölümler Tablo B'ye çekilir: bu U-4 (makro çizge, daha büyük sahalar) ve yeni Bölüm 5/7/10 aday araması ister
+   (A2'nin sahası 4×5–6×5, 7–8 blok; Bölüm 10 için 22–26 hamle 7 bloğa sığmaz). Önerim: (a) bölüm 1–4 için, (b) Bölüm 5, 7, 10
+   için (U-4 sonrası); o güne kadar `skillWin` orta vekili eğrinin kabul ölçütüdür.
+
 ---
 
 ## 7. Uygulama notları (code-lead'e; D-099)

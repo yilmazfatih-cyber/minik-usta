@@ -261,7 +261,7 @@ kuyruğa yalnız S3 kırılması (GDD K-17 adım 3) ve S4 molozun Çekiç'le inm
   paketinde 1 olur (iki tablo testle eşit tutulur).
   Bilgi kartı için D-099 metni (i18n dosyalarıyla aynı commit'te geçerli olur; anahtar `obs.s1.desc` aynı): TR «Bu kat
   bitince şantiye kayar; kalan bloklar sahada bekler.» · EN «Finish this floor; the site slides, your blocks wait.»
-- **Bilgi kartı** (`obs.s1.desc`): TR "Bu kat bitince şantiye kayar, kamyon malzeme getirir." · EN "Finish this floor; the site slides and the truck delivers."
+- **Bilgi kartı** (`obs.s1.desc`, D-099; code-lead P4B-07 ile i18n'e işledi): TR "Bu kat bitince şantiye kayar; kalan bloklar sahada bekler." · EN "Finish this floor; the site slides, your blocks wait."
 
 ### S2 — Plan Boşluğu — **MVP DIŞI (Faz 2R, R2-01)**
 - **Durum:** Proje sahibinin "şantiye alanı sürekli doldurulmalı" kararıyla plan şantiyeyi tamamen kaplar (GDD K-15);

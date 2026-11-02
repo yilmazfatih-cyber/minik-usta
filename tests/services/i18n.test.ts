@@ -116,7 +116,7 @@ function storyTableTexts(): Map<string, [string, string]> {
 
 /** STORY §4.0 prologue lines `- Speaker: "TR" / "EN"` → `story.prologue.p<n>.<speaker>`. */
 function prologueTexts(): Map<string, [string, string]> {
-  const speaker: Record<string, string> = { Tuna: 'tuna', 'Usta Dede': 'dede', Kepçe: 'kepce' };
+  const speaker: Record<string, string> = { Tuna: 'tuna', 'Usta Kral': 'king', Kepçe: 'kepce' };
   const section = read('docs/STORY.md').split('### 4.0')[1]?.split('### 4.1')[0] ?? '';
   const out = new Map<string, [string, string]>();
   let panel: string | null = null;
@@ -203,7 +203,8 @@ describe('i18n files (TECH 11.5)', () => {
       (k) => k !== 'lose.left' && !trKeys.includes(k),
     );
     expect(missing).toEqual([]);
-    for (const gone of ['lose.left', 'tut.ctx.truckhelp.material']) expect(trKeys).not.toContain(gone);
+    for (const gone of ['lose.left', 'tut.ctx.truckhelp.material', 'tut.ctx.reshuffle'])
+      expect(trKeys).not.toContain(gone);
     expect(trKeys.filter((k) => k.startsWith('tut.m.')).length).toBe(20);
   });
 
@@ -269,7 +270,16 @@ describe('i18n files (TECH 11.5)', () => {
 
   it('TECH 14.1 Phase 2R keys: levels 1-10 and the LEVELS 2 drafts 1-10 tutorial textKeys and teaches cards resolve in both languages', () => {
     const needed = new Set<string>();
-    const files = Array.from({ length: 10 }, (_, i) => `levels/level_${String(i + 1).padStart(3, '0')}.json`);
+    // the shipped D-099 levels (`levels/`) and the Faz 2R archive (`tests/fixtures/levels-2r/`, P4B-01) together
+    const files = Array.from(
+      { length: 10 },
+      (_, i) => `levels/level_${String(i + 1).padStart(3, '0')}.json`,
+    ).concat(
+      Array.from(
+        { length: 10 },
+        (_, i) => `tests/fixtures/levels-2r/level_${String(i + 1).padStart(3, '0')}.json`,
+      ),
+    );
     for (const file of files) {
       const level = JSON.parse(read(file)) as {
         tutorial?: { textKey: string }[];
@@ -304,6 +314,47 @@ describe('i18n files (TECH 11.5)', () => {
       'tut.ctx.resume',
     ]) {
       expect(trKeys).toContain(key);
+    }
+  });
+
+  /**
+   * P4B-07 (D-099, D-101): the shipped levels are schemaVersion 2 — no truck brings material, the yard is full from the start —
+   * and Usta Kral replaced Usta Dede. So no text a shipped level shows (its tutorial lines and the info card of the mechanic it
+   * teaches, TR and EN) may say a truck brings / delivers blocks, and the lines the game shows around a level name the King.
+   */
+  it('K-55 D-099 the texts the shipped levels show never say a truck brings or delivers material (TR and EN)', () => {
+    const truckBrings = /kamyon[^.!?]{0,40}(getir|boşalt|teslim)|truck[^.!?]{0,30}(bring|brought|deliver)/i;
+    const keys = new Set<string>();
+    for (let n = 1; n <= 10; n++) {
+      const level = JSON.parse(read(`levels/level_${String(n).padStart(3, '0')}.json`)) as {
+        schemaVersion?: number;
+        tutorial?: { textKey: string }[];
+        teaches?: string;
+      };
+      expect(level.schemaVersion, `level ${n}`).toBe(2);
+      for (const step of level.tutorial ?? []) keys.add(step.textKey);
+      if (level.teaches !== undefined) keys.add(`obs.${level.teaches.toLowerCase().replace('-', '')}.desc`);
+    }
+    expect(keys.size).toBeGreaterThanOrEqual(15);
+    for (const key of keys)
+      for (const [name, dict] of [
+        ['tr', tr],
+        ['en', en],
+      ] as const)
+        expect(lookupText(dict, key) ?? '', `${name} ${key}`).not.toMatch(truckBrings);
+    // the S1 card is what Bölüm 1 shows first (OBSTACLES S1, D-099)
+    expect(lookupText(tr, 'obs.s1.desc')).toBe('Bu kat bitince şantiye kayar; kalan bloklar sahada bekler.');
+    expect(lookupText(en, 'obs.s1.desc')).toBe('Finish this floor; the site slides, your blocks wait.');
+  });
+
+  it('D-101 Usta Kral replaced Usta Dede: the free +5 offer and the prologue speaker name the King, not Grandpa', () => {
+    expect(lookupText(tr, 'lose.offer.gift')).toBe("+{n} hamle · Usta Kral'dan hediye");
+    expect(lookupText(en, 'lose.offer.gift')).toBe('+{n} moves · a gift from the King');
+    expect(trKeys).toContain('story.prologue.p2.king');
+    expect(trKeys).not.toContain('story.prologue.p2.dede');
+    for (const key of trKeys.filter((k) => k.startsWith('lose.') || k.startsWith('story.prologue.'))) {
+      expect(lookupText(tr, key) ?? '', key).not.toMatch(/Dede/);
+      expect(lookupText(en, key) ?? '', key).not.toMatch(/Grandpa/i);
     }
   });
 });

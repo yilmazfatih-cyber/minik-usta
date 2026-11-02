@@ -81,6 +81,13 @@ export interface D099Metrics {
   readonly greedyWin: number;
   /** States reachable from the start by G moves. */
   readonly greedyStates: number;
+  /**
+   * P4B-03 skill-bot proxy (a stand-in until the WP-N playtest bot exists): the probability of winning within `moves` for a player
+   * who picks an optimal move (dist − cost = dist of the next state) with probability 1 − ε and ANY legal move (uniform over the
+   * graph's edges, optimal ones included) with probability ε, per move. ε: novice 0.25, mid 0.12, expert 0.06 (`SKILL_MISTAKE`).
+   * Exact DP over (state, budget left); 0 when the graph is incomplete. Not a measured win rate of people.
+   */
+  readonly skillWin: { readonly novice: number; readonly mid: number; readonly expert: number };
   /** K-50/17. */
   readonly ahaMin: number;
   readonly ahaMoves: readonly AhaMove[];
@@ -216,6 +223,45 @@ function parkCells(s: GameState, start: GameState): number {
     if (moved) cells += shapeByIndex(s.buf[base + PF.shape] ?? 0).cellCount;
   }
   return cells;
+}
+
+/** ε (per-move chance of a uniformly random legal move) of the skill-bot proxy rows (P4B-03). */
+export const SKILL_MISTAKE = { novice: 0.25, mid: 0.12, expert: 0.06 } as const;
+
+/**
+ * P4B-03: win probability within `budget` of a player who plays an optimal move with probability 1 − ε and a uniformly random
+ * legal move (any edge) with probability ε (exact DP over (state, budget left); a move costs `infoCost`). `D` = distance to win.
+ */
+export function skillWinProbability(g: Graph, D: Int32Array, budget: number, eps: number): number {
+  const B = Math.min(255, budget);
+  const memo = new Float32Array(g.count * (B + 1)).fill(-1);
+  const win = (s: number, b: number): number => {
+    if ((g.won[s] ?? 0) === 1) return 1;
+    const ds = D[s] ?? INF;
+    if (ds >= INF || ds > b) return 0;
+    const key = s * (B + 1) + b;
+    const hit = memo[key] ?? -1;
+    if (hit >= 0) return hit;
+    let all = 0;
+    let good = 0;
+    let nAll = 0;
+    let nGood = 0;
+    for (let e = g.edgeStart[s] ?? 0; e < (g.edgeStart[s + 1] ?? 0); e++) {
+      const t = g.edgeTo[e] ?? 0;
+      const c = infoCost(g.edgeInfo[e] ?? 0);
+      nAll++;
+      const w = c <= b ? win(t, b - c) : 0;
+      all += w;
+      if ((D[t] ?? INF) < INF && (D[t] ?? INF) + c === ds) {
+        nGood++;
+        good += w;
+      }
+    }
+    const p = nAll === 0 ? 0 : eps * (all / nAll) + (1 - eps) * (nGood === 0 ? all / nAll : good / nGood);
+    memo[key] = p;
+    return p;
+  };
+  return win(0, B);
 }
 
 export function d099Metrics(input: D099Input): D099Metrics {
@@ -460,6 +506,13 @@ export function d099Metrics(input: D099Input): D099Metrics {
     greedyTrap,
     greedyWin,
     greedyStates,
+    skillWin: g.complete
+      ? {
+          novice: skillWinProbability(g, D, budget, SKILL_MISTAKE.novice),
+          mid: skillWinProbability(g, D, budget, SKILL_MISTAKE.mid),
+          expert: skillWinProbability(g, D, budget, SKILL_MISTAKE.expert),
+        }
+      : { novice: 0, mid: 0, expert: 0 },
     ahaMin: (aha[0] ?? INF) >= INF ? 0 : (aha[0] ?? 0),
     ahaMoves,
     pieces3,
@@ -568,14 +621,16 @@ export function d099Checks(level: LevelData, m: D099Metrics): D099Issue[] {
       );
     const intro = level.teaches !== undefined;
     const hard = level.difficulty === 'hard' || level.difficulty === 'superhard';
-    if (((level.difficulty === 'normal' && !intro) || hard) && m.ahaMin < 1 && m.greedyWin > 0.7)
+    // P4B-02: a Normal (non-intro) or harder level must not be won by greedy play whatever its ahaMin: the aha move shifts the
+    // budget margin but a level that greedy play finishes inside the budget asks for no plan (D-099 "think more about the puzzle").
+    if (((level.difficulty === 'normal' && !intro) || hard) && m.greedyWin > 0.7)
       add(
         'puzzle_greedy_easy',
         'K-51/9',
         'L-39',
         'warn',
         'yard',
-        `ahaMin ${m.ahaMin} and greedyWin ${m.greedyWin.toFixed(2)} > 0.70: greedy play finishes the level safely`,
+        `greedyWin ${m.greedyWin.toFixed(2)} > 0.70 (ahaMin ${m.ahaMin}): greedy play finishes the level inside the budget`,
       );
     if (
       hard &&

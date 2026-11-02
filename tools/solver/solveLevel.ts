@@ -19,6 +19,8 @@ import { canonicalActions, computeMetrics, movesBand, puzzleChecks } from './met
 import type { CanonicalStep, MovesBand, PuzzleMetrics, SolveIssue } from './metrics.ts';
 import { checkTutorialHands } from './tutorial.ts';
 import { d099Checks } from './puzzle.ts';
+import { specGaps, specNote } from './spec.ts';
+import type { SpecGap } from './spec.ts';
 import { isFixedYardLevel } from '../../src/core/level/schema.ts';
 import { replayCanonical } from './verify.ts';
 import type { ReplayCheck } from './verify.ts';
@@ -85,6 +87,8 @@ export interface SolveReport {
   readonly variants: readonly VariantResult[];
   readonly issues: readonly SolveIssue[];
   readonly notes: readonly string[];
+  /** P4B-02: metrics (measured value or `targets` band) outside the LEVELS §6.6 Tablo B specification; `[]` for older cached reports. */
+  readonly specGaps?: readonly SpecGap[];
   readonly stats: SolveStats | null;
 }
 
@@ -188,6 +192,7 @@ export function solveLevelData(
   let metrics: PuzzleMetrics | null = null;
   let steps: readonly CanonicalStep[] = [];
   let band: MovesBand | null = null;
+  let specGapList: readonly SpecGap[] = [];
   let replay: ReplayCheck | null = null;
   const isVariant = opts.variant !== undefined;
 
@@ -262,8 +267,12 @@ export function solveLevelData(
         notes.push(
           `whole space: ${de.edges} move(s) from a live state lead into ${de.states} dead state(s) (${de.shiftEdges} of them shifts whose delivery buries a block, not K-50 ✓-traps); D1/D2/D3a catch ${de.caught} state(s), ${de.states - de.caught} would need the D3b table (cut 1, Faz 3)`,
         );
-      if (fixedYard) out.push(...d099Checks(level, metrics.d099));
-      else out.push(...wholeSpaceGate(metrics), ...deliveryChecks(metrics));
+      if (fixedYard) {
+        out.push(...d099Checks(level, metrics.d099));
+        specGapList = specGaps(level, metrics);
+        const sn = specNote(specGapList);
+        if (sn !== null) notes.push(sn);
+      } else out.push(...wholeSpaceGate(metrics), ...deliveryChecks(metrics));
       const penaltyFree = steps.every((st) => st.cost === 1 && st.kind !== 'wait');
       if (penaltyFree && !metrics.minIsNPlusShifts)
         notes.push(`K-50 item 2: min ${metrics.min} ≠ N ${metrics.N} + minShifts ${metrics.minShifts}`);
@@ -322,6 +331,7 @@ export function solveLevelData(
     variants,
     issues: out,
     notes,
+    specGaps: specGapList,
     stats: { ...g.stats, complete: g.complete, limit: g.limit, totalMs: Math.round(performance.now() - t0) },
   };
 }
