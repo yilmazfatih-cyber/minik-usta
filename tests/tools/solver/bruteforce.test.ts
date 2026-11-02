@@ -7,7 +7,7 @@ import { compiledLevel, level } from '../../fixtures/builders.ts';
 import { solveLevelData } from '../../../tools/solver/solveLevel.ts';
 import { explore } from '../../../tools/solver/explore.ts';
 import { astarMin } from '../../../tools/solver/astar.ts';
-import { MICRO, bruteExplore, bruteMetrics, treeMin } from './micro.ts';
+import { MICRO, bruteD099, bruteExplore, bruteMetrics, treeMin } from './micro.ts';
 
 describe('K-50 solver metrics on micro levels (3×4 yard, ≤ 4 blocks)', () => {
   for (const [name, spec] of Object.entries(MICRO)) {
@@ -42,6 +42,35 @@ describe('K-50 solver metrics on micro levels (3×4 yard, ≤ 4 blocks)', () => 
       // K-46: the canonical solution has the most over-the-wall placements among the shortest solutions
       expect(m.yao.overWall, 'K-46 canonical YAO').toBe(brute.maxOverWall);
       expect(report.steps.length, 'one step per move (unit costs)').toBe(m.min);
+    });
+  }
+
+  for (const [name, spec] of Object.entries(MICRO)) {
+    it(`K-50 D-099 greedy policy, aha and D1 match brute force on micro levels: ${name}`, () => {
+      const data = level(spec);
+      const report = solveLevelData(data, {}, { variants: false });
+      const d = report.metrics?.d099;
+      expect(d, name).toBeDefined();
+      if (!d || !report.metrics) return;
+      const brute = bruteD099(bruteExplore(compiledLevel(spec)), data.moves);
+      expect({
+        digStart: d.digStart,
+        greedyMin: d.greedyMin,
+        greedyTrap: d.greedyTrap,
+        greedyWin: d.greedyWin.toFixed(9),
+        ahaMin: d.ahaMin,
+        d1States: d.d1States,
+      }).toEqual({
+        digStart: brute.digStart,
+        greedyMin: brute.greedyMin,
+        greedyTrap: brute.greedyTrap,
+        greedyWin: brute.greedyWin.toFixed(9),
+        ahaMin: brute.ahaMin,
+        d1States: brute.d1States,
+      });
+      expect(d.greedyExcess).toBe(d.greedyMin === null ? null : d.greedyMin - report.metrics.min);
+      expect(d.complete).toBe(true);
+      expect(d.choicesAll.slice(0, 3)).toEqual(report.metrics.choices.filter((c) => c !== null));
     });
   }
 

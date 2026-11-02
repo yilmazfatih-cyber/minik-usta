@@ -17,6 +17,8 @@ import {
   TUT_EVENTS,
   TUT_TEXT_KEY_REGEX,
   TutCond,
+  isFixedYardLevel,
+  schemaVersionOf,
 } from '../../src/core/level/schema.ts';
 import type { LevelInput } from '../../src/core/level/schema.ts';
 import { levelJson, loadFixture } from '../fixtures/builders.ts';
@@ -61,6 +63,37 @@ describe('K-45/1 level schema (TECH §8.2, §2R.2)', () => {
     delete noVersion.schemaVersion;
     expect(ok(noVersion)).toBe(true);
     expect(parsed.seed).toBeUndefined();
+  });
+
+  it('K-55 GDD §14 schemaVersion 1 | 2 (backward compatible): missing = 1, the Faz 2R files still parse, 3 is rejected; v2 targets take the D-099 bands', () => {
+    const json = levelJson({ pieces: [['B1_0', 'W', 0, 0]] });
+    expect(ok({ ...json, schemaVersion: 1 })).toBe(true);
+    expect(ok({ ...json, schemaVersion: 2 })).toBe(true);
+    expect(ok({ ...json, schemaVersion: 3 })).toBe(false);
+    for (let n = 1; n <= 10; n++) {
+      const file = JSON.parse(
+        readFileSync(join(DOCS, '..', 'levels', `level_${String(n).padStart(3, '0')}.json`), 'utf8'),
+      ) as Record<string, unknown>;
+      expect(schemaVersionOf(LevelSchema.parse(file)), `level ${n}`).toBe(1);
+    }
+    const targets = {
+      min: [8, 9],
+      maxCover: [0, 1],
+      depLater: [0, 2],
+      crossDeps: [1, 99],
+      parkSlack: [1, 2.5],
+      forced: [0, 2],
+      greedyExcess: [2, 99],
+      greedyWin: [0.3, 0.7],
+      ahaMin: [1, 2],
+      branch3: [0.15, 0.35],
+    };
+    expect(LevelSchema.parse({ ...json, schemaVersion: 2, targets }).targets).toEqual(targets);
+    expect(ok({ ...json, targets: { greedyWin: [0.3, 1.5] } })).toBe(false);
+    expect(ok({ ...json, targets: { parkSlack: [1, 12] } })).toBe(false);
+    expect(ok({ ...json, targets: { depLater: [0.5, 2] } })).toBe(false);
+    expect(isFixedYardLevel({ schemaVersion: 2 })).toBe(true);
+    expect(isFixedYardLevel({})).toBe(false);
   });
 
   it('K-49 K-45/1 yard.cols/rows and site { cols, rows } are optional; a site needs both fields', () => {

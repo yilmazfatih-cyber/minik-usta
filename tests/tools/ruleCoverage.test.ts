@@ -41,7 +41,7 @@ describe('test:rules (TECH 12.2)', () => {
     expect(k).not.toContain('K-20');
     expect(k).not.toContain('K-30');
     // Faz 2R closure: K-54 (booster slot state) is the newest rule.
-    expect(ids.filter((r) => r.kind === 'K')).toHaveLength(54);
+    expect(ids.filter((r) => r.kind === 'K')).toHaveLength(55);
   });
 
   it('test:rules phase 2R (TECH 2R.11): K-47…K-54, the Faz 2R slice rules and the "(Faz 2R" E rows sit between phase 2 and phase 3', () => {

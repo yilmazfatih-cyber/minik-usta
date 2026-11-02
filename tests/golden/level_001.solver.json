@@ -1,8 +1,8 @@
 {
   "level": 1,
   "levelHash": "c8428cd15d5dfdae",
-  "rulesVersion": 2,
-  "solverVersion": 2,
+  "rulesVersion": 3,
+  "solverVersion": 3,
   "min": 5,
   "yao": { "overWall": 5, "rail": 0 },
   "log": [

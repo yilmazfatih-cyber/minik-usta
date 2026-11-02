@@ -58,10 +58,23 @@ export function levelText(r: SolveReport, name: string, allowed: (i: SolveIssue)
     );
     const yao = m.yao.value === null ? '–' : m.yao.value.toFixed(2);
     const band = r.band
-      ? `K-52 band [${r.band.lo}, ${r.band.hi}] (${r.band.row} row: T ${r.band.T}, A ${r.band.A}, floor ${r.band.floor}; nominal ${r.band.nominal})`
+      ? r.band.version === 2
+        ? `K-52 D-099 band [${r.band.lo}, ${r.band.hi}] (${r.band.row} row: P ${r.band.T}, aMax ${r.band.A})`
+        : `K-52 band [${r.band.lo}, ${r.band.hi}] (${r.band.row} row: T ${r.band.T}, A ${r.band.A}, floor ${r.band.floor}; nominal ${r.band.nominal})`
       : '';
     lines.push(
       `  YAO ${m.yao.overWall}/${m.yao.overWall + m.yao.rail} = ${yao} · moves ${r.moves} · ${band}`,
+    );
+    const d = m.d099;
+    const aha = d.ahaMoves.map((a) => `${a.n} ${a.kind}`).join(', ');
+    lines.push(
+      `  D-099: maxCover ${d.maxCover ?? '–'} · canonShifts ${d.canonShifts} (parked ${d.parkedBlocks}, reparks ${d.reparks}, maxDigRun ${d.maxDigRun}) · depLater ${d.depLater} · depEarlier ${d.depEarlier} · crossDeps ${d.crossDeps} · carryShifts ${d.carryShifts} · parkSlack ${d.parkSlack ?? '–'} (E0 ${d.E0} / parkPeak ${d.parkPeak})`,
+    );
+    lines.push(
+      `  D-099: forced ${d.forced} / decision points ${d.decisionPoints} (choices ${d.choicesAll.join('·')} / best ${d.bestChoicesAll.join('·')}) · branch3 ${d.branch3 ?? '–'} (${d.goodPieces3.join('·')} / ${d.pieces3.join('·')})`,
+    );
+    lines.push(
+      `  D-099: dig(start) ${d.digStart ?? '∞'} · greedyMin ${d.greedyMin ?? '∞'} (excess ${d.greedyExcess ?? '∞'}) · greedyTrap ${d.greedyTrap ?? '–'} · greedyWin ${d.greedyWin.toFixed(2)} (${fmtNum(d.greedyStates)} greedy states) · ahaMin ${d.ahaMin}${aha ? ` (canonical: ${aha})` : ''} · undetectedDead ${d.undetectedDead} · D1 states ${d.d1States}`,
     );
     if (m.delivery.length > 0)
       lines.push(
@@ -139,6 +152,41 @@ export function summaryTable(reports: readonly SolveReport[]): string {
   return [head, sep, ...rows.map((x) => `| ${x} |`)].join('\n');
 }
 
+/** Markdown table of the D-099 puzzle metrics (GDD K-50 items 11–19; LEVELS §6.6 Tablo B columns). */
+export function puzzleTable(reports: readonly SolveReport[]): string {
+  const head =
+    '| # | şema | min | minShifts | firstNeedDepth | maxCover | depLater | crossDeps | carryShifts | parkSlack | forced | trapCount | greedyTrap | greedyExcess | greedyWin | ahaMin | branch3 | complete | yakalanmayan çıkmaz | D1 |';
+  const sep = '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|';
+  const rows = reports.map((r) => {
+    const m = r.metrics;
+    const d = m?.d099;
+    if (!m || !d) return [r.level, '–', r.status, ...Array.from({ length: 17 }, () => '–')].join(' | ');
+    return [
+      r.level,
+      r.schemaVersion ?? 1,
+      m.min,
+      m.minShifts,
+      m.firstNeedDepth ?? '–',
+      d.maxCover ?? '–',
+      d.depLater,
+      d.crossDeps,
+      d.carryShifts,
+      d.parkSlack ?? '–',
+      d.forced,
+      m.trapCount,
+      d.greedyTrap ?? '–',
+      d.greedyExcess ?? '∞',
+      d.greedyWin.toFixed(2),
+      d.ahaMin,
+      d.branch3 ?? '–',
+      d.complete ? 'evet' : 'hayır',
+      d.undetectedDead,
+      d.d1States,
+    ].join(' | ');
+  });
+  return [head, sep, ...rows.map((x) => `| ${x} |`)].join('\n');
+}
+
 // --- files ---------------------------------------------------------------------------------------------------------
 
 export function writeJson(path: string, value: unknown): void {
@@ -170,6 +218,10 @@ export function writeLevelReportSection(path: string, reports: readonly SolveRep
     `Üretildi: ${date} · solver ${reports[0]?.solverVersion ?? '–'} · kurallar ${reports[0]?.rulesVersion ?? '–'}. Tanımlar GDD K-50; zorunluluklar K-51; hamle bandı K-52.`,
     '',
     summaryTable(reports),
+    '',
+    '### D-099 bulmaca zekâsı (GDD K-50 madde 11–19, K-51 madde 6–9)',
+    '',
+    puzzleTable(reports),
     REPORT_END,
   ].join('\n');
   const old = existsSync(path) ? readFileSync(path, 'utf8') : '# Bölüm raporu\n';

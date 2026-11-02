@@ -27,7 +27,7 @@ import type { LevelSpec } from '../../fixtures/builders.ts';
 
 const BIG = 1_000_000;
 
-/** Every micro level: name → builder spec. 3×4 yard, 2×4 site, wall 4 (H 4), full cover. */
+/** Every micro level: name → builder spec. 3×4 yard (`floors`: 4×4), 2×4 or 2×2 site, wall 4 (H 4), full cover. */
 export const MICRO: Readonly<Record<string, LevelSpec>> = {
   // two vertical caps over the first block: a dig of 2
   dig: {
@@ -67,6 +67,44 @@ export const MICRO: Readonly<Record<string, LevelSpec>> = {
       ['D2_0', 'W', 2, 0],
       ['D2_0', 'Y', 2, 2],
     ],
+  },
+  // D-099 (schemaVersion 2, K-55): two 2×2 floors from one yard; the second floor's bottom block lies under its top one
+  floors: {
+    id: 7,
+    schemaVersion: 2,
+    yard: { cols: 4, rows: 4 },
+    site: { cols: 2, rows: 2 },
+    wall: { height: 4 },
+    plan: [
+      ['WW', 'YY'],
+      ['YY', 'WW'],
+    ],
+    pieces: [
+      ['D2_90', 'W', 0, 0],
+      ['D2_90', 'Y', 0, 1],
+      ['D2_90', 'W', 0, 2],
+      ['D2_90', 'Y', 0, 3],
+    ],
+    moves: 9,
+  },
+  // D-099: one yard, two floors, two O4 / D2 pairs of one colour — the D2 pair on the first floor leaves the O4 for the
+  // second, the O4 on the first floor too; a lone D2 W in the W row of floor 2 must wait (hold) for its neighbour
+  swap: {
+    id: 8,
+    schemaVersion: 2,
+    yard: { cols: 3, rows: 4 },
+    site: { cols: 2, rows: 2 },
+    wall: { height: 4 },
+    plan: [
+      ['WW', 'WW'],
+      ['WW', 'WW'],
+    ],
+    pieces: [
+      ['O4_0', 'W', 0, 0],
+      ['D2_0', 'W', 2, 0],
+      ['D2_0', 'W', 2, 2],
+    ],
+    moves: 9,
   },
   // two segments, a truck batch that buries the blocks needed first (K-22, K-25), a carried dig in segment 2
   truck: {
@@ -137,6 +175,8 @@ export interface BruteGraph {
   readonly keys: string[];
   readonly won: boolean[];
   readonly edges: BruteEdge[][];
+  /** No block of the state can start a drag (K-09; K-30 D1 when the state is not won). */
+  readonly noDrag?: boolean[];
 }
 
 /** Every drag move of `s` that changes the state: [next state, edge without `to`]. */
@@ -179,10 +219,16 @@ export function bruteExplore(lvl: CompiledLevel): BruteGraph {
   const states = [start];
   const won = [isLevelWon(start)];
   const edges: BruteEdge[][] = [];
+  const noDrag: boolean[] = [];
+  const hooks = levelHooks(lvl);
   for (let i = 0; i < states.length; i++) {
     const s = states[i] as GameState;
     const list: BruteEdge[] = [];
     edges.push(list);
+    let any = false;
+    for (let id: PieceId = 0; id < lvl.layout.counts.pieces && !any; id++)
+      if (beginDrag(s, id, hooks.drag)) any = true;
+    noDrag.push(!any);
     if (won[i]) continue;
     const key = keys[i];
     for (const m of moves(s)) {
@@ -204,7 +250,7 @@ export function bruteExplore(lvl: CompiledLevel): BruteGraph {
         list[list.indexOf(prev)] = { to, kind: m.kind, overWall: m.overWall, cost: m.cost };
     }
   }
-  return { keys, won, edges };
+  return { keys, won, edges, noDrag };
 }
 
 const INF = 1e9;
@@ -343,3 +389,114 @@ export function treeMin(lvl: CompiledLevel, maxDepth: number): number | null {
 
 /** Colour letters of the colour indices (debug messages). */
 export const colorLetter = (c: number): string => COLOR_CODES[c] ?? '-';
+
+/** D-099 metrics of the brute force (GDD K-50 items 16, 17; K-51 item 8), by fixed points over the plain graph. */
+export interface BruteD099 {
+  readonly digStart: number | null;
+  readonly greedyMin: number | null;
+  readonly greedyTrap: number | null;
+  readonly greedyWin: number;
+  readonly ahaMin: number | null;
+  readonly d1States: number;
+}
+
+export function bruteD099(g: BruteGraph, budget: number): BruteD099 {
+  const dist = relax(g, (e) => e.cost);
+  // dig: fewest shifts to a state with a placement edge (fixed point; INF when none)
+  const dig: number[] = g.edges.map((list) => (list.some((e) => e.kind === 'placement') ? 0 : INF));
+  for (let changed = true; changed;) {
+    changed = false;
+    g.edges.forEach((list, s) => {
+      for (const e of list) {
+        if (e.kind !== 'shift') continue;
+        const v = (dig[e.to] ?? INF) + 1;
+        if (v < (dig[s] ?? INF)) {
+          dig[s] = v;
+          changed = true;
+        }
+      }
+    });
+  }
+  const isG = (s: number, e: BruteEdge): boolean =>
+    (dig[s] ?? INF) === 0
+      ? e.kind === 'placement'
+      : e.kind === 'shift' && (dig[s] ?? INF) < INF && (dig[e.to] ?? INF) === (dig[s] ?? INF) - 1;
+  // greedyMin: Bellman-Ford from the start over G edges
+  const gd: number[] = g.keys.map(() => INF);
+  gd[0] = 0;
+  for (let changed = true; changed;) {
+    changed = false;
+    g.edges.forEach((list, s) => {
+      if ((gd[s] ?? INF) >= INF) return;
+      for (const e of list) {
+        if (!isG(s, e)) continue;
+        const v = (gd[s] ?? INF) + e.cost;
+        if (v < (gd[e.to] ?? INF)) {
+          gd[e.to] = v;
+          changed = true;
+        }
+      }
+    });
+  }
+  let greedyMin = INF;
+  g.won.forEach((w, s) => {
+    if (w && (gd[s] ?? INF) < greedyMin) greedyMin = gd[s] ?? INF;
+  });
+  // greedyTrap: BFS (moves) over G edges to the first dead state
+  let greedyTrap: number | null = null;
+  const depth = new Map<number, number>([[0, 0]]);
+  const queue = [0];
+  for (let h = 0; h < queue.length && greedyTrap === null; h++) {
+    const s = queue[h] ?? 0;
+    if ((dist[s] ?? INF) >= INF) {
+      greedyTrap = depth.get(s) ?? 0;
+      break;
+    }
+    for (const e of g.edges[s] ?? [])
+      if (isG(s, e) && !depth.has(e.to)) {
+        depth.set(e.to, (depth.get(s) ?? 0) + 1);
+        queue.push(e.to);
+      }
+  }
+  // greedyWin: plain recursion over (state, budget) without a dead-state shortcut
+  const win = (s: number, b: number): number => {
+    if (g.won[s]) return 1;
+    const list = (g.edges[s] ?? []).filter((e) => isG(s, e));
+    if (list.length === 0) return 0;
+    let sum = 0;
+    for (const e of list) if (e.cost <= b) sum += win(e.to, b - e.cost);
+    return sum / list.length;
+  };
+  // ahaMin: memoised DFS on the shortest-path DAG, non-G edges weigh 1
+  const memo = new Map<number, number>();
+  const aha = (s: number): number => {
+    if (g.won[s]) return 0;
+    const m = memo.get(s);
+    if (m !== undefined) return m;
+    let best = INF;
+    for (const e of g.edges[s] ?? []) {
+      if ((dist[e.to] ?? INF) + e.cost !== dist[s]) continue;
+      best = Math.min(best, (isG(s, e) ? 0 : 1) + aha(e.to));
+    }
+    memo.set(s, best);
+    return best;
+  };
+  // D1: a non-won state where no block can start a drag (core K-09 with an unlimited counter), entered from a live
+  // state or the start
+  const d1 = new Set<number>();
+  const isD1 = (s: number): boolean => !g.won[s] && g.noDrag?.[s] === true;
+  if (isD1(0)) d1.add(0);
+  g.edges.forEach((list, s) => {
+    if ((dist[s] ?? INF) >= INF) return;
+    for (const e of list) if (isD1(e.to)) d1.add(e.to);
+  });
+  const d1States = d1.size;
+  return {
+    digStart: (dig[0] ?? INF) >= INF ? null : (dig[0] ?? 0),
+    greedyMin: greedyMin >= INF ? null : greedyMin,
+    greedyTrap,
+    greedyWin: win(0, budget),
+    ahaMin: (dist[0] ?? INF) >= INF ? null : aha(0),
+    d1States,
+  };
+}

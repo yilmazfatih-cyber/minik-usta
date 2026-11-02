@@ -293,23 +293,48 @@ const TutorialStep = z.strictObject({
   done: TutCond,
 });
 
-/** A target band `[low, high]` of a K-50 metric (LEVELS §0, P-2R-4; `low ≤ high` is checked by L-01). */
+/**
+ * A target band `[low, high]` of a K-50 metric (LEVELS §0, P-2R-4; `low ≤ high` is checked by L-01). For
+ * `greedyExcess` a high bound of 99 also admits "∞" (no greedy win, LEVELS §6.2 "≥ 2 ya da ∞").
+ */
 const Band = z.tuple([Int(0, 99), Int(0, 99)]);
 const Rate = z.number().check(z.minimum(0), z.maximum(1));
+const RateBand = z.tuple([Rate, Rate]);
+/** `parkSlack` band (two decimals, at most 9.99; LEVELS §7 U-1: "no park" is never out of band). */
+const Slack = z.number().check(z.minimum(0), z.maximum(9.99));
 
 /**
- * `targets` (TECH §2R.2, LEVELS §0): machine-readable copy of the LEVELS §2 target bands; the game does not read it,
- * `levels:solve` compares the K-50 metrics with it (`metric_out_of_band`, L-33).
+ * `targets` (TECH §2R.2, LEVELS §0; D-099 additions LEVELS §7 U-1, GDD §14): machine-readable copy of the LEVELS
+ * target bands; the game does not read it, `levels:solve` compares the K-50 metrics with it (`metric_out_of_band`,
+ * L-33).
  */
 const Targets = z.strictObject({
   minShifts: z.optional(Band),
   firstNeedDepth: z.optional(Band),
   choices0: z.optional(Band),
-  deadRate: z.optional(z.tuple([Rate, Rate])),
+  deadRate: z.optional(RateBand),
+  // D-099 (K-50 items 11–18)
+  min: z.optional(Band),
+  maxCover: z.optional(Band),
+  depLater: z.optional(Band),
+  crossDeps: z.optional(Band),
+  parkSlack: z.optional(z.tuple([Slack, Slack])),
+  forced: z.optional(Band),
+  greedyExcess: z.optional(Band),
+  greedyWin: z.optional(RateBand),
+  ahaMin: z.optional(Band),
+  branch3: z.optional(RateBand),
 });
 
+/**
+ * GDD §14 `schemaVersion` (D-099): 1 = Faz 2R archive (batches, truck, K-25…K-27); 2 = fixed yard (K-55: exactly one
+ * batch, `forSegment` 0, no `dropColumns`; D-099 move budget K-52; puzzle gates K-51 items 6–9). Missing = 1.
+ */
+export const SCHEMA_VERSIONS = [1, 2] as const;
+export type SchemaVersion = (typeof SCHEMA_VERSIONS)[number];
+
 export const LevelSchema = z.strictObject({
-  schemaVersion: z.optional(z.literal(1)),
+  schemaVersion: z.optional(z.union([z.literal(1), z.literal(2)])),
   id: Int(1, 999),
   chapter: Int(1, 5),
   name: I18nText,
@@ -398,3 +423,13 @@ export type ObstacleData = LevelData['obstacles'][number];
 export type GoalData = LevelData['goals'][number];
 export type SegmentData = LevelData['build']['segments'][number];
 export type TargetsData = NonNullable<LevelData['targets']>;
+
+/** The level's schema version (GDD §14; missing = 1). */
+export function schemaVersionOf(level: { readonly schemaVersion?: number | undefined }): SchemaVersion {
+  return level.schemaVersion === 2 ? 2 : 1;
+}
+
+/** K-55 (D-099): a `schemaVersion` 2 level — every block in the yard from the start, no batch or truck refill. */
+export function isFixedYardLevel(level: { readonly schemaVersion?: number | undefined }): boolean {
+  return schemaVersionOf(level) === 2;
+}

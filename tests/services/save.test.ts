@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import economy from '../../config/economy.json' with { type: 'json' };
 import type { SessionAction } from '../../src/core/types.ts';
+import { RULES_VERSION } from '../../src/core/session.ts';
 import type { AnalyticsEvent } from '../../src/services/analytics.ts';
 import { FakeClock } from '../../src/services/clock.ts';
 import {
@@ -654,6 +655,27 @@ describe('K-43 in-level record and resume (TECH 11.1)', () => {
     expect(h.events).toEqual([
       { name: 'level_resume_invalid', level: 3, movesMade: 0, cause: 'rules_version' },
     ]);
+  });
+
+  it('E-67 K-55 an attempt saved with rulesVersion 2 is closed without penalty under RULES_VERSION 3 (life, pre-level boosters, +5 coins back)', () => {
+    const h = harness();
+    const s = h.open();
+    s.commit((d) => void (d.coins = 5000));
+    s.beginAttempt(start({ preBoosters: ['thermos'], rulesVersion: 2 }));
+    s.recordAction(drag(1, 6, 0), { movesMade: 1 });
+    s.recordAction({ kind: 'addMoves', amount: 5, source: 'offerCoins' }, { movesMade: 1, offerCoins: 900 });
+    s.commit((d) => void (d.coins -= 900));
+    const d = h.open().resumeOnLaunch(() => ({ levelHash: IDENTITY.levelHash, rulesVersion: RULES_VERSION }));
+    expect(RULES_VERSION).toBe(3);
+    expect(d).toMatchObject({
+      kind: 'void',
+      cause: 'rules_version',
+      notice: { refunds: { life: 1, boosters: { thermos: 1 }, coins: 900 } },
+    });
+    const after = stored(h.store);
+    expect(after.inLevel).toBeNull();
+    expect(after.coins).toBe(5000);
+    expect(after.lives.reserved).toBe(0);
   });
 
   it('E-45 invalidated attempt refunds life, boosters and offer coins and reduces bridge run spend', () => {

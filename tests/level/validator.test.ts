@@ -771,8 +771,19 @@ describe('K-45 Faz 2R logic details', () => {
     ).toEqual(['build.debris[0]', 'build.debris[1]', 'build.debris[2]']);
   });
 
-  it('K-45 runtime subset: L-02, L-04, L-05, L-08, L-09, L-24, L-25, L-26, L-28 (WP-M put L-05 back after the Faz 2R levels)', () => {
-    expect(RUNTIME_CHECKS).toEqual(['L-02', 'L-04', 'L-05', 'L-08', 'L-09', 'L-24', 'L-25', 'L-26', 'L-28']);
+  it('K-45 runtime subset: L-02, L-04, L-05, L-08, L-09, L-24, L-25, L-26, L-28, L-36 (WP-M put L-05 back after the Faz 2R levels; K-55 adds L-36)', () => {
+    expect(RUNTIME_CHECKS).toEqual([
+      'L-02',
+      'L-04',
+      'L-05',
+      'L-08',
+      'L-09',
+      'L-24',
+      'L-25',
+      'L-26',
+      'L-28',
+      'L-36',
+    ]);
     const run = (file: string): string[] =>
       validateLevelJson(loadFixture('invalid', file), { only: RUNTIME_CHECKS }).issues.map((i) => i.code);
     expect(run('yard_fill_low')).toEqual([]);

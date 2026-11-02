@@ -24,6 +24,7 @@
     "levels:validate": "node tools/validate-levels.ts",
     "levels:solve": "node tools/solve.ts",
     "levels:check": "node tools/solve.ts --check",
+    "levels:gen": "node tools/levels-gen.ts",
     "screens": "npm run build:harness && node tools/screens.ts",
     "perf": "npm run build:harness && node tools/perf.ts",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test && npm run test:rules"

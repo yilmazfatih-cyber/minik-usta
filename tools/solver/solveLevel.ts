@@ -18,6 +18,8 @@ import { fastYardBlockers } from './expand.ts';
 import { canonicalActions, computeMetrics, movesBand, puzzleChecks } from './metrics.ts';
 import type { CanonicalStep, MovesBand, PuzzleMetrics, SolveIssue } from './metrics.ts';
 import { checkTutorialHands } from './tutorial.ts';
+import { d099Checks } from './puzzle.ts';
+import { isFixedYardLevel } from '../../src/core/level/schema.ts';
 import { replayCanonical } from './verify.ts';
 import type { ReplayCheck } from './verify.ts';
 import { VARIANTS, applyVariant, variantApplies, variantBandOk } from './variants.ts';
@@ -27,7 +29,7 @@ import type { VariantName } from './variants.ts';
  * Bump when the solver's results can change for the same level and rules (cache key with `levelHash` and
  * `RULES_VERSION`, TECH §2R.5).
  */
-export const SOLVER_VERSION = 2;
+export const SOLVER_VERSION = 3;
 
 export interface SolveOptions {
   readonly maxStates?: number;
@@ -66,6 +68,8 @@ export interface SolveReport {
   readonly rulesVersion: number;
   readonly solverVersion: number;
   readonly variant: VariantName | null;
+  /** GDD §14 `schemaVersion` of the level (2 = K-55 fixed yard); null when the file did not validate. */
+  readonly schemaVersion: 1 | 2 | null;
   readonly status: SolveStatus;
   readonly geometry: string | null;
   readonly difficulty: string | null;
@@ -116,6 +120,7 @@ export function solveLevelJson(json: unknown, ctx: SolveContext = {}, opts: Solv
       rulesVersion: RULES_VERSION,
       solverVersion: SOLVER_VERSION,
       variant: opts.variant ?? null,
+      schemaVersion: null,
       status: 'invalid',
       geometry: null,
       difficulty: null,
@@ -186,8 +191,21 @@ export function solveLevelData(
   let replay: ReplayCheck | null = null;
   const isVariant = opts.variant !== undefined;
 
+  const fixedYard = isFixedYardLevel(level);
   if (!g.complete) {
     status = 'unknown';
+    // K-51 item 7 (a), D-099: the dead-table gate needs a complete scan; a v2 level without one is not shipped
+    if (fixedYard)
+      out.push(
+        issue(
+          'scan_incomplete',
+          'K-51/7',
+          'L-37',
+          'error',
+          '(level)',
+          `schemaVersion 2: the state space was not scanned to the end (${g.count} states, ${g.limit}); shrink the yard or N (LEVELS §6.3)`,
+        ),
+      );
     out.push(
       issue(
         'solve_unknown',
@@ -195,7 +213,7 @@ export function solveLevelData(
         'tool',
         'error',
         '(level)',
-        `exploration stopped at ${g.count} states (${g.limit}): min, the canonical solution and every K-50 metric are unknown (the A* fallback is Faz 3)`,
+        `exploration stopped at ${g.count} states (${g.limit}): min, the canonical solution and every K-50 metric are unknown`,
       ),
       issue(
         'trap_scan_incomplete',
@@ -224,9 +242,11 @@ export function solveLevelData(
       status = 'solved';
       metrics = res.metrics;
       steps = res.canonical;
-      band = movesBand(metrics.min, level.difficulty, level.teaches !== undefined);
+      band = movesBand(metrics.min, level.difficulty, level.teaches !== undefined, fixedYard);
       out.push(...puzzleChecks({ level, lvl, metrics, canonical: steps, complete: g.complete }));
-      if (metrics.deadRate > 0)
+      // v1 (Faz 2R) tool gates; a v2 level replaces both with `undetected_dead` (K-51 item 7 b): a trap that D2/D3a
+      // catch is a Söküm, allowed on Zor/Çok Zor (trap_warn), forbidden on Kolay/Normal (trap_in_easy)
+      if (!fixedYard && metrics.deadRate > 0)
         out.push(
           issue(
             'dead_table_missing',
@@ -242,7 +262,8 @@ export function solveLevelData(
         notes.push(
           `whole space: ${de.edges} move(s) from a live state lead into ${de.states} dead state(s) (${de.shiftEdges} of them shifts whose delivery buries a block, not K-50 ✓-traps); D1/D2/D3a catch ${de.caught} state(s), ${de.states - de.caught} would need the D3b table (cut 1, Faz 3)`,
         );
-      out.push(...wholeSpaceGate(metrics), ...deliveryChecks(metrics));
+      if (fixedYard) out.push(...d099Checks(level, metrics.d099));
+      else out.push(...wholeSpaceGate(metrics), ...deliveryChecks(metrics));
       const penaltyFree = steps.every((st) => st.cost === 1 && st.kind !== 'wait');
       if (penaltyFree && !metrics.minIsNPlusShifts)
         notes.push(`K-50 item 2: min ${metrics.min} ≠ N ${metrics.N} + minShifts ${metrics.minShifts}`);
@@ -287,6 +308,7 @@ export function solveLevelData(
     rulesVersion: RULES_VERSION,
     solverVersion: SOLVER_VERSION,
     variant: opts.variant ?? null,
+    schemaVersion: fixedYard ? 2 : 1,
     status,
     geometry: geoLabel(lvl.geo),
     difficulty: level.difficulty,

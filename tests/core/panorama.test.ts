@@ -29,10 +29,12 @@ describe('K-06 build panorama', () => {
       wall: { height: 2 },
       plan: ['??', 'WY'],
       hidden: [{ kind: 'repeat', period: 1 }],
+      // a fourth block stays in the yard: a holdable block keeps K-30 D1 (RULES_VERSION 3: Söküm) away
       pieces: [
         ['B1_0', 'W', 0, 0],
         ['B1_0', 'Y', 1, 0],
         ['B1_0', 'W', 2, 0],
+        ['B1_0', 'Y', 3, 0],
       ],
     });
     expect(panoramaView(s)[0]?.rows).toEqual([

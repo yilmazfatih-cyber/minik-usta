@@ -3,7 +3,6 @@ import {
   D3A_MAX_EXPANSIONS,
   D3A_STATS,
   ANALYTICS_CAUSE,
-  anyOneMoveCorrect,
   colorImbalance,
   deadTableFromJson,
   detectDeadlock,
@@ -29,8 +28,6 @@ import {
   gapField,
   hasFlag,
   hdr,
-  pieceColor,
-  pieceShape,
   pieceX,
   pieceY,
   pieceZone,
@@ -404,21 +401,26 @@ describe('K-30 D1 no moves, K-29 after +5', () => {
     obstacles: [0, 1, 2, 3, 4].map((x) => ({ type: 'crate' as const, x, y: 2, hp: 1 })),
   };
 
-  it('K-30 D1 reshuffles a jammed yard (crates stay, shapes, colours and count kept) so one drag move places a block correctly', () => {
+  it('K-30 D1 (RULES_VERSION 3, K-55 item 8): a jammed yard is torn down with cause access — never re-laid', () => {
     const s = initialState(JAM);
     expect(isFullCover(s.lvl)).toBe(true);
     run(s, dragTo(5, 5, 4));
     expect(noMoves(s)).toBe(false);
-    const before = [0, 1, 2, 3, 4].map((id) => [pieceShape(s, id), pieceColor(s, id)]);
+    const before = cloneState(s);
+    const left = hdr(s, H.movesLeft);
     const r = run(s, dragTo(6, 5, 4));
+    expect(types(r.ev).slice(-2)).toEqual(['deadlockDetected', 'teardown']);
     expect(find(r.ev, 'deadlockDetected')).toMatchObject({ reason: 'noMoves', step: 12 });
-    const help = find(r.ev, 'truckHelp');
-    expect(help.kind).toBe('reshuffle');
-    expect((help.moves ?? []).length).toBeGreaterThan(0);
+    expect(types(r.ev)).not.toContain('truckHelp');
+    expect(find(r.ev, 'teardown')).toMatchObject({ cause: 'access', step: 12 });
+    expect(r.res.teardownCause).toBe('access');
+    // the yard is exactly the state before the move: no block was moved by the help
+    expect([0, 1, 2, 3, 4, 5, 6].map((id) => place(s, id))).toEqual(
+      [0, 1, 2, 3, 4, 5, 6].map((id) => place(before, id)),
+    );
     expect(noMoves(s)).toBe(false);
-    expect(anyOneMoveCorrect(s)).toBe(true);
-    expect([0, 1, 2, 3, 4].map((id) => [pieceShape(s, id), pieceColor(s, id)])).toEqual(before);
-    expect([0, 1, 2, 3, 4].every((id) => pieceZone(s, id) === Zone.yard)).toBe(true);
+    expect([hdr(s, H.movesLeft), hdr(s, H.turn)]).toEqual([left - 1, hdr(before, H.turn)]);
+    expect(hdr(s, H.movesSpent)).toBe(hdr(before, H.movesSpent) + 1);
     expect(stateInvariantErrors(s)).toEqual([]);
   });
 
@@ -444,23 +446,54 @@ describe('K-30 D1 no moves, K-29 after +5', () => {
     expect([hasFlag(s, 0, 'chained'), hasFlag(s, 1, 'chained')]).toEqual([false, false]);
   });
 
-  it('K-30 D1 not run at zero moves; K-29 after +5 only D1 runs once (E-42)', () => {
+  it('K-30 D1 not run at zero moves; K-29 after +5 only D1 runs once (E-42): its Söküm takes the last drag back', () => {
     const lvl = compiledLevel({ ...JAM, moves: 2 });
     const game = GameSession.start(lvl);
     game.commit(dragTo(5, 5, 4));
-    const last = game.apply(dragTo(6, 5, 4)); // counter 0 → no D1 help
+    const before = cloneState(game.state);
+    const last = game.apply(dragTo(6, 5, 4)); // counter 0 → no D1
     expect(last.outOfMoves).toBe(true);
-    expect(types(last.events)).not.toContain('truckHelp');
+    expect(types(last.events)).not.toContain('deadlockDetected');
+    expect(types(last.events)).not.toContain('teardown');
     expect(noMoves(game.state, game.hooks.drag)).toBe(true);
     expect(last.summary.holdable).toEqual([]);
     const offer = game.apply({ kind: 'addMoves', amount: 5, source: 'offerCoins' });
     expect(offer.events.map((e) => [e.t, e.step])).toEqual([
       ['movesChanged', 1],
       ['deadlockDetected', 12],
-      ['truckHelp', 12],
+      ['teardown', 12],
     ]);
+    expect(offer.teardown).toMatchObject({ cause: 'access' });
     expect(offer.summary.holdable.length).toBeGreaterThan(0);
-    expect([game.movesLeft, game.movesMade, game.movesSpent]).toEqual([5, 2, 2]);
+    expect([0, 1, 2, 3, 4, 5, 6].map((id) => place(game.state, id))).toEqual(
+      [0, 1, 2, 3, 4, 5, 6].map((id) => place(before, id)),
+    );
+    // the counter keeps the +5, `m` goes back to the drag's start, movesSpent never drops (K-30)
+    expect([game.movesLeft, game.movesMade, game.movesSpent]).toEqual([5, 1, 2]);
+    // replay (K-43) rebuilds the same state, Söküm included
+    const again = GameSession.replay(lvl, game.log);
+    expect(hashState(again.state)).toEqual(hashState(game.state));
+  });
+
+  it('E-64 K-55 D1 with a chained block: the chain is lifted first, the game goes on; no reshuffle', () => {
+    const s = initialState({
+      wall: { height: 2 },
+      site: { cols: 2, rows: 2 },
+      plan: ['WW', 'WW'],
+      pieces: [
+        ['B1_0', 'W', 0, 0, ['chained']],
+        ['B1_0', 'W', 1, 0, ['chained']],
+        ['D2_0', 'W', 4, 0],
+      ],
+    });
+    const r = run(s, dragTo(2, 6, 8));
+    expect(types(r.ev)).not.toContain('teardown');
+    expect(find(r.ev, 'truckHelp').kind).toBe('unchain');
+    expect(noMoves(s)).toBe(false);
+    expect([place(s, 0), place(s, 1)]).toEqual([
+      [Zone.yard, 0, 0],
+      [Zone.yard, 1, 0],
+    ]);
   });
 });
 

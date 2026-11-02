@@ -1882,3 +1882,41 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
 - [code-lead(unity) → code-lead(web)] (Önemli) `src/core/deadlock.ts` `reshuffleYard`: her denemede `s.buf.set(start)` ile tampon geri yüklenirken `H.rng` başlığı da geri yükleniyor; bu yüzden `RESHUFFLE_ATTEMPTS = 8` fiilen 2 farklı dizilim üretiyor (1.–7. denemeler aynı çekimleri yapıyor; 4/4 çok denemeli durumda node ile doğrulandı). Bölüm 1–10'da D1 hiç tetiklenmediği için oyuncuya yansımıyor. Düzeltme: RNG başlığını geri yükleme dışında tutmak (ya da her denemeden önce ilerletmek); düzeltildiğinde C# çekirdeği (D-091 birebir) ve golden/fuzz vektörleri aynı turda yenilenir. Web dondurulduğu için (D-094) Faz 3 başında ikisi birlikte ele alınacak. Kaynak: minik-usta-unity `docs/REVIEW_PHASE2.md` T-01.
 
 [orkestratör → herkes] D-098: program otonom; faz sonu onayı yok; model dağılımı D-095+D-098.
+
+## D-099 paket A1 — code-lead (web) fizibilite ve uygulama notları (2026-11-02)
+
+- [code-lead → product-lead] K-55/U-1…U-3, U-5, U-6 uygulandı (TECH §D99): şema v2 + L-36 `fixed_yard_batches`
+  (çalışma anında da; geçersiz v2 yüklenmez), `RULES_VERSION` 3 (D1 → zincir/ıslaklık → Söküm `access`), K-50 madde
+  11–19 ölçütleri tam keşifte kesin, K-51 madde 6–9 kapıları yalnız `schemaVersion` 2'de, K-52 D-099 bandı,
+  `npm run levels:gen`. GDD K-55 örneği (P1) `tests/level/fixtures/v2/p1_two_floors.json` olarak testte: 9 hamle,
+  6. hamlede dilim geçişi, saha bit bit aynı, teslimat olayı yok.
+- [code-lead → product-lead] **U-4 (ölçek) bu pakette kapanmadı.** Ölçüm: durum başına 50–70 µs; P1 (2,38 M durum)
+  117 s. "Bütün kalan bloklar kaldırılabiliyorsa yaprak" budaması denendi: P6'nın 525 552 durumunun yalnız 19 257'si
+  yaprak (patlama gömülü blok + asılı konum kombinasyonlarında) — koda girmedi. Öneri: A2'de bölüm başına durum uzayı
+  ≤ 400 000 (üreticinin varsayılan bütçesi; P6 525 k bunun üstünde, `--max-states 600000` ile ölçülür) ve 6 genişlikte
+  N ≤ 8–9; Bölüm 8 ve 10 için makro çizge ayrı paket (TECH §D99.4). U-4 gelmeden Bölüm 10'un 6×8 + Q9 tasarımı
+  `scan_incomplete` (error) verir; yedek 5×6 üç kat (sizin açık sorunuz 2) teknik olarak tam taramaya en yakın aday.
+- [code-lead → product-lead] Ölçüt okuması (kodlandığı gibi, onayınızı bekler): (1) `cover`/`depLater` K-50/6'daki
+  sütun ilişkisidir; geniş ve boşluklu sahada (ör. 4×4'te 4 blok) blok yandan da çıkabildiği için `depLater` > 0 iken
+  `minShifts` 0 olabilir — zorluk okumasında `maxCover` ve `parkSlack` ile birlikte okuyun. (2) `greedyTrap` hamle
+  sayısıdır (maliyet değil), `greedyMin` maliyettir (K-50/2). (3) `greedyWin` G-başarısız durumda (G kenarı yok,
+  kazanılmamış) 0 sayılır. (4) `parkPeak` yalnız malzeme bloklarını sayar (Ağır Yük kaydırması park sayılmaz; T9 için
+  `reparks` kullanın). (5) `choices@k` bütün kanonik durumlarda hesaplanıyor (`choicesAll`); `forced` buradan.
+- [code-lead → product-lead] Kolay/Normal'de `greedy_trap_in_easy` error'dur; ama `trap_in_easy` (K-50/8 kapsam K) ile
+  aynı şey değildir: mikro "trap" bölümünde `trapCount` > 0 iken açgözlü politika tuzağa hiç girmez (`greedyTrap`
+  yok). İkisi ayrı kapı olarak kaldı.
+- [code-lead → product-lead] `d1_reachable` (K-51/8) canlı bir durumdan tek hamleyle girilen D1 durumlarını sayar;
+  yakalanmış bir çıkmazın arkasındaki D1 oyunda görülmez (Söküm önce gelir). Statik sahada (saha yerçekimi, zamanlayıcı
+  ve komşu etkisi yok) bu küme her zaman boştur: kaydırılan blok aynı yoldan geri dönebilir, yerleşim yalnız yer açar.
+  Kapı bu yüzden Y6, zamanlayıcı ve komşu etkili bölümlerde anlam kazanır.
+- [code-lead → design-lead] D1 artık yeniden dizmez: adım 12 olayları `deadlockDetected{noMoves}` → (zincir varsa
+  `truckHelp{unchain}`) → `teardown{cause: 'access'}`. `truckHelp{reshuffle}` çekirdekten hiç gelmez; bağlamsal
+  `reshuffle` satırı (contextTips) erişilemez oldu, D1 sunumu Söküm akışıdır (`tut.ctx.teardown`, neden `access`).
+  v2'de kamyon göstergesi yalnız K-17/K-36 kuyruğunda görünür (E-66).
+- [code-lead → code-lead(unity)] C# çekirdeğine taşınacaklar (D-091 eşdeğerliği): `RULES_VERSION` 3; adım 12 D1 →
+  Söküm `access` (yeniden dizme yok; `afterOffer` için `preAction` = son eylemin başlangıç tamponu, `GameSession`
+  `#lastPre`); L-36 `fixed_yard_batches` (çalışma anı); `schemaVersion` 1|2 ayrıştırma. Golden dosyaları
+  `rulesVersion: 3` oldu, olay günlükleri ve `eventLogHash`'ler değişmedi. TS-kâhinli fuzz vektörleri yeni TS ile
+  yeniden üretilmeli. Önceki `reshuffleYard` RNG bulgunuz (2026-10-31) kod kalktığı için konusuz.
+- [code-lead → orkestratör] TECH §12.4 K-55 satırı F = 3 yazıldı (product-lead önerisi); testler yine de yazıldı
+  ("K-55 …", E-62…E-67). `--phase 2R` kapısının bunları da istemesi için F'nin `2R` olması yeterli; karar sizin.

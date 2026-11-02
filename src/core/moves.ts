@@ -10,12 +10,14 @@
  *   wall boundary) + hidden item check #1 · 6 yard gravity (`settleYard`) + check #2 · 7 goal counters · 8 segment
  *   completion (site strategy) + next batch queued · 9 FIFO delivery · 10 timers (`lvl.step10` order) · 11 win (K-48),
  *   else out of moves · 12 deadlock check and truck help (core/deadlock.ts `runStep12`; Faz 2R: also at 0 moves, before
- *   the out-of-moves window; skipped by `noTruckHelp`). A Söküm (K-30) restores the action's start buffer
+ *   the out-of-moves window; skipped by `noTruckHelp`). K-55 (D-099, `schemaVersion` 2): a level has one batch, so
+ *   step 8 queues nothing, step 9 only retries K-17 / K-36 queue blocks and a segment change never touches the yard. A Söküm (K-30) restores the action's start buffer
  *   (`ApplyOptions.preAction`) except the counter and `movesSpent`; its `teardown` event is the action's last event.
  * Boosters run the mini pipeline (GDD §10): the direct effect as step 1, then steps 5 (hidden items only), 6, 7, 8, 9,
  * 11, 12: hammer (K-36), crane (K-37), paint brush (K-38) and the Golden Trowel (K-33, `goldTrowel`); preconditions,
  * effects and the D3a pre-check live in core/boosters.ts. The Faz 2 cell trowel (`trowel`) is rejected.
- * `addMoves` from an accepted +5 offer sets no timer and no streak and runs step 12 once: D1 only (K-29, E-42).
+ * `addMoves` from an accepted +5 offer sets no timer and no streak and runs step 12 once: D1 only (K-29, E-42); a D1
+ * that the rules cannot lift is a Söküm of the last action before the window (`RULES_VERSION` 3, K-55 item 8).
  *
  * Obstacles: core has no obstacle-specific `if`. Every rule effect comes through `MoveHooks`; by default the level's
  * hooks from the obstacle registry (core/obstacles/registry.ts `levelHooks`, TECH §7). Phase 2 has W1 (core rail
@@ -245,7 +247,9 @@ export interface ApplyOptions {
   readonly strict?: boolean;
   /**
    * K-30 Söküm target: the buffer before this action. `GameSession` passes the copy it keeps for Undo; without it
-   * `applyMove` takes its own copy (≈ 1 µs) whenever step 12 may run.
+   * `applyMove` takes its own copy (≈ 1 µs) whenever step 12 may run. For an accepted +5 offer (`addMoves` from
+   * `offerCoins` / `offerAd`) it is the start buffer of the last action before the window: the target of a D1 Söküm
+   * (K-29, `RULES_VERSION` 3); absent = no Söküm after the offer.
    */
   readonly preAction?: Int32Array;
   /** K-30 D3b dead-state table of the level; null / absent in Faz 2R (cut 1). */
@@ -631,14 +635,18 @@ function addMovesMove(
     em.step = 12;
     const ctx = makeContext(s, em, { wasStuck: false, rotatedAtStep8: false, affected: new Set() });
     if (hooks.deadlock) hooks.deadlock(ctx);
-    else
-      runStep12(ctx, hooks, {
-        preAction: null,
+    else {
+      // K-29 (RULES_VERSION 3): a D1 Söküm goes back to the start of the last action before the window
+      const cause = runStep12(ctx, hooks, {
+        preAction: opts.preAction ?? null,
         tiling: false,
         counterZero: movesLeft <= 0,
         table: opts.deadTable ?? null,
         afterOffer: true,
       });
+      if (cause !== null)
+        return { status: 'applied', reason: null, won: false, outOfMoves: false, teardownCause: cause };
+    }
   }
   return APPLIED;
 }

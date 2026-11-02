@@ -1,10 +1,10 @@
 /**
- * Deadlock check and truck help — K-35 step 12 (docs/GDD.md K-30, K-29, K-35; TECH_DESIGN §2R.4). Pure: no clock, no
- * DOM; the only randomness is the state's seeded RNG (D1 reshuffle).
+ * Deadlock check and truck help — K-35 step 12 (docs/GDD.md K-30, K-29, K-35, K-55 item 8; TECH_DESIGN §2R.4, §D99).
+ * Pure: no clock, no DOM, no randomness.
  *
  * - D1 `noMoves`: no block can be held by K-09 (a)–(d) (the counter condition (e) is ignored). Help: rules lift chains
- *   and wetness (`onTruckHelp`); still D1 → the yard is re-laid by a constructive, seeded reshuffle (shapes, colours and
- *   count kept) checked by D3a and by "one drag move gives a correct placement". D1 is never a Söküm.
+ *   and wetness (`onTruckHelp`); still D1 → Söküm with cause `access` (`RULES_VERSION` 3, D-099: the yard is never
+ *   re-laid; the Faz 2R seeded reshuffle was removed — every `RULES_VERSION` ≤ 2 attempt is voided on load, K-43 item 4).
  * - D2 `color`: per colour, remaining supply ≠ remaining demand (K-47). Skipped on W6 levels (CL-2R-04).
  * - D3a `tiling` (`tileRemaining`): exact cover of the remaining plan cells by the remaining material blocks, bottom-up
  *   per column (K-34), segments in order, batch availability, W6 joker; access ignored. Budget = expansions
@@ -15,7 +15,8 @@
  *   keep their post-action values, the streak `c = 0`; `teardown` is the action's last event.
  *
  * Levels whose data is not a full cover (K-47 broken: old Faz 2 data, hand-made test boards) get D1 only: D2 / D3 are
- * defined for full-cover data, the validator never loads anything else (L-30 `cover_mismatch`).
+ * defined for full-cover data, the validator never loads anything else (L-30 `cover_mismatch`). D1's Söküm runs on
+ * every level (it only needs the action's start buffer).
  *
  * D3a algorithm note (TECH §2R.4 item 2, implementation): §2R.4 picks the lowest column and only tries blocks covering
  * its next cell. That misses tilings where the block over that cell must wait for a neighbour column (C3 overhang over
@@ -24,15 +25,7 @@
  * profile, class counts) merges the orders, so every state is expanded once. Complete and deterministic.
  */
 import { COLOR_CODES, Zone } from './types.ts';
-import type {
-  Anchor,
-  At,
-  GameEventBody,
-  PieceId,
-  TeardownCause,
-  TeardownMove,
-  TeardownPlace,
-} from './types.ts';
+import type { Anchor, GameEventBody, PieceId, TeardownCause, TeardownMove, TeardownPlace } from './types.ts';
 import {
   FLAG_BIT,
   H,
@@ -60,10 +53,9 @@ import { isCargoShape, tryBeginDrag } from './movement.ts';
 import type { DragRules } from './movement.ts';
 import { computeFall } from './gravity.ts';
 import type { FallRules } from './gravity.ts';
-import { occupyPiece, vacatePiece, visibleSegment } from './grid.ts';
+import { visibleSegment } from './grid.ts';
 import { isRemainingSupply, remainingDemandByColor, remainingSupplyByColor } from './goals.ts';
 import { hashState } from './hash.ts';
-import type { Rng } from './rng.ts';
 import type { MoveHooks, RuleContext } from './moves.ts';
 
 export type { TeardownCause };
@@ -76,9 +68,6 @@ export const D3A_MAX_EXPANSIONS = 20_000;
 
 /** D3a result: a tiling exists / none exists / the budget ran out (never counted as dead). */
 export type TileResult = 'ok' | 'dead' | 'unknown';
-
-/** D1 reshuffle attempts (seeded orders) before the fallback; a count, not a time budget (§1.3). */
-export const RESHUFFLE_ATTEMPTS = 8;
 
 // --- level-level facts ---------------------------------------------------------------------------------------------
 
@@ -154,7 +143,7 @@ export function noMoves(s: GameState, rules?: DragRules): boolean {
 }
 
 /**
- * One drag move gives a correct placement now (K-30 D1 check; K-34 hook 5 reach): some holdable yard block has a
+ * One drag move gives a correct placement now (K-34 hook 5 reach, TECH §2R.15 summary): the holdable yard block has a
  * reachable site release whose landing is correct (K-16 + K-34) and does not break (S3). The counter must be > 0.
  */
 export function hasReachableCorrect(s: GameState, id: PieceId, drag?: DragRules, fall?: FallRules): boolean {
@@ -184,15 +173,6 @@ export function hasReachableCorrect(s: GameState, id: PieceId, drag?: DragRules,
   for (const [ix, iy] of lowest) {
     const f = computeFall(s, id, { ix, iy, mode: 0 });
     if (f.verdict.ok) return true;
-  }
-  return false;
-}
-
-/** Some yard block can be placed correctly with one drag move (D1 reshuffle guarantee). */
-export function anyOneMoveCorrect(s: GameState, drag?: DragRules, fall?: FallRules): boolean {
-  const P = s.lvl.layout.counts.pieces;
-  for (let id = 0; id < P; id++) {
-    if (pieceZone(s, id) === Zone.yard && hasReachableCorrect(s, id, drag, fall)) return true;
   }
   return false;
 }
@@ -630,142 +610,13 @@ export function precheckOk(s: GameState): boolean {
   return !isFullCover(s.lvl) || tileRemaining(s) !== 'dead';
 }
 
-// --- D1 help: constructive reshuffle -------------------------------------------------------------------------------
-
-/** A yard block moved by the D1 reshuffle (`truckHelp.moves`). */
-export interface ReshuffleMove {
-  readonly pieceId: PieceId;
-  readonly from: At;
-  readonly to: At;
-}
-
-/**
- * D1 help, stage 2 (TECH §9.7 constructive algorithm, Faz 2R: no decoy, no reshape branch): every yard block leaves
- * the yard (crates and bags stay) and the yard fills again from the bottom — the others in a seeded order (attempt 0:
- * big blocks first, cargo included), each on the lowest free spot (row, then x); the first needed block (the first of
- * `neededFirst`) goes last, on the free spot nearest the wall (highest first) from which one drag move places it
- * correctly. An attempt is kept when one drag move then gives a correct placement; else the first attempt with a
- * holdable block; else nothing changes. Shapes, colours and count are kept. Returns the moves (empty = unchanged).
- */
-export function reshuffleYard(
-  s: GameState,
-  rng: Rng,
-  neededFirst: readonly PieceId[],
-  drag?: DragRules,
-  fall?: FallRules,
-): ReshuffleMove[] {
-  const P = s.lvl.layout.counts.pieces;
-  const yard: PieceId[] = [];
-  for (let id = 0; id < P; id++) if (pieceZone(s, id) === Zone.yard) yard.push(id);
-  if (yard.length === 0) return [];
-  const start = s.buf.slice();
-  const before = new Map(yard.map((id) => [id, { x: pieceX(s, id), y: pieceY(s, id) }]));
-  const first = neededFirst.find((id) => yard.includes(id)) ?? -1;
-  let fallback: Int32Array | null = null;
-
-  for (let attempt = 0; attempt < RESHUFFLE_ATTEMPTS; attempt++) {
-    s.buf.set(start);
-    const others = yard.filter((id) => id !== first);
-    if (attempt === 0) {
-      others.sort(
-        (a, b) =>
-          shapeByIndex(pieceShape(s, b)).cellCount - shapeByIndex(pieceShape(s, a)).cellCount || a - b,
-      );
-    } else {
-      for (let i = others.length - 1; i > 0; i--) {
-        const j = rng.nextInt(i + 1);
-        const t = others[i] ?? 0;
-        others[i] = others[j] ?? 0;
-        others[j] = t;
-      }
-    }
-    for (const id of yard) vacatePiece(s, id);
-    let fits = true;
-    for (const id of others) {
-      if (!placeLowest(s, id)) {
-        fits = false;
-        break;
-      }
-    }
-    if (!fits) continue;
-    if (first >= 0 && !placeNearWall(s, first, drag, fall)) continue;
-    if (anyOneMoveCorrect(s, drag, fall)) {
-      return movesSince(s, before);
-    }
-    if (fallback === null && !noMoves(s, drag)) fallback = s.buf.slice();
-  }
-  if (fallback) {
-    s.buf.set(fallback);
-    return movesSince(s, before);
-  }
-  s.buf.set(start);
-  return [];
-}
-
-/** Puts a vacated yard block on the lowest free spot (row, then x): the yard fills from the bottom (TECH §9.7). */
-function placeLowest(s: GameState, id: PieceId): boolean {
-  const shape = shapeByIndex(pieceShape(s, id));
-  const { wy, hy } = s.lvl.geo;
-  for (let y = 0; y + shape.h <= hy; y++) {
-    for (let x = 0; x + shape.w <= wy; x++) {
-      if (yardFree(s, shape, x, y)) {
-        placeYard(s, id, x, y);
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-/**
- * Puts the first needed block on the free spot nearest the wall, highest first, where one drag move then places it
- * correctly; when no spot gives that, the first free spot of that order.
- */
-function placeNearWall(s: GameState, id: PieceId, drag?: DragRules, fall?: FallRules): boolean {
-  const shape = shapeByIndex(pieceShape(s, id));
-  const { wy, hy } = s.lvl.geo;
-  let first: { x: number; y: number } | null = null;
-  for (let x = wy - shape.w; x >= 0; x--) {
-    for (let y = hy - shape.h; y >= 0; y--) {
-      if (!yardFree(s, shape, x, y)) continue;
-      placeYard(s, id, x, y);
-      if (hasReachableCorrect(s, id, drag, fall)) return true;
-      vacatePiece(s, id);
-      first ??= { x, y };
-    }
-  }
-  if (first === null) return false;
-  placeYard(s, id, first.x, first.y);
-  return true;
-}
-
-function yardFree(s: GameState, shape: ShapeDef, x: number, y: number): boolean {
-  for (const c of shape.cells) if (yardOcc(s, x + c.x, y + c.y) !== 0) return false;
-  return true;
-}
-
-function placeYard(s: GameState, id: PieceId, x: number, y: number): void {
-  const base = s.lvl.layout.pieces + id * PIECE_STRIDE;
-  s.buf[base + PF.x] = x;
-  s.buf[base + PF.y] = y;
-  occupyPiece(s, id);
-}
-
-function movesSince(s: GameState, before: ReadonlyMap<PieceId, { x: number; y: number }>): ReshuffleMove[] {
-  const out: ReshuffleMove[] = [];
-  for (const [id, b] of before) {
-    const x = pieceX(s, id);
-    const y = pieceY(s, id);
-    if (x !== b.x || y !== b.y)
-      out.push({ pieceId: id, from: { zone: 'yard', x: b.x, y: b.y }, to: { zone: 'yard', x, y } });
-  }
-  return out;
-}
-
 // --- K-35 step 12 ------------------------------------------------------------------------------------------------
 
 export interface Step12Options {
-  /** The buffer before the action (Söküm target); null = no Söküm (accepted +5 offer). */
+  /**
+   * The buffer before the action (Söküm target). For an accepted +5 offer: the start buffer of the last action before
+   * the window (K-29, D1 Söküm); null = no Söküm possible (step 12 off, or no earlier action).
+   */
   readonly preAction: Int32Array | null;
   /** Run D3a: the action placed correctly, delivered, used a booster or the Golden Trowel. */
   readonly tiling: boolean;
@@ -778,13 +629,24 @@ export interface Step12Options {
 }
 
 /**
- * K-35 step 12 (GDD K-30): counter > 0 → D1 (help) → D2 → D3a → D3b; counter 0 → D2 → D3; after a +5 offer → D1
- * once. D2 / D3 → Söküm (`teardown`, the action's last event). Returns the Söküm cause or null.
+ * K-35 step 12 (GDD K-30): counter > 0 → D1 (lift chains / wetness, still D1 → Söküm `access`) → D2 → D3a → D3b;
+ * counter 0 → D2 → D3; after a +5 offer → D1 once (its Söküm goes back to the start of the last action, K-29). D1 / D2
+ * / D3 → Söküm (`teardown`, the action's last event); after a Söküm nothing else runs (the restored state passed its
+ * own step 12). Returns the Söküm cause or null.
  */
 export function runStep12(ctx: RuleContext, hooks: MoveHooks, o: Step12Options): TeardownCause | null {
   const s = ctx.s;
-  const helped = o.counterZero ? false : d1Help(ctx, hooks);
-  // after an offer there is no action to take back; a reshuffle never changes D3a and D3b has no table yet
+  let helped = false;
+  if (!o.counterZero) {
+    const d1 = d1Help(ctx, hooks);
+    if (d1 === 'stuck') {
+      if (o.preAction === null) return null;
+      ctx.emit(teardown(s, o.preAction, 'access'));
+      return 'access';
+    }
+    helped = d1 === 'freed';
+  }
+  // after an offer there is no new action: the state passed D2 / D3 at the end of the action before the window
   if (o.afterOffer) return null;
   const cause = detectDeadlock(s, { table: o.table, tiling: o.tiling || helped });
   if (cause === null || o.preAction === null) return null;
@@ -792,29 +654,25 @@ export function runStep12(ctx: RuleContext, hooks: MoveHooks, o: Step12Options):
   return cause;
 }
 
-/** D1 (K-30): no holdable block → rules lift chains / wetness; still D1 → reshuffle. True when the board changed. */
-function d1Help(ctx: RuleContext, hooks: MoveHooks): boolean {
+/**
+ * D1 (K-30, `RULES_VERSION` 3): `none` = some block is holdable; otherwise `deadlockDetected{noMoves}` and the rules
+ * lift chains / wetness (`truckHelp{unchain}`): `freed` when a block became holdable, `stuck` when the state is still D1
+ * (the caller tears the action down, cause `access`; no reshuffle, K-55 item 8).
+ */
+function d1Help(ctx: RuleContext, hooks: MoveHooks): 'none' | 'freed' | 'stuck' {
   const s = ctx.s;
-  if (!noMoves(s, hooks.drag)) return false;
-  const pre = s.buf.slice();
-  const events: GameEventBody[] = [];
-  const sub: RuleContext = { ...ctx, emit: (e) => events.push(e) };
-  let changed = hooks.onTruckHelp?.(sub) === true;
-  if (changed) events.push({ t: 'truckHelp', kind: 'unchain' });
-  if (noMoves(s, hooks.drag)) {
-    const moves = reshuffleYard(s, ctx.rng, neededNow(s), hooks.drag, hooks.fall);
-    if (moves.length > 0) {
-      changed = true;
-      events.push({ t: 'truckHelp', kind: 'reshuffle', moves });
-    }
-  }
-  if (!changed) {
-    s.buf.set(pre);
-    return false;
-  }
+  if (!noMoves(s, hooks.drag)) return 'none';
   ctx.emit({ t: 'deadlockDetected', reason: 'noMoves' });
-  for (const e of events) ctx.emit(e);
-  return true;
+  if (hooks.onTruckHelp) {
+    const pre = s.buf.slice();
+    const events: GameEventBody[] = [];
+    const sub: RuleContext = { ...ctx, emit: (e) => events.push(e) };
+    if (hooks.onTruckHelp(sub) === true) {
+      for (const e of events) ctx.emit(e);
+      ctx.emit({ t: 'truckHelp', kind: 'unchain' });
+    } else s.buf.set(pre);
+  }
+  return noMoves(s, hooks.drag) ? 'stuck' : 'freed';
 }
 
 // --- Söküm ---------------------------------------------------------------------------------------------------------

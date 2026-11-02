@@ -39,9 +39,11 @@ import type { TurnSummary } from './summary.ts';
 
 /**
  * Core rules version (K-43 item 4): bump it whenever a rule change can change the replay of a saved log. 2 = Faz 2R
- * (full cover K-47/K-48, sizes K-49, Söküm K-30, new boosters, Zobrist frame positions; TECH §2R.0 item 4).
+ * (full cover K-47/K-48, sizes K-49, Söküm K-30, new boosters, Zobrist frame positions; TECH §2R.0 item 4). 3 = D-099
+ * (K-55 item 8, K-30: a D1 the rules cannot lift is a Söküm with cause `access`, never a reshuffle; after an accepted
+ * +5 offer the D1 Söküm goes back to the start of the last action). An attempt saved with 2 is voided (E-67).
  */
-export const RULES_VERSION = 2;
+export const RULES_VERSION = 3;
 /** K-29: moves of an accepted offer. */
 export const OFFER_MOVES = 5;
 /** K-29: offers per attempt (ad or coins). */
@@ -154,6 +156,8 @@ export class GameSession {
   readonly #opts: SessionOptions;
   /** Pre-move buffer of the last committed drag while it may be undone (K-39). */
   #undo: Int32Array | null = null;
+  /** Start buffer of the last committed action (drag, booster, trowel): the D1 Söküm target after a +5 offer (K-29). */
+  #lastPre: Int32Array | null = null;
   #outcome: SessionOutcome = 'playing';
   #offersUsed = 0;
   #adOfferUsed = false;
@@ -342,6 +346,7 @@ export class GameSession {
     if (res.status !== 'applied') return res;
     this.#log.push(copyAction(move));
     this.#undo = move.kind === 'drag' ? snapshot : null; // K-39: only a drag move is undone
+    this.#lastPre = snapshot;
     if (res.won) this.#outcome = 'won';
     else if (res.outOfMoves) this.#outcome = this.#offersUsed >= MAX_OFFERS ? 'lost' : 'outOfMoves';
     if (this.#outcome === 'lost') this.#markLost();
@@ -354,6 +359,7 @@ export class GameSession {
     if (this.undoBlock() !== null || snapshot === null) return false;
     this.#state.buf.set(snapshot);
     this.#undo = null;
+    this.#lastPre = null;
     this.#log.push({ kind: 'undo' });
     return true;
   }
@@ -364,9 +370,14 @@ export class GameSession {
     if (!offer) return { ...NOT_PLAYING, reason: 'noOffer' };
     if (source === 'offerAd' && !offer.adAllowed) return { ...NOT_PLAYING, reason: 'adNotAllowed' };
     const move: Move = { kind: 'addMoves', amount: OFFER_MOVES, source };
-    const res = applyMove(this.#state, move, sink, this.#applyOptions());
+    const pre = this.#lastPre;
+    const res = applyMove(this.#state, move, sink, {
+      ...this.#applyOptions(),
+      ...(pre !== null ? { preAction: pre } : {}),
+    });
     if (res.status !== 'applied') return res;
     this.#log.push(move);
+    this.#lastPre = null;
     this.#offersUsed += 1;
     if (source === 'offerAd') this.#adOfferUsed = true;
     this.#undo = null; // K-39: no Undo across a +5 offer

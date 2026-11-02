@@ -1,6 +1,6 @@
 # Teknik tasarım
 
-Sahip: code-lead · Sürüm: **Faz 2R (2026-10-07)** — çapraz inceleme kapanışı: §2R GDD/UX/ASSET kapanışlarına eşitlendi
+Sahip: code-lead · Sürüm: **D-099 (2026-11-02)** — yeni §D99: sabit saha şeması (L-36), `RULES_VERSION` 3 (D1 → Söküm), D-099 solver ölçütleri ve kapıları, `levels:gen` üretici, ölçek ölçümleri; §12.4 K-55 satırı · Önceki: **Faz 2R (2026-10-07)** — çapraz inceleme kapanışı: §2R GDD/UX/ASSET kapanışlarına eşitlendi
 (kural kararları kesinleşti ve politika sabitleri kalktı §2R.0; uyarlanır hücre boyu ve web geri koruması §2R.1;
 `tut_hand_invalid` L-35 §2R.3, §2R.5; Söküm tek adım + `movesSpent` + adım 12 perf kapısı §2R.4; SVG görsel boru hattı
 §2R.6; iş paketleri son hali ve kesme sırası §2R.12; yeni §2R.15 sunum kancaları ve §2R.16 analytics v6 + geri bildirim
@@ -30,7 +30,7 @@ kapsamı, L-11 boya kapısı satırı (§8.3), §10.1 EXPAND sıkıştırması, 
 iki katmanı (§10.2), UX §0.1 karar (b) (§10.1), STORY §7.3 / §7.5 / §7.6 anahtarları (§11.5), Faz 2 asgari ana ekran
 (§14.1 #12))
 Kaynaklar: `docs/BRIEF.md` (§4, §5, §7, §12), `CLAUDE.md`, `docs/DECISIONS.md`, `docs/review_inbox/_orchestrator_rulings.md`.
-Kurallar için bağlayıcı kaynak **`docs/GDD.md` (K-01…K-54, K-35 hamle sonu hattı, §14.1 öğretici kuralları, E-01…E-61; Faz 2R farkı §2R)** ve `docs/OBSTACLES.md`'dir
+Kurallar için bağlayıcı kaynak **`docs/GDD.md` (K-01…K-55, K-35 hamle sonu hattı, §14.1 öğretici kuralları, E-01…E-67; Faz 2R farkı §2R, D-099 farkı §D99)** ve `docs/OBSTACLES.md`'dir
 (W1…W8, Y1…Y8, S1…S8, G-H, G-L, etkileşim notları N1…N43, veri imzası tablosu); bu belge kuralı değiştirmez, nasıl
 uygulanacağını yazar (R-02). Ölçüler ve görsel değerler `src/theme/tokens.json`'dan okunur (R-04). §16'daki S-1…S-38'in
 hepsi GDD/META'da yanıtlandı (§16.2). Önerilen kararlar §17'de **P-n** numarasıyla durur (DECISIONS.md'ye orkestratör taşır).
@@ -728,6 +728,10 @@ export const DEFAULT_GEO: BoardGeo;     // 6, 8, 2, 8, eMax 0 → h 8, rows 10 (
 | L-33 | 9 | `metric_out_of_band` | `targets` bantları (K-51 madde 3) | solve | warn |
 | L-34 | 9 | `batch_queued` | kanonik çözümde kuyrukta bekleyen kamyon bloğu; `tools/levels-allow.json` ile bölüm bölüm susturulur (`{ "10": ["batch_queued"] }`, E-54) | solve | warn |
 | L-35 | 10 | `tut_hand_invalid` (DL-2R-01) | `drag`/`hold` eldiveni GDD §14 "`hand.path` anlamı"nı bozuyor: `path[0]` vurgulu bloğun hücresi değil, ardışık noktalar aynı satır/sütunda değil, ara çapa `R` dışında, son konum iptal, `drag`'in son konumu bir en kısa çözümün ilk hamlesi değil | solve | error |
+| L-36 | 11 | `fixed_yard_batches` (D-099, K-55) | `schemaVersion` 2: tam 1 parti, `forSegment` 0, `dropColumns` yok; çalışma anı alt kümesinde (§D99.1) | validate (+ oyun) | error |
+| L-37 | 11 | `scan_incomplete`, `undetected_dead`, `d1_reachable` (D-099) | v2: tarama tam; canlıdan girilen her çıkmazı D1/D2/D3a yakalar; erişilebilir D1 yok (K-51 madde 7–8; v1'deki `dead_table_missing` kapısının yerine) | solve | error |
+| L-38 | 11 | `greedy_trap_in_easy` (D-099) | v2 Kolay/Normal: `greedyTrap` yok (K-51 madde 6) | solve | error |
+| L-39 | 11 | `puzzle_no_cross`, `puzzle_greedy_easy`, `puzzle_greedy_wins` (D-099) | v2, id ≥ 3: bulmaca zekâsı alt sınırları (K-51 madde 9) | solve | warn |
 
 L-35 K-45 madde 10'dadır ama kanonik çözüme ve mesafe tablosuna (`dist`) ihtiyaç duyduğu için `levels:solve`
 aşamasında koşar; adımın başladığı durum kanonik çözüm oynatılarak bulunur (`startOn` olan adımda olayın ilk
@@ -1859,6 +1863,120 @@ deadlock_teardown never sends unknown_before_offer").
   reload".
 
 ---
+
+## D99. D-099 teknik deltası: sabit saha, bulmaca zekâsı, üretici (2026-11-02, paket A1)
+
+Kaynak: GDD K-55, K-50 madde 11–19, K-51 madde 6–9, K-52 D-099 bütçesi, E-62…E-67; LEVELS §6 (bulmaca zekâsı
+şartnamesi) ve §7 (U-1…U-8). Bu bölüm kuralı değiştirmez; nasıl uygulandığını, adları ve ölçülen sınırları yazar.
+
+### D99.1 Şema ve doğrulayıcı (U-1, U-2)
+
+- `schemaVersion: 1 | 2` (yoksa 1; `schemaVersionOf`, `isFixedYardLevel` — `src/core/level/schema.ts`). Yol A: v2'de
+  `yard.batches` dizisi biçim olarak kalır, tam 1 eleman; derleyici, Zobrist, durum tamponu ve C# ayrıştırıcısı
+  değişmez.
+- **L-36 `fixed_yard_batches`** (K-45/11, error, **çalışma anı alt kümesinde**: geçersiz v2 bölüm oyuna yüklenmez):
+  v2'de `batches.length ≠ 1`, `batches[0].forSegment ≠ 0` ya da `batches[0].dropColumns` var. v1 dosyası Faz 2R
+  kurallarıyla denetlenir (E-65).
+- `targets` isteğe bağlı yeni bantları: `min`, `maxCover`, `depLater`, `crossDeps`, `forced`, `greedyExcess`,
+  `ahaMin` (`[alt, üst]` tamsayı), `greedyWin`, `branch3` (0–1), `parkSlack` (0–9,99). `greedyExcess` için üst sınır
+  99 "∞ de kabul" demektir; `parkSlack` park yokken bant dışı sayılmaz (L-33).
+- `moves_budget` (L-19) v2'de D-099 tablosuyla: `min + P ≤ moves ≤ min + P + aMax` (`tools/solver/puzzle.ts`
+  `d099Band`, `D099_P`, `d099AMax`; `MovesBand.version` 1 | 2).
+
+### D99.2 Çekirdek (U-6): `RULES_VERSION` 3
+
+- **D1 (K-30, K-55 madde 8):** adım 12'de D1 → `deadlockDetected{noMoves}` → kurallar zincir/ıslaklık kaldırır
+  (`truckHelp{unchain}`, değişiklik yoksa tampon geri yüklenir) → hâlâ D1 ise **Söküm** `teardown{cause: 'access'}`
+  (eylemin son olayı; ardından D2/D3 çalışmaz). Seed'li yeniden dizme (`reshuffleYard`, `RESHUFFLE_ATTEMPTS`,
+  `anyOneMoveCorrect`) kaldırıldı; `truckHelp{kind: 'reshuffle' | 'reshape' | 'deliverMissing'}` tip birliğinde Faz 2R
+  sunumu için kalır ama çekirdek artık yaymaz. Unity incelemesinin `reshuffleYard` RNG bulgusu (REVIEW_LOG,
+  2026-10-31) bu yüzden konusuz kaldı.
+- **+5 sonrası D1 (K-29):** `GameSession.#lastPre` = son işlenen eylemin (sürükleme, güçlendirici, Mala) başlangıç
+  tamponu; `acceptOffer` bunu `ApplyOptions.preAction` olarak verir ve D1 Söküm'ü oraya döner (sayaç +5'i korur, `m`
+  eylem öncesine döner, `movesSpent` düşmez). Geri Al ve teklif `#lastPre`'yi siler; tekrar oynatma (K-43) aynı sonucu
+  verir.
+- **v2 olayları:** tek parti olduğundan adım 8 kuyruğa parti eklemez; dilim geçişi `segmentCompleted` + `siteShifted`
+  üretir, `deliveryArrived` / `deliveryQueued` / `pieceFell{cause: 'delivery'}` yalnız K-17 adım 3 ve K-36 (moloz)
+  kuyruğundan doğar (E-62, E-66). Kaldırılan olay yok; yayılmayan olay: `truckHelp{reshuffle}`.
+- `RULES_VERSION` 2 → 3: devam kaydı (`inLevel.rulesVersion` 2) cezasız kapanır (K-43 madde 4, E-67). Golden'lar
+  (`tests/golden/level_00N.{hand,solver}.json`) `rulesVersion: 3`; olay günlükleri değişmedi (Bölüm 1–10'da D1 yok).
+  **C# çekirdeği aynı değişikliği yapmalı** (TS-kâhinli fuzz D1 durumlarında ayrışır).
+
+### D99.3 Çözücü ölçütleri (U-3; `tools/solver/puzzle.ts`, `SOLVER_VERSION` 3)
+
+Hepsi tam keşif çizgesinde kesin hesaplanır (örnekleme yok); `PuzzleMetrics.d099` alanı:
+
+| Ad | Hesap |
+| --- | --- |
+| `maxCover` | başlangıçta malzeme blokları üzerinde en büyük `cover(b)` |
+| `canonShifts`, `parkedBlocks`, `reparks`, `maxDigRun` | kanonik adımlar üzerinde tek geçiş |
+| `seg` | parça ref → kanonik yerleşim adımındaki aktif dilim |
+| `depLater`, `depEarlier`, `crossDeps` | başlangıç örtü ilişkisi (a, b'nin bir sütununda b'nin en üst hücresinin üstünde) × `seg` |
+| `carryShifts` | `seg(b)` > hamle anındaki aktif dilim olan kanonik kaydırmalar |
+| `E0`, `parkPeak`, `parkSlack` | başlangıç boş saha hücresi; kanonik durumlarda başlangıç çapasında olmayan malzeme hücreleri; `E0 / parkPeak` (2 ondalık, park yoksa null) |
+| `choicesAll`, `bestChoicesAll`, `decisionPoints`, `forced` | K-50/9 kuralları kanonik yolun bütün durumlarında (bütçe JSON `moves`); `choices[0..2]` eski alan olarak kalır |
+| `digStart` | `dig(s)`: yerleşim kenarı olan durumlardan ters kaydırma kenarlarıyla çok kaynaklı BFS |
+| `greedyMin`, `greedyExcess`, `greedyTrap`, `greedyWin`, `greedyStates` | G kenarı = durumda yerleşim varsa bütün yerleşimler, yoksa `dig(t) = dig(s) − 1` kaydırmaları (DAG); Dial; birim BFS ile ilk çıkmaz; (durum, kalan bütçe) DP ile kesin olasılık |
+| `ahaMin`, `ahaMoves` | en kısa yol DAG'ında G olmayan kenar 1 ağırlıklı DP; kanonik `hold` / `prep` hamleleri |
+| `pieces3`, `goodPieces3`, `branch3` | k = 0…2'de durumu değiştiren parça / en kısa çözümde kalan hamlesi olan parça |
+| `complete`, `undetectedDead`, `d1States` | tarama bitti; canlıdan girilen ve D1/D2/D3a'nın yakalamadığı çıkmaz; canlı durumdan (ya da başlangıçtan) tek hamleyle girilen, kenarsız ve `noMoves` olan durum (yakalanmış bir çıkmazın arkasındaki D1 oyunda görülmez) |
+
+Bağımsız kaba hesap (`tests/tools/solver/micro.ts` `bruteD099`) mikro bölümlerde `digStart`, `greedyMin`,
+`greedyTrap`, `greedyWin` (9 ondalık), `ahaMin` ve `d1States`'i birebir verir (iki yeni v2 mikro bölüm: `floors`,
+`swap`).
+
+**v2 kapıları** (`d099Checks`; v1 bölümünde çalışmaz): L-37 `scan_incomplete` (tarama bitmedi, error), L-37
+`undetected_dead` (error; v1'deki `dead_table_missing` bütün uzay kapısının yerine — v2'de `deadRate > 0` kapısı da
+kalkar, tuzak Zor/Çok Zor'da Söküm'le kurtarıldığı için serbesttir), L-37 `d1_reachable` (error), L-38
+`greedy_trap_in_easy` (Kolay/Normal, error), L-39 `puzzle_no_cross`, `puzzle_greedy_easy`, `puzzle_greedy_wins`
+(id ≥ 3, warn). `delivery_foresight` v2'de hesaplanmaz (parti yok). Rapor: `levelText` üç "D-099:" satırı;
+LEVEL_REPORT'a ikinci tablo "D-099 bulmaca zekâsı" (`puzzleTable`); `SolveReport.schemaVersion`.
+
+### D99.4 Ölçek ve performans (U-4: kısmen)
+
+Ölçüm (bu makine, 4 çekirdek, Node 22, önbelleksiz): yayındaki 10 bölüm (v1) `levels:solve --no-variants` **35 s**
+duvar saati (Bölüm 10: 559 797 durum, 33 s; D-099 ölçütleri toplam sürenin ≈ %7'si). Sabit sahalı taslaklar (LEVELS
+§6.8): P6 525 552 durum / 27 s, P5 900 998 / 38 s, P2 754 098 / 25 s, P1 2 379 724 / 117 s; P3, P4 > 3 M (kesildi).
+Durum başına ≈ 50–70 µs; kenar başına ≈ 2 µs (profil: sürükleme oturumu + R önbelleği ≈ %45, `applyMove` ile
+yerleşimler ≈ %15, karma/depo ≈ %15).
+
+Denenen ve bırakılan: **"serbest yaprak"** budaması (bütün kalan bloklar kaldırılabiliyorsa `dist = N_kalan` ve
+canlılık = D3a): P6'da 525 552 durumun yalnız 19 257'si yaprak; patlama, bazı blokların gömülü kaldığı orta oyundaki
+asılı konumlardan geliyor. Kazanç < %5 olduğu için koda girmedi.
+
+Açık kalan (U-4 madde 2, ayrı paket): **makro çizge** — K-55 sahasında kaydırma kenarları iki yönlüdür (aynı diğer
+bloklarla geri yol), dolayısıyla çıkmazlık şantiye dolumunun ve kalan blok kümesinin fonksiyonudur; makro düğüm başına
+erken çıkışlı tek kaynaklı erişim araması `complete`/`undetectedDead`/`d1States`'i tam taramasız verir, yerel ölçütler
+(`min`, kanonik, `choices@k`, G) A* + bellekli yerel arama ile. Kanıt şartı: makro ve tam tarama sonuçları P1, P2,
+P5, P6 ve mikro bölümlerde eşit olmalı. Bu yapılana kadar v2 bölümü tam taramaya sığmalıdır (`scan_incomplete`
+error); üretici varsayılan bütçesi 400 000 durumdur (`--max-states`). Bölüm 8 ve 10 (6×5 + Q9, 6×8 + Q9) bu yüzden
+şimdilik kanıtlanamaz (product-lead'in yedek boyutu 5×6 üç kat).
+
+### D99.5 Üretici: `npm run levels:gen` (U-5; `tools/gen/generate.ts`, `tools/levels-gen.ts`)
+
+`npm run levels:gen -- --plan <plan.json> --targets <targets.json> --seed N [--iterations 120] [--starts 6]
+[--count 3] [--max-states 400000] [--max-full 40] [--out artifacts/levels-gen/level_NNN/]`
+
+- **Plan** (`GenPlan`): `id`, `name {tr, en}`, `difficulty`, `teaches?`, `yard {cols, rows}`, `site {cols, rows}`,
+  `wall {height, gaps}`, `gravity?`, `segments [{name, rows}]` (üstten alta), `shapes` (tür adları: `D2`, `O4`, `C3`
+  …; genişliği ≤ Ws olan bütün farklı dönüşler), `cargo?` (`Q9_0` …), `tutorial?`, `seed?`.
+- **Targets**: bölüm `targets` biçimi (D99.1).
+- **Akış:** her dilim planı izinli şekillerle tam örtü olarak döşenir (sabit sıralı sayım, en çok 400 döşeme; PRNG
+  birini seçer) → parçalar bir "bırakma dizisi" ile yerçekimiyle sahaya düşer (asılı başlangıç yok; ilk düzen ters
+  istif: sonraki katlar önce, ilk gereken üstte; sütunlar en alçak inişe ağırlıklı açgözlü paketleme) → ucuz alt sınır
+  (doğrulama, A* `min`, `firstNeedDepth`, `maxCover`, K-51/1 hataları; tam puanın alt kümesi) → yalnız alt sınır en
+  iyiyi aşmıyorsa tam çözüm (tam keşif + `computeMetrics`, `moves = min + P`, K-51 + D-099 kapıları) → tepe tırmanma
+  (eşit puana izin: plato yürüyüşü; komşular: iki öğeyi takas, öğe taşı, sütun değiştir, bir dilimi yeniden döşe;
+  sığmayan komşu ilk sığmayan öğeden yeniden paketlenir).
+- **Puan:** hata kodu 1 000, uyarı 25 (bant dışı uyarıları hariç), bant uzaklığı × ağırlık × 10 (`ahaMin`,
+  `greedyWin` 4; `forced`, `depLater`, `parkSlack` 3; `crossDeps`, `greedyExcess`, `min` 2; diğerleri 1). 0 = bütün
+  bantlarda ve hatasız.
+- **Belirlenimcilik:** tek PRNG (`mulberry32(seed)`), sabit yineleme sayısı, A* ve keşifte `maxMs: Infinity` (duvar
+  saati yok); aynı plan + hedef + tohum + seçenek + `SOLVER_VERSION` → bit bit aynı dosyalar (test).
+- **Çıktı:** `candidate_<sıra>.json` (`schemaVersion` 2, tek parti, `targets` dolu) + `report.md` (puan, ölçütler,
+  sorunlar, ASCII, arama izi). Çıkış 1: hatasız aday yok.
+- Testler: `tests/tools/levelsGen.test.ts` (döşeme sayımı, yerçekimi bırakma, belirlenimcilik, hedefe yaklaşma, CLI).
+
 
 ## 3. Şekiller
 
@@ -4315,6 +4433,7 @@ bağımlılık yok: `node tools/solve.ts`. Koşulları:
 | `levels:bot` | `node tools/playtest-bot.ts [--games 500] [--profile orta] [--continue N]` → `docs/LEVEL_REPORT.md` + `docs/level-report/difficulty.svg` (Faz 3) |
 | `levels:preview` | `node tools/level-preview.ts [--level N] [--png]` → ASCII stdout; `--png` Playwright + `theme/draw` → `artifacts/previews/` |
 | `levels:check` | `levels:validate && levels:solve --traps && levels:bot` (solver ve tarama önbellekli) |
+| `levels:gen` | `node tools/levels-gen.ts --plan <plan.json> --targets <targets.json> --seed N [--iterations 120] [--starts 6] [--count 3] [--max-states 400000] [--max-full 40] [--out <dizin>]` — D-099 belirlenimci üretici (§D99.5) |
 | `events:sim` | `node tools/event-sim.ts` — Köprü/Lig bot dağılımı raporu (§11.2) |
 | `config:validate` | `node tools/validate-config.ts` — `config/economy.json` + `events.json` zod/mini şeması ve değer kuralları (kumbara R-16, `bridge_share_cap` META §6.2; §11.3); hata → çıkış 1. Aynı doğrulayıcı `tests/config/validate.test.ts` ile `npm test`'te koşar (Faz 4, §14.3) |
 | `screens` | `vite build --mode harness && node tools/screens.ts [--profile 390x844\|360x800\|390x763\|360x740] [--only <ad>,…] [--cvd protanopia,deuteranopia,tritanopia\|all]` → `artifacts/screens/<profil>[-<cvd>]/<ad>.png`. CVD: harness `&cvd=` → `#game` üstünde SVG `feColorMatrix` (Machado 2009, şiddet 1,0, doğrusal RGB). Faz 2 çekimleri 01a–01c giriş panelleri (harness `introPanel(n)`), 02–18, 19-palette (8 renk blok + plan + cephe + `.` + `?`, harness fikstür sahnesi), 20-home-l2, 21-home-more-soon, 22-pause, 23-cancel-preview, 24-bounce-support (JUICE #84'ün içinde: harness `waitCue(84)` + 100 ms oyun zamanı, Faz 2 tur 2 #6), 25-trowel-pick. Kısa görünümler 390×763 (TECH §10.1, Safari çubukları) ve 360×740 yalnız `start1`…`start5` senaryoları (her biri boş bağlamda; harness kayıtlı denemenin üstüne başka bölüm yüklemez, K-43): Bölüm 1–5 başlangıçları 02–06 (öğretici balonu, Faz 2 tur 2 #15) |
@@ -4352,7 +4471,7 @@ mağaza/web üretim paketi olarak dağıtılmaz. DOM katmanıdır (Phaser değil
 
 ### 12.4 Test stratejisi
 
-- **Kural testleri:** GDD'deki **her K-01…K-54** en az bir test; test adı kimliği içerir:
+- **Kural testleri:** GDD'deki **her K-01…K-55** en az bir test; test adı kimliği içerir:
   `it('K-17 wrong placement bounces to start and burns a move', …)`. Kenar durumları (E-01…E-47) `'E-04 …'`, GDD §14.1 öğretici kuralları `'GDD 14.1 …'`, hat adımları
   `'K-35 step 9 …'`, engeller `'W4 shutter closes every period'`, `[kural]` N-notları `'N33 …'`, engel çiftleri
   `'W6+S3 …'`. `test:rules` kapsamayı zorlar (`npm run check`'in parçası). Kapsam tablosu aşağıda.
@@ -4378,7 +4497,7 @@ mağaza/web üretim paketi olarak dağıtılmaz. DOM katmanıdır (Phaser değil
 - **Performans:** §10.7 + `vitest bench`.
 - Ortam: Vitest `environment: 'node'` (mevcut); core testleri DOM'suz koşar (saflığın ek kanıtı).
 
-**K-xx test kapsamı (K-01…K-54; "F" = ilk yazıldığı faz; "2R" = Faz 2R, 2 ile 3 arasında bir faz: `test:rules --phase 2` istemez, `--phase 2R` ister, §2R.11):**
+**K-xx test kapsamı (K-01…K-55; "F" = ilk yazıldığı faz; "2R" = Faz 2R, 2 ile 3 arasında bir faz: `test:rules --phase 2` istemez, `--phase 2R` ister, §2R.11):**
 
 | Kural | Ana test(ler) | F | | Kural | Ana test(ler) | F |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -4409,6 +4528,7 @@ mağaza/web üretim paketi olarak dağıtılmaz. DOM katmanıdır (Phaser değil
 | K-49 | 8 geometride değişmezler, sınır `boundaryX` ile `siteX` arasında, saha/şantiye üstü hava, düşüş satırı `rows − boy`, `size_out_of_range`, `board_too_wide` | 2R | | K-50 | solver ölçütleri: mikro bölümlerde kaba hesapla eşitlik; Bölüm 1–10 değerleri; hızlı saha yolu = `applyMove` | 2R |
 | K-51 | `puzzle_first_reachable`, `puzzle_no_shift`, `trap_in_easy`, `trap_warn`, `trap_scan_incomplete`, `metric_out_of_band` | 2R | | K-52 | `moves_budget` aralığı ve zorluk tabanları | 2R |
 | K-53 | öğretici ≤ 2 adım, yalnız `soft`, girdi hiç kilitlenmez, gizli adım `done` ile biter, tekrar oynanışta yok, `TutorialPresence` durum makinesi (sahte saat), eldiven yolu L-35 | 2R | | K-54 | güçlendirici yuvası durum sırası kilitli > hedefsiz > adet 0 > hazır, hedefsiz yuvada satış yok (E-61; §2R.15) | 2R |
+| K-55 | sabit saha: v2 tek parti (L-36 `fixed_yard_batches`), dilim geçişinde saha değişmez, D1 → Söküm (`RULES_VERSION` 3), E-62…E-67 | 3 | | | | |
 
 ---
 

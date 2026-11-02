@@ -37,6 +37,8 @@ export interface SizeSpec {
 
 export interface LevelSpec {
   readonly id?: number;
+  /** GDD §14 `schemaVersion` (default 1; 2 = K-55 fixed yard, D-099). */
+  readonly schemaVersion?: 1 | 2;
   /** K-49 yard size Wy × Hy (default 6 × 8). */
   readonly yard?: SizeSpec;
   /** K-49 site size Ws × Hs (default 2 × 8). */
@@ -99,7 +101,7 @@ export function levelJson(spec: LevelSpec = {}): LevelInput {
       ? [planInput as readonly string[]]
       : (planInput as readonly (readonly string[])[]);
   return {
-    schemaVersion: 1,
+    schemaVersion: spec.schemaVersion ?? 1,
     id,
     chapter: spec.chapter ?? Math.ceil(id / 10),
     name: { tr: 'Test', en: 'Test' },

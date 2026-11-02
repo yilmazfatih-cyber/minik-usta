@@ -19,7 +19,7 @@ import { DEFAULT_SIZES, MAX_BOARD_ROWS, MAX_COLS, MAX_SITE_COLS, geoFromLevel } 
 import type { BoardGeo } from '../geometry.ts';
 import { FORBIDDEN_SHAPES, HEAVY_MIN_LEVEL_ID, KIND_FIRST_CHAPTER, shapeById } from '../shapes.ts';
 import type { ShapeDef } from '../shapes.ts';
-import { LevelSchema } from './schema.ts';
+import { LevelSchema, isFixedYardLevel } from './schema.ts';
 import type { GapData, LevelData, MechanicId, PieceData, TutCondition } from './schema.ts';
 import { boardHeight, deriveMechanics, isCargo } from './mechanics.ts';
 import { buildPlans, localIndex } from './plan.ts';
@@ -70,6 +70,7 @@ export const CHECK_IDS = [
   'L-29',
   'L-30',
   'L-31',
+  'L-36',
 ] as const;
 export type CheckId = (typeof CHECK_IDS)[number];
 
@@ -78,7 +79,8 @@ export type CheckId = (typeof CHECK_IDS)[number];
  * schema always runs. L-28 is new and first: `compile` cannot build a geometry outside the frame. L-05 (`plan_size`,
  * `plan_has_window`, `elevator_overflow`: every plan exactly Hs × Ws, no `.`, `Hs + b ≤ 8`) was validate-only during
  * the Faz 2R transition while the Faz 2 levels/*.json (shorter plans on the default 2 × 8 site) had to stay playable;
- * WP-M replaced them with the Faz 2R levels 1–10 and put L-05 back here (TECH §2R.3 note 2).
+ * WP-M replaced them with the Faz 2R levels 1–10 and put L-05 back here (TECH §2R.3 note 2). L-36 (K-55,
+ * `fixed_yard_batches`, D-099): a `schemaVersion` 2 level with truck batches is not loaded.
  */
 export const RUNTIME_CHECKS: readonly CheckId[] = [
   'L-02',
@@ -90,6 +92,7 @@ export const RUNTIME_CHECKS: readonly CheckId[] = [
   'L-25',
   'L-26',
   'L-28',
+  'L-36',
 ];
 
 export interface LogicContext {
@@ -184,6 +187,7 @@ const CHECK_RULE: Readonly<Record<CheckId, string>> = {
   'L-29': 'K-45/7',
   'L-30': 'K-45/8',
   'L-31': 'K-45/10',
+  'L-36': 'K-45/11',
 };
 
 type Push = (check: CheckId, code: string, path: string, message: string, severity?: Severity) => void;
@@ -430,6 +434,7 @@ export function checkLevel(level: LevelData, ctx: LogicContext = {}): Issue[] {
   if (enabled.has('L-11') && coverOk && shapesOk)
     checkTiling(level, plans, geo, ctx.tileBudget ?? TILE_BUDGET, push);
   if (enabled.has('L-12')) checkBatches(level, geo, push);
+  if (enabled.has('L-36')) checkFixedYard(level, push);
   if (enabled.has('L-13') || enabled.has('L-29')) checkDebris(level, plans, geo, plansUsable, push);
   if (enabled.has('L-14') || enabled.has('L-23')) checkHiddenItems(level, push);
   if (enabled.has('L-15')) checkGoals(level, push);
@@ -978,6 +983,38 @@ function checkBatches(level: LevelData, geo: BoardGeo, push: Push): void {
       }
     });
   });
+}
+
+/**
+ * L-36 `fixed_yard_batches` (K-45/11, K-55 item 1; D-099): a `schemaVersion` 2 level has exactly one batch, with
+ * `forSegment` 0 and no `dropColumns` — every block is in the yard from the start and no batch or truck refill comes
+ * when a segment completes. A `schemaVersion` 1 file (Faz 2R archive, golden) keeps the K-25 batches (E-65).
+ */
+function checkFixedYard(level: LevelData, push: Push): void {
+  if (!isFixedYardLevel(level)) return;
+  const batches = level.yard.batches;
+  if (batches.length !== 1)
+    push(
+      'L-36',
+      'fixed_yard_batches',
+      'yard.batches',
+      `schemaVersion 2 (K-55): exactly one batch, got ${batches.length} (truck batches are schemaVersion 1 only)`,
+    );
+  const first = batches[0];
+  if (first && first.forSegment !== 0)
+    push(
+      'L-36',
+      'fixed_yard_batches',
+      'yard.batches[0].forSegment',
+      `schemaVersion 2 (K-55): the single batch has forSegment 0 (got ${first.forSegment})`,
+    );
+  if (first?.dropColumns !== undefined)
+    push(
+      'L-36',
+      'fixed_yard_batches',
+      'yard.batches[0].dropColumns',
+      'schemaVersion 2 (K-55): dropColumns is not written (no truck delivery)',
+    );
 }
 
 /**

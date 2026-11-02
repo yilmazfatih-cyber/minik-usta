@@ -48,6 +48,9 @@ import {
   shiftsToWin,
 } from './distance.ts';
 import type { DistanceResult } from './distance.ts';
+import { d099Band, d099Metrics } from './puzzle.ts';
+import type { D099Metrics } from './puzzle.ts';
+import { isFixedYardLevel } from '../../src/core/level/schema.ts';
 
 /** One finding of the solve stage (same shape as the validator's `Issue`; `check` adds `tool` for tool gates). */
 export interface SolveIssue {
@@ -137,6 +140,8 @@ export interface PuzzleMetrics {
   readonly choices: readonly (number | null)[];
   readonly bestChoices: readonly (number | null)[];
   readonly yao: { readonly overWall: number; readonly rail: number; readonly value: number | null };
+  /** D-099 puzzle-intelligence metrics (GDD K-50 items 11–19, tools/solver/puzzle.ts). */
+  readonly d099: D099Metrics;
 }
 
 /** GDD K-51 item 5 values of one truck batch (see `PuzzleMetrics.delivery`). */
@@ -476,6 +481,17 @@ export function computeMetrics(g: Graph, budget: number): MetricsResult {
   }
   const N = g.lvl.materialCount;
   const start = startMetrics(g.lvl);
+  const d099 = d099Metrics({
+    g,
+    rev,
+    dist,
+    steps,
+    pathStates: states,
+    budget,
+    cover: start.cover,
+    ref: (id) => pieceRef(g.lvl, id),
+    undetectedDead: deadTargets.size - caught,
+  });
   return {
     metrics: {
       N,
@@ -499,6 +515,7 @@ export function computeMetrics(g: Graph, budget: number): MetricsResult {
       choices,
       bestChoices,
       yao: { overWall, rail, value: overWall + rail === 0 ? null : overWall / (overWall + rail) },
+      d099,
     },
     canonical: steps,
     pathStates: states,
@@ -541,25 +558,36 @@ const EASIER: Readonly<Record<Difficulty, Difficulty>> = {
 export interface MovesBand {
   /** The K-52 row used (an intro level takes the easier row, DL-2R-05). */
   readonly row: Difficulty;
+  /** `schemaVersion` 1: the Faz 2R T table; 2: the D-099 table (P, aMax). */
+  readonly version: 1 | 2;
+  /** v1: T; v2: P (the difficulty share). */
   readonly T: number;
   readonly floor: number;
-  /** A = max(1, ⌊0.1 · min⌋). */
+  /** v1: A = max(1, ⌊0.1 · min⌋); v2: aMax. */
   readonly A: number;
   /** min + T (a = 0). */
   readonly nominal: number;
-  /** Lowest / highest valid `moves`: [max(min + T − A, min + floor), min + T + A]. */
+  /** v1: [max(min + T − A, min + floor), min + T + A]; v2: [min + P, min + P + aMax]. */
   readonly lo: number;
   readonly hi: number;
 }
 
-/** GDD K-52: `moves = min + T + a`, |a| ≤ max(1, ⌊0.1·min⌋), `moves − min ≥ taban`; intro levels one row easier. */
-export function movesBand(min: number, difficulty: Difficulty, intro: boolean): MovesBand {
+/**
+ * GDD K-52: `moves = min + T + a`, |a| ≤ max(1, ⌊0.1·min⌋), `moves − min ≥ taban`; intro levels one row easier. A
+ * `schemaVersion` 2 level (`fixedYard`) uses the D-099 table: `moves = min + P + a`, 0 ≤ a ≤ aMax (puzzle.ts).
+ */
+export function movesBand(min: number, difficulty: Difficulty, intro: boolean, fixedYard = false): MovesBand {
   const row = intro ? EASIER[difficulty] : difficulty;
+  if (fixedYard) {
+    const b = d099Band(min, difficulty, intro);
+    return { row, version: 2, T: b.P, floor: b.P, A: b.aMax, nominal: b.lo, lo: b.lo, hi: b.hi };
+  }
   const r = ROWS[row];
   const T = Math.max(r.minT, Math.ceil((r.pct * min) / 100));
   const A = Math.max(1, Math.floor(min / 10));
   return {
     row,
+    version: 1,
     T,
     floor: r.floor,
     A,
@@ -579,7 +607,61 @@ export interface CheckInput {
   readonly complete: boolean;
 }
 
-const BAND_KEYS = ['minShifts', 'firstNeedDepth', 'choices0', 'deadRate'] as const;
+const BAND_KEYS = [
+  'minShifts',
+  'firstNeedDepth',
+  'choices0',
+  'deadRate',
+  'min',
+  'maxCover',
+  'depLater',
+  'crossDeps',
+  'parkSlack',
+  'forced',
+  'greedyExcess',
+  'greedyWin',
+  'ahaMin',
+  'branch3',
+] as const;
+type BandKey = (typeof BAND_KEYS)[number];
+
+/**
+ * The value a `targets` band is compared with (L-33). `undefined` = never out of band (`parkSlack` without a park,
+ * LEVELS §7 U-1); `Infinity` = `greedyExcess` without a greedy win (in band only when the high bound is 99).
+ */
+function bandValue(m: PuzzleMetrics, k: BandKey): number | null | undefined {
+  const d = m.d099;
+  switch (k) {
+    case 'minShifts':
+      return m.minShifts;
+    case 'firstNeedDepth':
+      return m.firstNeedDepth;
+    case 'choices0':
+      return m.choices[0] ?? null;
+    case 'deadRate':
+      return m.deadRate;
+    case 'min':
+      return m.min;
+    case 'maxCover':
+      return d.maxCover;
+    case 'depLater':
+      return d.depLater;
+    case 'crossDeps':
+      return d.crossDeps;
+    case 'parkSlack':
+      return d.parkSlack ?? undefined;
+    case 'forced':
+      return d.forced;
+    case 'greedyExcess':
+      return d.greedyExcess ?? Infinity;
+    case 'greedyWin':
+      return Math.round(d.greedyWin * 100) / 100;
+    case 'ahaMin':
+      return d.ahaMin;
+    case 'branch3':
+      return d.branch3;
+  }
+}
 
 /** L-19, L-27, L-32, L-33, L-34 on a solved level (the unsolvable / unknown cases are reported by the caller). */
 export function puzzleChecks(input: CheckInput): SolveIssue[] {
@@ -610,8 +692,8 @@ export function puzzleChecks(input: CheckInput): SolveIssue[] {
       'yard',
       `blocks not placed exactly once by the canonical solution: ${unused.map((id) => pieceRef(lvl, id)).join(', ')} (K-47/3)`,
     );
-  // L-19 moves_budget (K-52)
-  const band = movesBand(m.min, level.difficulty, level.teaches !== undefined);
+  // L-19 moves_budget (K-52; schemaVersion 2: the D-099 table)
+  const band = movesBand(m.min, level.difficulty, level.teaches !== undefined, isFixedYardLevel(level));
   if (level.moves < band.lo || level.moves > band.hi)
     add(
       'moves_budget',
@@ -619,7 +701,9 @@ export function puzzleChecks(input: CheckInput): SolveIssue[] {
       'L-19',
       'error',
       'moves',
-      `moves ${level.moves} is outside [${band.lo}, ${band.hi}] (min ${m.min}, ${band.row} row T ${band.T}, A ${band.A}, floor ${band.floor}; nominal ${band.nominal})`,
+      band.version === 2
+        ? `moves ${level.moves} is outside [${band.lo}, ${band.hi}] (D-099: min ${m.min} + P ${band.T} + a, 0 ≤ a ≤ ${band.A}; ${band.row} row)`
+        : `moves ${level.moves} is outside [${band.lo}, ${band.hi}] (min ${m.min}, ${band.row} row T ${band.T}, A ${band.A}, floor ${band.floor}; nominal ${band.nominal})`,
     );
   // L-19 yao_low (K-46)
   if (m.yao.value !== null && m.yao.value < 0.6)
@@ -667,16 +751,12 @@ export function puzzleChecks(input: CheckInput): SolveIssue[] {
   // L-33 metric_out_of_band (K-51 item 3)
   const t = level.targets;
   if (t) {
-    const value: Record<(typeof BAND_KEYS)[number], number | null> = {
-      minShifts: m.minShifts,
-      firstNeedDepth: m.firstNeedDepth,
-      choices0: m.choices[0] ?? null,
-      deadRate: m.deadRate,
-    };
     for (const k of BAND_KEYS) {
       const bandK = t[k];
       if (!bandK) continue;
-      const v = value[k];
+      const v = bandValue(m, k);
+      if (v === undefined) continue;
+      if (v === Infinity && bandK[1] >= 99) continue;
       if (v === null || v < bandK[0] || v > bandK[1])
         add(
           'metric_out_of_band',
@@ -684,7 +764,7 @@ export function puzzleChecks(input: CheckInput): SolveIssue[] {
           'L-33',
           'warn',
           `targets.${k}`,
-          `${k} = ${v === null ? 'none' : v} is outside [${bandK[0]}, ${bandK[1]}]`,
+          `${k} = ${v === null ? 'none' : v === Infinity ? '∞' : v} is outside [${bandK[0]}, ${bandK[1]}]`,
         );
     }
   }
