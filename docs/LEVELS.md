@@ -1,6 +1,6 @@
 # 50 bölüm planı
 
-Sahip: product-lead · Sürüm: D-099 bulmaca zekâsı şartnamesi (2026-11-01; yeni §6 ölçütler, hedef aralıklar ve Bölüm 1–10 eğrisi, §7 code-lead uygulama notları; §1–§2 Faz 2R verisini anlatmaya devam eder) · Önceki: Faz 2R solver turu (2026-10-07; Bölüm 1–10 JSON'ları `levels/` altında, resmî solver
+Sahip: product-lead · Sürüm: D-099 bölüm turu (2026-11-02, paket A2: Bölüm 1–10 `schemaVersion` 2 olarak yeniden kuruldu; §1, §2, §6.6 güncel, yeni §6.10 hedef–gerçek tablosu) · Önceki: D-099 bulmaca zekâsı şartnamesi (2026-11-01; yeni §6 ölçütler, hedef aralıklar ve Bölüm 1–10 eğrisi, §7 code-lead uygulama notları; §1–§2 Faz 2R verisini anlatmaya devam eder) · Önceki: Faz 2R solver turu (2026-10-07; Bölüm 1–10 JSON'ları `levels/` altında, resmî solver
 `levels:solve` ile doğrulandı; Bölüm 4, 5, 7 ve 10 yeniden tasarlandı — §2.11) · Önceki: Faz 2R (2026-10-07; R2-01…R2-06, R2-10 — `docs/review_inbox/_orchestrator_rulings_2R.md`; çapraz inceleme kapanışı: tanıtım bölümü tamponu, öğretici yolları ve süzgeçleri, Bölüm 4 adı, Faz 3 kuralları) · Faz 1 revizyonu (2026-10-04; R-01, R-08, R-18, R-21; tutarlılık denetimi tur 1, 2026-10-05; F-3 çıkmaz taraması, 2026-10-05) · Kaynak: `docs/BRIEF.md` §8, `docs/GDD.md` (Faz 2R), `docs/OBSTACLES.md`
 
 Bu belge 50 bölümün taslağıdır. **Faz 2R dikey dilimi Bölüm 1–10'dur (R2-06):** §2'de her biri yeni kurallarla (tam örtü
@@ -15,9 +15,9 @@ kayıtlardır; Faz 3'te §2.0 yöntemiyle yeniden tasarlanır (§3 başındaki F
 **D-099 (2026-11-01, sabit saha, GDD K-55):** bölümün bütün blokları ilk andan sahadadır; dilim geçişinde sahaya parti ya
 da kamyon dolumu gelmez. Bulmaca zekâsı şartnamesi (ölçütler, hedef aralıklar, ölü masa kapısı, D-099 hamle bütçesi,
 Bölüm 1–10 eğrisi ve öğretici taslakları) **§6**'da, code-lead uygulama notları (şema, doğrulayıcı, çözücü ölçütleri,
-ölçek, üretici tarifi) **§7**'dedir. §1 tablosu, §2 kayıtları ve `levels/level_001…010.json` Faz 2R (`schemaVersion` 1)
-verisidir; D2 paketinde §6.6'ya göre `schemaVersion` 2 olarak yeniden yazılır ve üçü aynı commit'te değişir (testler bu
-belgeyi JSON'larla karşılaştırır, §7 U-7).
+ölçek, üretici tarifi) **§7**'dedir. §1 tablosu, §2 kayıtları ve `levels/level_001…010.json` D2 paketinde (A2, 2026-11-02) §6.6'ya göre `schemaVersion` 2
+olarak yeniden yazıldı; üçü aynı commit'te değişti (testler bu belgeyi JSON'larla karşılaştırır, §7 U-7). Faz 2R
+verisi (`schemaVersion` 1) git geçmişindedir (`f065b80`); bu paragrafın üstündeki Faz 2R anlatımı tarihseldir.
 
 ## 0. Kurallar ve yöntem
 
@@ -54,7 +54,7 @@ blokları `k<parti>_<indeks>` (0 tabanlı; ASCII'de rakamla: `0` = `k1_0` …). 
 bloklarında `y = Hy` yazılır (yok sayılır, K-25). `seed` yazılmazsa `id × 1000 + id`. `targets` (isteğe bağlı, oyun
 okumaz; TECH §2R.2, P-2R-4 KABUL önerisi): §2 tablosundaki hedef aralıkların makine okunur kopyası (`minShifts`,
 `firstNeedDepth`, `choices0`, `deadRate`); `metric_out_of_band` bunu okur; yazarı product-lead. `teaches` yalnızca veri imzası olan
-mekanik için yazılır (OBSTACLES "Veri imzası": 4 → W1, 5 → S1, 6 → W2, 8 → Y5, 9 → W3).
+mekanik için yazılır (OBSTACLES "Veri imzası": 1 → S1, 4 → W1, 6 → W2, 8 → Y5, 9 → W3).
 
 **Öğretici adımları (K-53, GDD §14.1):** bölüm başına en çok 2 adım, hepsi yumuşak (`mode` yazılmaz ya da `"soft"`),
 spot ışığı yok, oyunu kilitlemez; adım yalnız `done` olayıyla biter (`timeoutMs` yok), el/balon hareketsizlikte
@@ -88,8 +88,8 @@ Bölüm 5'tir (brif: 4; renk açılışı "en erken"dir, `color_locked` R için 
 mekaniği olan bölümdür (`teaches` dolu). Tanıtım bölümü sadedir; tamponu bir alt zorluğun formülüyle hesaplanır ve hedef
 kazanma oranı Kolay'da ≥ %90, Normal'de %80–90, Zor'da %55–65, Çok Zor'da %40–50'dir (yukarıdaki hamle bütçesi
 paragrafı).
-İmzasız öğretimler (Faz 2R 1–10): 1 kaldır–taşı–indir, 2 şekil + gölge, 3 kazı (K-10, R2-03), 7 taşınan malzeme (K-27),
-10 final; güçlendirici açılışları 8 Çekiç, 10 Vinç (META §4).
+İmzasız öğretimler (D-099 1–10, §6.6): 2 şekil + gölge, 3 kazı (T1), 5 bekletme (T5), 7 takas ve yer açma (T4 + T6),
+10 final (yeniden dizme); güçlendirici açılışları 8 Çekiç, 10 Vinç (META §4).
 
 **YAO:** Her bölümde çözümdeki yerleşimlerin ≥ %60'ı duvar üstünden (GDD K-46). Geçitli bölümlerde ray yerleşimi
 toplam yerleşimin %40'ını aşmaz (Bölüm 4: 1/5, Bölüm 9: 1/4).
@@ -106,16 +106,16 @@ düşeceği sol sütun (GDD K-25).
 
 | # | Zorluk | Hamle (taslak) | Hedef kazanma (orta bot) | # | Zorluk | Hamle (taslak) | Hedef kazanma (orta bot) |
 |---|---|---|---|---|---|---|---|
-| 1 | Kolay | 11 | ≥ %95 | 26 | Normal (nefes) | 20 | %80 |
-| 2 | Kolay | 9 | ≥ %92 | 27 | Normal | 20 | %70 |
-| 3 | Kolay | 11 | ≥ %92 | 28 | Normal | 21 | %70 |
+| 1 | Kolay (tanıtım) | 10 | ≥ %95 | 26 | Normal (nefes) | 20 | %80 |
+| 2 | Kolay | 10 | ≥ %92 | 27 | Normal | 20 | %70 |
+| 3 | Kolay | 12 | ≥ %92 | 28 | Normal | 21 | %70 |
 | 4 | Kolay (tanıtım) | 13 | ≥ %90 | 29 | Normal | 19 | %70 |
-| 5 | Normal (tanıtım) | 17 | %85 | 30 | **Çok Zor** | 27 | %30 |
+| 5 | Normal | 13 | %75 | 30 | **Çok Zor** | 27 | %30 |
 | 6 | Normal (tanıtım) | 13 | %85 | 31 | Normal (nefes) | 20 | %80 |
-| 7 | Normal | 17 | %75 | 32 | Normal | 20 | %70 |
+| 7 | Normal | 13 | %70 | 32 | Normal | 20 | %70 |
 | 8 | Normal (tanıtım) | 14 | %85 | 33 | Normal | 22 | %65 |
-| 9 | Normal (tanıtım) | 13 | %85 | 34 | Normal | 22 | %65 |
-| 10 | **Zor** | 18 | %45 | 35 | **Zor** | 21 | %50 |
+| 9 | Normal (tanıtım) | 16 | %85 | 34 | Normal | 22 | %65 |
+| 10 | **Zor** | 14 | %45 | 35 | **Zor** | 21 | %50 |
 | 11 | Normal (nefes) | 14 | %80 | 36 | Normal (nefes) | 21 | %75 |
 | 12 | Normal | 16 | %70 | 37 | Normal | 21 | %70 |
 | 13 | Normal | 16 | %70 | 38 | Normal | 21 | %70 |
@@ -132,8 +132,8 @@ düşeceği sol sütun (GDD K-25).
 | 24 | Normal | 20 | %70 | 49 | **Zor** | 30 | %45 |
 | 25 | **Zor** | 22 | %45 | 50 | **Çok Zor** | 38 | %30 |
 
-Hamle sütunu 1–10 için Faz 2R `solver min + T` (K-52, `a = 0`; resmî `levels:solve` sonucu, §2.11; tanıtım bölümlerinde
-5, 6, 8, 9 T Kolay satırından, 4 zaten Kolay), 11–50 için eski kurallarla `tahmini minimum + eski tampon`dur (Faz 3'te K-52 ile yeniden hesaplanır;
+Hamle sütunu 1–10 için D-099 `solver min + P` (K-52 D-099 tablosu, `a = 0`; resmî `levels:solve` sonucu, §2.11; tanıtım
+bölümleri 1, 4, 6, 8, 9 P'yi bir alt zorluğun satırından alır, 1 ve 4 zaten Kolay), 11–50 için eski kurallarla `tahmini minimum + eski tampon`dur (Faz 3'te K-52 ile yeniden hesaplanır;
 tanıtım bölümleri aynı kuralla). Fark ve gerekçe §4'te. 11–50'nin tanıtım bölümlerinin hedef oranları Faz 3'te
 tanıtım bandına (§0) çekilir. "Hedef kazanma" sütunu **bot** oranıdır; bot K-34 kanca 5 ipuçlarını görmez (DL-2R-04).
 
@@ -141,7 +141,12 @@ tanıtım bandına (§0) çekilir. "Hedef kazanma" sütunu **bot** oranıdır; b
 
 ---
 
-## 2. Bölüm 1–10 (Hikaye Bölümü 1 — Ağaç Ev) — Faz 2R dikey dilimi
+## 2. Bölüm 1–10 (Hikaye Bölümü 1 — Ağaç Ev) — D-099 sabit saha (`schemaVersion` 2)
+
+**D-099 notu (A2, 2026-11-02):** Bölüm 1–10 kayıtları (§2 başlıkları "Bölüm N") §6 şartnamesine göre yeniden
+kuruldu: her bölüm iki katlıdır, bütün bloklar baştan sahadadır (K-55), hamle `min + P`'dir (K-52 D-099). Aşağıdaki
+§2.0 Faz 2R yöntemidir; tarihsel kayıt olarak kalır, D-099 yöntemi §6'dadır. Kayıtlardaki ASCII, blok tablosu ve kanonik
+çözüm solver çıktısıdır (`tests/golden/level_NNN.hand.json` ile birebir).
 
 ### 2.0 Bulmaca tasarım yöntemi (Faz 2R; R2-01…R2-04)
 
@@ -261,665 +266,559 @@ dersi küçük sahada okunur.
 
 | Alan | Değer |
 |---|---|
-| Öğretilen | Kaldır–taşı–indir (duvar üstü + düşme); imza yok (`tutorial`) |
-| Zorluk / hedef kazanma | Kolay / ≥ %95 |
-| Boyut (K-49) | `yard { cols 4, rows 4 }`, `site { cols 2, rows 5 }` → H = 5, Vinç Alanı y = 5–6 |
-| Duvar | `height 4` (saha tepesiyle aynı: her blok saha üstü havaya kalkar); geçit yok |
+| Öğretilen | **S1 Kayan Şantiye** (iki kat tek sahada, K-55) + kaldır–taşı–indir (`teaches: "S1"`) |
+| Zorluk / hedef kazanma | Kolay (tanıtım) / ≥ %95 |
+| Boyut (K-49) | `yard { cols 5, rows 4 }`, `site { cols 2, rows 4 }` → H = 4, Vinç Alanı y = 4–5 |
+| Duvar | `height 3`; geçit yok |
 | Yerçekimi | build `normal`, yard `false` |
-| Dilimler | 1. Basamaklar (EN: Steps) `["WW", "YY", "WW", "YW", "YW"]` |
-| Renkler / şekiller | W, Y (2) / D2 |
-| Saha | C = 16, F = 10, E = 6 (= ⌊6,4⌋, üst sınır) |
-| Ölçütler (solver) | N 5 · min 5 · minShifts 0 · firstNeedDepth 0 · F0 {`a`, `b`} · YAO 5/5 · trapCount 0 · choices@0..2 11, 11, 16 · best 2, 1, 1 · 10 401 durum, çıkmaz 0 |
-| Hamle (K-52) | 5 + max(6, 3) = **11** |
+| Dilimler | 1. Alt Basamak (EN: Lower Step) `["YY", "YY", "WW", "WW"]` · 2. Üst Basamak (EN: Upper Step) `["WW", "WW", "YY", "YY"]` |
+| Renkler / şekiller | W, Y (2) / D2, O4 |
+| Saha | C = 20, F = 16, E = 4 (K-55: bütün bloklar baştan sahada, tek parti) |
+| Ölçütler (solver) | N 6 · min 6 · minShifts 0 · firstNeedDepth 0 · YAO 6/6 · trapCount 0 · maxCover 3 · depLater 0 · crossDeps 5 · parkSlack – · forced 4 · greedyWin 1 · greedyExcess 0 · greedyTrap – · ahaMin 0 · branch3 0,36 · 21 125 durum, complete evet, undetectedDead 0, D1 0 |
+| Hamle (K-52, D-099) | 6 + P 4 = **10** |
 
-**Tasarım niyeti:** Oyuncu bloğu yukarı kaldırıp duvarın üstünden aşırmanın ve bırakınca düşmenin temel hareket
-olduğunu keşfeder; yığının üstünün planın altı olduğunu (ters istif) ilk kez görür. Kazı yok (öğretici).
+**Tasarım niyeti:** Oyuncu bloğu kaldırıp duvarın üstünden aşırmanın temel hareket olduğunu keşfeder (duvar `height 3`, saha tepesi bir satır yukarıda). İlk kat üç hamlede biter; şantiye kayınca sahada kalan üç blok ikinci katın malzemesidir: sahaya yeni blok gelmez, kalanlar sırasını bekler (K-55). Yığının üstü planın altıdır (ters istif); kazı ve tuzak yok, açgözlü oyun en kısa yoldur (`greedyWin` 1,00).
 
 ```
-       x: 0 1 2 3   D   4 5
-   y=6:  · · · ·   :   · ·  ← Vinç Alanı
-   y=5:  · · · ·   :   · ·
-   y=4:  · · · ·   :   W W
-   y=3:  a b . .   #   Y Y
-   y=2:  a b . .   #   W W
-   y=1:  c c d d   #   Y W
-   y=0:  e e . .   #   Y W
+       x: 0 1 2 3 4   D   5 6
+   y=5:  · · · · ·   :   · ·
+   y=4:  · · · · ·   :   · ·  ← Vinç Alanı
+   y=3:  a a b b .   :   Y Y
+   y=2:  a a c c .   #   Y Y
+   y=1:  d d e e .   #   W W
+   y=0:  d d f f .   #   W W
 ```
 
 | Kimlik | Şekil | Renk | Çapa (x,y) | Rol |
 |---|---|---|---|---|
-| `a` | `D2_0` | Y | (0,2) | ilk gereken (y0–1 sütun 0) |
-| `b` | `D2_0` | W | (1,2) | ilk gereken (y0–1 sütun 1) |
-| `c` | `D2_90` | W | (0,1) | y2 (ya da y4; `e` ile özdeş) |
-| `d` | `D2_90` | Y | (2,1) | y3 |
-| `e` | `D2_90` | W | (0,0) | y4 |
+| `a` | `O4_0` | W | (0,2) | 1. kat y0–1 (ilk gereken) |
+| `b` | `D2_90` | Y | (2,3) | 1. kat y3 |
+| `c` | `D2_90` | Y | (2,2) | 1. kat y2 |
+| `d` | `O4_0` | Y | (0,0) | 2. kat y0–1 |
+| `e` | `D2_90` | W | (2,1) | 2. kat y3 |
+| `f` | `D2_90` | W | (2,0) | 2. kat y2 |
 
-Kanonik çözüm (solver, hamle hamle; karalama çözücüsüyle aynı):
-1. `b` (D2_0 W) (1,2) → saha üstü havaya kaldır → duvar üstünden → bırak → (5,0) — duvar üstü, doğru
-2. `a` (D2_0 Y) (0,2) → (4,0) — duvar üstü, doğru
-3. `c` (D2_90 W) (0,1) → (4,2) — duvar üstü, doğru
-4. `d` (D2_90 Y) (2,1) → (4,3) — duvar üstü, doğru
-5. `e` (D2_90 W) (0,0) → (4,4) — duvar üstü, doğru → dilim tamam, saha boş → kazanma (K-48)
+Kanonik çözüm (solver, K-50 madde 4):
+1. `a` (O4_0 W) (0,2) → (5,0) — duvar üstü, doğru
+2. `c` (D2_90 Y) (2,2) → (5,2) — duvar üstü, doğru
+3. `b` (D2_90 Y) (2,3) → (5,3) — duvar üstü, doğru
+4. `d` (O4_0 Y) (0,0) → (5,0) — duvar üstü, doğru
+5. `f` (D2_90 W) (2,0) → (5,2) — duvar üstü, doğru
+6. `e` (D2_90 W) (2,1) → (5,3) — duvar üstü, doğru
 
-Öğretici (`tutorial[]`, K-53):
-1. `piece:0`, `crane` · drag `[[0,3],[0,5],[4,5]]` (tutulan hücre `a`'nın üst hücresi (0,3); son çapa (4,4), düşüş (4,0),
-   doğru) · `tut.m.lift` · `{ event: placementCorrect, count: 1 }`
-2. `goals` (kalan blok çipi, UX §5.9) · — · `tut.m.useall` · `{ event: placementCorrect, count: 1 }`
+Öğretici:
+1. `piece:0`, `crane` · drag `[[0,3],[0,5],[5,5]]` · `tut.m.lift` · `{ event: placementCorrect, count: 1 }` (tutulan hücre `a`nın sol üst hücresi (0,3); Vinç Alanı y = 4–5, son çapa (5,4) şantiye üstünde, düşüş (5,0))
+2. `startOn: { event: segmentDone }` · `goals` · — · `tut.m.useall` · `{ event: placementCorrect, count: 1 }` (kat bitince kalan blok çipi)
 
 ### Bölüm 2 — Platform (Platform)
 
 | Alan | Değer |
 |---|---|
-| Öğretilen | Şekil uyumu + düşüş gölgesi (`C3` çifti); imza yok (`tutorial`) |
+| Öğretilen | Şekil ve gölge: `C3` çifti iki katta da merdiven deseninde kilitlenir; yanlış zamanda denenen blok kaybolmaz |
 | Zorluk / hedef kazanma | Kolay / ≥ %92 |
-| Boyut | `yard { cols 4, rows 4 }`, `site { cols 2, rows 5 }` → H = 5 |
-| Duvar | `height 4`; geçit yok |
+| Boyut (K-49) | `yard { cols 5, rows 4 }`, `site { cols 2, rows 4 }` → H = 4, Vinç Alanı y = 4–5 |
+| Duvar | `height 3`; geçit yok |
 | Yerçekimi | build `normal`, yard `false` |
-| Dilimler | 1. Platform (EN: Platform) `["YY", "WY", "WW", "GG", "GG"]` (çapraz şerit = `C3_0` + `C3_180`) |
-| Renkler / şekiller | G, W, Y (3) / O4, C3 |
-| Saha | C = 16, F = 10, E = 6 |
-| Ölçütler (solver) | N 3 · min 3 · minShifts 0 · firstNeedDepth 0 · F0 {`a`} · YAO 3/3 · trapCount 0 · choices 7, 13, 9 · best 1, 1, 1 · 97 durum, çıkmaz 0 |
-| Hamle | 3 + 6 = **9** |
+| Dilimler | 1. Platform Tabanı (EN: Platform Base) `["WW", "GG", "YG", "YY"]` · 2. Platform Korkuluğu (EN: Platform Rail) `["GG", "YY", "WY", "WW"]` |
+| Renkler / şekiller | G, W, Y (3) / C3, D2 |
+| Saha | C = 20, F = 16, E = 4 (K-55: bütün bloklar baştan sahada, tek parti) |
+| Ölçütler (solver) | N 6 · min 6 · minShifts 0 · firstNeedDepth 0 · YAO 6/6 · trapCount 0 · maxCover 2 · depLater 0 · crossDeps 5 · parkSlack – · forced 5 · greedyWin 1 · greedyExcess 0 · greedyTrap – · ahaMin 0 · branch3 0,75 · 13 797 durum, complete evet, undetectedDead 0, D1 0 |
+| Hamle (K-52, D-099) | 6 + P 4 = **10** |
 
-**Tasarım niyeti:** En üstteki `c` (`C3_180` Y) ilk göze çarpan bloktur ama gölgesi "!" gösterir (renk + destek); oyuncu
-gölgenin doğruyu söylediğini ve yanlış zamanda gelen bloğun kaybolmadığını, sırası gelince kullanıldığını keşfeder.
-`b` (`C3_0` W) sağa kayıp boş sütundan çıkar (yol kuralı ilk kez görünür).
+**Tasarım niyeti:** `C3_0` + `C3_180` çifti 2×3 bir merdiven kurar (K-34 alttan üste). Başlangıçta tek oynanabilir hamle `a`dır; açıktaki `c` (`C3_180` G) erken denenirse gölge «hatalı» gösterir (K-18) ve blok geri döner, ikinci hamlede yerine oturur. İkinci kat aynı deseni ters renkte tekrarlar. Kazı yok.
 
 ```
-       x: 0 1 2 3   D   4 5
-   y=6:  · · · ·   :   · ·  ← Vinç Alanı
-   y=5:  · · · ·   :   · ·
-   y=4:  · · · ·   :   Y Y
-   y=3:  c c a a   #   W Y
-   y=2:  . c a a   #   W W
-   y=1:  b . . .   #   G G
-   y=0:  b b . .   #   G G
+       x: 0 1 2 3 4   D   5 6
+   y=5:  · · · · ·   :   · ·
+   y=4:  · · · · ·   :   · ·  ← Vinç Alanı
+   y=3:  a . . c c   :   W W
+   y=2:  a a b b c   #   G G
+   y=1:  . e e f .   #   Y G
+   y=0:  d d e f f   #   Y Y
 ```
 
 | Kimlik | Şekil | Renk | Çapa (x,y) | Rol |
 |---|---|---|---|---|
-| `a` | `O4_0` | G | (2,2) | ilk gereken (y0–1) |
-| `b` | `C3_0` | W | (0,0) | y2–3 |
-| `c` | `C3_180` | Y | (0,2) | y3–4; üstte, gölgesi önce "!" |
+| `a` | `C3_0` | Y | (0,2) | 1. kat y0–1 (ilk gereken) |
+| `b` | `D2_90` | W | (2,2) | 1. kat y3 |
+| `c` | `C3_180` | G | (3,2) | 1. kat y1–2 |
+| `d` | `D2_90` | G | (0,0) | 2. kat y3 |
+| `e` | `C3_180` | Y | (1,0) | 2. kat y1–2 |
+| `f` | `C3_0` | W | (3,0) | 2. kat y0–1 |
 
-Kanonik çözüm (solver; karalama çözücüsüyle aynı):
-1. `a` (O4_0 G) (2,2) → (4,0) — duvar üstü, doğru
-2. `b` (C3_0 W) (0,0) → sağa (2,0) → yukarı → duvar üstünden → (4,2) — duvar üstü, doğru (hücreler (4,2),(5,2),(4,3))
-3. `c` (C3_180 Y) (0,2) → (4,3) — duvar üstü, doğru (hücreler (5,3),(4,4),(5,4)) → kazanma
+Kanonik çözüm (solver, K-50 madde 4):
+1. `a` (C3_0 Y) (0,2) → (5,0) — duvar üstü, doğru
+2. `c` (C3_180 G) (3,2) → (5,1) — duvar üstü, doğru
+3. `b` (D2_90 W) (2,2) → (5,3) — duvar üstü, doğru
+4. `f` (C3_0 W) (3,0) → (5,0) — duvar üstü, doğru
+5. `e` (C3_180 Y) (1,0) → (5,1) — duvar üstü, doğru
+6. `d` (D2_90 G) (0,0) → (5,3) — duvar üstü, doğru
 
 Öğretici:
-1. `panorama`, `build` · — · `tut.m.pattern` · `{ event: placementCorrect, count: 1 }` (UX §13.2 Bölüm 2 adım 1:
-   "alttan üste" fikrini panoramadaki dikey ok gösterir — aktif dilimin alt satırından üst satırına; ok yalnız
-   `panorama` vurgusuyla çizilir. DL-2R-10 (a)'daki `front` önerisinin yerine UX satırı geçti, 2026-10-08)
-2. `piece:2`, `build` · hold `[[1,3],[1,5],[5,5]]` (`c`'nin sağ üst hücresi (1,3), ofset (1,1); son çapa (4,4) tamamen
-   şantiye üstünde; gölge (4,2)'ye iner ve renk + destek için "!" gösterir) · `tut.m.shadow` · `{ event: placementCorrect,
-   count: 1 }`
+1. `panorama`, `build` · — · `tut.m.pattern` · `{ event: placementCorrect, count: 1 }`
+2. `piece:2` · hold `[[3,3],[3,4],[5,4]]` · `tut.m.shadow` · `{ event: placementCorrect, count: 1 }` (tutulan hücre `c`nin sol üst hücresi (3,3); şantiye üstünde tutulurken gölge «doğru» gösterir, iniş (5,1))
 
 ### Bölüm 3 — Ön Duvar (Front Wall)
 
 | Alan | Değer |
 |---|---|
-| Öğretilen | **Kazı** (sahada yeniden konumlandırma, K-10; R2-03 "en geç Bölüm 3"); imza yok (`tutorial`) |
+| Öğretilen | Kazı (T1): sonraki katın bloğu bu katın bloğunun üstündedir; önce kenara çek |
 | Zorluk / hedef kazanma | Kolay / ≥ %92 |
-| Boyut | `yard { cols 4, rows 4 }`, `site { cols 2, rows 5 }` → H = 5 |
-| Duvar | `height 4`; geçit yok |
+| Boyut (K-49) | `yard { cols 5, rows 4 }`, `site { cols 2, rows 4 }` → H = 4, Vinç Alanı y = 4–5 |
+| Duvar | `height 3`; geçit yok |
 | Yerçekimi | build `normal`, yard `false` |
-| Dilimler | 1. Ön Duvar (EN: Front Wall) `["YY", "GG", "GG", "YW", "YW"]` |
+| Dilimler | 1. Duvar Altı (EN: Wall Base) `["WW", "WW", "YY", "GG"]` · 2. Duvar Üstü (EN: Wall Top) `["WW", "WW", "YY", "YY"]` |
 | Renkler / şekiller | G, W, Y (3) / D2, O4 |
-| Saha | C = 16, F = 10, E = 6 |
-| Ölçütler (solver) | N 4 · min 5 · **minShifts 1** · **firstNeedDepth 1** · F0 {`a`, `b`} (ikisi de `c`'nin altında, `cover` 1) · YAO 4/4 · trapCount 0 · choices 6, 9, 10 · best 3, 1, 1 · 1 931 durum, çıkmaz 0 |
-| Hamle | 5 + 6 = **11** |
+| Saha | C = 20, F = 16, E = 4 (K-55: bütün bloklar baştan sahada, tek parti) |
+| Ölçütler (solver) | N 7 · min 8 · minShifts 1 · firstNeedDepth 1 · YAO 7/7 · trapCount 0 · maxCover 2 · depLater 2 · crossDeps 2 · parkSlack 1 · forced 6 · greedyWin 1 · greedyExcess 0 · greedyTrap – · ahaMin 0 · branch3 0,3 · 77 757 durum, complete evet, undetectedDead 0, D1 0 |
+| Hamle (K-52, D-099) | 8 + P 4 = **12** |
 
-**Tasarım niyeti:** İlk gereken iki dikey blok, sonra gereken `O4` G'nin altındadır; `O4` G henüz yerleşemez (y2–3,
-altı boş). Oyuncu "üstteki bloğu boş yere çek, alttakini al" kazısını keşfeder. Kapak sağa bir sütun kayınca sol sütun
-açılır; `b` önce sola, sonra yukarı tünelden çıkar.
+**Tasarım niyeti:** İlk kez kazı: ikinci katın tabanı `O4` Y (`a`), birinci katın G ve Y bloklarının üstündedir (`depLater` 2). Sahada tek cep (sağ üstte 2×2) vardır; `a` oraya kayınca birinci kat açılır, cepteki blok ikinci katın tabanı olarak bekler. Dikey W çifti (sütun 4) birinci katın üst bölgesini doldurur; yatay W çifti ikinci kata kalır.
 
 ```
-       x: 0 1 2 3   D   4 5
-   y=6:  · · · ·   :   · ·  ← Vinç Alanı
-   y=5:  · · · ·   :   · ·
-   y=4:  · · · ·   :   Y Y
-   y=3:  c c . .   #   G G
-   y=2:  c c . .   #   G G
-   y=1:  a b . .   #   Y W
-   y=0:  a b d d   #   Y W
+       x: 0 1 2 3 4   D   5 6
+   y=5:  · · · · ·   :   · ·
+   y=4:  · · · · ·   :   · ·  ← Vinç Alanı
+   y=3:  a a . . f   :   W W
+   y=2:  a a . . f   #   W W
+   y=1:  b b d d g   #   Y Y
+   y=0:  c c e e g   #   G G
 ```
 
 | Kimlik | Şekil | Renk | Çapa (x,y) | Rol |
 |---|---|---|---|---|
-| `a` | `D2_0` | Y | (0,0) | ilk gereken (y0–1 sütun 0), gömülü |
-| `b` | `D2_0` | W | (1,0) | ilk gereken (y0–1 sütun 1), gömülü |
-| `c` | `O4_0` | G | (0,2) | kapak (y2–3) |
-| `d` | `D2_90` | Y | (2,0) | y4 |
+| `a` | `O4_0` | Y | (0,2) | 2. kat y0–1; önce sahada kaydırılır |
+| `b` | `D2_90` | G | (0,1) | 1. kat y0 (ilk gereken) |
+| `c` | `D2_90` | Y | (0,0) | 1. kat y1 |
+| `d` | `D2_90` | W | (2,1) | 2. kat y3 |
+| `e` | `D2_90` | W | (2,0) | 2. kat y2 |
+| `f` | `D2_0` | W | (4,2) | 1. kat y2–3 |
+| `g` | `D2_0` | W | (4,0) | 1. kat y2–3 |
 
-Kanonik çözüm (solver; karalama çözücüsüyle aynı):
-1. `c` (O4_0 G) (0,2) → (1,2) — **kaydırma** (sol sütun açılır)
-2. `a` (D2_0 Y) (0,0) → yukarı (0,2)… → duvar üstünden → (4,0) — duvar üstü, doğru
-3. `b` (D2_0 W) (1,0) → sola (0,0) → yukarı → (5,0) — duvar üstü, doğru
-4. `c` (O4_0 G) (1,2) → (4,2) — duvar üstü, doğru
-5. `d` (D2_90 Y) (2,0) → (4,4) — duvar üstü, doğru → kazanma
-
-Tuzak notu: ilk taslakta y2–3 `WW` ve kapak `O4` W idi; `b` (`D2_0` W) sütun 0'ın y2–3'üne de ✓ iniyordu ve bölüm
-bitmiyordu (20 ✓-tuzağı geçişi) → kapak G yapıldı (§2.0 madde 4).
+Kanonik çözüm (solver, K-50 madde 4):
+1. `a` (O4_0 Y) (0,2) → (2,2) — **kaydırma**
+2. `b` (D2_90 G) (0,1) → (5,0) — duvar üstü, doğru
+3. `c` (D2_90 Y) (0,0) → (5,1) — duvar üstü, doğru
+4. `f` (D2_0 W) (4,2) → (5,2) — duvar üstü, doğru
+5. `g` (D2_0 W) (4,0) → (6,2) — duvar üstü, doğru
+6. `a` (O4_0 Y) (2,2) → (5,0) — duvar üstü, doğru
+7. `e` (D2_90 W) (2,0) → (5,2) — duvar üstü, doğru
+8. `d` (D2_90 W) (2,1) → (5,3) — duvar üstü, doğru
 
 Öğretici:
-1. `piece:2` · drag `[[0,3],[1,3]]` · `tut.m.dig` · `{ event: yardMove, count: 1, piece: 'piece:2' }` (`d`'nin
-   kaydırılması adımı bitirmez, DL-2R-02)
-2. `piece:0`, `piece:1` · — · `tut.m.free` · `{ event: placementCorrect, count: 1 }`
+1. `piece:0` · drag `[[0,3],[2,3]]` · `tut.m.dig` · `{ event: yardMove, count: 1, piece: 'piece:0' }` (`a`nın sol üst hücresi (0,3), sağa (2,3); son çapa (2,2) = kanonik hamle 1)
+2. `startOn: { event: yardMove, piece: 'piece:0' }` · `piece:0`, `panorama` · — · `tut.m.carry` · `{ event: segmentDone, count: 1 }` (kat bitene kadar)
 
 ### Bölüm 4 — Pencere Pervazı (Window Sill)
 
 | Alan | Değer |
 |---|---|
-| Öğretilen | **W1 Sabit Geçit** + ray (`teaches: "W1"`); yapı parçası "pencere pervazı" (dolu bant; S2 MVP dışı, plan dolu; DL-2R-11) |
-| Zorluk / hedef kazanma | Kolay / ≥ %90 |
-| Boyut | `yard { cols 4, rows 4 }`, `site { cols 2, rows 6 }` → H = 6, Vinç Alanı y = 6–7 |
-| Duvar | `height 4`; geçit `{ type: "static", y: 0, size: 2 }` (boy 2: W3 dar geçit 9'a kalır, R-21) |
+| Öğretilen | **W1 Sabit Geçit** + ray (`teaches: "W1"`) |
+| Zorluk / hedef kazanma | Kolay (tanıtım) / ≥ %90 |
+| Boyut (K-49) | `yard { cols 4, rows 5 }`, `site { cols 2, rows 4 }` → H = 5, Vinç Alanı y = 5–6 |
+| Duvar | `height 4`; geçit `{ type: "static", y: 0, size: 2 }` |
 | Yerçekimi | build `normal`, yard `false` |
-| Dilimler | 1. Pervaz (EN: Sill) `["YY", "GG", "GG", "YY", "WW", "WW"]` |
-| Renkler / şekiller | G, W, Y (3) / D2, O4 |
-| Saha | C = 16, F = 12, E = 4 |
-| Ölçütler (solver) | N 5 · min 7 · minShifts 2 · firstNeedDepth 2 · F0 {`a`} (`cover` 2) · YAO 4/5 (1 ray) · trapCount 0 · choices 5, 9, 9 · best 1, 1, 1 · **geçitsiz min 9** (ray 2 hamle kazandırır) · 1 922 durum, çıkmaz 0 |
-| Hamle (K-52) | 7 + 6 = **13** |
+| Dilimler | 1. Pervaz (EN: Sill) `["WW", "GG", "YY", "WW"]` · 2. Pencere Üstü (EN: Window Top) `["YY", "WW", "GG", "YY"]` |
+| Renkler / şekiller | G, W, Y (3) / D2 |
+| Saha | C = 20, F = 16, E = 4 (K-55: bütün bloklar baştan sahada, tek parti) |
+| Ölçütler (solver) | N 8 · min 9 · minShifts 1 · firstNeedDepth 1 · YAO 7/8 (1 ray) · trapCount 0 · maxCover 5 · depLater 1 · crossDeps 11 · parkSlack 2 · forced 8 · greedyWin 1 · greedyExcess 0 · greedyTrap – · ahaMin 0 · branch3 0,33 · 220 746 durum, complete evet, undetectedDead 0, D1 0 |
+| Hamle (K-52, D-099) | 9 + P 4 = **13** |
 
-**Tasarım niyeti:** İlk gereken `O4` W yığının en altında, iki `D2_90` Y'nin altındadır; geçit olmasaydı bölüm dört kazı
-isterdi (geçitsiz min 9 = 5 yerleşim + 4 kazı). Geçit satırlarındaki koridorda (x 2–3, y 0–1) ise duvar dibindeki tıkaç `c` durur;
-`c`'nin tek kaçış yolu sütun 2'dir ve o sütunun tepesi `e` ile kapalıdır. Oyuncu iki adımlık bir kazı keşfeder: önce `e`'yi
-bir hücre sola kaydırıp sütun 2'nin tepesini açar, sonra tıkacı sütun 2'den yukarı kaldırır; koridor açılınca `O4` W
-geçitten yatay kayar, raya girer ve düşmez. Tıkacı yalnız sola (2,0)'a çekmek koridoru açmaz (tek israf hamlesi).
-Önceki taslağa göre fark: 1 kazı → 2 kazı (proje sahibi isteği, §2.0 madde 5).
+**Tasarım niyeti:** Geçit satır 0–1'de açıktır. Başlangıçta iki W bloğu `a` (Y) ile örtülüdür; `a` bir hücre sağa kayınca `b` açılır. İkinci katın tabanı `h` (Y) duvar dibinde, `f`nin altındadır: duvarın üstünden çıkamaz ama geçitten yatay kayar, raya girer ve düşmez (1 ray). Geçitsiz `min` 10: geçit bir hamle kazandırır (`no-gaps` +1).
 
 ```
        x: 0 1 2 3   D   4 5
-   y=7:  · · · ·   :   · ·  ← Vinç Alanı
    y=6:  · · · ·   :   · ·
-   y=5:  · · · ·   :   Y Y
-   y=4:  · · · ·   :   G G
-   y=3:  . e e d   #   G G
-   y=2:  b b . d   #   Y Y
-   y=1:  a a . c   =   W W
-   y=0:  a a . c   =   W W
+   y=5:  · · · ·   :   · ·  ← Vinç Alanı
+   y=4:  . a a .   :   · ·
+   y=3:  b b c c   #   W W
+   y=2:  d d e e   #   G G
+   y=1:  . f f .   =   Y Y
+   y=0:  g g h h   =   W W
 ```
 
 | Kimlik | Şekil | Renk | Çapa (x,y) | Rol |
 |---|---|---|---|---|
-| `a` | `O4_0` | W | (0,0) | ilk gereken (y0–1), raydan |
-| `b` | `D2_90` | Y | (0,2) | y5 (ya da y2; `e` ile özdeş) |
-| `c` | `D2_0` | G | (3,0) | tıkaç; y3–4 (`d` ile özdeş) |
-| `d` | `D2_0` | G | (3,2) | tıkacın üstü; y3–4 |
-| `e` | `D2_90` | Y | (1,3) | sütun 2'nin kapağı; y2 |
+| `a` | `D2_90` | Y | (1,4) | 1. kat y1; önce sahada kaydırılır |
+| `b` | `D2_90` | W | (0,3) | 1. kat y0 (ilk gereken) |
+| `c` | `D2_90` | W | (2,3) | 2. kat y2 |
+| `d` | `D2_90` | G | (0,2) | 1. kat y2 |
+| `e` | `D2_90` | W | (2,2) | 1. kat y3 |
+| `f` | `D2_90` | G | (1,1) | 2. kat y1 |
+| `g` | `D2_90` | Y | (0,0) | 2. kat y3 |
+| `h` | `D2_90` | Y | (2,0) | 2. kat y0, raydan |
 
 Kanonik çözüm (solver, K-50 madde 4):
-1. `e` (D2_90 Y) (1,3) → (0,3) — **kaydırma** (sütun 2'nin tepesi açılır)
-2. `c` (D2_0 G) (3,0) → sola (2,0) → yukarı → (2,2) — **kaydırma** (koridor ve geçit önü açılır)
-3. `a` (O4_0 W) (0,0) → sağa (1,0), (2,0) → geçitten raya → (4,0)'da bırak — **ray**, doğru (düşmez)
-4. `e` (D2_90 Y) (0,3) → (4,2) — duvar üstü, doğru
-5. `c` (D2_0 G) (2,2) → (4,3) — duvar üstü, doğru
-6. `d` (D2_0 G) (3,2) → (5,3) — duvar üstü, doğru
-7. `b` (D2_90 Y) (0,2) → (4,5) — duvar üstü, doğru → kazanma
+1. `a` (D2_90 Y) (1,4) → (2,4) — **kaydırma**
+2. `b` (D2_90 W) (0,3) → (4,0) — duvar üstü, doğru
+3. `a` (D2_90 Y) (2,4) → (4,1) — duvar üstü, doğru
+4. `d` (D2_90 G) (0,2) → (4,2) — duvar üstü, doğru
+5. `e` (D2_90 W) (2,2) → (4,3) — duvar üstü, doğru
+6. `h` (D2_90 Y) (2,0) → geçitten raya → (4,0) — **ray**, doğru (düşmez)
+7. `f` (D2_90 G) (1,1) → (4,1) — duvar üstü, doğru
+8. `c` (D2_90 W) (2,3) → (4,2) — duvar üstü, doğru
+9. `g` (D2_90 Y) (0,0) → (4,3) — duvar üstü, doğru
 
 Öğretici:
-1. `piece:4`, `piece:2` · drag `[[2,3],[1,3]]` (`e`'nin sağ hücresi (2,3), ofset (1,0); son çapa (0,3) = kanonik hamle 1) ·
-   `tut.m.dig` · `{ event: yardMove, count: 1, piece: 'piece:4' }` (tıkacın boşa kaydırılması adımı bitirmez, DL-2R-02)
-2. `startOn: { event: yardMove, piece: 'piece:2' }` · `piece:0`, `gap:0` · drag `[[1,1],[5,1]]` (`a`'nın sağ üst hücresi
-   (1,1), ofset (1,1); son çapa (4,0) rayda, K-07 satır 7, doğru) · `tut.m.gap` · `{ event: gapPass, count: 1 }` (adım
-   tıkaç kaydırılınca başlar, kanonik çözümde 2. hamleden sonra; tıkaç koridorda kaldıysa eldivenin yolu `R` dışındadır ve
-   eldiven gizlenir, balon kalır — GDD §14 "`hand.path` anlamı" madde 5)
+1. `piece:0` · drag `[[2,4],[3,4]]` · `tut.m.dig` · `{ event: yardMove, count: 1, piece: 'piece:0' }` (`a`nın sağ hücresi (2,4), bir sağa; son çapa (2,4) = kanonik hamle 1)
+2. `startOn: { event: segmentDone }` · `piece:7`, `gap:0` · drag `[[3,0],[5,0]]` · `tut.m.gap` · `{ event: gapPass, count: 1 }` (ikinci kat başında; `h`nin sağ hücresi (3,0), son çapa (4,0) rayda, kanonik hamle 6)
 
 ### Bölüm 5 — İki Odalı Ev (Two-Room House)
 
 | Alan | Değer |
 |---|---|
-| Öğretilen | **S1 Kayan Şantiye** + kamyon teslimatı (`teaches: "S1"`) |
-| Zorluk / hedef kazanma | Normal (tanıtım) / %85 (tanıtım bandı %80–90) |
-| Boyut | `yard { cols 4, rows 4 }`, `site { cols 2, rows 5 }` → H = 5 |
-| Duvar | `height 4`; geçit yok |
+| Öğretilen | Bekletme (T5) ve park yeri: yerleşebilecek dikey bloğu sonraki kata sakla |
+| Zorluk / hedef kazanma | Normal / %75 |
+| Boyut (K-49) | `yard { cols 5, rows 4 }`, `site { cols 2, rows 4 }` → H = 4, Vinç Alanı y = 4–5 |
+| Duvar | `height 3`; geçit yok |
 | Yerçekimi | build `normal`, yard `false` |
-| Dilimler | 1. Sol Oda (EN: Left Room) `["WW", "WY", "WY", "RR", "RR"]` → 2. Sağ Oda (EN: Right Room) `["RR", "RR", "WW", "YY", "YY"]` |
-| Renkler / şekiller | R, W, Y (3) / D2, O4 |
-| Saha | C = 16, F = 10, E = 6 (parti 0 = dilim 1'in malzemesi) |
-| Ölçütler (solver) | N 8 · min 11 · minShifts 3 (dilim 1: 1, dilim 2: 2) · firstNeedDepth 1 · F0 {`a`} · YAO 8/8 · trapCount 0 · choices 11, 8, 14 · best 2, 1, 1 · önsezi kazancı 0 (fark 0) · 3 203 durum, çıkmaz 0 |
-| Hamle | 11 + max(6, ⌈5,5⌉) = **17** (tanıtım: Kolay satırı, K-52; taban 4) |
+| Dilimler | 1. Sol Oda (EN: Left Room) `["YY", "WW", "WW", "RR"]` · 2. Sağ Oda (EN: Right Room) `["RR", "WW", "WW", "YY"]` |
+| Renkler / şekiller | R, W, Y (3) / D2 |
+| Saha | C = 20, F = 16, E = 4 (K-55: bütün bloklar baştan sahada, tek parti) |
+| Ölçütler (solver) | N 8 · min 11 · minShifts 3 · firstNeedDepth 2 · YAO 8/8 · trapCount 0 · maxCover 3 · depLater 3 · crossDeps 7 · parkSlack 1 · forced 8 · greedyWin 1 · greedyExcess 1 · greedyTrap – · ahaMin 1 · branch3 0,27 · 745 442 durum, complete evet, undetectedDead 0, D1 0 |
+| Hamle (K-52, D-099) | 11 + P 2 = **13** |
 
-**Tasarım niyeti:** Oyuncu bir dilim bitince şantiyenin kaydığını ve kamyonun boşalan sahaya yeni yığın döktüğünü
-keşfeder. Dilim 1 tek kazıyla açılır (tanıtım sade başlar); sağ odanın yığını ters istiftir: kamyonun ilk döktüğü `O4` Y
-(odanın tabanı) en altta kalır, üstüne çatının iki `D2_0` R'si düşer ve ikisi de kenara park edilmeden taban çıkmaz
-(dilim 2'de 2 kazı). R'leri alçağa park eden oyuncu `D2_90` W'yi gömer ama W sola kayıp boşalan sütunlardan çıkar
-(fazladan hamle yok). Önceki taslağa göre fark: dilim 2'de 1 kazı → 2 kazı, N 9 → 8.
+**Tasarım niyeti:** İlk bekletme (`hold`): birinci katın W bölgesine (y1–2) dikey `D2_0` W de uyar, ama şimdi konursa eşi `d` (sol sütunda, park edilen `a`nın altında) kazılmalıdır (açgözlü +1). Kanonik çözüm 4. hamlede yerleşebilecek dikey `b`yi sütun 4'teki dikey cebe çeker; iki yatay W (`e`, `g`) bu katı, iki dikey W (`b`, `d`) sonraki katı doldurur (`ahaMin` 1). Açılışta `b` bir hücre sağa, `a` sol üste park edilir: R tabanı açılır.
 
-Dilim 1 başlangıcı:
 ```
-       x: 0 1 2 3   D   4 5
-   y=6:  · · · ·   :   · ·  ← Vinç Alanı
-   y=5:  · · · ·   :   · ·
-   y=4:  · · · ·   :   W W
-   y=3:  . . . .   #   W Y
-   y=2:  d d . .   #   W Y
-   y=1:  a a b c   #   R R
-   y=0:  a a b c   #   R R
+       x: 0 1 2 3 4   D   5 6
+   y=5:  · · · · ·   :   · ·
+   y=4:  · · · · ·   :   · ·  ← Vinç Alanı
+   y=3:  . b . a a   :   Y Y
+   y=2:  d b . c c   #   W W
+   y=1:  d e e f f   #   W W
+   y=0:  g g . h h   #   R R
 ```
 
 | Kimlik | Şekil | Renk | Çapa (x,y) | Rol |
 |---|---|---|---|---|
-| `a` | `O4_0` | R | (0,0) | ilk gereken (y0–1), kapak altında |
-| `b` | `D2_0` | W | (2,0) | y2–3 sütun 0 |
-| `c` | `D2_0` | Y | (3,0) | y2–3 sütun 1 |
-| `d` | `D2_90` | W | (0,2) | kapak; y4 |
+| `a` | `D2_90` | Y | (3,3) | 1. kat y3; önce sahada kaydırılır |
+| `b` | `D2_0` | W | (1,2) | 2. kat y1–2; önce sahada kaydırılır |
+| `c` | `D2_90` | R | (3,2) | 1. kat y0 (ilk gereken) |
+| `d` | `D2_0` | W | (0,1) | 2. kat y1–2 |
+| `e` | `D2_90` | W | (1,1) | 1. kat y1 |
+| `f` | `D2_90` | R | (3,1) | 2. kat y3 |
+| `g` | `D2_90` | W | (0,0) | 1. kat y2 |
+| `h` | `D2_90` | Y | (3,0) | 2. kat y0 |
 
-Kamyon partisi 1 (dilim 1 tamamlanınca, dizi sırasıyla; `y = 4`): `k1_0` `O4_0` Y x=0 · `k1_1` `D2_0` R x=0 · `k1_2`
-`D2_0` R x=1 · `k1_3` `D2_90` W x=2. Boş sahaya düşüş (K-25): `k1_0` (0,0), `k1_1` (0,2), `k1_2` (1,2), `k1_3` (2,0) —
-kuyruk yok. Dilim 1 bitince saha her zaman boştur, bu yüzden döküm her oyunda aynıdır (önsezi kazancı 0, §2.0 madde 9).
-
-Dilim 2 başlangıcı (5. hamleden sonra):
-```
-       x: 0 1 2 3   D   4 5
-   y=6:  · · · ·   :   · ·  ← Vinç Alanı
-   y=5:  · · · ·   :   · ·
-   y=4:  · · · ·   :   R R
-   y=3:  1 2 . .   #   R R
-   y=2:  1 2 . .   #   W W
-   y=1:  0 0 . .   #   Y Y
-   y=0:  0 0 3 3   #   Y Y
-```
-
-Kanonik çözüm (solver):
-1. `d` (D2_90 W) (0,2) → (2,2) — **kaydırma**
-2. `a` (O4_0 R) (0,0) → (4,0) — duvar üstü, doğru
-3. `b` (D2_0 W) (2,0) → (4,2) — duvar üstü, doğru
-4. `c` (D2_0 Y) (3,0) → (5,2) — duvar üstü, doğru
-5. `d` (D2_90 W) (2,2) → (4,4) — duvar üstü, doğru → dilim 1 tamam, kayma, parti 1 düşer
-6. `k1_1` (D2_0 R) (0,2) → (2,1) — **kaydırma**
-7. `k1_2` (D2_0 R) (1,2) → (3,1) — **kaydırma** (taban açılır)
-8. `k1_0` (O4_0 Y) (0,0) → (4,0) — duvar üstü, doğru
-9. `k1_3` (D2_90 W) (2,0) → sola (0,0) → yukarı → (4,2) — duvar üstü, doğru
-10. `k1_1` (D2_0 R) (2,1) → (4,3) — duvar üstü, doğru
-11. `k1_2` (D2_0 R) (3,1) → (5,3) — duvar üstü, doğru → kazanma
+Kanonik çözüm (solver, K-50 madde 4):
+1. `b` (D2_0 W) (1,2) → (2,2) — **kaydırma**
+2. `a` (D2_90 Y) (3,3) → (0,3) — **kaydırma**
+3. `c` (D2_90 R) (3,2) → (5,0) — duvar üstü, doğru
+4. `b` (D2_0 W) (2,2) → (4,2) — **kaydırma**
+5. `e` (D2_90 W) (1,1) → (5,1) — duvar üstü, doğru
+6. `g` (D2_90 W) (0,0) → (5,2) — duvar üstü, doğru
+7. `a` (D2_90 Y) (0,3) → (5,3) — duvar üstü, doğru
+8. `h` (D2_90 Y) (3,0) → (5,0) — duvar üstü, doğru
+9. `d` (D2_0 W) (0,1) → (5,1) — duvar üstü, doğru
+10. `b` (D2_0 W) (4,2) → (6,1) — duvar üstü, doğru
+11. `f` (D2_90 R) (3,1) → (5,3) — duvar üstü, doğru
 
 Öğretici:
-1. `panorama` · — · `tut.m.segments` · `{ event: segmentDone, count: 1 }`
-2. `piece:k1_0`, `piece:k1_1`, `piece:k1_2`, `piece:k1_3` (yeni düşen 4 blok; `N = 0` iken kamyon göstergesi gizli
-   olduğundan `truck` vurgulanmaz, DL-2R-03) · — · `tut.m.truck` · `{ event: placementCorrect, count: 1 }` (adım 1 dilim
-   tamamlanınca biter; teslimat aynı hamlenin 9. adımında olduğu için adım 2 `deliveryDone`'la bitseydi hiç görünmezdi —
-   dilim 2'nin ilk doğru yerleşimine kadar etkin kalır)
+1. `piece:1` · drag `[[1,3],[2,3]]` · `tut.m.dig` · `{ event: yardMove, count: 1, piece: 'piece:1' }` (`b`nin üst hücresi (1,3), bir sağa; son çapa (2,2) = kanonik hamle 1)
+2. `startOn: { event: placementCorrect }` · `piece:1`, `piece:3` · — · `tut.m.carry` · `{ event: segmentDone, count: 1 }` (ilk doğru yerleşimden sonra; iki dikey W vurgulanır, eldiven yok)
 
 ### Bölüm 6 — Uzun Gövde (Tall Trunk)
 
 | Alan | Değer |
 |---|---|
-| Öğretilen | **W2 Yüksek Duvar** (`teaches: "W2"`): duvar = tahta yüksekliği, Vinç Alanı'na kaldırma |
-| Zorluk / hedef kazanma | Normal (tanıtım) / %85 (tanıtım bandı %80–90) |
-| Boyut | `yard { cols 4, rows 5 }`, `site { cols 2, rows 7 }` → H = 7, Vinç Alanı y = 7–8 |
-| Duvar | `height 7` (= H); geçit yok |
+| Öğretilen | **W2 Yüksek Duvar**: duvar saha tepesiyle aynı, her blok Vinç Alanı'na kalkar; kapağı yükseğe park et (`teaches: "W2"`) |
+| Zorluk / hedef kazanma | Normal (tanıtım) / %85 |
+| Boyut (K-49) | `yard { cols 4, rows 5 }`, `site { cols 2, rows 4 }` → H = 5, Vinç Alanı y = 5–6 |
+| Duvar | `height 5` (Yüksek Duvar, W2); geçit yok |
 | Yerçekimi | build `normal`, yard `false` |
-| Dilimler | 1. Uzun Gövde (EN: Tall Trunk) `["YY", "YY", "YY", "WY", "WW", "GG", "GG"]` |
-| Renkler / şekiller | G, W, Y (3) / D2, O4, C3 |
-| Saha | C = 20, F = 14, E = 6 |
-| Ölçütler (solver) | N 5 · min 7 · minShifts 2 · firstNeedDepth 2 · F0 {`a`} (`cover` 2) · YAO 5/5 · trapCount 0 · choices 7, 9, 10 · best 1, 1, 1 · 5 175 durum, çıkmaz 0 |
-| Hamle | 7 + max(6, ⌈3,5⌉) = **13** (tanıtım: Kolay satırı, K-52; taban 4) |
+| Dilimler | 1. Gövde Altı (EN: Trunk Base) `["WW", "GW", "GG", "YY"]` · 2. Gövde Üstü (EN: Trunk Top) `["YY", "WW", "WW", "YY"]` |
+| Renkler / şekiller | G, W, Y (3) / C3, D2 |
+| Saha | C = 20, F = 16, E = 4 (K-55: bütün bloklar baştan sahada, tek parti) |
+| Ölçütler (solver) | N 7 · min 9 · minShifts 2 · firstNeedDepth 1 · YAO 7/7 · trapCount 0 · maxCover 3 · depLater 2 · crossDeps 6 · parkSlack 2 · forced 7 · greedyWin 1 · greedyExcess 0 · greedyTrap – · ahaMin 0 · branch3 0,5 · 31 270 durum, complete evet, undetectedDead 0, D1 0 |
+| Hamle (K-52, D-099) | 9 + P 4 = **13** |
 
-**Tasarım niyeti:** Sol yığın alttan `O4` G, `C3_0` W, `C3_180` Y'dir — planın alt beş satırı, açılış sırasının tam
-tersi. İki C3 kapak sağdaki cebe park edilir; cebe ilk giren `c` **yükseğe** (2,3) konmazsa `b` altına sığmaz ve fazladan
-hamle gerekir ("üsttekini yükseğe park et"). Yüksek duvar her bloğu saha tepesinden 3 satır yukarı, Vinç Alanı'na
-kaldırtır.
+**Tasarım niyeti:** Yüksek Duvar (`height 5` = H): her blok saha tepesinin üstüne (Vinç Alanı y = 5–6) kalkmalıdır. Kapak `a` (W) saha tepesinde sağa park edilir (yükseğe park, T7), `b` ilk katın tabanını kurar, `a` geri döner ve `c` (`C3_0` G) açılır; `C3` çifti birinci katın ortasıdır. Tanıtım sade: iki kaydırma, tuzak yok.
 
 ```
        x: 0 1 2 3   D   4 5
-   y=8:  · · · ·   :   · ·  ← Vinç Alanı
-   y=7:  · · · ·   :   · ·
-   y=6:  · · · ·   #   Y Y
-   y=5:  · · · ·   #   Y Y
-   y=4:  c c . .   #   Y Y
-   y=3:  b c . .   #   W Y
-   y=2:  b b . .   #   W W
-   y=1:  a a e e   #   G G
-   y=0:  a a d d   #   G G
+   y=6:  · · · ·   :   · ·
+   y=5:  · · · ·   :   · ·  ← Vinç Alanı
+   y=4:  a a . .   #   · ·
+   y=3:  b b c .   #   W W
+   y=2:  d d c c   #   G W
+   y=1:  . d e e   #   G G
+   y=0:  f f g g   #   Y Y
 ```
 
 | Kimlik | Şekil | Renk | Çapa (x,y) | Rol |
 |---|---|---|---|---|
-| `a` | `O4_0` | G | (0,0) | ilk gereken (y0–1), iki kapak altında |
-| `b` | `C3_0` | W | (0,2) | kapak 2; y2–3 |
-| `c` | `C3_180` | Y | (0,3) | kapak 1; y3–4 |
-| `d` | `D2_90` | Y | (2,0) | y5 (`e` ile özdeş) |
-| `e` | `D2_90` | Y | (2,1) | y6 |
+| `a` | `D2_90` | W | (0,4) | 2. kat y1; önce sahada kaydırılır |
+| `b` | `D2_90` | Y | (0,3) | 1. kat y0 (ilk gereken) |
+| `c` | `C3_0` | G | (2,2) | 1. kat y1–2 |
+| `d` | `C3_180` | W | (0,1) | 1. kat y2–3 |
+| `e` | `D2_90` | Y | (2,1) | 2. kat y3 |
+| `f` | `D2_90` | Y | (0,0) | 2. kat y0 |
+| `g` | `D2_90` | W | (2,0) | 2. kat y2 |
 
-Kanonik çözüm (solver; karalama çözücüsüyle aynı):
-1. `c` (C3_180 Y) (0,3) → (2,3) — **kaydırma** (cebin üstüne; hücreler (3,3),(2,4),(3,4))
-2. `b` (C3_0 W) (0,2) → (2,2) — **kaydırma** (`c`'nin altına kilitlenir; hücreler (2,2),(3,2),(2,3))
-3. `a` (O4_0 G) (0,0) → yukarı Vinç Alanı'na (y ≥ 7) → duvar üstünden → (4,0) — duvar üstü, doğru
-4. `b` (C3_0 W) (2,2) → (4,2) — duvar üstü, doğru
-5. `c` (C3_180 Y) (2,3) → (4,3) — duvar üstü, doğru
-6. `d` (D2_90 Y) (2,0) → (4,5) — duvar üstü, doğru
-7. `e` (D2_90 Y) (2,1) → (4,6) — duvar üstü, doğru → kazanma
+Kanonik çözüm (solver, K-50 madde 4):
+1. `a` (D2_90 W) (0,4) → (2,4) — **kaydırma**
+2. `b` (D2_90 Y) (0,3) → (4,0) — duvar üstü, doğru
+3. `a` (D2_90 W) (2,4) → (0,4) — **kaydırma**
+4. `c` (C3_0 G) (2,2) → (4,1) — duvar üstü, doğru
+5. `d` (C3_180 W) (0,1) → (4,2) — duvar üstü, doğru
+6. `f` (D2_90 Y) (0,0) → (4,0) — duvar üstü, doğru
+7. `a` (D2_90 W) (0,4) → (4,1) — duvar üstü, doğru
+8. `g` (D2_90 W) (2,0) → (4,2) — duvar üstü, doğru
+9. `e` (D2_90 Y) (2,1) → (4,3) — duvar üstü, doğru
 
 Öğretici:
-1. `piece:2`, `cell:2,4`, `cell:3,4` · drag `[[1,4],[3,4]]` (`c`'nin sağ üst hücresi (1,4), ofset (1,1); son çapa (2,3))
-   · `tut.m.park` (yeni) · `{ event: yardMove, count: 1, at: [2, 3] }` (yalnız yüksek park adımı bitirir; alçak park ya
-   da `e`'nin cebe konması bitirmez, DL-2R-02)
-2. `crane`, `wall` · — · `tut.m.highwall` · `{ event: overWall, count: 1 }`
+1. `piece:0` · drag `[[0,4],[2,4]]` · `tut.m.park` · `{ event: yardMove, count: 1, piece: 'piece:0' }` (`a`nın sol hücresi (0,4), iki sağa; son çapa (2,4) = kanonik hamle 1)
+2. `startOn: { event: yardMove, piece: 'piece:0' }` · `crane`, `wall` · — · `tut.m.highwall` · `{ event: overWall, count: 1 }` (`a` park edilince)
 
 ### Bölüm 7 — Çatı Altı (Under the Roof)
 
 | Alan | Değer |
 |---|---|
-| Öğretilen | **Taşınan malzeme** (sonraki dilimin bloğu bu dilimde sahada, K-27); imza yok (`tutorial`). W2 pekiştirilir. |
-| Zorluk / hedef kazanma | Normal / %75 |
-| Boyut | `yard { cols 4, rows 5 }`, `site { cols 2, rows 5 }` → H = 5 |
-| Duvar | `height 5` (= H, W2); geçit yok |
+| Öğretilen | Takas ve yer açma (T4 + T6): büyük `O4` W sonraki kata kalır, bu kat iki yatay W ile dolar; önce dipte yer aç |
+| Zorluk / hedef kazanma | Normal / %70 |
+| Boyut (K-49) | `yard { cols 5, rows 4 }`, `site { cols 2, rows 4 }` → H = 4, Vinç Alanı y = 4–5 |
+| Duvar | `height 4` (Yüksek Duvar, W2); geçit yok |
 | Yerçekimi | build `normal`, yard `false` |
-| Dilimler | 1. Kiriş (EN: Beam) `["WW", "GW", "GW", "RR", "RR"]` → 2. Saçak (EN: Eaves) `["RR", "RW", "RW", "GG", "GG"]` |
+| Dilimler | 1. Tavan Arası (EN: Attic) `["GG", "GG", "WW", "WW"]` · 2. Çatı Kirişi (EN: Roof Beam) `["RR", "RR", "WW", "WW"]` |
 | Renkler / şekiller | G, R, W (3) / D2, O4 |
-| Saha | C = 20, F = 14 (dilim 1'in 10 hücresi + taşınan `O4` G), E = 6 |
-| Ölçütler (solver) | N 8 · min 12 · minShifts 4 (dilim 1: 3, dilim 2: 1) · firstNeedDepth 3 · F0 {`a`} (`cover` 3) · YAO 8/8 · trapCount 0 · choices 11, 11, 10 · best 4, 2, 1 · önsezi kazancı 0 (fark 0) · 26 040 durum, çıkmaz 0 |
-| Hamle | 12 + max(4, ⌈4,2⌉) = **17** |
+| Saha | C = 20, F = 16, E = 4 (K-55: bütün bloklar baştan sahada, tek parti) |
+| Ölçütler (solver) | N 7 · min 11 · minShifts 4 · firstNeedDepth 1 · YAO 7/7 · trapCount 0 · maxCover 2 · depLater 2 · crossDeps 4 · parkSlack 0,5 · forced 9 · greedyWin 1 · greedyExcess 2 · greedyTrap – · ahaMin 2 · branch3 0,27 · 133 422 durum, complete evet, undetectedDead 0, D1 0 |
+| Hamle (K-52, D-099) | 11 + P 2 = **13** |
 
-**Tasarım niyeti:** Sol kule planın birebir tersidir (§2.0 madde 1): altta ilk gereken `a` (`O4` R, kirişin tabanı),
-ortada kirişin orta katı (`b` G | `c` W), en üstte kiriş başlığı `d`. Sağ alttaki `e` (`O4` G) dilim 1'de hiçbir yere uymaz
-(planında G 2×2 yok, "sonraki kat" rozeti); oyuncu onun **sonraki kat için** beklediğini ve üstüne park etmenin zararsız
-olduğunu keşfeder. Kule, `e`'nin üstündeki cebe sağdan sola ve alttan üste bir blok bir blok taşınır (`c`, `b`, `d`: 3
-kazı); sonra her blok sırayla çıkar ve dilim bitince cep boşalır. Dilim 2'de kamyon yığını `e`'nin üstüne döker; `e` ilk
-gereken olur ve sol köşedeki `k1_1` kaydırılınca sola kayıp çıkar. Önceki taslağa göre fark: dilim 1'de 2 kazı → 3 kazı
-(ters istif kule), `min` 11 → 12.
+**Tasarım niyeti:** Birinci katın W bölgesine `O4` W de uyar ama onu almak dikey R çiftini kazdırır. Kanonik çözüm önce dipteki `f`yi bir hücre sağa, dikey `d`yi köşeye kaydırır (iki `prep` hamlesi, `ahaMin` 2); böylece `b` sola geçer ve `c` açılır. İki yatay W bu katı doldurur, `O4` W ikinci katın tabanı olur. Açgözlü oyun 2 fazla hamle harcar (`greedyExcess` 2).
 
-Dilim 1 başlangıcı:
 ```
-       x: 0 1 2 3   D   4 5
-   y=6:  · · · ·   :   · ·  ← Vinç Alanı
-   y=5:  · · · ·   :   · ·
-   y=4:  d d . .   #   W W
-   y=3:  b c . .   #   G W
-   y=2:  b c . .   #   G W
-   y=1:  a a e e   #   R R
-   y=0:  a a e e   #   R R
+       x: 0 1 2 3 4   D   5 6
+   y=5:  · · · · ·   :   · ·
+   y=4:  · · · · ·   :   · ·  ← Vinç Alanı
+   y=3:  . . b a a   #   G G
+   y=2:  d . b c c   #   G G
+   y=1:  d e e g g   #   W W
+   y=0:  f f . g g   #   W W
 ```
 
 | Kimlik | Şekil | Renk | Çapa (x,y) | Rol |
 |---|---|---|---|---|
-| `a` | `O4_0` | R | (0,0) | ilk gereken (dilim 1 y0–1), kulenin tabanı |
-| `b` | `D2_0` | G | (0,2) | dilim 1 y2–3 sütun 0 |
-| `c` | `D2_0` | W | (1,2) | dilim 1 y2–3 sütun 1 |
-| `d` | `D2_90` | W | (0,4) | kulenin başlığı; dilim 1 y4 |
-| `e` | `O4_0` | G | (2,0) | **taşınan malzeme**: dilim 2 y0–1 |
+| `a` | `D2_90` | G | (3,3) | 1. kat y3 |
+| `b` | `D2_0` | R | (2,2) | 2. kat y2–3; önce sahada kaydırılır |
+| `c` | `D2_90` | W | (3,2) | 1. kat y0 (ilk gereken) |
+| `d` | `D2_0` | R | (0,1) | 2. kat y2–3; önce sahada kaydırılır |
+| `e` | `D2_90` | G | (1,1) | 1. kat y2; önce sahada kaydırılır |
+| `f` | `D2_90` | W | (0,0) | 1. kat y1; önce sahada kaydırılır |
+| `g` | `O4_0` | W | (3,0) | 2. kat y0–1 |
 
-Kamyon partisi 1 (dilim 1 tamamlanınca; `y = 5`): `k1_0` `D2_0` W x=2 · `k1_1` `D2_90` R x=0 · `k1_2` `D2_0` R x=2.
-Düşüş: `k1_0` (2,2) (`e`'nin üstüne), `k1_1` (0,0), `k1_2` x=2 dolu (y=4'e iner, taşar) → aday x=3 → (3,2). Kuyruk yok.
-Dilim 1'in en kısa bitirilişlerinde `e` yerinden oynamaz (önsezi kazancı 0, fark 0).
-
-Dilim 2 başlangıcı (7. hamleden sonra):
-```
-       x: 0 1 2 3   D   4 5
-   y=6:  · · · ·   :   · ·  ← Vinç Alanı
-   y=5:  · · · ·   :   · ·
-   y=4:  . . . .   #   R R
-   y=3:  . . 0 2   #   R W
-   y=2:  . . 0 2   #   R W
-   y=1:  . . e e   #   G G
-   y=0:  1 1 e e   #   G G
-```
-
-Kanonik çözüm (solver):
-1. `c` (D2_0 W) (1,2) → (3,2) — **kaydırma** (cebin sağına)
-2. `b` (D2_0 G) (0,2) → (2,2) — **kaydırma**
-3. `d` (D2_90 W) (0,4) → (2,4) — **kaydırma** (kule cebe taşındı, `a` açıldı)
-4. `a` (O4_0 R) (0,0) → (4,0) — duvar üstü, doğru
-5. `b` (D2_0 G) (2,2) → sola → yukarı → (4,2) — duvar üstü, doğru
-6. `c` (D2_0 W) (3,2) → (5,2) — duvar üstü, doğru
-7. `d` (D2_90 W) (2,4) → (4,4) — duvar üstü, doğru → dilim 1 tamam, kayma, parti 1 düşer
-8. `k1_1` (D2_90 R) (0,0) → (2,4) — **kaydırma** (sol köşe boşalır)
-9. `e` (O4_0 G) (2,0) → sola (0,0) → yukarı → (4,0) — duvar üstü, doğru
-10. `k1_0` (D2_0 W) (2,2) → (5,2) — duvar üstü, doğru
-11. `k1_2` (D2_0 R) (3,2) → (4,2) — duvar üstü, doğru
-12. `k1_1` (D2_90 R) (2,4) → (4,4) — duvar üstü, doğru → kazanma
+Kanonik çözüm (solver, K-50 madde 4):
+1. `f` (D2_90 W) (0,0) → (1,0) — **kaydırma**
+2. `d` (D2_0 R) (0,1) → (0,0) — **kaydırma**
+3. `b` (D2_0 R) (2,2) → (0,2) — **kaydırma**
+4. `c` (D2_90 W) (3,2) → (5,0) — duvar üstü, doğru
+5. `e` (D2_90 G) (1,1) → (3,2) — **kaydırma**
+6. `f` (D2_90 W) (1,0) → (5,1) — duvar üstü, doğru
+7. `e` (D2_90 G) (3,2) → (5,2) — duvar üstü, doğru
+8. `a` (D2_90 G) (3,3) → (5,3) — duvar üstü, doğru
+9. `g` (O4_0 W) (3,0) → (5,0) — duvar üstü, doğru
+10. `d` (D2_0 R) (0,0) → (5,2) — duvar üstü, doğru
+11. `b` (D2_0 R) (0,2) → (6,2) — duvar üstü, doğru
 
 Öğretici:
-1. `piece:4`, `panorama` · — (eldiven yok: `e` başta tutulamaz, K-09) · `tut.m.carry` · `{ event: placementCorrect,
-   count: 1 }` (sonraki kat yalnız panoramada görünür, DL-2R-10)
-2. `startOn: { event: segmentDone }` · `piece:4` · — · `tut.m.carryNow` · `{ event: placementCorrect, count: 1 }`
+1. `startOn: { event: segmentDone }` · `piece:6` · — · `tut.m.carryNow` · `{ event: placementCorrect, count: 1 }` (ikinci kat başında `O4` W vurgulanır)
 
 ### Bölüm 8 — Bahçe Çiti (Garden Fence)
 
 | Alan | Değer |
 |---|---|
-| Öğretilen | **Y5 Ağır Yük** (`teaches: "Y5"`) + Çekiç açılır (META §4: 3 ücretsiz deneme) |
-| Zorluk / hedef kazanma | Normal (tanıtım) / %85 (tanıtım bandı %80–90) |
-| Boyut | `yard { cols 6, rows 5 }`, `site { cols 2, rows 6 }` → H = 6 (varsayılan genişlik 6 + 2) |
-| Duvar | `height 5`; geçit yok |
+| Öğretilen | **Y5 Ağır Yük**: plana girmez, yalnız sahada kayar; Çekiç onu kırar (`teaches: "Y5"`) |
+| Zorluk / hedef kazanma | Normal (tanıtım) / %85 |
+| Boyut (K-49) | `yard { cols 6, rows 5 }`, `site { cols 2, rows 4 }` → H = 5, Vinç Alanı y = 5–6 |
+| Duvar | `height 5` (Yüksek Duvar, W2); geçit yok |
 | Yerçekimi | build `normal`, yard `false` |
-| Dilimler | 1. Çit (EN: Fence) `["WW", "YY", "YW", "YW", "RR", "RR"]` |
-| Renkler / şekiller | R, W, Y (3) / D2, O4; Ağır Yük Q9 |
-| Saha | C = 30, F = 21 (12 malzeme + 9 Ağır Yük), E = 9 |
-| Ölçütler (solver) | N 5 · min 8 · minShifts 3 · firstNeedDepth 3 · F0 {`a`} (`cover` 1: Ağır Yük) · YAO 5/5 · trapCount 0 · choices 12, 15, 16 · best 1, 1, 2 · **Çekiç'le (başta Ağır Yük kırılırsa) min 5** · 431 006 durum, çıkmaz 0 |
-| Hamle | 8 + max(6, ⌈4⌉) = **14** (tanıtım: Kolay satırı, K-52; taban 4) |
+| Dilimler | 1. Çit Direkleri (EN: Fence Posts) `["WW", "WW", "RR", "RR"]` · 2. Çit Tahtaları (EN: Fence Boards) `["RR", "YY", "YY", "YY"]` |
+| Renkler / şekiller | R, W, Y (3) / D2, O4, Q9 |
+| Saha | C = 30, F = 25, E = 5 (K-55: bütün bloklar baştan sahada, tek parti) |
+| Ölçütler (solver) | N 7 · min 10 · minShifts 3 · firstNeedDepth 3 · YAO 7/7 · trapCount 0 · maxCover 3 · depLater 3 · crossDeps 4 · parkSlack 0,83 · forced 7 · greedyWin 1 · greedyExcess 0 · greedyTrap – · ahaMin 0 · branch3 0,21 · 446 663 durum, complete evet, undetectedDead 0, D1 0 |
+| Hamle (K-52, D-099) | 10 + P 4 = **14** |
 
-**Tasarım niyeti:** Paletli yük (`f`, `Q9_0`) ilk gereken `a`'nın üstünde bir kapaktır ve duvarı geçemez. Kaymak için
-sağında 3 hücrelik serbest sütun gerekir; o sütunu sağdaki iki yatay blok tıkar. Oyuncu iki bloğu aşağıdaki cebe indirip
-yükü iki sütun kaydırmayı (3 kaydırma) **ya da** Çekiç'le yükü kırmayı (0 hamle) keşfeder; iki yol da açıktır (Çekiç
-adımı yumuşak).
+**Tasarım niyeti:** `Q9` Ağır Yük (`e`) sağ üstte, `O4` Y'nin sağ yarısının ve `h`nin üstündedir; sahada park yeri yoktur. Önce `O4` Y bir sola kayar, yük boşalan satıra bir satır iner (yalnız saha içinde kayar, K-44) ve saha tepesinde park yeri açar; üstteki Y (`a`) oraya park edilir ve R tabanı açılır. Yük ikinci katta yerinde kalır, `h` sola kayıp çıkar. Çekiç yükü baştan kırarsa `min` 8 olur (`hammer-start` −2). Tanıtım sade: üç kaydırma, tuzak yok; bu bölümde bekletme yoktur (`ahaMin` 0, §6.10).
 
 ```
        x: 0 1 2 3 4 5   D   6 7
-   y=7:  · · · · · ·   :   · ·  ← Vinç Alanı
    y=6:  · · · · · ·   :   · ·
-   y=5:  · · · · · ·   :   W W
-   y=4:  Q Q Q . . .   #   Y Y
-   y=3:  Q Q Q . e e   #   Y W
-   y=2:  Q Q Q . d d   #   Y W
-   y=1:  a a b c . .   #   R R
-   y=0:  a a b c . .   #   R R
+   y=5:  · · · · · ·   :   · ·  ← Vinç Alanı
+   y=4:  a a . Q Q Q   #   · ·
+   y=3:  b b d Q Q Q   #   W W
+   y=2:  c c d Q Q Q   #   W W
+   y=1:  f . g g . .   #   R R
+   y=0:  f . g g h h   #   R R
 ```
 
 | Kimlik | Şekil | Renk | Çapa (x,y) | Rol |
 |---|---|---|---|---|
-| `a` | `O4_0` | R | (0,0) | ilk gereken (y0–1), yükün altında |
-| `b` | `D2_0` | W | (2,0) | y2–3 sütun 1 |
-| `c` | `D2_0` | Y | (3,0) | y2–3 sütun 0 |
-| `d` | `D2_90` | Y | (4,2) | y4; yükün kayma yolunu tıkar |
-| `e` | `D2_90` | W | (4,3) | y5; yükün kayma yolunu tıkar |
-| `f` | `Q9_0` | — (Ağır Yük, `color` yazılmaz) | (0,2) | kapak |
+| `a` | `D2_90` | Y | (0,4) | 2. kat y0; önce sahada kaydırılır |
+| `b` | `D2_90` | R | (0,3) | 1. kat y0 (ilk gereken) |
+| `c` | `D2_90` | R | (0,2) | 1. kat y1 |
+| `d` | `D2_0` | W | (2,2) | 1. kat y2–3 |
+| `e` | `Q9_0` | — (Ağır Yük, `color` yazılmaz) | (3,2) | Ağır Yük; plana girmez, yalnız sahada kayar |
+| `f` | `D2_0` | W | (0,0) | 1. kat y2–3 |
+| `g` | `O4_0` | Y | (2,0) | 2. kat y1–2; önce sahada kaydırılır |
+| `h` | `D2_90` | R | (4,0) | 2. kat y3 |
 
-Kanonik çözüm (solver; karalama çözücüsüyle aynı):
-1. `d` (D2_90 Y) (4,2) → (4,0) — **kaydırma** (sağ alt cebe)
-2. `e` (D2_90 W) (4,3) → (4,1) — **kaydırma**
-3. `f` (Q9_0 Ağır Yük) (0,2) → (2,2) — **kaydırma** (iki sütun sağa; sol iki sütun açılır)
-4. `a` (O4_0 R) (0,0) → (6,0) — duvar üstü, doğru
-5. `b` (D2_0 W) (2,0) → sola (1,0) → yukarı → (7,2) — duvar üstü, doğru
-6. `c` (D2_0 Y) (3,0) → sola (1,0) → yukarı → (6,2) — duvar üstü, doğru
-7. `d` (D2_90 Y) (4,0) → sola (0,0) → yukarı → (6,4) — duvar üstü, doğru
-8. `e` (D2_90 W) (4,1) → sola (0,1) → yukarı → (6,5) — duvar üstü, doğru → kazanma; Ağır Yük sahada kalır (K-48)
+Kanonik çözüm (solver, K-50 madde 4):
+1. `g` (O4_0 Y) (2,0) → (1,0) — **kaydırma**
+2. `e` (Q9_0 Ağır Yük) (3,2) → (3,1) — **kaydırma**
+3. `a` (D2_90 Y) (0,4) → (2,4) — **kaydırma**
+4. `b` (D2_90 R) (0,3) → (6,0) — duvar üstü, doğru
+5. `c` (D2_90 R) (0,2) → (6,1) — duvar üstü, doğru
+6. `f` (D2_0 W) (0,0) → (6,2) — duvar üstü, doğru
+7. `d` (D2_0 W) (2,2) → (7,2) — duvar üstü, doğru
+8. `a` (D2_90 Y) (2,4) → (6,0) — duvar üstü, doğru
+9. `g` (O4_0 Y) (1,0) → (6,1) — duvar üstü, doğru
+10. `h` (D2_90 R) (4,0) → (6,3) — duvar üstü, doğru
 
 Öğretici:
-1. `piece:5`, `piece:3`, `piece:4` · drag `[[4,2],[4,0]]` (kanonik hamle 1: `d` sağ alt cebe; tutulan hücre (4,2) =
-   çapa) · `tut.m.heavy` (metin Ağır Yük'e göre güncellenir) · `{ event: yardMove, count: 1 }`. Eski yol `[[1,3],[3,3]]`
-   yükü `R`'de olmayan (2,2)'ye götürüyordu (DL-2R-01).
-2. `booster:hammer`, `piece:5` · tap (yuva) · `tut.m.hammer` (metin: Çekiç yükü kırar) · `{ event: placementCorrect,
-   count: 1 }` (Çekiç'in Ağır Yük'ü kırması `obstacleHit` üretmez; adım iki yolda da ilk doğru yerleşimle biter,
-   CL-2R-11)
+1. `piece:4`, `piece:6` · — · `tut.m.heavy` · `{ event: yardMove, count: 1, piece: 'piece:4' }` (yük kaydırılınca biter)
+2. `booster:hammer`, `piece:4` · tap · `tut.m.hammer` · `{ event: placementCorrect, count: 1 }` (Çekiç yuvası; yük kırılmasa da ilk doğru yerleşimle biter)
 
 ### Bölüm 9 — İp Merdiven (Rope Ladder)
 
 | Alan | Değer |
 |---|---|
-| Öğretilen | **W3 Dar Geçit** (`teaches: "W3"`): yalnız tek sıra boyundaki blok geçer |
-| Zorluk / hedef kazanma | Normal (tanıtım) / %85 (tanıtım bandı %80–90) |
-| Boyut | `yard { cols 4, rows 4 }`, `site { cols 2, rows 6 }` → H = 6 |
-| Duvar | `height 4`; geçit `{ type: "static", y: 0, size: 1 }` |
+| Öğretilen | **W3 Dar Geçit** (boy 1): yalnız tek sıra boyundaki blok satır 0'dan geçer (`teaches: "W3"`) |
+| Zorluk / hedef kazanma | Normal (tanıtım) / %85 |
+| Boyut (K-49) | `yard { cols 4, rows 5 }`, `site { cols 2, rows 4 }` → H = 5, Vinç Alanı y = 5–6 |
+| Duvar | `height 5` (Yüksek Duvar, W2); geçit `{ type: "static", y: 0, size: 1 }` |
 | Yerçekimi | build `normal`, yard `false` |
-| Dilimler | 1. Basamaklar (EN: Rungs) `["RR", "RR", "WW", "WW", "GG", "RR"]` |
+| Dilimler | 1. Alt Basamaklar (EN: Lower Rungs) `["GG", "RR", "WW", "WW"]` · 2. Üst Basamaklar (EN: Upper Rungs) `["RR", "RR", "GG", "WW"]` |
 | Renkler / şekiller | G, R, W (3) / D2, O4 |
-| Saha | C = 16, F = 12, E = 4 |
-| Ölçütler (solver) | N 4 · min 7 · minShifts 3 · firstNeedDepth 1 · F0 {`a`} · YAO 3/4 (1 ray) · trapCount 0 · choices 3, 5, 5 · best 1, 1, 1 · **geçitsiz min 8** · 224 durum, çıkmaz 0 |
-| Hamle | 7 + max(6, ⌈3,5⌉) = **13** (tanıtım: Kolay satırı, K-52; taban 4) |
+| Saha | C = 20, F = 16, E = 4 (K-55: bütün bloklar baştan sahada, tek parti) |
+| Ölçütler (solver) | N 7 · min 12 · minShifts 5 · firstNeedDepth 2 · YAO 6/7 (1 ray) · trapCount 0 · maxCover 4 · depLater 6 · crossDeps 9 · parkSlack 0,4 · forced 11 · greedyWin 1 · greedyExcess 3 · greedyTrap – · ahaMin 2 · branch3 0,38 · 72 477 durum, complete evet, undetectedDead 0, D1 0 |
+| Hamle (K-52, D-099) | 12 + P 4 = **16** |
 
-**Tasarım niyeti:** İlk gereken `a` (`D2_90` R) dar geçidin satırında ama arkasında `b` tıkacı vardır; üstü `O4` R ile
-kapalıdır. Tıkaç bir satır kalkınca `a` geçitten kayar. `O4`'ler iki satır boyunda olduğu için dar geçide hiç giremez
-(yapışkan takip geçit ağzında durur) ve duvar üstünden gider. Tanıtım bölümü olarak derinlik 1'dir; kazı sayısı 3'tür.
+**Tasarım niyeti:** Dar geçit yalnız satır 0'dadır. Birinci katın tabanı W'dir; `O4` R bir satır yukarı itilir, `e` (W) onun altına girer, R `g` sola kalkar ve `e` satır 0'a inip dar geçitten raya geçer (1 ray); ardından `O4` R sağ alta iner. Beş kaydırmalık bir yer açma dizisidir (iki `prep`, `ahaMin` 2); geçitsiz `min` 14 (`no-gaps` +2).
 
 ```
        x: 0 1 2 3   D   4 5
-   y=7:  · · · ·   :   · ·  ← Vinç Alanı
    y=6:  · · · ·   :   · ·
-   y=5:  · · · ·   :   R R
-   y=4:  · · · ·   :   R R
-   y=3:  . . d d   #   W W
-   y=2:  c c d d   #   W W
-   y=1:  c c . .   #   G G
-   y=0:  a a b b   =   R R
+   y=5:  · · · ·   :   · ·  ← Vinç Alanı
+   y=4:  . a a .   #   · ·
+   y=3:  b b d d   #   G G
+   y=2:  c c d d   #   R R
+   y=1:  . e e .   #   W W
+   y=0:  f f g g   =   W W
 ```
 
 | Kimlik | Şekil | Renk | Çapa (x,y) | Rol |
 |---|---|---|---|---|
-| `a` | `D2_90` | R | (0,0) | ilk gereken (y0), dar geçitten |
-| `b` | `D2_90` | G | (2,0) | tıkaç; y1 |
-| `c` | `O4_0` | R | (0,1) | kapak; y4–5 |
-| `d` | `O4_0` | W | (2,2) | y2–3 |
+| `a` | `D2_90` | G | (1,4) | 2. kat y1; önce sahada kaydırılır |
+| `b` | `D2_90` | G | (0,3) | 1. kat y3 |
+| `c` | `D2_90` | W | (0,2) | 1. kat y1 |
+| `d` | `O4_0` | R | (2,2) | 2. kat y2–3; önce sahada kaydırılır |
+| `e` | `D2_90` | W | (1,1) | 1. kat y0, raydan (ilk gereken); önce sahada kaydırılır |
+| `f` | `D2_90` | W | (0,0) | 2. kat y0 |
+| `g` | `D2_90` | R | (2,0) | 1. kat y2; önce sahada kaydırılır |
 
-Kanonik çözüm (solver; karalama çözücüsüyle aynı):
-1. `b` (D2_90 G) (2,0) → (2,1) — **kaydırma** (geçit önü açılır)
-2. `a` (D2_90 R) (0,0) → sağa (2,0) → dar geçitten raya → (4,0)'da bırak — **ray**, doğru
-3. `c` (O4_0 R) (0,1) → (0,0) — **kaydırma**
-4. `d` (O4_0 W) (2,2) → (0,2) — **kaydırma** (`b`'nin üstü açılır)
-5. `b` (D2_90 G) (2,1) → (4,1) — duvar üstü, doğru
-6. `d` (O4_0 W) (0,2) → (4,2) — duvar üstü, doğru
-7. `c` (O4_0 R) (0,0) → (4,4) — duvar üstü, doğru → kazanma
+Kanonik çözüm (solver, K-50 madde 4):
+1. `a` (D2_90 G) (1,4) → (0,4) — **kaydırma**
+2. `d` (O4_0 R) (2,2) → (2,3) — **kaydırma**
+3. `e` (D2_90 W) (1,1) → (2,2) — **kaydırma**
+4. `g` (D2_90 R) (2,0) → (0,1) — **kaydırma**
+5. `e` (D2_90 W) (2,2) → geçitten raya → (4,0) — **ray**, doğru (düşmez)
+6. `d` (O4_0 R) (2,3) → (2,0) — **kaydırma**
+7. `c` (D2_90 W) (0,2) → (4,1) — duvar üstü, doğru
+8. `g` (D2_90 R) (0,1) → (4,2) — duvar üstü, doğru
+9. `b` (D2_90 G) (0,3) → (4,3) — duvar üstü, doğru
+10. `f` (D2_90 W) (0,0) → (4,0) — duvar üstü, doğru
+11. `a` (D2_90 G) (0,4) → (4,1) — duvar üstü, doğru
+12. `d` (O4_0 R) (2,0) → (4,2) — duvar üstü, doğru
 
 Öğretici:
-1. `piece:1` · drag `[[2,0],[2,1]]` (kanonik hamle 1: tıkaç `b` bir satır yukarı) · `tut.m.dig` · `{ event: yardMove,
-   count: 1, piece: 'piece:1' }`
-2. `piece:0`, `gap:0` · drag `[[1,0],[5,0]]` (`a`'nın sağ hücresi (1,0), ofset (1,0); son çapa (4,0) dar geçidin rayında)
-   · `tut.m.narrow` · `{ event: gapPass, count: 1 }` (DL-2R-10: tek adım kazıyı gösterip dar geçitten söz ediyordu)
+1. `piece:0` · drag `[[1,4],[0,4]]` · `tut.m.dig` · `{ event: yardMove, count: 1, piece: 'piece:0' }` (`a`nın sol hücresi (1,4), bir sola; son çapa (0,4) = kanonik hamle 1)
+2. `startOn: { event: yardMove, piece: 'piece:6' }` · `piece:4`, `gap:0` · — · `tut.m.narrow` · `{ event: gapPass, count: 1 }` (`g` kaydırılınca; eldiven yok (blok başlangıç yerinde değil))
 
 ### Bölüm 10 — Ağaç Ev Tamam! (Treehouse Done!)
 
 | Alan | Değer |
 |---|---|
-| Öğretilen | Hikaye bölümü finali (W2 + Y5 + S1 + kamyon) + Vinç açılır (META §4: 2 ücretsiz deneme); imza yok |
-| Zorluk / hedef kazanma | **Zor** / %45 |
-| Boyut | `yard { cols 6, rows 5 }`, `site { cols 2, rows 6 }` → H = 6 |
-| Duvar | `height 6` (= H, W2); geçit yok (§4 madde 5) |
+| Öğretilen | Final: iki kat, yüksek duvar, bekletme ve yer açma; Vinç güçlendiricisi açılır |
+| Zorluk / hedef kazanma | **Zor** / **%45** |
+| Boyut (K-49) | `yard { cols 4, rows 5 }`, `site { cols 2, rows 4 }` → H = 5, Vinç Alanı y = 5–6 |
+| Duvar | `height 5` (Yüksek Duvar, W2); geçit yok |
 | Yerçekimi | build `normal`, yard `false` |
-| Dilimler | 1. Gövde (EN: Trunk) `["WW", "GG", "GW", "GW", "RR", "RR"]` → 2. Çatı (EN: Roof) `["RR", "GG", "GG", "RR", "WW", "WW"]` |
-| Renkler / şekiller | G, R, W (3) / D2, O4; Ağır Yük Q9 |
-| Saha | C = 30, F = 21, E = 9 |
-| Ölçütler (solver) | N 10 · min 15 · minShifts 5 (dilim 1: 3, dilim 2: 2) · firstNeedDepth 3 · F0 {`a`} (`cover` 1) · YAO 10/10 · trapCount 0 · deadRate 0 · choices 12, 15, 16 · best 1, 1, 2 · **Çekiç'le min 11** · önsezi kazancı 0 (fark 0) · 559 797 durum, çıkmaz 0 |
-| Hamle | 15 + max(3, ⌈3⌉) = **18** |
+| Dilimler | 1. Çatı (EN: Roof) `["GG", "WW", "WW", "RR"]` · 2. Bayrak Kulesi (EN: Flag Tower) `["RR", "GG", "WW", "WW"]` |
+| Renkler / şekiller | G, R, W (3) / D2, O4 |
+| Saha | C = 20, F = 16, E = 4 (K-55: bütün bloklar baştan sahada, tek parti) |
+| Ölçütler (solver) | N 7 · min 13 · minShifts 6 · firstNeedDepth 5 · YAO 7/7 · trapCount 0 · maxCover 3 · depLater 4 · crossDeps 6 · parkSlack 0,33 · forced 13 · greedyWin 0 · greedyExcess 2 · greedyTrap – · ahaMin 1 · branch3 0,43 · 121 022 durum, complete evet, undetectedDead 0, D1 0 |
+| Hamle (K-52, D-099) | 13 + P 1 = **14** |
 
-**Tasarım niyeti:** Bölüm 8'in yük kazısı bu kez duvar dibinde (ayna düzen) ve yüksek duvarla: yük ilk gereken `a`'nın
-(duvara bitişik) üstündedir, kayması için soldaki cep boşaltılır (dilim 1'de 3 kazı). Dilim 2'de kamyon çatı malzemesini
-yükün yanındaki üç sütuna döker: ilk gereken `O4` W'nin üstünde bir yatay kiriş (`k1_4`) vardır ve sahada onu bırakacak
-yer yoktur; oyuncu yükü altındaki boşalmış tünele indirir, üstte açılan cebe kirişi park eder (dilim 2'de 2 kazı, yük
-ikinci kez taşınır). Zorluk dar bütçeden (+3), iki dilimlik planlamadan ve aynı yükü iki kez kullanmaktan gelir; tuzak
-yoktur. Teslimat adildir: dilim 1 en kısa yoldan nasıl bitirilirse bitirilsin dilim 2'nin en kısa çözümü aynıdır (önsezi
-kazancı 0, fark 0) ve sonradan hazırlık yapan oyuncu kazanmaz (yükü dilim 1 bitmeden indirmek 1 hamleye mal olur,
-dilim 2'de 1 hamle kazandırır). Vinç gömülü bloğu tek dokunuşla çıkarır. Önceki taslağa göre fark: kuyruklu dilim 2
-(`O4` G kamyonda bekliyordu) bütün uzayda 338 erişim çıkmazı üretiyordu (§2.11) ve kaldırıldı; `min` 13 → 15, kazı 4 → 5.
+**Tasarım niyeti:** Final: yığını doğru sırayla yeniden dizmek. Birinci katın sırası R, W, W, G'dir; R ve W'ler iki yanda dağınık, `O4` W ortada `d` ile `e`nin üstünde oturur, iki yanı boştur. Kanonik çözüm altı kaydırmayla sağ sütunda R–W–W sırasını kurar (`O4` W sola kayar, R yukarı, iki W onun altına girer), `O4` W sol köşeye iner ve üstteki G onun üstüne park edilir; sonra yedi yerleşim art arda akar. Her en kısa çözüm bir `prep` hamlesi ister (`ahaMin` 1); açgözlü oyun 2 fazla hamle harcar ve P = 1 bütçesiyle kazanamaz (`greedyWin` 0). Üç kat yerine iki kat: üç katlı sabit saha bugünkü tam taramayı aşar (LEVELS §7 U-4, §6.10).
 
-Dilim 1 başlangıcı:
 ```
-       x: 0 1 2 3 4 5   D   6 7
-   y=7:  · · · · · ·   :   · ·  ← Vinç Alanı
-   y=6:  · · · · · ·   :   · ·
-   y=5:  · · · · · ·   #   W W
-   y=4:  . . . Q Q Q   #   G G
-   y=3:  e e . Q Q Q   #   G W
-   y=2:  d d . Q Q Q   #   G W
-   y=1:  . . c b a a   #   R R
-   y=0:  . . c b a a   #   R R
+       x: 0 1 2 3   D   4 5
+   y=6:  · · · ·   :   · ·
+   y=5:  · · · ·   :   · ·  ← Vinç Alanı
+   y=4:  a a b b   #   · ·
+   y=3:  . c c .   #   G G
+   y=2:  . c c .   #   W W
+   y=1:  d d e e   #   W W
+   y=0:  f f g g   #   R R
 ```
 
 | Kimlik | Şekil | Renk | Çapa (x,y) | Rol |
 |---|---|---|---|---|
-| `a` | `O4_0` | R | (4,0) | ilk gereken (dilim 1 y0–1), yükün altında |
-| `b` | `D2_0` | W | (3,0) | dilim 1 y2–3 sütun 1 |
-| `c` | `D2_0` | G | (2,0) | dilim 1 y2–3 sütun 0 |
-| `d` | `D2_90` | G | (0,2) | dilim 1 y4; cebi tıkar |
-| `e` | `D2_90` | W | (0,3) | dilim 1 y5; cebi tıkar |
-| `f` | `Q9_0` | — (Ağır Yük) | (3,2) | kapak |
+| `a` | `D2_90` | G | (0,4) | 1. kat y3; önce sahada kaydırılır |
+| `b` | `D2_90` | G | (2,4) | 2. kat y2 |
+| `c` | `O4_0` | W | (1,2) | 2. kat y0–1; önce sahada kaydırılır |
+| `d` | `D2_90` | W | (0,1) | 1. kat y1; önce sahada kaydırılır |
+| `e` | `D2_90` | R | (2,1) | 1. kat y0 (ilk gereken); önce sahada kaydırılır |
+| `f` | `D2_90` | W | (0,0) | 1. kat y2; önce sahada kaydırılır |
+| `g` | `D2_90` | R | (2,0) | 2. kat y3 |
 
-Kamyon partisi 1 (dilim 1 tamamlanınca; `y = 5`): `k1_0` `D2_90` R x=3 · `k1_1` `O4_0` W x=0 · `k1_2` `D2_0` G x=5 ·
-`k1_3` `D2_0` G x=5 · `k1_4` `D2_90` R x=0. Kanonik çözümde yük (0,2)'dedir (sütun 0–2'nin tepesi 5): `k1_0` → (3,0);
-`k1_1` x=0, 1, 2 taşar → x=3 → (3,1); `k1_2` → (5,0); `k1_3` → (5,2); `k1_4` x=0, 1, 2 taşar → x=3 → (3,3). Kuyruk yok.
-x=0 tercihleri bilinçlidir: oyuncu yükü dilim 1 bitmeden sağa ya da aşağı taşırsa partinin yığını aynı biçimde yükün
-öbür yanına kurulur (kiriş yine `O4` W'nin üstüne düşer), hazırlık hamlesi kazandırmaz (§2.0 madde 9).
-
-Dilim 2 başlangıcı (8. hamleden sonra):
-```
-       x: 0 1 2 3 4 5   D   6 7
-   y=7:  · · · · · ·   :   · ·  ← Vinç Alanı
-   y=6:  · · · · · ·   :   · ·
-   y=5:  · · · · · ·   #   R R
-   y=4:  Q Q Q . . .   #   G G
-   y=3:  Q Q Q 4 4 3   #   G G
-   y=2:  Q Q Q 1 1 3   #   R R
-   y=1:  . . . 1 1 2   #   W W
-   y=0:  . . . 0 0 2   #   W W
-```
-
-Kanonik çözüm (solver):
-1. `d` (D2_90 G) (0,2) → (0,0) — **kaydırma** (cebe)
-2. `e` (D2_90 W) (0,3) → (0,1) — **kaydırma**
-3. `f` (Q9_0 Ağır Yük) (3,2) → (0,2) — **kaydırma** (üç sütun sola; duvar dibi açılır)
-4. `a` (O4_0 R) (4,0) → Vinç Alanı'na → (6,0) — duvar üstü, doğru
-5. `b` (D2_0 W) (3,0) → (7,2) — duvar üstü, doğru
-6. `c` (D2_0 G) (2,0) → (6,2) — duvar üstü, doğru
-7. `d` (D2_90 G) (0,0) → sağa (3,0) → yukarı → (6,4) — duvar üstü, doğru
-8. `e` (D2_90 W) (0,1) → (6,5) — duvar üstü, doğru → dilim 1 tamam, kayma, parti 1 düşer
-9. `f` (Q9_0 Ağır Yük) (0,2) → (0,0) — **kaydırma** (yük boş tünele iner, sol üstte 3×2 cep açılır)
-10. `k1_4` (D2_90 R) (3,3) → (0,3) — **kaydırma** (kiriş cebe; `O4` W açıldı)
-11. `k1_1` (O4_0 W) (3,1) → (6,0) — duvar üstü, doğru
-12. `k1_4` (D2_90 R) (0,3) → (6,2) — duvar üstü, doğru
-13. `k1_3` (D2_0 G) (5,2) → (6,3) — duvar üstü, doğru
-14. `k1_2` (D2_0 G) (5,0) → (7,3) — duvar üstü, doğru
-15. `k1_0` (D2_90 R) (3,0) → (6,5) — duvar üstü, doğru → kazanma; Ağır Yük sahada kalır
-
-Kamyon dökümü oyuncunun yükü nereye koyduğuna bağlıdır (K-25 belirlenimci); solver bütün yerleşimleri tarar, kanonik
-çözüm yukarıdadır. Oyuncu yükü dilim 1 sonunda başka bir yerde (ör. (1,2)) bırakırsa bir kamyon bloğu kuyrukta bekleyebilir
-(559 797 durumun 17 795'i; "Kamyonda: 1", `tut.ctx.queue`); bu durumların hiçbiri çıkmaz değildir. Zor bölüm olmasına
-rağmen bütün uzayda çıkmaz durum yoktur (Söküm hiç gerekmez, §2.0 madde 10); zorluk +3 tampondan gelir.
+Kanonik çözüm (solver, K-50 madde 4):
+1. `c` (O4_0 W) (1,2) → (0,2) — **kaydırma**
+2. `e` (D2_90 R) (2,1) → (2,3) — **kaydırma**
+3. `d` (D2_90 W) (0,1) → (2,2) — **kaydırma**
+4. `f` (D2_90 W) (0,0) → (2,1) — **kaydırma**
+5. `c` (O4_0 W) (0,2) → (0,0) — **kaydırma**
+6. `a` (D2_90 G) (0,4) → (0,2) — **kaydırma**
+7. `e` (D2_90 R) (2,3) → (4,0) — duvar üstü, doğru
+8. `d` (D2_90 W) (2,2) → (4,1) — duvar üstü, doğru
+9. `f` (D2_90 W) (2,1) → (4,2) — duvar üstü, doğru
+10. `a` (D2_90 G) (0,2) → (4,3) — duvar üstü, doğru
+11. `c` (O4_0 W) (0,0) → (4,0) — duvar üstü, doğru
+12. `b` (D2_90 G) (2,4) → (4,2) — duvar üstü, doğru
+13. `g` (D2_90 R) (2,0) → (4,3) — duvar üstü, doğru
 
 Öğretici:
-1. `startOn: { event: segmentDone }` · `booster:crane` · tap (yuva) · `tut.m.cranebooster` · `{ event: boosterUsed,
-   count: 1 }` (Vinç dilim 2'de önerilir; dilim 1'in yük kazısı ilk oyunda oynanır, DL-2R-09. Vinç yerleşimi
-   `placementCorrect` üretmez, CL-2R-11. Oyuncu Vinç'i kullanmazsa adım bölüm sonuna kadar etkin kalır ve hareketsizlikte
-   görünür)
+1. `startOn: { event: segmentDone }` · `booster:crane` · tap · `tut.m.cranebooster` · `{ event: boosterUsed, count: 1 }` (ikinci kat başında Vinç yuvası; güçlendirici kullanılınca biter)
 
-### 2.11 Solver doğrulaması (Faz 2R solver turu, 2026-10-07)
+### 2.11 Solver doğrulaması (D-099 bölüm turu, A2, 2026-11-02)
 
-**Komutlar ve sonuç:** `node tools/validate-levels.ts` (i18n dahil) 10/10 geçerli, 0 hata, 0 uyarı; `npm run levels:check`
-(validate + `levels:solve`, önbelleksiz) 10/10 `solved`, 0 hata, 0 uyarı; bütün kanonik çözümler çekirdekte yeniden
-oynatıldı (`replay ok`), bütün eldiven yolları geçerli (L-35). Bot adımı (WP-N) yok; `a = 0`.
+**Komutlar ve sonuç:** `npm run levels:validate` (i18n dahil) 10/10 geçerli, 0 hata, 0 uyarı; `npm run levels:check`
+(validate + `levels:solve`, önbelleksiz, varyantlar dahil) 10/10 `solved`, 0 hata, 0 uyarı; bütün kanonik çözümler
+çekirdekte yeniden oynatıldı (`replay ok`), bütün eldiven yolları geçerli (L-35); bütün bölümlerde `complete` evet,
+`undetectedDead` 0, D1 durumu 0 (K-51 madde 7–8). Golden kayıtlar `npm run levels:solve -- --update-golden` ile yeniden
+üretildi. Bot adımı (WP-N) yok; `a = 0`. Bölüm başına ölçütlerin hedef–gerçek karşılaştırması §6.10'dadır.
 
-| # | N | min | s (dilim) | d | F0 örtü | trap | deadRate | çıkmaz (bütün uzay) | ch@0·1·2 / best | YAO | moves (K-52 bandı) | varyant | önsezi g (fark) | durum | acemi vekil |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 11·11·16 / 2·1·1 | 5/5 | 11 (10–12) | – | – | 10 401 | 1,00 |
-| 2 | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 7·13·9 / 1·1·1 | 3/3 | 9 (8–10) | – | – | 97 | 1,00 |
-| 3 | 4 | 5 | 1 | 1 | 1 | 0 | 0 | 0 | 6·9·10 / 3·1·1 | 4/4 | 11 (10–12) | – | – | 1 931 | 1,00 |
-| 4 | 5 | 7 | 2 | 2 | 2 | 0 | 0 | 0 | 5·9·9 / 1·1·1 | 4/5 | 13 (12–14) | geçitsiz 9 | – | 1 922 | 0,81 |
-| 5 | 8 | 11 | 3 (1+2) | 1 | 1 | 0 | 0 | 0 | 11·8·14 / 2·1·1 | 8/8 | 17 (16–18) | – | 0 (0) | 3 203 | 0,92 |
-| 6 | 5 | 7 | 2 | 2 | 2 | 0 | 0 | 0 | 7·9·10 / 1·1·1 | 5/5 | 13 (12–14) | – | – | 5 175 | 0,46 |
-| 7 | 8 | 12 | 4 (3+1) | 3 | 3 | 0 | 0 | 0 | 11·11·10 / 4·2·1 | 8/8 | 17 (16–18) | – | 0 (0) | 26 040 | 0,33 |
-| 8 | 5 | 8 | 3 | 3 | 1 | 0 | 0 | 0 | 12·15·16 / 1·1·2 | 5/5 | 14 (13–15) | Çekiç'le 5 | – | 431 006 | 0,07 |
-| 9 | 4 | 7 | 3 | 1 | 1 | 0 | 0 | 0 | 3·5·5 / 1·1·1 | 3/4 | 13 (12–14) | geçitsiz 8 | – | 224 | 0,63 |
-| 10 | 10 | 15 | 5 (3+2) | 3 | 1 | 0 | 0 | 0 | 12·15·16 / 1·1·2 | 10/10 | 18 (17–19) | Çekiç'le 11 | 0 (0) | 559 797 | 0,01 |
+| # | N | min | s | d | trap | YAO | moves (K-52 bandı) | varyant | ahaMin | greedyWin | greedyExcess | durum |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 6 | 6 | 0 | 0 | 0 | 6/6 | 10 (10–12) | – | 0 | 1 | 0 | 21 125 |
+| 2 | 6 | 6 | 0 | 0 | 0 | 6/6 | 10 (10–12) | – | 0 | 1 | 0 | 13 797 |
+| 3 | 7 | 8 | 1 | 1 | 0 | 7/7 | 12 (12–14) | – | 0 | 1 | 0 | 77 757 |
+| 4 | 8 | 9 | 1 | 1 | 0 | 7/8 | 13 (13–15) | geçitsiz 10 | 0 | 1 | 0 | 220 746 |
+| 5 | 8 | 11 | 3 | 2 | 0 | 8/8 | 13 (13–15) | – | 1 | 1 | 1 | 745 442 |
+| 6 | 7 | 9 | 2 | 1 | 0 | 7/7 | 13 (13–15) | – | 0 | 1 | 0 | 31 270 |
+| 7 | 7 | 11 | 4 | 1 | 0 | 7/7 | 13 (13–15) | – | 2 | 1 | 2 | 133 422 |
+| 8 | 7 | 10 | 3 | 3 | 0 | 7/7 | 14 (14–16) | Çekiç'le 8 | 0 | 1 | 0 | 446 663 |
+| 9 | 7 | 12 | 5 | 2 | 0 | 6/7 | 16 (16–18) | geçitsiz 14 | 2 | 1 | 3 | 72 477 |
+| 10 | 7 | 13 | 6 | 5 | 0 | 7/7 | 14 (14–16) | – | 1 | 0 | 2 | 121 022 |
 
-"çıkmaz (bütün uzay)" = solver `deadStates` (hiçbir sürükleme dizisiyle kazanılamayan durum; kapsam K dışı dahil). "önsezi
-g (fark)" = §2.0 madde 9 (yalnız çok dilimli bölümler). "acemi vekil" = §2.0 madde 11'deki karalama vekilinin bütçe içinde
-kazanma oranı (1 000 oyun); bot değildir, yalnız bölümleri birbiriyle karşılaştırır: kazısı derin (d = 3) ve kaydırma
-seçeneği çok olan Ağır Yük bölümlerinde (8, 10) rastgele kazı neredeyse hiç kazanmaz, Bölüm 6 ve 7'de park sırası
-iki adım ileriyi görmeyi ister. "Kazıcı" vekil 1–10'un hepsini en kısa yoldan kazanır.
-
-**Değişen bölümler (taslağa göre):**
-- **Bölüm 4:** kazı 1 → 2 (tıkacın kaçış sütunu kapalı), `min` 6 → 7, hamle 12 → 13, `d` 1 → 2, geçitsiz min 8 → 9.
-- **Bölüm 5:** dilim 2 kazı 1 → 2 (sağ odanın tabanı iki çatı bloğunun altında), N 9 → 8, `min` 11, hamle 17.
-- **Bölüm 7:** dilim 1 kazı 2 → 3 (tam ters istif kule, cep taşınan bloğun üstünde), `min` 11 → 12, hamle 15 → 17
-  (T = ⌈0,35 · 12⌉ = 5), `d` 2 → 3. WP-E notundaki eski kanonik sıra farkı (eski 9.–10. hamle) yeni taslakla geçersizdir.
-- **Bölüm 10:** dilim 2 kuyruksuz yeniden kuruldu; `min` 13 → 15, kazı 4 → 5 (3+2), hamle 16 → 18, N 9 → 10, Çekiç'le min
-  9 → 11. Eski kuyruklu dilim 2'de bütün uzayda canlı durumdan çıkan 1 618 kaydırma 338 çıkmaz duruma götürüyordu
-  (`k1_3` `O4` G, `O4` W bir satır aşağı kaydırılınca onun üstüne düşüyordu; D1/D2/D3a hiçbirini yakalamıyordu). Seçenek
-  (a) (veri) uygulandı; ayrıca K-51 madde 2'ye bütün uzay kapısı yazıldı (§2.0 madde 10).
-- **Bölüm 1, 2, 3, 6, 8, 9:** taslak değişmedi; solver bütün ölçütleri ve kanonik çözümü karalama çözücüsüyle aynı verdi.
-
-**Hamle ayarı:** bütün bölümlerde `moves = min + T` (`a = 0`). Bot (WP-N) gelince orta bot oranına göre `a` ayarlanır
-(|a| ≤ max(1, ⌊0,1 · min⌋); 7 ve 10 için ±1). Yeni JSON'lar `targets` hedef bantlarını taşır (`metric_out_of_band`).
+**Yöntem (brif ilkesi 6):** her bölüm için plan (renk deseni, iki kat) → ASCII gri kutu → JSON → `levels:solve` →
+hamle ayarı sırası izlendi. Adaylar üç kaynaktan geldi: `npm run levels:gen` (Bölüm 2 ve 6 adayları, aday 1 ve 3),
+oturum karalama aracıyla rastgele arama ve tepe tırmanma (aynı solver modülleri; Bölüm 4, 5, 7, 8, 9, 10) ve elle
+kurulum (Bölüm 1, 3). Her aday resmî solver'la ölçüldü; seçim ve ince ayar (renkler, katlar, öğretici, `targets`)
+elle yapıldı. Faz 2R'nin 4×4–6×5 sahaları yerine D-099'da sahalar 20–30 hücredir: bugünkü tam tarama 6 genişlikte 8–9
+blokta 0,5–2 M durumu aştığı için (§6.8) bölümler 5×4, 4×5 ve (yüklü) 6×5'te kuruldu; en büyük uzay 745 442 durumdur
+(Bölüm 5), toplam `levels:solve` 4 işçiyle ≈ 45 sn.
 
 ---
 
@@ -1294,18 +1193,21 @@ koddaki `firstLevel` ile birlikte 5 → 1 olur, §7 U-2).
 
 | # | Ad (TR / EN) | Zorluk | Tek fikir (öğretilen) | Kaynak | Yeni imza | Saha Wy×Hy | Şantiye Ws×Hs × S | H / duvar / geçit | E | Renkler | Şekiller | N |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | Ağaç Basamakları / Tree Steps | Kolay (tanıtım) | Kaldır, duvarı aş, bırak; kat bitince kalan bloklar sonraki kat için sahada bekler | T2 | S1 | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | W, Y | D2, O4 | 8–9 |
-| 2 | Platform / Platform | Kolay | Şekil ve gölge: `C3` çifti; yanlış zamanda gelen blok kaybolmaz, sırası gelince kullanılır | T2 | — | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | G, W, Y | O4, C3, D2 | 6–8 |
-| 3 | Ön Duvar / Front Wall | Kolay | Kazı: sonraki katın bloğu bu katın bloğunun üstünde; önce kenara çek | T1 | — | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | G, W, Y | D2, O4 | 7–8 |
-| 4 | Pencere Pervazı / Window Sill | Kolay (tanıtım) | Geçit derindeki bloğa kestirmedir | T8 | W1 | 6×4 | 2×5 × 2 | 5 / 4 / y0 boy 2 | 4 | G, W, Y | D2, O4 | 7–8 |
-| 5 | İki Odalı Ev / Two-Room House | Normal | Park yeri seçimi: kapağı sonraki katın ilk bloğunu örtmeyen cebe koy; bazen yerleşebilecek bloğu beklet | T3 (+T5) | — | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | R, W, Y | D2, O4 | 8 |
-| 6 | Uzun Gövde / Tall Trunk | Normal (tanıtım) | Yüksek duvar: her blok Vinç Alanı'na kalkar; cebe ilk gireni yükseğe park et | T7 | W2 | 4×6 | 2×5 × 2 | 6 / 6 / — | 4 | G, W, Y | D2, O4, C3 | 7–8 |
-| 7 | Çatı Altı / Under the Roof | Normal | Takas: açıkta duran sonraki kat bloklarını şimdi kullan, gömülü olanı sonraki kata bırak; yer yoksa önce yerleştir | T4 (+T6) | — | 4×7 | 2×6 × 2 | 7 / 7 / — | 4 | G, R, W | D2, O4 | 9–10 |
-| 8 | Bahçe Çiti / Garden Fence | Normal (tanıtım) | Ağır Yük kapaktır, yalnız saha içinde kayar; Çekiç onu kırar | T9 (ilk yarı) | Y5 | 6×5 | 2×4 × 2 (+ Q9) | 5 / 5 / — | 5 | R, W, Y | D2, O4, Q9 | 6–7 |
-| 9 | İp Merdiven / Rope Ladder | Normal (tanıtım) | Dar geçitten yalnız tek sıra boyundaki blok geçer | T8 | W3 | 4×6 | 2×5 × 2 | 6 / 6 / y0 boy 1 | 4 | G, R, W | D2, O4 | 8 |
-| 10 | Ağaç Ev Tamam! / Treehouse Done! | **Zor** | Final: üç kat tek sahada; yük iki kez kayar; açgözlü takas tuzaktır (Söküm); Vinç açılır | T9 + T10 | — | 6×8 | 2×5 × 3 (+ Q9) | 8 / 8 / — | 9 | G, R, W | D2, O4, Q9 | 12–15 |
+| 1 | Ağaç Basamakları / Tree Steps | Kolay (tanıtım) | Kaldır, duvarı aş, bırak; kat bitince kalan bloklar sonraki kat için sahada bekler | T2 | S1 | 5×4 | 2×4 × 2 | 4 / 3 / — | 4 | W, Y | D2, O4 | 6 |
+| 2 | Platform / Platform | Kolay | Şekil ve gölge: `C3` çifti; yanlış zamanda denenen blok kaybolmaz | T2 | — | 5×4 | 2×4 × 2 | 4 / 3 / — | 4 | G, W, Y | C3, D2 | 6 |
+| 3 | Ön Duvar / Front Wall | Kolay | Kazı: sonraki katın `O4`'ü bu katın bloklarının üstünde; tek cebe çek | T1 | — | 5×4 | 2×4 × 2 | 4 / 3 / — | 4 | G, W, Y | D2, O4 | 7 |
+| 4 | Pencere Pervazı / Window Sill | Kolay (tanıtım) | Geçit dipteki bloğa kestirmedir (ikinci katın tabanı raydan) | T8 | W1 | 4×5 | 2×4 × 2 | 5 / 4 / y0 boy 2 | 4 | G, W, Y | D2 | 8 |
+| 5 | İki Odalı Ev / Two-Room House | Normal | Bekletme: yerleşebilecek dikey W'yi sonraki kata sakla; park yerini seç | T5 (+T3) | — | 5×4 | 2×4 × 2 | 4 / 3 / — | 4 | R, W, Y | D2 | 8 |
+| 6 | Uzun Gövde / Tall Trunk | Normal (tanıtım) | Yüksek duvar: her blok Vinç Alanı'na kalkar; kapağı yükseğe park et | T7 | W2 | 4×5 | 2×4 × 2 | 5 / 5 / — | 4 | G, W, Y | C3, D2 | 7 |
+| 7 | Çatı Altı / Under the Roof | Normal | Takas ve yer açma: `O4` W sonraki kata kalır; önce dipte yer aç | T4 (+T6) | — | 5×4 | 2×4 × 2 | 4 / 4 / — | 4 | G, R, W | D2, O4 | 7 |
+| 8 | Bahçe Çiti / Garden Fence | Normal (tanıtım) | Ağır Yük kapaktır, yalnız saha içinde kayar ve park yeri açar; Çekiç onu kırar | T9 (ilk yarı) | Y5 | 6×5 | 2×4 × 2 (+ Q9) | 5 / 5 / — | 5 | R, W, Y | D2, O4, Q9 | 7 |
+| 9 | İp Merdiven / Rope Ladder | Normal (tanıtım) | Dar geçitten yalnız tek sıra boyundaki blok geçer; önce onu satır 0'a indir | T8 (+T6) | W3 | 4×5 | 2×4 × 2 | 5 / 5 / y0 boy 1 | 4 | G, R, W | D2, O4 | 7 |
+| 10 | Ağaç Ev Tamam! / Treehouse Done! | **Zor** | Final: yığını doğru sırayla yeniden diz; Vinç açılır | T6 + T1 | — | 4×5 | 2×4 × 2 | 5 / 5 / — | 4 | G, R, W | D2, O4 | 7 |
 
-Geometri gerekçeleri (§6.5): 1–5 "her blok kalkar" düzenidir (6×4, duvar = saha tepesi, şantiye bir satır yüksek; E 4 ile
+**A2 notu (2026-11-02):** tablo gerçekleşen veridir (`levels/*.json`); D0 taslağı (6×4 sahalar, 2×5 katlar, Bölüm 10'da
+6×8 saha ve üç kat) git geçmişindedir (`806311d`). Fark ve gerekçe §6.10'dadır.
+
+Geometri gerekçeleri (§6.5, D0 taslağı; A2 gerçekleşeni §6.10): 1–5 "her blok kalkar" düzenidir (6×4, duvar = saha tepesi, şantiye bir satır yüksek; E 4 ile
 6 genişlikte N ≤ 9 bugünkü tarama bütçesine sığar, §6.8 P5–P6). 6, 7, 9 dar ve yüksek sahada Yüksek Duvar kullanır: dar
 saha kazıyı derinleştirir, durum uzayını küçültür (§6.8 P2). 8 ve 10 Ağır Yük için 6 genişlik ister (Q9 3×3 ve yanında
 kayma sütunu); 10 varsayılan 6×8 sahayı ilk kez tam kullanır (bölüm finali: "bütün şantiye malzemesi tek yığında") ve
@@ -1409,6 +1311,64 @@ dökümünün kalkması Faz 2R'de görülen tek Söküm'süz çıkmaz kaynağın
 - [ ] Hamle `min + P + a`, `a ≥ 0` (K-52 D-099); bot ölçümü LEVEL_REPORT'ta.
 - [ ] Öğretici ≤ 2 yumuşak adım, eldiven yolu kanonik hamle (`tut_hand_invalid` yok).
 - [ ] ASCII gri kutu taslak → JSON → `levels:check` → LEVEL_REPORT → hamle ayarı sırası izlendi (brif ilkesi 6).
+
+### 6.10 D2 turu sonucu: hedef ve gerçek (A2, 2026-11-02)
+
+Her hücre `gerçek (D0 hedefi, Tablo B)`; kalın = D0 bandının dışında. Bağlayıcı bantlar artık JSON `targets`'tadır
+(gerçek değerin çevresinde, solver `metric_out_of_band` ile denetler; 10/10 bölümde bant dışı uyarı yok). Tanımlar GDD
+K-50; değerler `levels:solve` (SOLVER_VERSION 3) çıktısıdır.
+
+| # | min | minShifts | firstNeedDepth | maxCover | depLater | crossDeps | parkSlack | forced | greedyExcess | greedyWin | ahaMin | branch3 | Hamle |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | **6** (8–9) | 0 (0) | 0 (0) | **3** (≤ 1) | 0 (0) | 5 (≥ 1) | – (—) | **4** (0–2) | 0 (0) | 1 (≥ 0,95) | 0 (0) | **0,36** (≥ 0,40) | 10 |
+| 2 | 6 (6–8) | 0 (0–1) | 0 (0) | **2** (≤ 1) | 0 (0) | 5 (≥ 1) | – (—/≥ 2,0) | **5** (0–2) | 0 (0) | 1 (≥ 0,90) | 0 (0) | 0,75 (≥ 0,35) | 10 |
+| 3 | **8** (9–11) | **1** (2–3) | 1 (1) | 2 (1–2) | 2 (1–2) | 2 (≥ 2) | **1** (≥ 1,5) | **6** (1–3) | 0 (0) | 1 (≥ 0,85) | 0 (0) | 0,3 (0,25–0,45) | 12 |
+| 4 | **9** (10–12) | **1** (2–3) | 1 (1–2) | **5** (2) | 1 (1–2) | 11 (≥ 2) | 2 (≥ 1,0) | **8** (1–3) | 0 (0) | 1 (≥ 0,75) | 0 (0) | 0,33 (0,20–0,40) | 13 |
+| 5 | **11** (12–14) | 3 (3–4) | 2 (1–2) | 3 (2–3) | 3 (2–3) | 7 (≥ 3) | 1 (1,0–2,0) | **8** (2–4) | 1 (1–2) | **1** (0,40–0,70) | 1 (1) | 0,27 (0,15–0,35) | 13 |
+| 6 | **9** (11–13) | **2** (3) | **1** (2) | 3 (2–3) | 2 (1–2) | 6 (≥ 2) | **2** (1,0–1,5) | **7** (2–4) | 0 (0–1) | **1** (0,50–0,85) | 0 (0–1) | **0,5** (0,20–0,40) | 13 |
+| 7 | **11** (14–16) | 4 (4–5) | **1** (2) | 2 (2–3) | 2 (2–3) | 4 (≥ 3) | **0,5** (0,8–1,5) | **9** (3–5) | 2 (1–3) | **1** (0,30–0,60) | 2 (1–2) | 0,27 (0,15–0,30) | 13 |
+| 8 | **10** (11–13) | 3 (3–4) | 3 (2–3) | **3** (2) | **3** (1–2) | 4 (≥ 2) | **0,83** (1,0–2,0) | **7** (2–4) | 0 (0–1) | **1** (0,40–0,80) | 0 (0–1) | 0,21 (0,15–0,35) | 14 |
+| 9 | 12 (11–13) | **5** (3–4) | 2 (1–2) | **4** (2) | **6** (1–2) | 9 (≥ 2) | **0,4** (≥ 1,0) | **11** (2–4) | **3** (0–1) | **1** (0,50–0,85) | **2** (0–1) | 0,38 (0,20–0,40) | 16 |
+| 10 | **13** (22–26) | **6** (7–9) | **5** (2–3) | 3 (3–4) | 4 (3–5) | 6 (≥ 5) | **0,33** (0,6–1,2) | **13** (5–8) | 2 (≥ 2) | **0** (0,05–0,25) | **1** (≥ 2) | **0,43** (≤ 0,20) | 14 |
+
+**Sapmalar ve gerekçeleri:**
+1. **Saha ve kat boyu (ölçek):** D0'nın 6×4 saha + 2×5 katı 8–9 blokta 0,5–0,9 M durum, bölüm başına 30–40 sn tam tarama
+   veriyordu; 6×5 + `Q9` ile 8 blok 3 M'yi aştı, üç kat 4×7'de 12 blokla 2,5 M'yi aştı (oturum ölçümü). Bu yüzden katlar
+   2×4, sahalar 20–30 hücredir ve `min` değerleri D0 bandının 2–3 hamle altındadır. Zorluk `min`den değil `ahaMin`,
+   `greedyExcess`, `forced` ve `parkSlack`'ten gelir (§6.2 yorum kuralı 1). `maxCover` ve `forced` küçük sahada doğal
+   olarak yüksektir (son katın dipteki bloğu her zaman derindedir; her durumda tek doğru blok çoğunluktadır).
+2. **Bölüm 10 iki katlıdır** (D0: üç kat, 6×8 + `Q9`): üç katlı sabit saha §7 U-4 (makro çizge) olmadan tam taranamaz
+   (`scan_incomplete`). Final, 7 bloklu bir yeniden dizme bulmacasıdır; P = 1 bütçesinde açgözlü oyun hiç kazanamaz
+   (`greedyWin` 0). Ağır Yük ve takas tuzağı (T9, T10) U-4 gelince Bölüm 15'e (Zor) taşınır.
+3. **`greedyWin` Normal'de 1,00:** D-099 bütçesinde Normal P = 2'dir; bekletmeyi ya da yer açmayı kaçıran açgözlü oyuncu
+   1–2 fazla hamleyle yine kazanır. Aha anı kazanmayı değil payı belirler (5: +1, 7: +2, 9: +3). Bot (WP-N) gelince
+   `a` ayarı ve gerekirse Normal P'nin 1'e çekilmesi önerilir (DECISIONS ÖNERİ, §6.4).
+4. **Bölüm 8'de `ahaMin` 0:** yük tanıtımı sade tutuldu (brif ilkesi 3); yükle bekletme birleşimini arama (≈ 300 tam çözüm)
+   bugünkü ölçek sınırında bulamadı. Orkestratörün "8–10'da aha ≥ 1" çıtası 9 (2) ve 10 (1) için sağlandı; 8 için açık.
+5. **Bölüm 4 ve 9'da geçit:** iki bölümde de geçit ikinci katın (4) ya da birinci katın (9) tabanını raydan getirir;
+   geçitsiz `min` 4'te +1, 9'da +2 (varyant bandı ≥ 1, §6.6).
+
+**Kendi kendine inceleme (3 insan stratejisi; bot yok, zihinden ve solver ölçütleriyle):** "Açgözlü" = her an doğru
+yerleşimi, yoksa en yakın yerleşimi açan kaydırmayı yapar (`greedyWin`, `greedyExcess`); "en üsttekini al" = hep en
+üstteki bloğu dener, uymazsa ilk boş cebe park eder; "plancı" = kanonik çözüm.
+
+| # | Açgözlü | En üsttekini al | Plancı | Karar |
+|---|---|---|---|---|
+| 1 | en kısa yol (+0) | üstteki blok tam sıradır, kazanır | 6 | kolay, ilk 10 sn'de oynanır |
+| 2 | +0 | `c` erken denenir, 1 hamle geri sekme; 10 hamlede rahat kazanır | 6 | gölge öğretiliyor |
+| 3 | +0 | üstteki `O4` Y tek cebe gider; kazanır | 8 | kazı tek ve okunur |
+| 4 | +0 | `f`yi kazıp geçidi kullanmazsa +1; 13 hamlede kazanır | 9 | geçit fark edilmezse de adil |
+| 5 | +1 | dikey W'yi hemen koyar, eşini dipten kazar (+1); 13 hamlede kazanır | 11 | ilk "bekle" anı; öğretici ipucu var |
+| 6 | +0 | kapağı sağa park eder, geri getirir; kazanır | 9 | tanıtım sade |
+| 7 | +2 | `O4` W'yi bu kata koyar, dikey R'leri kazar (+2); son hamlede kazanır | 11 | sıkı ama adil |
+| 8 | +0 | üst Y'yi park edecek yer bulamaz; yükü kaydırınca açılır (öğretici `tut.m.heavy`) | 10 | yük dersi net |
+| 9 | +3 | dar geçidi geç fark ederse 15 hamle; 16 bütçede kazanır | 12 | düşündürür, bütçe affeder |
+| 10 | +2 (bütçe 14) | yığını sırasız boşaltırsa 15+ hamle; kaybeder, Söküm gerekmez | 13 | final: plan şart |
+
+Sinir bozucu bulunan ve düzeltilen: (1) ilk Bölüm 4 adayında geçit hiç kullanılmıyordu (sol sütun boşalınca dipteki
+blok yandan kaçıyordu); geçidi ikinci katın tabanına taşıyan aday seçildi. (2) Bölüm 6'nın ilk adayında kapak üç kez
+taşınıyordu; iki kaydırmalı aday seçildi. (3) Bölüm 9'un ikinci adımı başlangıçta yer değiştiren bir bloğa eldiven
+koyuyordu (`tut_highlight_invalid`); eldiven kaldırıldı, vurgu ve metin kaldı.
 
 ---
 

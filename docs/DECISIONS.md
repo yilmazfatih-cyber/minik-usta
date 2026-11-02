@@ -622,3 +622,16 @@ ART_REFERENCE §10 rubriğinde her ekranın her boyutu ≥ 4/5 (iki bağımsız 
 rehberi), ücretsiz ve üretken yapay zekâsız görsel üretim. Program: Faz 4 görsel ve his yükseltmesi (Unity); Faz 5 içerik ve meta (50 bölüm, 5 hikâye bölümü,
 kasaba, ekonomi, 2 etkinlik, sahte mağaza); Faz 6 yayın hazırlığı (performans, Android/WebGL derlemeleri, mağaza metinleri, gizlilik).
 
+
+### ÖNERİ P-A2-1 — Bölüm 10 iki katlı; üç kat, Ağır Yük ve takas tuzağı U-4 sonrasına (product-lead, 2026-11-02)
+Durum: ÖNERİ. D0 eğrisi (LEVELS §6.6) Bölüm 10'u 6×8 saha, üç kat ve `Q9` ile tanımlıyordu; bugünkü tam tarama bu
+uzayı bitiremez (`scan_incomplete`, error; 5×6 üç kat yedeği de > 2,5 M durum). A2'de Bölüm 10, 4×5 sahada iki katlı
+bir yeniden dizme bulmacasıdır (`min` 13, `ahaMin` 1, P = 1 ile açgözlü oyun kazanamaz). Üç katlı final, Ağır Yük'ün iki
+kez kayması (T9) ve takas tuzağı (T10) LEVELS §7 U-4 (makro çizge) geldiğinde Bölüm 15'te (Zor) kullanılır. Gerekçe:
+bilgi gizlenmez ve her bölüm solver kanıtlı olmalı (brif ilkesi 5, K-51 madde 7).
+
+### ÖNERİ P-A2-2 — Normal bütçe payı P = 2 kalır; bot ölçümüyle yeniden bakılır (product-lead, 2026-11-02)
+Durum: ÖNERİ. D-099 bütçesinde Normal P = 2 iken Bölüm 5, 7, 9'da bekletmeyi ya da yer açmayı kaçıran açgözlü oyuncu
+1–3 fazla hamleyle yine kazanır (`greedyWin` 1,00); aha anı kazanmayı değil payı belirler. Orta bot (WP-N) gelince bu
+bölümlerde kazanma oranı %80'in üstündeyse önce `a` ve bulmaca ayarı, sonra Normal P'nin 1'e indirilmesi değerlendirilir
+(K-52 tablosu, entrepreneur ile birlikte; ekonomi ve +5 talebi etkilenir).

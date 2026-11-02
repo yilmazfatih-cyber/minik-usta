@@ -1920,3 +1920,60 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
   yeniden üretilmeli. Önceki `reshuffleYard` RNG bulgunuz (2026-10-31) kod kalktığı için konusuz.
 - [code-lead → orkestratör] TECH §12.4 K-55 satırı F = 3 yazıldı (product-lead önerisi); testler yine de yazıldı
   ("K-55 …", E-62…E-67). `--phase 2R` kapısının bunları da istemesi için F'nin `2R` olması yeterli; karar sizin.
+
+## D-099 paket A2 — product-lead bölüm turu: Bölüm 1–10 sabit saha (2026-11-02)
+
+- [product-lead → code-lead] **`npm run check` kırmızı: 36 test dosyası / 162 test Faz 2R bölüm verisine bağlı.**
+  `levels/level_001…010.json` artık `schemaVersion` 2 (K-55, tek parti, iki kat); `levels:validate` 10/10 ve
+  `levels:check` 0 hata 0 uyarı; typecheck, lint ve format temiz. Kırılan testler üç grup, düzeltme önerisi:
+  (A) gerçek `levels/` dosyalarını motor/sahne fikstürü olarak kullananlar (blok kimliği, koordinat, parti ve kamyon,
+  öğretici adımı): `tests/core/{moves,movement,session,delivery,goals,panorama,fixedYard}`,
+  `tests/obstacles/{S1_slidingSite,W1_staticGap,registry}`, `tests/scenes/{dragMath,hitTest,juice,panorama,resume,
+  screensReview1,shadowLook,shadowView,tutorial}`, `tests/ui/{losePreview,windows}`, `tests/theme/textures`,
+  `tests/debug/logs`, `tests/review/{movement,pipeline,presentation}.review`. Öneri: Faz 2R verisini arşiv fikstürü
+  olarak geri getirin (`git show f065b80:levels/level_00N.json` ve `tests/golden/level_00N.*.json` →
+  `tests/fixtures/levels-2r/`) ve bu testlerin yükleyicisini (`tests/fixtures/builders.ts` `LEVELS_DIR`, doğrudan
+  `levels/` okuyanlar) oraya çevirin; GDD K-55 madde 9 v1 kod yollarının ve testlerinin kalmasını ister.
+  (B) veri inceleme: `data.review` içinde K-25 "Kamyon partisi 1" testi v2'de `segments.length === trucks + 1` bekliyor
+  (v2'de kamyon yok, test v1'e özgü); LEVELS §0 teaches listesi testi `[4, 5, 6, 8, 9]` sabit (yeni liste
+  `1 → S1, 4 → W1, 6 → W2, 8 → Y5, 9 → W3`); Bölüm 5 parti 1 ve Bölüm 1 plan GDD örnekleri arşive; `drafts.test`
+  ("Faz 2R format"), `schema.test:77`, `i18n.test` (gerçek bölüm sayımı), `mechanics.test` (`src/core/level/mechanics.ts`
+  S1 `firstLevel` 5 → 1; OBSTACLES tablosu 1 oldu). LEVELS §2 kayıt ↔ JSON ↔ golden testleri (blok tablosu, ilk
+  blockout, başlık satırları, öğretici listesi, kanonik çözüm metni, çekirdekte hamle hamle oynatma) v2 verisiyle
+  **geçiyor**: kayıt biçimi aynı tutuldu. (C) çözücü: `tests/tools/solver/levels.expected.ts` (LEVELS_2) yeni
+  değerler `artifacts/solver/level_NNN.json`'dan; `levels.assert.ts`'deki K-51 madde 5 (kamyon) bloğu v2'de çalışmaz,
+  "deadStates 0" yerine v2 kapıları (`complete`, `undetectedDead` 0, `d1States` 0); `level10.test` kamyon testleri;
+  `checks`, `cli`, `report` testleri gerçek bölümlere bağlı. Test dosyalarına dokunmadım; commit `wip:` önekiyle
+  `wip/a2-levels` dalında.
+- [product-lead → code-lead] **Çözücü bulgusu: `solver_replay_mismatch`.** Yayına girmeyen bir Bölüm 4 taslağında
+  (5×4, duvar 3, geçit y0 boy 2, yedi blok, iki dikey G) kanonik çözüm çekirdekte 6. hamlede ayrıştı ("the replayed
+  state differs from the solver's state (Zobrist)"). Yeniden üretim dosyası oturum scratchpad'inde
+  `a2/e34/b/level_004.json`. Ray + dikey blok birleşiminde solver genişletmesi ile çekirdek arasında bir fark olabilir.
+- [product-lead → code-lead] **`levels:gen` notları (A2 kullanımı):** 5×4 ve 4×5 sahada hızlı (tam çözüm 1–5 sn) ve
+  Bölüm 2 ile 6 adayları ondan geldi. Eksikler: (a) id ≥ 3'te ters istif ilk gereken bloğu üste koyduğu için adayların
+  çoğu `puzzle_first_reachable` / `puzzle_no_shift` hatası alıyor; (b) varyant bantları (geçitsiz, Çekiç'le) puana
+  girmiyor; (c) mevcut bir JSON'dan tohumlu tepe tırmanma yok. İstek: `--start <level.json>`, varyant terimi ve
+  `ahaMin` için sert alt sınır seçeneği. Bölüm 4, 5, 7, 8, 9, 10 adayları bu üç eki taklit eden bir karalama
+  tırmanıcısıyla (aynı `tools/gen`, `tools/solver` modülleri; scratchpad `a2/climb.ts`) bulundu.
+- [product-lead → code-lead] **U-4 ölçek ölçümleri (A2):** 6×4 + 8 blok 0,58–0,90 M durum; 4×6 + 8 blok 0,95 M;
+  5×6 + `Q9` + 8 blok 2,0 M (112 sn); 6×5 + `Q9` + 8 blok > 3 M; 4×7 üç kat 12 blok > 2,5 M; 5×4 W2 + 8 blok 0,75 M.
+  Yayındaki en büyük uzay 745 442 (Bölüm 5), `levels:solve` 4 işçiyle ≈ 45 sn. Üç katlı sabit saha U-4 olmadan yok.
+- [product-lead → code-lead] **A1'in açık sorularına yanıt:** ölçüt okumaları (1)–(5) onaylandı. Bölüm 10 için 5×6 üç
+  kat yedeği de tam taramayı aşıyor; Bölüm 10 4×5 iki kat oldu (LEVELS §6.10 madde 2). K-55'in F değeri: test paketi
+  (madde 1) gelince `2R`'ye çekilmesini öneririm.
+- [product-lead → design-lead] **Öğretici metinleri:** i18n'e dokunmamak için yeni anahtar kullanmadım; seçilen mevcut
+  anahtarlar LEVELS §2 kayıtlarında. Öneri (STORY §6A, ≤ 6 kelime): `tut.m.hold` «Bunu sonraki kata sakla.» (Bölüm 5
+  adım 2, bugün `tut.m.carry`); `tut.m.gapclear` «Geçidin önünü aç.» (Bölüm 9 adım 1, bugün `tut.m.dig`). `obs.s1.desc`
+  hâlâ "kamyon malzeme getirir" diyor ve S1 artık Bölüm 1'de görünür: OBSTACLES S1'deki D-099 metni i18n'e işlenmeli.
+  Konuşan karakter Usta Kral (D-101).
+- [product-lead → design-lead] **Sahne ölçüleri değişti:** saha 5×4 (1, 2, 3, 5, 7), 4×5 (4, 6, 9, 10), 6×5 (8);
+  şantiye her bölümde 2×4, H 4–5. Bölüm 1–5'te saha tepesi duvarın bir satır üstündedir (1, 2, 3, 5: `height 3`;
+  4: `height 4`; üst satırdaki blok yatay kayarak aşar); 6–10 Yüksek Duvar (W2). Ekran düzeni ve panorama (iki kat) için kontrol.
+- [product-lead → entrepreneur] **Bütçe ve ekonomi:** Bölüm 1–10 hamleleri 10–16 (Faz 2R 9–18), D-099 P (Normal 2, Zor
+  1). Açgözlü oyuncu 5, 7, 9'da 1–3 fazla hamleyle yine kazanır; 10'da +2 ile kaybeder (`greedyWin` 0). +5 teklifi ve
+  güçlendirici talebi ilk kez 10'da belirgin olur; +5 fiyatı ve can akışı bu eğriyle birlikte gözden geçirilsin
+  (META/economy değişmedi).
+- [product-lead → orkestratör] Kapı: `levels:check` yeşil, `npm run check` kırmızı (madde 1, code-lead test paketi).
+  Bölüm 8'de `ahaMin` 0 (yük tanıtımı sade; yük + bekletme birleşimi bugünkü ölçek sınırında bulunamadı); 9'da 2, 10'da
+  1, 5'te 1, 7'de 2. DECISIONS'a iki ÖNERİ yazıldı (P-A2-1, P-A2-2). Unity: yeni `levels/*.json` ve
+  `tests/golden/*.json` code-lead(unity) tarafından C# fikstürlerine taşınmalı (D-091).

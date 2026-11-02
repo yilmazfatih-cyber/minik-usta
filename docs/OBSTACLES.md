@@ -1,6 +1,6 @@
 # Engel kütüphanesi
 
-Sahip: product-lead · Sürüm: D-099 sabit saha notları (2026-11-01; GDD K-55: S1 kamyonsuz, kamyona bağlı notlar yalnız `schemaVersion` 1) · Önceki: Faz 2R (2026-10-07; R2-01 tam örtü, R2-02 değişken boyut, R2-05 çelişen sistemler; çapraz inceleme kapanışı: Y5 saha içinde kalır, W1/Y5 kartları, W6 jokerli D3a, S9 ilk bölüm 12, veri imzası tablosu) · Önceki: Faz 1 revizyonu (2026-10-04; R-08, R-10, R-21; tutarlılık denetimi tur 1, 2026-10-05) · Kaynak: `docs/BRIEF.md` §7, `docs/GDD.md`
+Sahip: product-lead · Sürüm: D-099 bölüm turu (2026-11-02, A2: S1 ilk bölüm 1) · Önceki: D-099 sabit saha notları (2026-11-01; GDD K-55: S1 kamyonsuz, kamyona bağlı notlar yalnız `schemaVersion` 1) · Önceki: Faz 2R (2026-10-07; R2-01 tam örtü, R2-02 değişken boyut, R2-05 çelişen sistemler; çapraz inceleme kapanışı: Y5 saha içinde kalır, W1/Y5 kartları, W6 jokerli D3a, S9 ilk bölüm 12, veri imzası tablosu) · Önceki: Faz 1 revizyonu (2026-10-04; R-08, R-10, R-21; tutarlılık denetimi tur 1, 2026-10-05) · Kaynak: `docs/BRIEF.md` §7, `docs/GDD.md`
 
 Her engel: kimlik, bölge, kural (kodlanabilir), veri parametreleri, ilk bölüm, bilgi kartı metni (TR/EN, en çok 12 kelime).
 Genel kurallar (yol, düşüş, doğrulama, hamle sonu hattı) GDD'dedir; burada yalnızca engele özel olan yazılır.
@@ -251,13 +251,14 @@ kuyruğa yalnız S3 kırılması (GDD K-17 adım 3) ve S4 molozun Çekiç'le inm
 ## Şantiye ve yerçekimi (S, G)
 
 ### S1 — Kayan Şantiye
-- **Bölge:** şantiye · **İlk bölüm:** 5
+- **Bölge:** şantiye · **İlk bölüm:** 1 (D-099; Faz 2R'de 5)
 - **Kural:** `build.mode = "segments"`, 2–5 dilim (GDD K-22, K-25). Dilim bitince kayma ve kamyon teslimatı.
 - **Veri:** `build.segments[]`, `yard.batches[]` (`forSegment` = dilim indeksi).
 - **D-099 (GDD K-55, `schemaVersion` 2):** dilim bitince yalnız kayma; tamamlanan dilim panoramaya (kasabaya) gider,
   sıradaki dilim boş gelir, saha aynen kalır; kamyon teslimatı yoktur (yukarıdaki iki satır `schemaVersion` 1 içindir).
-  Veri: tek parti `yard.batches[0]` (`forSegment: 0`). İlk bölüm D-099 eğrisinde 1'dir (LEVELS §6.6); "Veri imzası"
-  tablosundaki 5 değeri, kod tablosuyla (`mechanics.ts` `firstLevel`) birlikte yeni Bölüm 1 verisi yazıldığında 1 olur.
+  Veri: tek parti `yard.batches[0]` (`forSegment: 0`). İlk bölüm D-099 eğrisinde 1'dir (LEVELS §6.6); yeni Bölüm 1
+  verisiyle (A2, 2026-11-02) "Veri imzası" tablosu 1 oldu; koddaki `mechanics.ts` `firstLevel` değeri code-lead
+  paketinde 1 olur (iki tablo testle eşit tutulur).
   Bilgi kartı için D-099 metni (i18n dosyalarıyla aynı commit'te geçerli olur; anahtar `obs.s1.desc` aynı): TR «Bu kat
   bitince şantiye kayar; kalan bloklar sahada bekler.» · EN «Finish this floor; the site slides, your blocks wait.»
 - **Bilgi kartı** (`obs.s1.desc`): TR "Bu kat bitince şantiye kayar, kamyon malzeme getirir." · EN "Finish this floor; the site slides and the truck delivers."
@@ -406,7 +407,7 @@ değişiklikleri: W1 ilk bölüm 4; W2 imzası `height = H`; Y5 imzası I5/Q9; S
 | Y6 | `gravity.yard = true` | 14 |
 | Y7 | `screw` | 19 |
 | Y8 | `mortar` | 35 |
-| S1 | `build.mode = "segments"` ve dilim sayısı ≥ 2 | 5 |
+| S1 | `build.mode = "segments"` ve dilim sayısı ≥ 2 | 1 |
 | S3 | `glass` | 21 |
 | S4 | `build.debris[]` dolu | 17 |
 | S5 | `build.mode = "carousel"` | 31 |
@@ -427,9 +428,10 @@ alanlarıyla birebir. Faz 2R Bölüm 1–10 türetilen yeni mekanikler: 4 → W1
 yeni imza içermez (öğretimleri `tutorial` ile: kaldır–taşı–indir, şekil/gölge, kazı, taşınan malzeme, final). Bölüm
 4'ün geçidi boy 2'dir, bu yüzden W3 ilk kez 9'da görünür (R-21). Bölüm 10'da W1/W3 yoktur (LEVELS §4).
 
-**D-099 eğrisi (LEVELS §6.6):** bütün bölümler 2–3 dilimli olduğundan S1 imzası Bölüm 1'de doğar; türetilen yeni
-mekanikler 1 → S1, 4 → W1, 6 → W2, 8 → Y5, 9 → W3 olur. Tablodaki S1 "İlk bölüm" değeri, yeni Bölüm 1 verisi ve koddaki
-`firstLevel` ile aynı commit'te 5 → 1 değişir (iki tablo testle eşit tutulur; LEVELS §7 U-2).
+**D-099 eğrisi (LEVELS §6.6):** bütün bölümler iki dilimli olduğundan S1 imzası Bölüm 1'de doğar; türetilen yeni
+mekanikler 1 → S1, 4 → W1, 6 → W2, 8 → Y5, 9 → W3'tür (A2 denetimi: `levels:validate` 10/10, `teaches` alanlarıyla
+birebir; 2, 3, 5, 7, 10 yeni imza içermez). Tablodaki S1 "İlk bölüm" değeri yeni Bölüm 1 verisiyle 5 → 1 oldu; koddaki
+`firstLevel` code-lead paketinde aynı değere çekilir (iki tablo testle eşit tutulur; LEVELS §7 U-2).
 
 ## Aynı bloktaki bayrak birleşimleri
 
