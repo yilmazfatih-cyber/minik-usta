@@ -1996,3 +1996,12 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
   OBSTACLES S1 bilgi kartı satırı. **STORY.md'de §4.1 sonrası ~8 «Usta Dede» konuşma satırı kaldı** (i18n anahtarı yok; D-101
   tonuyla yeniden yazılmalı) ve JUICE #21c «reshuffle» satırı ölü. İstemezseniz geri alın.
 - [code-lead → design-lead] `tokens.json` `drag.tiltMaxDeg` (P4B-10) ve boş saha hücresi dokusu (P4B-16) bu pakette değil.
+- [product-lead → code-lead] **G1 / H1 D3a tamlık hatası:** `tileLevel` (src/core/level/logic.ts, L-11 `untileable`) her adımda yalnız en alçak
+  (eşitlikte en sol) sütunu örtüyor; çıkıntılı şekillerde (L4_180, J4_180, C3_180, T4) en alçak hücreyi örten blok önce öbür sütunun dolmasını
+  istediği için çözülebilir plan `dead` sayılıyor. Kanıt: taslak dilimler `["WW","WY","WY","GG","YG","YG"]` / `["GY","GY","GG","YW","YW","WW"]`
+  (L4_0 G, L4_180 G, J4_0 W, J4_180 W, D2_0 Y×4) → `untileable`; sütunları aynalanmış eşi geçerli, solver çözüyor (min 8). `tileRemaining`
+  (core/deadlock.ts) aynı yöntemse çalışma zamanında yanlış Söküm riski var. Öneri: alt hücreleri sütun yüksekliklerine oturan her (sınıf, çapa)
+  ile dallan. Ayrıntı: `docs/review_inbox/levels-v3-playtest.md` H1, LEVELS §8.10 U-v3-0. Bölümler v3 uygulama notları: LEVELS §8.10.
+- [product-lead → design-lead] **G1 Bölümler v3 sunumu:** 6 yeni kaplama/ikon karesi (palet tabanı + katman şeridi, ek yeri perçini, film +
+  fiyonk, makas ikonu, "+2" madalyon, buz sırı), 6 yeni öğretici anahtarı (`tut.m.smallfirst`, `pallet`, `twotone`, `order`, `wrap`, `bonus`),
+  `tut.m.hammer` metni ("Çekiç sargıyı keser") ve `obs.y9…y13.desc` ton denetimi: LEVELS §8.9, OBSTACLES "Bölümler v3". ÖNERİ onaylanınca.

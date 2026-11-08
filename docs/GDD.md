@@ -1686,3 +1686,116 @@ adımları bu kurala uyar.
 | Bölüm 10 dilim 2 teslimat çıkmazları (trapCount 0 ama 338 Söküm'süz çıkmaz) | Seçenek (a) uygulandı: dilim 2 kuyruksuz yeniden kuruldu, bütün uzayda çıkmaz 0 (LEVELS §2.11). Kapı sıkılaştırıldı: K-51 madde 2 "Bütün uzay kapısı" (araç kuralı, error). (b) ✓-tuzağı tanımı değişmedi; (c) D3b tablosu Faz 3'te kalır. |
 | Bölüm 7 kanonik sırası (W < R) | Solver esastır; LEVELS el çözümleri solver çıktısından yazılır (Bölüm 7 yeniden tasarlandı, yeni sıra solver'ınki). |
 | Bölüm 10 Çekiç'le min | LEVELS'a yazıldı (yeni veride 11; 15 − 11 = 4 ≥ 2). |
+
+---
+
+## 16. Bölümler v3 — kural önerileri (ÖNERİ, paket G1, 2026-11-08)
+
+Sahip: product-lead · Durum: **ÖNERİ** — onaylanana kadar bağlayıcı değildir ve bugünkü çekirdeği/veriyi değiştirmez.
+Kaynak: proje sahibinin 2026-11-08 isteği ("daha çok blok, daha farklı şekil ve özellik, uğraşılabilir ama abartısız"),
+oyun testi raporu `docs/review_inbox/levels-v3-playtest.md`, LEVELS §8 (v3 tasarımı), OBSTACLES "Bölümler v3 blok
+özellikleri". Kimlikler K-56…K-63 yeni ve tek kullanımlıktır. **Biçim notu:** başlıklar bilerek "ÖNERİ K-xx" diye
+yazıldı; `test:rules` yalnız `### K-xx` başlıklarını kural sayar ve her kural için test ister. Onaydan sonra code-lead
+paketinde başlıklar `### K-xx …` olur, TECH §12.4 satırı ve testler aynı commit'te gelir.
+
+Korunanlar (değişmez): sabit saha K-55, tam örtü K-47/K-48, YAO ≥ 0,60 (K-46), ölü masa kapısı (D-090, K-51 madde 7),
+hafif öğretici K-53, hamle bütçesi `min + P + a` (K-52; bonus eki ÖNERİ K-62), bilgi gizlenmez (K-18), bölüm başına en
+çok bir yeni mekanik (K-45 madde 10).
+
+#### ÖNERİ K-56 Şekil kümesi v3 (K-44 açılış tablosunun değişikliği)
+**Kural:** Hikaye bölümüne göre izinli türler: 1 → B1, D2, O4, C3, **L4, J4 (2. bölümden), T4 (6. bölümden), I3
+(8. bölümden)**; 2 → + S4, Z4; 3 → + I4; Ağır Yük (I5, Q9) K-44 ve Y5 kuralıyla ayrı kalır (malzeme değildir). K-44'ün
+diğer maddeleri aynen geçerlidir: dönüş yoktur, veri yönelimi Ws'den geniş olamaz (`piece_too_wide`). Ws = 2 iken
+kullanılabilen yönelimler: `D2_0`, `D2_90`, `O4_0`, `C3_0/90/180/270`, `L4_0`, `L4_180`, `J4_0`, `J4_180`, `T4_0`,
+`T4_180`, `I3_0`, `S4_0`, `Z4_0` (S4/Z4 Hikaye 2). Artı (beşli haç) ve `L4_90` gibi 3 genişlikli yönelimler yalnız Ws ≥ 3
+(S9) bölümlerindedir; yeni tür (ör. 2×3 dikdörtgen) MVP'de eklenmez.
+**Açık yükseklik bağı (K-05 sonucu):** boyu 3 olan dikey yönelimler (`L4_0`, `L4_180`, `J4_0`, `J4_180`, `T4_0`, `T4_180`, `I3_0`, `S4_0`, `Z4_0`)
+duvarı yalnız `(H + 2) − height ≥ 3` iken aşar; bu yüzden bu şekilleri kullanan bölümde `height ≤ H − 1`'dir (Yüksek Duvar
+W2 ile birlikte kullanılamaz). Doğrulayıcı: şekil bölümün hiçbir girişinden (duvar üstü ya da geçit) geçemiyorsa
+`piece_unreachable` (error).
+**Örnek:** Bölüm 2 (H = 6, `height` 5): `L4_180` G (2×3) duvarı y5–y7 hücreleriyle aşar → geçerli. Aynı bölüm `height`
+6 (W2) olsaydı `L4_180` hiçbir yerden giremez → `piece_unreachable`. Bölüm 5'te `S4_0` → `shape_locked` (Hikaye 2).
+
+#### ÖNERİ K-57 İki Renkli Blok (Y9)
+**Kural:** `colors` alanı olan malzeme bloğunun her hücresinin rengi `colors[i]`'dir (`i` = şeklin (y, x) sıralı hücre
+dizini). (1) K-16 koşul 2 hücre bazında uygulanır: her hücre, oturduğu plan hücresinin rengiyle aynı olmalıdır. (2)
+K-47 arz/talep hücre rengiyle sayılır. (3) K-31 renk sayısına her iki renk girer. (4) K-18 gölgesi hücre başına ✓ ya da
+! gösterir. (5) Boya Kapısı (W6) iki renkli bloğu boyamaz (geçide giremez değil; renk değişmez). (6) Boya Fırçası (K-38)
+iki renkli bloğu hedefleyemez.
+**Örnek:** Plan dilimi (yukarıdan aşağı) `["WY","YW"]`. `D2_90` "YW" (x0 Y, x1 W) satır 0'a → doğru; ardından `D2_90`
+"WY" satır 1'e → doğru. Önce "WY" satır 0'a bırakılırsa iki hücre de yanlış → K-17 geri sekme, gölge iki hücrede "!".
+Veri: `{ "shape": "D2_90", "color": "W", "colors": "WY", "x": 2, "y": 0 }`; `colors` uzunluğu 2 değilse ya da tek renkse
+`colors_invalid` (error).
+
+#### ÖNERİ K-58 Palet (Y10) ve doluluk ayak izi
+**Kural:** (1) Aynı `stack.id`'yi taşıyan 2–4 malzeme bloğu bir palettir: şekilleri ve çapaları aynıdır, `z` değerleri
+0'dan ardışıktır. (2) Paletin hücreleri, paletinde en az bir katman kaldıkça doludur (K-08 yol kuralı için engeldir).
+(3) Yalnız en büyük `z`'li kalan katman (üst) tutulabilir (K-09'a koşul (f)); alt katmanın tutulma denemesi tepkisizdir
+(hamle harcanmaz). (4) Üst katman tutulduğunda erişim kümesi `R` (K-08), paletin hücreleri bir alt katmanla dolu sayılarak
+hesaplanır; başlangıç konumuna bırakmak iptaldir (K-07 satır 1), başka her konum normal hamledir. Kaldırılan katman
+palete geri konamaz. (5) K-02 doluluk bandında `F` **ayak izidir** (başta dolu hücre sayısı; bir palet yalnız şekil
+hücreleri kadar sayılır); tam örtü (K-47) bütün katmanları sayar. Bu yüzden `Σ` saha alanını aşabilir. (6) Geri Al ve
+Söküm katmanı palete geri koyar (K-39, K-30: çekirdek durumu geri yüklenir).
+**Örnek:** Saha 6×4 (C = 24), plan Σ = 24, iki palet × 3 `D2_90` (6 blok, 4 hücre ayak izi) + 4 tekil blok (12 hücre) →
+F = 16, E = 8 ≤ ⌊9,6⌋ → geçerli. Palet A (4,0) [z2 W, z1 Y, z0 W]: W tutulur, (0,3)'e bırakılır (1 hamle) → Y üst olur;
+(4,0)–(5,0) hâlâ dolu.
+
+#### ÖNERİ K-59 Sargılı Blok ve Makas (Y11)
+**Kural:** (1) `wrapped` bayraklı blok tutulamaz ve Vinç (K-37) ile seçilemez (K-09 (c)'ye eklenir). (2) Sargı varsa
+bölümde tam bir `scissors` bayraklı blok bulunur; yoksa `scissors_missing` (error); birden çoksa `scissors_many` (error).
+(3) Makaslı blok K-16'ya göre doğru yerleştiği hamlenin 5. adımında (K-35) sahadaki bütün `wrapped` bayrakları kalkar
+(`clear` sayımına girmez). (4) Çekiç (K-36) sargılı bloğa vurunca yalnız sargıyı kaldırır. (5) Doğrulayıcı: makaslı blok
+sargılı olamaz; sargılı blok K-58 paletinde yalnız üst katman olabilir.
+**Örnek:** Makaslı `D2_90` R (2,0), sargılı `D2_0` G (0,0) ve `D2_90` W (3,3). Oyuncu sargılı G'ye dokunur → kurdele
+titrer, hamle harcanmaz. Makaslı R şantiyede doğru yere konur → aynı hamlenin 5. adımında iki sargı kalkar; sonraki
+hamlede G tutulabilir.
+
+#### ÖNERİ K-60 Bonus Blok (Y12)
+**Kural:** (1) `bonus` bayraklı blok doğru yerleştiği hamlenin 4. adımında, maliyet düşüldükten sonra, sayaca
+`bonusMoves` (1–3, varsayılan 2) ekler. (2) Bölüm başına en çok 2 bonus blok (`bonus_many`, error). (3) Bonus, adım
+11–12'den önce uygulanır; bu yüzden son hamlede sayaç 0'a inip aynı hamlede bonus gelirse bölüm sürer. (4) Geri Al ve
+Söküm bonusu geri alır (sayaç dahil çekirdek durum). (5) Altın Mala ve +5 teklifi bonustan bağımsızdır.
+**Örnek:** Sayaç 1; bonus blok doğru konur → adım 4: 1 − 1 = 0, + 2 = 2 → adım 11 kaybetme yok. Bonus blok hatalı yere
+bırakılır → geri seker, sayaç 1 − 1 = 0 → kaybetme penceresi (K-29).
+
+#### ÖNERİ K-61 Kaygan Blok (Y13; Hikaye 2)
+**Kural:** `slippery` bayraklı malzeme bloğu `gravity.yard` değerinden bağımsız olarak hamle sonu 6. adımda saha
+yerçekimiyle (K-20) düşer; diğer bloklar yalnız Y6 açıksa düşer. Şantiyede ve rayda sıradan bloktur.
+**Örnek:** `gravity.yard` false; kaygan `D2_90` (3,4)'e park edilir, altı (3,3)–(4,3) boş, (3,2)–(4,2) dolu → adım 6'da
+(3,3)'e iner. Aynı yere sıradan blok park edilseydi (3,4)'te kalırdı (K-10).
+
+#### ÖNERİ K-62 Hamle bütçesi v3 (K-52'ye bonus eki)
+**Kural:** `moves = min + P + a − B·k`. `B` = bölümdeki bonus hamle toplamı (Σ `bonusMoves`), `k` = 0 tanıtım
+bölümünde (bonus saf paydır), 1 diğer bölümlerde (bonus bütçeye dahildir, oyuncu onu zamanında almalıdır). `k = 1` iken
+solver **bonus zamanlamasını** kanıtlar: bonus blok(lar)ın sırasıyla en geç `moves − 1 − P` hamlesinde doğru yerleştiği
+bir en kısa çözüm vardır (oyuncu bonusu almadan önce de en az P hamlelik hata payına sahiptir ve sayaç bölüm bitmeden 0
+olmaz). Kanıt yoksa `bonus_late` (error) ve `k = 0` kullanılır. `min` bonusu yok sayar (her yerleşim bir hamledir).
+**Örnek:** Bölüm 10 v3: `min` 20, Zor P 1, `a` 0, bir bonus (+2): `moves` = 20 + 1 − 2 = 19; bonus en geç 19 − 1 − 1 =
+17. hamlede alınmalı. Kanonik çözümde bonus blok 7. hamlede konur → 7. hamle sonunda sayaç 19 − 7 + 2 = 14, kalan 13
+hamle, bölüm sonunda pay 1 = P → geçerli. Bölüm 9 v3 (tanıtım, k = 0): `min` 19, P 4 → `moves` 23 ve bonus +2 saf pay.
+
+#### ÖNERİ K-63 Döşeme aileleri (tuzaksız Kolay/Normal için doğrulayıcı uyarısı)
+**Kural:** 2 sütunlu şantiyede bir rengin "alt satırı dolu" şekilleri (`D2_90`, `O4_0`, `C3_0`, `C3_270`, `L4_0`,
+`J4_0`) ile "sütun" şekilleri (`D2_0`, `I3_0` ve L/J/T'nin 3 hücreli sütunu) birbirinin bölgesine girebilir ve ✓-tuzağı
+üretir. Kolay ve Normal bölümde her renk için şu ikisinden biri doğru olmalıdır: (a) o rengin tek renkli blokları tek
+aileden (alt satırı dolu ailelerden yalnız biri, sütun ailesinden yalnız biri) ve aileler K-34 ile korunur (bir aile
+ancak öbürünün bloğu yerleşince oraya inebilir); (b) solver o bölümde `trapCount` = 0 kanıtlar. (a) sağlanmazsa
+`tile_family_mix` (warn; solver kanıtı varsa susar). İki renkli bloklar (K-57) kendi renk çiftlerinin ailesidir.
+**Örnek:** Hikaye 1 taslağı: `C3_0` G (alt satırı dolu) ile `D2_90` G aynı bölümde → `D2_90` G, `C3_0` G'nin alt
+satırına inebilir ve tek `G` hücresi döşenemez kalır (✓-tuzağı) → `tile_family_mix`. Bölüm 6 v3: `C3_270` W tek W
+alt-dolu bloğu, `D2_90` W yok → uyarı yok.
+
+#### v3 kenar durumları (ÖNERİ; onaydan sonra §13 tablosuna E-xx olarak taşınır)
+
+| Kimlik (geçici) | Durum | Çözüm |
+|---|---|---|
+| V3-1 | Paletin üst katmanı tutulup paletin kendi hücrelerine (başlangıç) bırakılır | İptal (K-07 satır 1); hamle yok |
+| V3-2 | Paletin üst katmanı kaldırılırken alt katman sargılı | Doğrulayıcı reddeder (K-59 madde 5): sargılı yalnız üst katman |
+| V3-3 | Makaslı blok hatalı yere düşer, geri seker | Sargılar kalmaz değil, **kalır**; tetik yalnız doğru yerleşim |
+| V3-4 | Makaslı ve bonus aynı blokta, son hamle | Adım 4 bonus, adım 5 sargı; adım 11 kazanma denetimi |
+| V3-5 | Bonus bloğun yerleşimiyle dilim biter ve sayaç 0 | Adım 4'te sayaç 0 + 2; adım 8 dilim geçişi; kayıp yok |
+| V3-6 | İki renkli blok Boya Kapısı'ndan geçer | Renk değişmez (K-57 madde 5); geçiş serbest |
+| V3-7 | Kaygan blok paletin üstüne park edilir, palet katmanı alınınca | Palet hücreleri bir alt katmanla dolu kalır; kaygan blok düşmez. Son katman da alınınca adım 6'da düşer |
+| V3-8 | Çekiç sargısız bloğa | K-36 `booster.hammer.noTarget` (malzeme kırılmaz) |
+| V3-9 | Geri Al, makas yerleşiminden sonra | Makaslı blok sahaya, bütün sargılar geri; bonus da geri |
+| V3-10 | D3a (K-30) palet sırası yüzünden döşenebilir ama erişilemez durum | D3a erişimi yok sayar; D3b/makro çizge (LEVELS §8.10 U-v3-2) yakalar; Kolay/Normal'de tasarım gereği oluşmaz (solver kanıtı) |

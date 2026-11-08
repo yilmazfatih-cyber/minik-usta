@@ -546,3 +546,122 @@ tasarım notu, test gerektirmez.
 - **—2** — Aynı bölümde tek `gravity.build` değeri olur.
 
 Kullanılmayan not yok; her `N01…N43` en az bir hücrede geçer; N44–N47 (Faz 2R) matris dışı genel notlardır. Matris, `docs/OBSTACLES.md` üretilirken bir betikle kontrol edildi: 26 engel, 325 çift, her çift tam bir kod taşır.
+
+---
+
+## Bölümler v3 blok özellikleri — ÖNERİ (G1, 2026-11-08)
+
+Sahip: product-lead · Durum: **ÖNERİ** (orkestratör/proje sahibi onayı ve code-lead uygulaması bekleniyor). Kurallar
+GDD §16'daki ÖNERİ K-57…K-61'dedir; burada engel kartı biçiminde özetlenir. Bu bölümdeki kimlikler (Y9–Y13) yukarıdaki
+"Veri imzası" tablosuna onaydan sonra code-lead paketinde girer (tablo `mechanics.test` ve `rule-coverage` tarafından
+okunur; onaysız satır testleri kırar). Bilgi kartı metinleri i18n'e henüz girmedi (design-lead ton denetimi + code-lead
+anahtar ekler); bu yüzden aşağıda «…» ile yazıldı.
+
+**Seçim (systems-designer yöntemi: aday → ölçülebilir gerekçe).** Orkestratörün 10 adayı ve benim 3 ek adayım şu
+ölçütle puanlandı: (a) yeni bir **karar** yaratıyor mu (K-50 `choices`, `ahaMin`, `depLater` üzerindeki beklenen etki),
+(b) **görsel okunurluk** (renk körü dahil, tek bakışta), (c) **adalet** (bilgi gizlenmez, şans yok), (d) **çözücü
+maliyeti** (durum uzayı çarpanı), (e) **tam örtü uyumu** (K-47/K-48), (f) mevcut bir engelle **çakışma**.
+
+| Aday | Karar | Okunur | Adil | Çözücü | K-47 | Çakışma | Sonuç |
+|---|---|---|---|---|---|---|---|
+| İki renkli blok | şekil+yön kararı geri gelir | yüksek (hücre başına renk) | evet | ×1 | evet | yok | **SEÇİLDİ → Y9** |
+| Palet (katmanlı yığın) — *product-lead önerisi* | z ekseninde kazı; çok blok | yüksek (katman şeridi + ×n) | evet | × Π(kᵢ+1), küçük | evet | yok | **SEÇİLDİ → Y10** |
+| Sargılı blok + Makas ("sargılı" adayı) | uzaktan sıra bağımlılığı | yüksek (kurdele + makas ikonu) | evet (renk görünür) | ×1 (makas konumundan türetilir) | evet | Y3 Zincir'den farklı tetik | **SEÇİLDİ → Y11** |
+| Bonus blok (+2 hamle) | öncelik kararı; ödül anı | yüksek ("+2" madalyon) | evet | sayaç kaynağı (A* + kaynak) | evet | Altın Mala ile ayrışır | **SEÇİLDİ → Y12** |
+| Kaygan blok | yüksek park yasak → park yeri kararı | orta (buz parıltısı) | evet | uzayı **küçültür** | evet | Y6'nın tek blokluk hâli | **SEÇİLDİ → Y13** (Hikaye 2) |
+| Ağır blok (yalnız vinçle) | yok (güçlendiriciye bağlar) | orta | **hayır** (ücretli güce bağlı) | — | — | Y5 adı | RET |
+| Renk değiştiren blok | zamanlama | orta | evet | × periyot; K-47 renk eşitliği dinamikleşir | kısmen | W6 jokerli D3a gerekir | ERTELENDİ (Hikaye 3+) |
+| Çift yerleşim | belirsiz tanım | — | — | — | — | — | RET (kodlanamaz tanım) |
+| Gizli renkli paket | — | — | **hayır** (bilgi gizler) | — | — | K-18 ilkesi | RET |
+| Yapışkan harç / cam | var (Y8, S3) | — | — | — | — | — | mevcut, ilk bölüm değişmez |
+
+### Y9 — İki Renkli Blok (ÖNERİ)
+- **Bölge:** saha (etkisi şantiyede) · **İlk bölüm (öneri):** 5
+- **Kural:** Bloğun her hücresinin kendi rengi vardır (`colors`, hücre sırası şeklin (y, x) sırası). K-16 doğru yerleşim
+  her hücrede kendi rengini ister; döndürme yoktur, bu yüzden `D2_90` "WY" ile "YW" farklı bloklardır. Arz/talep (K-47)
+  hücre rengiyle sayılır. Gölge (K-18) hücre başına ✓/! gösterir.
+- **Veri:** `PiecePlacement.colors: "WY"` (uzunluk = hücre sayısı, en az iki farklı renk); `color` = ilk hücrenin rengi.
+- **Örnek:** Plan satırı `"WY"` (x0 W, x1 Y): `D2_90` "WY" doğru; `D2_90` "YW" aynı yerde `!` (iki hücre de yanlış).
+- **Okunurluk:** hücre başına renk + renk deseni; iki hücre arasında perçinli ek yeri (tek blok olduğu anlaşılır).
+- **Eğlence gerekçesi:** tek renkli satırlarda kaybolan **şekil/yön kararını** geri getirir; karışık satırlı planlar
+  ("WY/YW" pencere) yalnız doğru iki renkliyle dolar.
+- **Bilgi kartı** (ÖNERİ, anahtar `obs.y9.desc`): TR «İki renkli blok: her rengi kendi yerine gelmeli.» · EN «Two-tone block: each colour must match its spot.»
+
+### Y10 — Palet (ÖNERİ)
+- **Bölge:** saha · **İlk bölüm (öneri):** 3
+- **Kural:** Palet, aynı şekilde 2–4 malzeme bloğunun aynı hücrelerde üst üste (z) durduğu yığındır. Yalnız en üst katman
+  tutulabilir (K-09); alttaki katmanlar paletin hücrelerini doldurur. Üst katman kaldırılınca bir alttaki aynı anda
+  "üst" olur (hücreler dolu kalır). Kaldırılan katman palete geri **konamaz**; başlangıç konumuna bırakılırsa hamle
+  iptaldir (K-07 satır 1) ve katman yeniden üst olur. Son katman kalkınca hücreler boşalır. Her katman ayrı bloktur:
+  blok sayısına, arz/talebe (K-47) ve kazanma koşuluna (K-48) girer.
+- **Veri:** parçada `stack: { id, z }` (aynı `id`'li parçalar aynı şekil ve çapa; `z` 0 = en alt, ardışık).
+- **Örnek:** Palet (4,0) `D2_90` [üst W, orta Y, alt W]: üst W şantiyeye konur → orta Y üst olur; Y sahaya (0,3)'e park
+  edilir → alt W üst olur.
+- **Okunurluk:** tahta palet tabanı; alt katmanlar sağ-alt kenarda 6 px'lik renkli şeritler olarak görünür (bütün
+  sıra her an okunur), sağ üstte "×n" rozeti; üst kalkınca alttaki "pop" ile yükselir (JUICE).
+- **Eğlence gerekçesi:** ekranı taşırmadan **blok kütlesini** artırır (2 hücrelik yer, 3 blok); "z kazısı" sırası
+  ("üsttekini şimdi mi kullanayım, park mı edeyim?") yeni karar üretir.
+- **Bilgi kartı** (ÖNERİ, anahtar `obs.y10.desc`): TR «Paletten hep en üstteki alınır.» · EN «Take from the top of the pallet.»
+
+### Y11 — Sargılı Blok ve Makas (ÖNERİ)
+- **Bölge:** saha (tetik şantiyede) · **İlk bölüm (öneri):** 7
+- **Kural:** `wrapped` bayraklı blok tutulamaz (K-09 (c)), Vinçle seçilemez; rengi ve şekli görünür. Bölümde tam bir
+  `scissors` bayraklı blok vardır. Makaslı blok K-16'ya göre **doğru** yerleştiği hamlenin 5. adımında (K-35) sahadaki
+  bütün sargılar kalkar. Çekiç (K-36) tek sargıyı keser (bloğu kırmaz). Geri Al ve Söküm sargıları geri getirir.
+- **Veri:** `flags: ["wrapped"]`, `flags: ["scissors"]`; makaslı blok sargılı olamaz.
+- **Örnek:** Makaslı `D2_90` R gömülü; üstündeki iki blok park edilip makaslı blok şantiyede (4,0)'a doğru konur → aynı
+  hamlede üç sargılı blok serbest kalır.
+- **Okunurluk:** şeffaf streç film + kurdele fiyonku (renk ve desen olduğu gibi görünür); makaslı blokta makas ikonu;
+  sargılı bloğa dokununca kurdele titrer ve makaslı blok 1 kez parlar (ipucu, K-34 kanca 5 gibi).
+- **Eğlence gerekçesi:** "önce anahtarı bul" düzeninde uzaktan **sıra bağımlılığı** kurar; tek yerleşim üç bloğu açar
+  (doyurucu zincirleme an). Y3 Zincir komşu hareketiyle, Y11 bir yerleşimle açılır: ayrı karar.
+- **Bilgi kartı** (ÖNERİ, anahtar `obs.y11.desc`): TR «Makaslı bloğu yerleştir, paketler açılsın.» · EN «Place the scissors block to unwrap the rest.»
+
+### Y12 — Bonus Blok (ÖNERİ)
+- **Bölge:** saha (tetik şantiyede) · **İlk bölüm (öneri):** 9
+- **Kural:** `bonus` bayraklı blok doğru yerleştiği hamlenin 4. adımında (K-35, maliyetten sonra) hamle sayacına
+  `bonusMoves` (varsayılan 2) ekler. Hatalı yerleşim ve kaydırma bir şey vermez. Bölümde en çok 2 bonus blok. Geri Al ve
+  Söküm bonusu geri alır. Bütçe etkisi GDD ÖNERİ K-62'de.
+- **Veri:** `flags: ["bonus"]`, isteğe bağlı `bonusMoves: 1–3` (varsayılan 2).
+- **Örnek:** Sayaç 6; bonus blok doğru konur → 6 − 1 + 2 = 7.
+- **Okunurluk:** blokta altın "+2" madalyon; yerleşince madalyon hamle sayacına uçar.
+- **Eğlence gerekçesi:** **öncelik kararı** ("bonusu erken kaz, sonra rahat oyna") ve olumlu sürpriz; zorluğu bütçeyle
+  değil ödülle yumuşatır (abartısız zorluk isteği).
+- **Bilgi kartı** (ÖNERİ, anahtar `obs.y12.desc`): TR «Bonus blok yerine oturunca +2 hamle verir.» · EN «A bonus block gives +2 moves when placed.»
+
+### Y13 — Kaygan Blok (ÖNERİ; Hikaye 2)
+- **Bölge:** saha · **İlk bölüm (öneri):** 13
+- **Kural:** `slippery` bayraklı blok sahada desteksiz kalamaz: `gravity.yard` kapalı olsa da hamle sonu 6. adımda (K-35)
+  altında boşluk varsa düşer (K-20 kuralıyla, yalnız bu blok). Şantiyede sıradan bloktur.
+- **Veri:** `flags: ["slippery"]`.
+- **Örnek:** Kaygan `D2_90` (0,3)'ten (3,4)'e park edilir; (3,3)–(4,3) boş, (3,2)–(4,2) dolu → adım 6'da (3,3)'e iner.
+- **Okunurluk:** mavi buz sırı, alt kenarda damla; düşüşte kısa kayma izi.
+- **Eğlence gerekçesi:** "yükseğe park" (T7) seçeneğini kapatır → park yeri kararı; ayrıca çözücü uzayını küçültür.
+- **Bilgi kartı** (ÖNERİ, anahtar `obs.y13.desc`): TR «Kaygan blok havada durmaz, aşağı kayar.» · EN «Slippery blocks slide down; they never float.»
+
+### v3 imza önerileri (onaydan sonra "Veri imzası" tablosuna; bu tablo araçlarca okunmaz)
+
+| Mekanik | Veri imzası | İlk bölüm |
+|---|---|---|
+| Y9 | herhangi bir parçada `colors` | 5 (öneri) |
+| Y10 | herhangi bir parçada `stack` | 3 (öneri) |
+| Y11 | `wrapped` ya da `scissors` | 7 (öneri) |
+| Y12 | `bonus` | 9 (öneri) |
+| Y13 | `slippery` | 13 (öneri) |
+
+**Taşınan ilk bölümler (ÖNERİ, v3 eğrisi; LEVELS §8.2):** W1 Sabit Geçit 4 → 11, W2 Yüksek Duvar 6 → 12 (yalnız
+boyu ≤ 2 şekillerle), Y5 Ağır Yük 8 → 14, W3 Dar Geçit 9 → 16; S9 Geniş Şantiye 12 → 18. Hikaye 1 yeni oyuncaklara
+(şekil + 4 özellik) ayrılır; eski mekanikler Hikaye 2'de bir ritimle döner.
+
+### v3 aynı bloktaki birleşimler (ÖNERİ)
+
+| | colors (Y9) | stack (Y10) | wrapped | scissors | bonus | slippery | glass | mortar | chained | wet |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **colors** | — | ✓ (katman iki renkli olabilir) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **stack** | | — | ✓ (yalnız en üst katman sargılı olabilir) | ✓ | ✓ | ✗ (katman havada durmaz) | ✗ | ✗ | ✗ | ✗ |
+| **wrapped** | | | — | ✗ | ✓ | ✓ | ✓ | ✓ | ✗ (iki kilit) | ✗ (iki kilit) |
+| **scissors** | | | | — | ✓ | ✓ | ✗ (kırılıp dönmesi tetiği belirsizleştirir) | ✓ | ✗ | ✗ |
+| **bonus** | | | | | — | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **slippery** | | | | | | — | ✓ | ✓ | ✓ | ✓ |
+
+✓ izinli · ✗ doğrulayıcı reddeder (öneri kod: `flag_combo_forbidden`). Ağır Yük (I5/Q9) v3 özelliklerinin hiçbirini almaz.

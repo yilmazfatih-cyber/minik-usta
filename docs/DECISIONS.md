@@ -646,3 +646,14 @@ bütçesini Zor ile eşitler; bu yüzden **P = 2 kalır**. Bölüm 10 `moves` 14
 `greedyExcess > P` (açgözlü en iyi yolda bile kaybeder) ya da beceri botu bandı olarak yeniden tanımlanır; (2) ölçek sütunları
 Bölüm 1–4 için revize edilir; (3) Bölüm 5, 7, 10 U-4 (makro çizge) sonrası Tablo B'ye çekilir. O güne kadar `puzzle_greedy_easy`
 uyarıları (Bölüm 5, 7) bilinçli ve görünür kalır. Yazıldığı yer: `docs/LEVELS.md` §6.11.
+
+### ÖNERİ P-G1-1 — Bölümler v3: yeni şekiller, dört blok özelliği, blok kütlesi, eski mekanikler Hikaye 2'ye (product-lead, 2026-11-08)
+Durum: ÖNERİ. Proje sahibinin 2026-11-08 isteği ("daha çok blok, daha farklı şekil ve özellik, uğraşılabilir ama
+abartısız") üzerine: (1) Hikaye 1'de L4/J4 (2), T4 (6), I3 (8) dikey yönelimleriyle açılır (GDD ÖNERİ K-56; K-44
+tablosu değişir); (2) dört blok özelliği: Y10 Palet (3), Y9 İki Renkli (5), Y11 Sargı + Makas (7), Y12 Bonus (9); Y13
+Kaygan Hikaye 2'de (13) (GDD ÖNERİ K-57…K-61, OBSTACLES v3); (3) blok sayısı 8 → 16 (toplam 70 → 124), `min` ≤ 20,
+Bölüm 10 Zor kalır (testere dişi), puan bandı LEVELS §8.6; (4) W1 → 11, W2 → 12, Y5 → 14, W3 → 16, S9 → 18; (5) hamle
+bütçesine bonus eki (ÖNERİ K-62) ve döşeme ailesi uyarısı (ÖNERİ K-63). Gerekçe: oyun testi raporu
+`docs/review_inbox/levels-v3-playtest.md` (%70 yatay domino, %96 tek renkli plan satırı, `greedyWin` 1–9'da 1,00).
+Bağımlılık: code-lead U-v3-0…4 (LEVELS §8.10; önce D3a tamlık hatası H1), design-lead 6 kaplama karesi ve 6 öğretici
+anahtarı (§8.9). Açık sorular LEVELS §8.11.
