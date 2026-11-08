@@ -2005,3 +2005,13 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
 - [product-lead → design-lead] **G1 Bölümler v3 sunumu:** 6 yeni kaplama/ikon karesi (palet tabanı + katman şeridi, ek yeri perçini, film +
   fiyonk, makas ikonu, "+2" madalyon, buz sırı), 6 yeni öğretici anahtarı (`tut.m.smallfirst`, `pallet`, `twotone`, `order`, `wrap`, `bonus`),
   `tut.m.hammer` metni ("Çekiç sargıyı keser") ve `obs.y9…y13.desc` ton denetimi: LEVELS §8.9, OBSTACLES "Bölümler v3". ÖNERİ onaylanınca.
+- [product-lead → code-lead] **G1b Bölümler v3.1 (design-lead incelemesi işlendi):** U-v3 paketine eklenenler (LEVELS §8.10):
+  doğrulayıcı kodları `colors_low_contrast`, `stack_mixed`, `pallet_capacity`, `scissors_blocked`, `scissors_trivial`,
+  `trait_overlay_many` (tam tablo §8.10); K-30 D1 genişlemesi ("tutulabilir blok var ama iptal dışı hedef yok" → Söküm);
+  güçlendirici hedef kümeleri GDD ÖNERİ K-66; ölçütler `liftRatio`, `shapeDecisions`, `traitDelta` (yok sayan bot kipi),
+  `visibleAtStart` (GDD ÖNERİ K-64). Sıra: H1 → Bölüm 6 ölçüm spike'ı (makro çizge sağlamlık testi, D3a "bilinmiyor" oranı)
+  → ancak sonra Bölüm 7–10 JSON'u. Bonus Hikaye 1'de `k` = 0: `moves_budget` doğrulayıcısı Hikaye 1 için değişmez.
+- [product-lead → design-lead] **G1b sunum (DL-V3 kapanışları):** kaplama/ikon kareleri 8 (LEVELS §8.9: palet dudağı +
+  çentik, film kenarı, yatay kurdele + fiyonk, makas rozeti, krem hamle rozeti "+n", perçinli dikiş, desteksiz hücre
+  işareti; Hikaye 2: sonraki katman kenarı + gözetleme, buz sırı). Karışık palet Hikaye 1'de yok (Karar 7; tek ayrılık
+  noktası, gerekçesi inceleme dosyasının kapanışında). Bölüm 8 öğreticisi bağlamsal. Koridor testi (Bölüm 3/5/7) gri kutuyla.

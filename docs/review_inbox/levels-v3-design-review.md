@@ -221,3 +221,40 @@ TR + EN yazılır; benim işim.
 6 yeni kaplama/ikon karesi (§8.9) bu incelemeyle **8**'e çıkar: palet dudağı + çentik (DL-V3-02/03), sonraki katman
 kenarı (DL-V3-01), film kenarı, yatay kurdele + fiyonk, makas rozeti, hamle rozeti (+n), desteksiz hücre işareti
 (DL-V3-22), (Hikaye 2) buz sırı. Hepsi önce gri kutu, sonra ART_REFERENCE rubriğiyle.
+
+## product-lead kapanışı (G1b, 2026-11-08)
+
+Yöntem: stüdyo şablonu `design-review` kapanış biçimi (bulgu → seçenek → seçim → yer → doğrulama). Her bulgu GDD §16,
+LEVELS §8 ya da OBSTACLES "Bölümler v3" içinde kapatıldı. Plan düzeyi tuzak taraması yeniden renklendirilmiş 10 planla
+yeniden koşuldu: hepsi çözülebilir, ✓-tuzağı 0 (resmî değildir; resmî ölçüm code-lead U-v3 paketinden sonra).
+Durum: **KAPANDI** = metin ve kural yazıldı; **KAPANDI (bağımlı)** = kural yazıldı, uygulaması başka ajanda.
+
+| Bulgu | Önem | Seçim | Nerede | Durum |
+|---|---|---|---|---|
+| DL-V3-01 | Engel | A, Hikaye 1 boyunca: palet tek tipli (aynı şekil, renk(ler), bayrak); karışık palet Hikaye 2'de, en çok 2 katman, kendi tanıtım bölümüyle, gözetleme + sonraki katman kenarı çizildikten sonra. design-lead'in "L6'dan 2 katman" seçimi alınmadı: L6/L8/L10'a ikinci yeni fikir olurdu (K-45 madde 10). Bölüm 3 paletleri W×2 ve G×2 (sahanın büyümesiyle 2 katman; görünen öğe 8 kalır). z kazısı kararı tek tipli palette de var: paletin altındaki blok (Bölüm 4, 10). | LEVELS §8.1 Karar 7, §8.4, §8.7; GDD ÖNERİ K-65 madde 1 (`stack_mixed`); OBSTACLES Y10 | KAPANDI |
+| DL-V3-02 | Önemli | Kabul: gri-mavi metal kızak, 2 çıta, 16 design px dudak; ahşap rengi/damar yok | OBSTACLES Y10 Okunurluk; LEVELS §8.9 | KAPANDI (bağımlı: design-lead sanatı) |
+| DL-V3-03 | Önemli | Kabul: katman sayısı çentikle; bonus rozeti HUD hamle simgesi + "+2", krem, Ø 56, altın yok; blokta en çok bir rakamlı rozet, `bonus` + `wet` yasak | OBSTACLES Y10, Y12, birleşim tablosu; GDD ÖNERİ K-65 madde 4 | KAPANDI |
+| DL-V3-04 | Önemli | Kabul: film kenarı (4 px taşan, %35), tek yatay kurdele, 48 px fiyonk, çapraz çizgi/kilit yok; makas rozeti 56 px | OBSTACLES Y11; LEVELS §8.9 | KAPANDI (bağımlı: design-lead sanatı) |
+| DL-V3-05 | Önemli | Kabul: blok başına en çok bir kaplama (`trait_overlay_many`, warn); ayrıca palet katmanı Hikaye 1'de bayraksız (`stack_mixed`, error) | GDD ÖNERİ K-65 madde 2; OBSTACLES birleşim tablosu (H1 ✗ / H1 ⚠); LEVELS §8.7 | KAPANDI |
+| DL-V3-06 | Önemli | Kabul: Hikaye 1 çiftleri W–Y, R–Y, W–G, G–Y (`colors_low_contrast`). Yeniden renklendirme birebir eşlemeyle (tuzak yapısı korunur): Bölüm 7 W→Y ("YR"/"RY", ΔE 59), Bölüm 9 R→G, Bölüm 10 R→Y ("GY"/"YG", "GW"/"WG", palet "WY"); dikiş 2 perçin | LEVELS §8.1 Karar 8, §8.7; GDD ÖNERİ K-57 madde 7, K-65 madde 3; OBSTACLES Y9 | KAPANDI |
+| DL-V3-07 | Önemli | A: Hikaye 1'de bonus ödül anı, `k` = 0, Bölüm 10'dan çıktı (hamle 21 = 20 + 1); B (bağlayıcı son tarih + HUD "19 (+2)") Hikaye 2'de. `moves_budget` formülü açık: `moves + B·k − min − P ∈ [0, a_max]`; Hikaye 1'de bugünküyle aynı | GDD ÖNERİ K-60 madde 6, K-62; LEVELS §8.5, §8.11 madde 4 | KAPANDI |
+| DL-V3-08 | Önemli | Kabul: `traitDelta` ≥ 10 kapısı (Y12 muaf; Y10'un kapısı Bölüm 4'te: Bölüm 3 kural öğretir), yok sayan kip tanımları; `shapeDecisions` ≥ 2 Normal ve Zor'da kapı; Bölüm 3/5/7 koridor testi (5 kişi, ≥ 4/5 iki soru) sanat öncesi | GDD ÖNERİ K-64; LEVELS §8.6, §8.10 U-v3-3 | KAPANDI (bağımlı: code-lead bot kipi; koridor testi için oyuncu — §8.11 madde 7) |
+| DL-V3-09 | Önemli | C + B: `liftRatio` ≥ 0,60 her bölümde kapı; üst satıra yalnız ilk hamlesi park olan blok. Ek: Bölüm 3–5 sahası 6×5 ve duvar 5 → 1–5 ve 7'de üst satır yok (A kendiliğinden); 6, 8, 9, 10'da C + B, tutmazsa A | LEVELS §8.1 Karar 9, §8.4 "Üst satır" sütunu, §8.8 madde 6; GDD ÖNERİ K-64 madde 1 | KAPANDI |
+| DL-V3-10 | Önemli | Kabul: `pallet_capacity` (`E ≥ 2 + max(hücre × (katman − 1))`, Kolay error, Normal/Zor warn); D1 genişlemesi ("tutulabilir blok var ama iptal dışı hedef yok"); Bölüm 4 yeniden: saha 6×5, E 10, tek palet W×3 (alt sınır 6). Bütün 10 satır alt sınırı tutar (§8.4 `pal.cap`). V3-10 kenar durumu düzeltildi (D3b dayanağı geri çekildi) | GDD ÖNERİ K-58 madde 8, "K-30 değişikliği: D1 genişlemesi", V3-10; LEVELS §8.4 | KAPANDI (bağımlı: code-lead D1 + doğrulayıcı) |
+| DL-V3-11 | Önemli | Kabul: `scissors_blocked` (error), `scissors_trivial` (warn); üretici kısıtı | GDD ÖNERİ K-59 madde 6, V3-14; LEVELS §8.8 madde 6, §8.10 kod tablosu | KAPANDI |
+| DL-V3-12 | Önemli | Kabul (Fırça'da ince ayarla): Vinç ve Altın Mala yalnız tutulabilir (palet üstü, sargısız); Fırça yalnız palet üst katmanı ve yalnız Hikaye 2+ (Fırça 22'de açılır; takas paleti karıştırabilir, kenar/gözetleme gerekir); Fırça sargılıyı seçebilir; Çekiç yalnız sargı | GDD ÖNERİ K-66, V3-11…V3-13; OBSTACLES Y10 "Güçlendiriciler" | KAPANDI |
+| DL-V3-13 | Önemli | Kabul: Bölüm 8 öğreticisi bağlamsal (sargılıya 2. dokunuşta Çekiç yuvası + `tut.m.hammer`; `done` = `boosterUsed` ya da makas yerleşimi); aha "makas her şeyi açar, Çekiç kestirme" | LEVELS §8.7 Bölüm 8 kartı; OBSTACLES Y11 | KAPANDI |
+| DL-V3-14 | Önemli | B, olmazsa A: makro çizge sağlamlık testi (tam taramanın bittiği bütün bölümlerde ölü küme birebir); A'nın somut biçimi Bölüm 6–10 iki kat, 6×5, N 12–14; Bölüm 6 spike'ı (süre, bellek, `complete`, D3a "bilinmiyor" oranı, eşik %1) gelmeden 7–10 JSON'u yok | LEVELS §8.10 U-v3-2, §8.7 Bölüm 6 kartı | KAPANDI (bağımlı: code-lead spike) |
+| DL-V3-15 | Önemli | Kabul: Bölüm 10 en çok 3 özellik (iki renkli, palet, sargı + makas), bonus yok, ikizler güçlü çiftlerden, orta bot %50–60, `branch3` 0,10–0,20, `greedyWin` 0,10–0,30, `ahaMin` 1–2; testere dişi ve Bölüm 11 nefes korunur | LEVELS §8.5, §8.6, §8.7 Bölüm 10 | KAPANDI |
+| DL-V3-16 | Öneri | Kabul: R Bölüm 4'te (tek renkli, öğreticisiz; G→R eşlemesi); Bölüm 5'in tek yeni fikri iki renkli | LEVELS §8.7 renk satırı, Bölüm 4/5 kartları | KAPANDI |
+| DL-V3-17 | Öneri | Kabul: `visibleAtStart` izleme ölçütü (K-64 madde 4); eğri 8, 8, 8, 8, 10, 11, 12, 12, 13, 14 (tekdüze); katman gölgesi §8.9 | LEVELS §8.4; GDD ÖNERİ K-64 | KAPANDI |
+| DL-V3-18 | Öneri | Kabul: H1 yalnız doğrulayıcı (`tileLevel`); "muhtemelen çalışma zamanı" cümlesi düzeltildi | LEVELS §8.10 U-v3-0 | KAPANDI |
+| DL-V3-19 | Öneri | Kabul: EN "color" | OBSTACLES Y9 kartı | KAPANDI |
+| DL-V3-20 | Öneri | Kabul: rozetlerde taç, kral, altın-mor yok; D-101'in web `DECISIONS.md`'ye yazılması orkestratöre | OBSTACLES Y12; LEVELS §8.9, §8.11 madde 6 | KAPANDI (bağımlı: orkestratör) |
+| DL-V3-21 | Öneri | Kabul: 6×7 / 6×8 ve N 18–22 Hikaye 2 finalinde; proje sahibine açıkça bildirilsin | LEVELS §8.1 Karar 6, §8.11 madde 2 | KAPANDI (bildirim orkestratörde) |
+| DL-V3-22 | Öneri | Kabul: desteksiz hücre kesik kontur + aşağı ok (Bölüm 2 aha'sı) | LEVELS §8.7 Bölüm 2 kartı, §8.9 | KAPANDI (bağımlı: design-lead sanatı) |
+
+**design-lead'den ayrıldığım tek nokta:** DL-V3-01'de karışık paleti Hikaye 1'den tamamen çıkardım (orkestratör onayı
+LEVELS §8.11 madde 5). Gerekçe 3 satır: (1) Bölüm 6–10'un her birinin zaten bir yeni fikri var; karışık palet ikinci olurdu
+(K-45 madde 10). (2) Hikaye 1 yeni sanat kapısına (gözetleme) bağlanmaz. (3) Tek tipli palette de z kazısı kararı
+paletin altındaki blokla kurulur ve `traitDelta` ile Bölüm 4'te ölçülür.

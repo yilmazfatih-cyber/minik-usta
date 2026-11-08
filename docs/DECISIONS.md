@@ -657,3 +657,11 @@ bütçesine bonus eki (ÖNERİ K-62) ve döşeme ailesi uyarısı (ÖNERİ K-63)
 `docs/review_inbox/levels-v3-playtest.md` (%70 yatay domino, %96 tek renkli plan satırı, `greedyWin` 1–9'da 1,00).
 Bağımlılık: code-lead U-v3-0…4 (LEVELS §8.10; önce D3a tamlık hatası H1), design-lead 6 kaplama karesi ve 6 öğretici
 anahtarı (§8.9). Açık sorular LEVELS §8.11.
+**G1b revizyonu (product-lead, 2026-11-08; design-lead incelemesi DL-V3-01…22):** (a) Hikaye 1'de palet tek tiplidir,
+karışık palet Hikaye 2'de gözetleme + sonraki katman kenarıyla (ÖNERİ K-65 madde 1); (b) iki renkli bloklar yalnız W–Y,
+R–Y, W–G, G–Y (K-65 madde 3); Bölüm 4, 7, 9, 10 birebir renk eşlemesiyle yeniden renklendi; (c) Bonus Hikaye 1'de ödül anı,
+`k` = 0, Bölüm 10'dan çıktı (Bölüm 10 hamle 21; K-62 doğrulayıcı formülü açık yazıldı); (d) yeni kapılar `pallet_capacity`,
+`scissors_blocked`, `liftRatio` ≥ 0,60, `shapeDecisions` ≥ 2, `traitDelta` ≥ 10 (ÖNERİ K-58 madde 8, K-59 madde 6, K-64);
+(e) güçlendirici × özellik kuralları (ÖNERİ K-66) ve K-30 D1 genişlemesi; (f) R rengi Bölüm 4'e; Bölüm 3–5 sahası 6×5;
+(g) çözücü kanıtı: makro çizge sağlamlık testi (B), olmazsa Bölüm 6–10 iki kata iner (A); Bölüm 6 spike'ı gelmeden 7–10
+JSON'u yazılmaz. Ayrıntı ve kapanışlar: LEVELS §8, `docs/review_inbox/levels-v3-design-review.md` sonu.
