@@ -41,9 +41,11 @@ import type { TurnSummary } from './summary.ts';
  * Core rules version (K-43 item 4): bump it whenever a rule change can change the replay of a saved log. 2 = Faz 2R
  * (full cover K-47/K-48, sizes K-49, Söküm K-30, new boosters, Zobrist frame positions; TECH §2R.0 item 4). 3 = D-099
  * (K-55 item 8, K-30: a D1 the rules cannot lift is a Söküm with cause `access`, never a reshuffle; after an accepted
- * +5 offer the D1 Söküm goes back to the start of the last action). An attempt saved with 2 is voided (E-67).
+ * +5 offer the D1 Söküm goes back to the start of the last action). 4 = levels v3 (GDD §16, `schemaVersion` 3: two-tone,
+ * pallet, wrap + scissors, bonus and slippery blocks; v3 flags in the Zobrist class; D1 widening — blocks that can be
+ * held but have no release other than a cancel are D1 too). An attempt saved with an older version is voided (E-67).
  */
-export const RULES_VERSION = 3;
+export const RULES_VERSION = 4;
 /** K-29: moves of an accepted offer. */
 export const OFFER_MOVES = 5;
 /** K-29: offers per attempt (ad or coins). */

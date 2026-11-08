@@ -17,11 +17,17 @@ import { COLOR_CODES } from '../types.ts';
 import type { ColorCode, ShapeId } from '../types.ts';
 import { DEFAULT_SIZES, MAX_BOARD_ROWS, MAX_COLS, MAX_SITE_COLS, geoFromLevel } from '../geometry.ts';
 import type { BoardGeo } from '../geometry.ts';
-import { FORBIDDEN_SHAPES, HEAVY_MIN_LEVEL_ID, KIND_FIRST_CHAPTER, shapeById } from '../shapes.ts';
+import {
+  FORBIDDEN_SHAPES,
+  HEAVY_MIN_LEVEL_ID,
+  KIND_FIRST_CHAPTER,
+  KIND_FIRST_LEVEL_V3,
+  shapeById,
+} from '../shapes.ts';
 import type { ShapeDef } from '../shapes.ts';
-import { LevelSchema, isFixedYardLevel } from './schema.ts';
+import { LevelSchema, V3_FLAGS, isFixedYardLevel, schemaVersionOf } from './schema.ts';
 import type { GapData, LevelData, MechanicId, PieceData, TutCondition } from './schema.ts';
-import { boardHeight, deriveMechanics, isCargo } from './mechanics.ts';
+import { TRAIT_MECHANICS, boardHeight, deriveMechanics, isCargo } from './mechanics.ts';
 import { buildPlans, localIndex } from './plan.ts';
 import type { SegmentPlan } from './plan.ts';
 
@@ -71,6 +77,9 @@ export const CHECK_IDS = [
   'L-30',
   'L-31',
   'L-36',
+  // v3 block traits (GDD §16 K-56…K-65; LEVELS §8.10 U-v3-1)
+  'L-40',
+  'L-41',
 ] as const;
 export type CheckId = (typeof CHECK_IDS)[number];
 
@@ -93,6 +102,7 @@ export const RUNTIME_CHECKS: readonly CheckId[] = [
   'L-26',
   'L-28',
   'L-36',
+  'L-40',
 ];
 
 export interface LogicContext {
@@ -188,6 +198,8 @@ const CHECK_RULE: Readonly<Record<CheckId, string>> = {
   'L-30': 'K-45/8',
   'L-31': 'K-45/10',
   'L-36': 'K-45/11',
+  'L-40': 'GDD 16',
+  'L-41': 'GDD 16',
 };
 
 type Push = (check: CheckId, code: string, path: string, message: string, severity?: Severity) => void;
@@ -447,6 +459,8 @@ export function checkLevel(level: LevelData, ctx: LogicContext = {}): Issue[] {
   if (enabled.has('L-25')) checkCarousel(level, push);
   if (enabled.has('L-26')) checkWet(level, push);
   if (enabled.has('L-31')) checkTutorialLoad(level, push);
+  if (enabled.has('L-40')) checkTraits(level, push);
+  if (enabled.has('L-41')) checkTraitDesign(level, geo, plans, plansUsable, push);
   return issues;
 }
 
@@ -559,13 +573,17 @@ function checkYard(level: LevelData, geo: BoardGeo, push: Push): void {
     if (prev !== undefined) push('L-02', 'overlap', path, `cell (${x},${y}) is already taken by ${prev}`);
     else owner.set(key, path);
   };
-  level.yard.batches[0]?.pieces.forEach((p, i) => {
+  const pieces = level.yard.batches[0]?.pieces ?? [];
+  pieces.forEach((p, i) => {
     const path = `yard.batches[0].pieces[${i}]`;
     const cells = cellsAt(shapeById(p.shape), p.x, p.y);
     if (cells.some((c) => !inYard(c.x, c.y))) {
       push('L-02', 'out_of_yard', path, `${p.shape} at (${p.x},${p.y}) leaves the yard (${where})`);
       return;
     }
+    // v3 Y10 (K-58 item 5): a pallet's layers share its cells; only the top layer claims them (footprint F)
+    if (p.stack && pieces.some((q) => q.stack?.id === p.stack?.id && (q.stack?.z ?? 0) > (p.stack?.z ?? 0)))
+      return;
     for (const c of cells) claim(c.x, c.y, path);
   });
   level.obstacles.forEach((o, i) => {
@@ -605,8 +623,13 @@ function checkShapes(level: LevelData, geo: BoardGeo, push: Push): boolean {
     if (FORBIDDEN_SHAPES.has(id)) bad('shape_forbidden', path, `${id} is forbidden in level data (K-44)`);
     if (debris && cargo)
       bad('shape_forbidden', path, `${shape.kind} (Ağır Yük) may only be used in the yard`);
+    // v3 (`schemaVersion` 3, GDD §16 ÖNERİ K-56): unlock by level id; earlier files keep the K-44 chapter table
+    const firstLevel = schemaVersionOf(level) === 3 && !cargo ? KIND_FIRST_LEVEL_V3[shape.kind] : 0;
     const first = KIND_FIRST_CHAPTER[shape.kind];
-    if (first > level.chapter)
+    if (firstLevel > 0) {
+      if (firstLevel > level.id)
+        bad('shape_locked', path, `${shape.kind} unlocks at level ${firstLevel} (v3 table, K-56)`);
+    } else if (first > level.chapter)
       bad(
         'shape_locked',
         path,
@@ -634,7 +657,10 @@ export function levelColorSet(
 ): ColorCode[] {
   const set = new Set<ColorCode>();
   for (const plan of plans) for (const c of plan.cells) if (c !== null && c !== '.') set.add(c);
-  for (const b of materialBlocks(level)) set.add(b.color);
+  for (const b of materialBlocks(level)) {
+    set.add(b.color);
+    for (const c of b.piece?.colors ?? '') set.add(c as ColorCode); // v3 Y9: every cell colour (K-57 item 3)
+  }
   for (const g of level.wall.gaps) if (g.type === 'paint') set.add(g.color);
   return COLOR_CODES.filter((c) => set.has(c));
 }
@@ -724,7 +750,14 @@ function demandOf(plans: readonly SegmentPlan[], upTo = plans.length - 1): Color
 /** Material cells per colour (K-47 supply: batches and debris, Ağır Yük excluded) available up to segment `upTo`. */
 function supplyOf(level: LevelData, upTo = Infinity): ColorCount {
   const out = zeroCount();
-  for (const b of materialBlocks(level)) if (b.from <= upTo) out[b.color] += b.shape.cellCount;
+  for (const b of materialBlocks(level)) {
+    if (b.from > upTo) continue;
+    // v3 Y9 (K-57 item 2): a two-tone block supplies each cell in its own colour
+    const cells = b.piece?.colors;
+    if (cells !== undefined && cells.length === b.shape.cellCount)
+      for (const c of cells) out[c as ColorCode] += 1;
+    else out[b.color] += b.shape.cellCount;
+  }
   return out;
 }
 
@@ -793,6 +826,8 @@ interface TileClass {
   readonly shape: ShapeDef;
   /** Own colour first, then the W6 joker colours (paint gates the block's box height fits, TECH §2R.4 step 1). */
   readonly colors: readonly ColorCode[];
+  /** v3 Y9 (K-57): colour per shape cell of a two-tone class (no W6 joker); null = one colour from `colors`. */
+  readonly cellColors: string | null;
   /** First 0-based segment index the class may fill (`availableFrom`; 0 in carousel mode). */
   readonly from: number;
 }
@@ -821,20 +856,45 @@ export function tileLevel(
   geo: BoardGeo = geoFromLevel(level),
   budget: number = TILE_BUDGET,
 ): TileResult {
+  return tileSearch(level, plans, geo, budget, {});
+}
+
+/** Options of the D3a-style search: leave blocks out, or stop as soon as a target block is placed. */
+interface TileOptions {
+  /** Blocks that may not be used (v3 `scissors_blocked`: wrapped blocks before the scissors). */
+  readonly skip?: (b: Placed) => boolean;
+  /** `ok` as soon as such a block is placed (instead of a full cover). */
+  readonly target?: (b: Placed) => boolean;
+}
+
+function tileSearch(
+  level: LevelData,
+  plans: readonly SegmentPlan[],
+  geo: BoardGeo,
+  budget: number,
+  opts: TileOptions,
+): TileResult {
   const carousel = level.build.mode === 'carousel';
   const paint = level.wall.gaps.flatMap((g) => (g.type === 'paint' ? [g] : []));
   const classes: TileClass[] = [];
   const counts: number[] = [];
   const index = new Map<string, number>();
+  const targets: boolean[] = [];
   for (const b of materialBlocks(level)) {
+    if (opts.skip?.(b)) continue;
+    const isTarget = opts.target?.(b) ?? false;
     const shape = shapeById(b.shape.canonical);
-    const colors = [...new Set([b.color, ...paint.filter((g) => shape.h <= g.size).map((g) => g.color)])];
+    const cellColors = b.piece?.colors ?? null;
+    const colors = cellColors
+      ? [b.color]
+      : [...new Set([b.color, ...paint.filter((g) => shape.h <= g.size).map((g) => g.color)])];
     const from = carousel ? 0 : b.from;
-    const key = `${shape.index}:${colors.join('')}:${from}`;
+    const key = `${shape.index}:${colors.join('')}:${from}:${cellColors ?? ''}:${isTarget ? 'T' : ''}`;
     let i = index.get(key);
     if (i === undefined) {
       i = classes.length;
-      classes.push({ shape, colors, from });
+      classes.push({ shape, colors, from, cellColors });
+      targets.push(isTarget);
       counts.push(0);
       index.set(key, i);
     }
@@ -860,8 +920,9 @@ export function tileLevel(
   const failed = new Set<number | string>();
   let expansions = 0;
 
+  const goal = opts.target !== undefined;
   const solve = (seg: number): boolean | 'budget' => {
-    if (seg >= S) return true;
+    if (seg >= S) return !goal;
     if (heights.every((h) => h === hs)) {
       heights.fill(0);
       const res = solve(seg + 1);
@@ -873,28 +934,34 @@ export function tileLevel(
     if (++expansions > budget) return 'budget';
     const plan = plans[seg];
     if (!plan) return false;
-    let col = 0;
-    for (let x = 1; x < ws; x++) if ((heights[x] ?? 0) < (heights[col] ?? 0)) col = x;
-    const row = heights[col] ?? 0;
+    // U-v3-0 (H1): branch on EVERY (class, anchor) whose column bottoms sit on the column heights (K-34), not only on
+    // blocks covering the lowest column — an overhang (L4_180, J4_180, C3_180, T4_*) may need its neighbour column
+    // first. The memo (segment, profile, counts) merges the orders, as in the run-time D3a (core/deadlock.ts).
     for (let ti = 0; ti < classes.length; ti++) {
       const t = classes[ti] as TileClass;
       if (!counts[ti] || t.from > seg) continue;
       const s = t.shape;
-      for (let k = 0; k < s.w; k++) {
-        const ax = col - k;
-        const ay = row - (s.colBottom[k] ?? 0);
-        if (ax < 0 || ax + s.w > ws || ay < 0) continue;
+      for (let ax = 0; ax + s.w <= ws; ax++) {
+        const ay = (heights[ax] ?? 0) - (s.colBottom[0] ?? 0);
+        if (ay < 0) continue;
         let ok = true;
         for (let j = 0; j < s.w && ok; j++) {
           const x = ax + j;
           if (ay + (s.colBottom[j] ?? 0) !== heights[x] || ay + (s.colTop[j] ?? 0) >= hs) ok = false;
         }
         if (!ok) continue;
-        const first = s.cells[0];
-        const color = first ? plan.cells[localIndex(ax + first.x, ay + first.y, ws)] : null;
-        if (!color || color === '.' || !t.colors.includes(color)) continue;
-        for (const c of s.cells) if (plan.cells[localIndex(ax + c.x, ay + c.y, ws)] !== color) ok = false;
+        if (t.cellColors) {
+          s.cells.forEach((c, ci) => {
+            if (plan.cells[localIndex(ax + c.x, ay + c.y, ws)] !== t.cellColors?.[ci]) ok = false;
+          });
+        } else {
+          const first = s.cells[0];
+          const color = first ? plan.cells[localIndex(ax + first.x, ay + first.y, ws)] : null;
+          if (!color || color === '.' || !t.colors.includes(color)) continue;
+          for (const c of s.cells) if (plan.cells[localIndex(ax + c.x, ay + c.y, ws)] !== color) ok = false;
+        }
         if (!ok) continue;
+        if (targets[ti]) return true;
         const saved = heights.slice(ax, ax + s.w);
         for (let j = 0; j < s.w; j++) heights[ax + j] = ay + (s.colTop[j] ?? 0) + 1;
         counts[ti] = (counts[ti] ?? 0) - 1;
@@ -1468,6 +1535,354 @@ function checkFlagCombos(level: LevelData, push: Push): void {
       const bad = flags.filter((f) => f === 'glass' || f === 'balloon' || f === 'mortar');
       if (bad.length > 0) push('L-21', 'flag_combo_forbidden', path, `Ağır Yük cannot be ${bad.join(', ')}`);
     }
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// L-40 / L-41 v3 block traits (GDD §16 ÖNERİ K-56…K-65; LEVELS §8.10 U-v3-1 code table; OBSTACLES v3 combinations)
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Colour pairs a two-tone block may use in story chapter 1 (K-65 item 3: deutan and protan ΔE ≥ 30). */
+export const TWO_TONE_PAIRS_CH1: readonly string[] = ['WY', 'RY', 'GW', 'GY'];
+/** At most this many bonus blocks per level (K-60 item 2). */
+export const MAX_BONUS_BLOCKS = 2;
+/** K-63 tiling families on a 2-column site: "bottom row full" and "column" orientations. */
+export const BOTTOM_FAMILY: ReadonlySet<ShapeId> = new Set<ShapeId>([
+  'D2_90',
+  'O4_0',
+  'C3_0',
+  'C3_270',
+  'L4_0',
+  'J4_0',
+]);
+export const COLUMN_FAMILY: ReadonlySet<ShapeId> = new Set<ShapeId>([
+  'D2_0',
+  'I3_0',
+  'L4_180',
+  'J4_180',
+  'T4_0',
+  'T4_180',
+]);
+/** v3 OBSTACLES "aynı bloktaki birleşimler": flag pairs forbidden on one block in every story chapter. */
+const V3_FORBIDDEN_PAIRS: readonly (readonly [string, string, string])[] = [
+  ['wrapped', 'scissors', 'the scissors block cannot be wrapped (K-59 item 5)'],
+  ['wrapped', 'chained', 'two locks on one block'],
+  ['wrapped', 'wet', 'two locks on one block'],
+  ['scissors', 'glass', 'a broken scissors block would return and blur the trigger'],
+  ['scissors', 'chained', 'two locks on one block'],
+  ['scissors', 'wet', 'two locks on one block'],
+  ['bonus', 'wet', 'two number badges on one block (K-65 item 4)'],
+];
+/** Flags a pallet layer can never carry (OBSTACLES v3 table: a layer neither floats nor breaks nor locks). */
+const STACK_FORBIDDEN_FLAGS: readonly string[] = ['slippery', 'glass', 'mortar', 'chained', 'wet', 'balloon'];
+
+/** The piece writes a v3 field (`colors`, `stack`, `bonusMoves`, a v3 flag). */
+function usesV3(p: PieceData): boolean {
+  return (
+    p.colors !== undefined ||
+    p.stack !== undefined ||
+    p.bonusMoves !== undefined ||
+    flagsOf(p).some((f) => V3_FLAGS.has(f))
+  );
+}
+
+/** Pallets of the start batch: id → layers (path, piece) in data order. */
+function palletsOf(level: LevelData): Map<number, { path: string; piece: PieceData }[]> {
+  const out = new Map<number, { path: string; piece: PieceData }[]>();
+  level.yard.batches[0]?.pieces.forEach((p, i) => {
+    if (!p.stack) return;
+    const list = out.get(p.stack.id) ?? [];
+    list.push({ path: `yard.batches[0].pieces[${i}]`, piece: p });
+    out.set(p.stack.id, list);
+  });
+  return out;
+}
+
+/**
+ * L-40 (runtime subset: a broken v3 level is not loaded): `schema_version_low` (a v3 field in a file that is not
+ * `schemaVersion` 3), `colors_invalid` (K-57), `stack_invalid` (K-58 item 1), `scissors_missing` / `scissors_many`
+ * (K-59 item 2), `bonus_many` / `bonus_invalid` (K-60), `flag_combo_forbidden` (OBSTACLES v3 combination table).
+ */
+function checkTraits(level: LevelData, push: Push): void {
+  const v3 = schemaVersionOf(level) === 3;
+  let scissors = 0;
+  let wrapped = 0;
+  let bonus = 0;
+  level.yard.batches.forEach((b, bi) =>
+    b.pieces.forEach((p, i) => {
+      const path = `yard.batches[${bi}].pieces[${i}]`;
+      if (!usesV3(p)) return;
+      if (!v3)
+        push('L-40', 'schema_version_low', path, 'v3 block traits need schemaVersion 3 (GDD §16, U-v3-1)');
+      const shape = shapeById(p.shape);
+      const flags = flagsOf(p);
+      if (isCargo(shape))
+        push('L-40', 'flag_combo_forbidden', path, 'Ağır Yük takes no v3 trait (OBSTACLES v3 table)');
+      if (p.colors !== undefined) {
+        const set = new Set(p.colors);
+        if (p.colors.length !== shape.cellCount)
+          push(
+            'L-40',
+            'colors_invalid',
+            path,
+            `colors "${p.colors}" has ${p.colors.length} letters, ${p.shape} has ${shape.cellCount} cells (K-57)`,
+          );
+        else if (set.size < 2)
+          push(
+            'L-40',
+            'colors_invalid',
+            path,
+            `colors "${p.colors}" has one colour: write it as a one-colour block (K-57)`,
+          );
+        else if (p.colors[0] !== p.color)
+          push(
+            'L-40',
+            'colors_invalid',
+            path,
+            `color ${p.color} must be the first cell colour of "${p.colors}" (K-57)`,
+          );
+      }
+      if (p.stack !== undefined && bi !== 0)
+        push('L-40', 'stack_invalid', path, 'a pallet lies in the start yard (batch 0) only (K-58, K-55)');
+      if (p.bonusMoves !== undefined && !flags.includes('bonus'))
+        push('L-40', 'bonus_invalid', path, 'bonusMoves without the bonus flag (K-60)');
+      if (flags.includes('scissors')) scissors++;
+      if (flags.includes('wrapped')) wrapped++;
+      if (flags.includes('bonus')) bonus++;
+      for (const [a, c, why] of V3_FORBIDDEN_PAIRS)
+        if (flags.includes(a) && flags.includes(c))
+          push('L-40', 'flag_combo_forbidden', path, `${a} + ${c} is forbidden: ${why}`);
+      if (p.stack !== undefined) {
+        const bad = flags.filter((f) => STACK_FORBIDDEN_FLAGS.includes(f));
+        if (bad.length > 0)
+          push(
+            'L-40',
+            'flag_combo_forbidden',
+            path,
+            `a pallet layer cannot be ${bad.join(', ')} (OBSTACLES v3 table)`,
+          );
+      }
+    }),
+  );
+  if (wrapped > 0 && scissors === 0)
+    push(
+      'L-40',
+      'scissors_missing',
+      'yard',
+      `${wrapped} wrapped block(s) and no scissors block (K-59 item 2)`,
+    );
+  if (scissors > 1)
+    push('L-40', 'scissors_many', 'yard', `${scissors} scissors blocks; exactly one (K-59 item 2)`);
+  if (bonus > MAX_BONUS_BLOCKS)
+    push('L-40', 'bonus_many', 'yard', `${bonus} bonus blocks > ${MAX_BONUS_BLOCKS} (K-60 item 2)`);
+  for (const [id, layers] of palletsOf(level)) {
+    const path = layers[0]?.path ?? 'yard';
+    const first = layers[0]?.piece;
+    if (!first) continue;
+    const zs = layers.map((l) => l.piece.stack?.z ?? -1).sort((a, b) => a - b);
+    if (layers.length < 2 || layers.length > 4)
+      push('L-40', 'stack_invalid', path, `pallet ${id} has ${layers.length} layer(s); 2–4 (K-58 item 1)`);
+    if (zs.some((z, k) => z !== k))
+      push(
+        'L-40',
+        'stack_invalid',
+        path,
+        `pallet ${id} layers z = ${zs.join(',')}; 0, 1, … without gaps (K-58 item 1)`,
+      );
+    if (layers.some((l) => l.piece.shape !== first.shape || l.piece.x !== first.x || l.piece.y !== first.y))
+      push(
+        'L-40',
+        'stack_invalid',
+        path,
+        `pallet ${id}: every layer has the same shape and anchor (K-58 item 1)`,
+      );
+    if (level.gravity.yard)
+      push(
+        'L-40',
+        'stack_invalid',
+        path,
+        'a pallet in a yard-gravity level (Y6) is not defined (OBSTACLES v3 table)',
+      );
+  }
+  if (level.chapter >= 2) {
+    // K-59 item 5 (story 2+): a wrapped pallet layer must be the top layer
+    for (const [id, layers] of palletsOf(level)) {
+      const top = Math.max(...layers.map((l) => l.piece.stack?.z ?? 0));
+      for (const l of layers)
+        if (flagsOf(l.piece).includes('wrapped') && (l.piece.stack?.z ?? 0) !== top)
+          push(
+            'L-40',
+            'flag_combo_forbidden',
+            l.path,
+            `pallet ${id}: only the top layer may be wrapped (K-59 item 5)`,
+          );
+    }
+  }
+}
+
+/**
+ * L-41 (validate stage, design rules): `shape_locked` is L-04; here `trait_locked` (a v3 trait before its first level:
+ * nothing untaught), `piece_unreachable` (K-56), `colors_low_contrast` (K-65 item 3, story 1), `stack_mixed` (K-65
+ * item 1, story 1), `pallet_capacity` (K-58 item 8), `trait_overlay_many` (K-65 item 2, story 1),
+ * `scissors_trivial` / `scissors_blocked` (K-59 item 6), `tile_family_mix` (K-63, Easy / Normal).
+ */
+function checkTraitDesign(
+  level: LevelData,
+  geo: BoardGeo,
+  plans: readonly SegmentPlan[],
+  plansUsable: boolean,
+  push: Push,
+): void {
+  // v3 design rules are for `schemaVersion` 3 files (ÖNERİ, GDD §16); earlier files keep their Faz 2R / D-099 rules
+  if (schemaVersionOf(level) !== 3) return;
+  const story1 = level.chapter === 1;
+  const mechanics = new Set(deriveMechanics(level));
+  for (const t of TRAIT_MECHANICS)
+    if (mechanics.has(t.id) && t.firstLevel > level.id)
+      push(
+        'L-41',
+        'trait_locked',
+        'level',
+        `${t.id} is introduced at level ${t.firstLevel}; level ${level.id} may not use it`,
+      );
+  const pieces = level.yard.batches[0]?.pieces ?? [];
+  pieces.forEach((p, i) => {
+    const path = `yard.batches[0].pieces[${i}]`;
+    const shape = shapeById(p.shape);
+    if (!isCargo(shape) && !canReachSite(shape, level))
+      push(
+        'L-41',
+        'piece_unreachable',
+        path,
+        `${p.shape} (${shape.h} tall) passes neither over the wall (height ${level.wall.height}, H ${boardHeight(level)}) nor through a gap (K-56, K-05)`,
+      );
+    if (story1 && p.colors !== undefined) {
+      const pair = [...new Set(p.colors)].sort().join('');
+      if (!TWO_TONE_PAIRS_CH1.includes(pair))
+        push(
+          'L-41',
+          'colors_low_contrast',
+          path,
+          `colours ${pair} are not an allowed story-1 pair (${TWO_TONE_PAIRS_CH1.join(', ')}; K-65 item 3)`,
+        );
+    }
+    if (story1) {
+      const overlays =
+        ['wrapped', 'scissors', 'bonus'].filter((f) => flagsOf(p).includes(f)).length + (p.stack ? 1 : 0);
+      if (overlays > 1)
+        push(
+          'L-41',
+          'trait_overlay_many',
+          path,
+          `${overlays} overlay traits on one block; at most 1 in story 1 (K-65 item 2)`,
+          'warn',
+        );
+    }
+  });
+  // pallets: story-1 single type, capacity
+  const pallets = palletsOf(level);
+  let worst = 0;
+  for (const [id, layers] of pallets) {
+    const first = layers[0]?.piece;
+    if (!first) continue;
+    if (story1) {
+      const same = layers.every(
+        (l) =>
+          l.piece.shape === first.shape &&
+          l.piece.color === first.color &&
+          (l.piece.colors ?? '') === (first.colors ?? '') &&
+          flagsOf(l.piece).length === 0,
+      );
+      if (!same)
+        push(
+          'L-41',
+          'stack_mixed',
+          layers[0]?.path ?? 'yard',
+          `pallet ${id}: in story 1 every layer is the same block without flags (K-65 item 1)`,
+        );
+    }
+    worst = Math.max(worst, shapeById(first.shape).cellCount * (layers.length - 1));
+  }
+  if (pallets.size > 0) {
+    const footprint = new Set<number>();
+    pieces.forEach((p) => {
+      if (p.stack && pieces.some((q) => q.stack?.id === p.stack?.id && (q.stack?.z ?? 0) > (p.stack?.z ?? 0)))
+        return;
+      for (const c of cellsAt(shapeById(p.shape), p.x, p.y)) footprint.add(c.y * geo.wy + c.x);
+    });
+    for (const o of level.obstacles)
+      if (o.type === 'crate' || o.type === 'cement_bag') footprint.add(o.y * geo.wy + o.x);
+    const empty = geo.wy * geo.hy - footprint.size;
+    const need = 2 + worst;
+    if (empty < need)
+      push(
+        'L-41',
+        'pallet_capacity',
+        'yard',
+        `E = ${empty} empty cells < 2 + max(cells × (layers − 1)) = ${need} (K-58 item 8)`,
+        level.difficulty === 'easy' ? 'error' : 'warn',
+      );
+  }
+  // scissors: trivial (not under a dig) / blocked (its correct placement needs a wrapped block first)
+  const sIndex = pieces.findIndex((p) => flagsOf(p).includes('scissors'));
+  const sc = pieces[sIndex];
+  if (sc && pieces.some((p) => flagsOf(p).includes('wrapped'))) {
+    const path = `yard.batches[0].pieces[${sIndex}]`;
+    const shape = shapeById(sc.shape);
+    const occupied = new Set<number>();
+    pieces.forEach((p) => {
+      if (p === sc) return;
+      for (const c of cellsAt(shapeById(p.shape), p.x, p.y)) occupied.add(c.y * geo.wy + c.x);
+    });
+    for (const o of level.obstacles)
+      if (o.type === 'crate' || o.type === 'cement_bag') occupied.add(o.y * geo.wy + o.x);
+    let dug = false;
+    for (let j = 0; j < shape.w && !dug; j++) {
+      const x = sc.x + j;
+      for (let y = sc.y + (shape.colTop[j] ?? 0) + 1; y < geo.hy && !dug; y++)
+        if (occupied.has(y * geo.wy + x)) dug = true;
+    }
+    if (!dug)
+      push(
+        'L-41',
+        'scissors_trivial',
+        path,
+        'the scissors block is not under any block at the start: no order decision (K-59 item 6)',
+        'warn',
+      );
+    if (plansUsable) {
+      const res = tileSearch(level, plans, geo, TILE_BUDGET, {
+        skip: (b) => b.piece !== undefined && flagsOf(b.piece).includes('wrapped'),
+        target: (b) => b.piece === sc,
+      });
+      if (res === 'dead')
+        push(
+          'L-41',
+          'scissors_blocked',
+          path,
+          'the scissors block cannot be placed correctly before a wrapped block is placed (K-34 support or an earlier segment needs a wrapped block; K-59 item 6)',
+        );
+    }
+  }
+  // K-63 tiling families (Easy / Normal): one "bottom row full" and one "column" orientation per colour
+  if (level.difficulty === 'easy' || level.difficulty === 'normal') {
+    const fam = new Map<string, { bottom: Set<string>; column: Set<string> }>();
+    for (const p of pieces) {
+      if (p.colors !== undefined || isCargo(shapeById(p.shape))) continue;
+      const f = fam.get(p.color) ?? { bottom: new Set<string>(), column: new Set<string>() };
+      if (BOTTOM_FAMILY.has(p.shape)) f.bottom.add(p.shape);
+      if (COLUMN_FAMILY.has(p.shape)) f.column.add(p.shape);
+      fam.set(p.color, f);
+    }
+    for (const [color, f] of fam)
+      if (f.bottom.size > 1 || f.column.size > 1)
+        push(
+          'L-41',
+          'tile_family_mix',
+          'yard',
+          `colour ${color}: ${[...f.bottom, ...f.column].join(', ')} mix tiling families; the solver must prove trapCount 0 (K-63)`,
+          'warn',
+        );
   }
 }
 

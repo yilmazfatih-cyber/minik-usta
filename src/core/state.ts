@@ -195,6 +195,20 @@ export const setPieceX = (s: GameState, id: PieceId, v: number): void => setPiec
 export const setPieceY = (s: GameState, id: PieceId, v: number): void => setPieceField(s, id, PF.y, v);
 export const setPieceZone = (s: GameState, id: PieceId, v: number): void => setPieceField(s, id, PF.zone, v);
 
+/**
+ * Colour index of cell `i` (the shape's (y, x) cell order) of piece `id`: the static `cellColors` of a v3 two-tone block
+ * (Y9, GDD §16 K-57), else the piece's current colour.
+ */
+export function pieceCellColor(s: GameState, id: PieceId, i: number): number {
+  const cc = s.lvl.pieces[id]?.cellColors;
+  return cc ? (cc[i] ?? pieceColor(s, id)) : pieceColor(s, id);
+}
+
+/** v3 Y9: the piece is a two-tone block (per-cell colours, K-57). */
+export function isTwoTone(s: GameState, id: PieceId): boolean {
+  return (s.lvl.pieces[id]?.cellColors ?? null) !== null;
+}
+
 export function hasFlag(s: GameState, id: PieceId, flag: PieceFlag): boolean {
   return (pieceFlags(s, id) & FLAG_BIT[flag]) !== 0;
 }
@@ -353,7 +367,11 @@ export function createInitialState(lvl: CompiledLevel): GameState {
     setHdr(s, H.elev, lvl.elevator.start);
     setHdr(s, H.elevDir, lvl.elevator.dir);
   }
-  for (const p of lvl.pieces) {
+  // v3 Y10 (K-58): pallet layers share their cells; layers are written bottom-up so the top layer owns the occupancy
+  const order = lvl.hasStacks
+    ? [...lvl.pieces].sort((a, b) => a.stackZ - b.stackZ || a.id - b.id)
+    : lvl.pieces;
+  for (const p of order) {
     setPieceField(s, p.id, PF.shape, p.shapeIndex);
     setPieceField(s, p.id, PF.color, p.colorIndex);
     setPieceField(s, p.id, PF.zone, p.startZone);

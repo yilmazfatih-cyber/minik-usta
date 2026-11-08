@@ -46,12 +46,28 @@ import type {
 import { W1_staticGap } from './W1_staticGap.ts';
 import { S1_slidingSite } from './S1_slidingSite.ts';
 import { Y3_chain } from './Y3_chain.ts';
+import { Y9_twoTone } from './Y9_twoTone.ts';
+import { Y10_pallet } from './Y10_pallet.ts';
+import { Y11_wrap } from './Y11_wrap.ts';
+import { Y12_bonus } from './Y12_bonus.ts';
+import { Y13_slippery } from './Y13_slippery.ts';
 
 /**
  * Every rule plugin (TECH §7.1). Faz 2R: W1, Y3, S1 (S2 Plan Boşluğu left the MVP, R2-01: its plugin is gone, the `.`
  * cell rules stay in the core for a later return); a new obstacle adds one line here.
  */
-export const ALL_RULES: readonly ObstacleRule[] = Object.freeze([W1_staticGap, Y3_chain, S1_slidingSite]);
+export const ALL_RULES: readonly ObstacleRule[] = Object.freeze([
+  W1_staticGap,
+  Y3_chain,
+  // v3 block traits (GDD §16; ÖNERİ): Y9 and Y10 are core models (per-cell colours, pallet occupancy), Y13 the core
+  // yard gravity of one block; their plugins declare `appliesTo` and the info card only.
+  Y9_twoTone,
+  Y10_pallet,
+  Y11_wrap,
+  Y12_bonus,
+  Y13_slippery,
+  S1_slidingSite,
+]);
 
 // --- validation --------------------------------------------------------------------------------------------------------
 
@@ -247,6 +263,18 @@ export function composeHooks(lvl: CompiledLevel, set: RuleSet): MoveHooks {
   const onPassGap = composePassGap(set);
   const onYardRelease = composeYardRelease(set.rules);
   const moveCost = composeMoveCost(set.rules);
+  const bonusFns = hooksOf(set.rules, 'placementBonus');
+  const placementBonus =
+    bonusFns.length > 0
+      ? (ctx: RuleContext, id: PieceId): number => bonusFns.reduce((n, f) => n + f(ctx, id), 0)
+      : undefined;
+  const placedFns = hooksOf(set.rules, 'onCorrectPlacement');
+  const onCorrectPlacement =
+    placedFns.length > 0
+      ? (ctx: RuleContext, id: PieceId): void => {
+          for (const f of placedFns) f(ctx, id);
+        }
+      : undefined;
   const onNeighborMoved = composeNeighborMoved(set);
   const onCellUncovered = composeCellUncovered(set);
   const afterNeighbors = composeAfterNeighbors(set.rules);
@@ -260,6 +288,8 @@ export function composeHooks(lvl: CompiledLevel, set: RuleSet): MoveHooks {
     ...(onPassGap ? { onPassGap } : {}),
     ...(onYardRelease ? { onYardRelease } : {}),
     ...(moveCost ? { moveCost } : {}),
+    ...(placementBonus ? { placementBonus } : {}),
+    ...(onCorrectPlacement ? { onCorrectPlacement } : {}),
     ...(onNeighborMoved ? { onNeighborMoved } : {}),
     ...(onCellUncovered ? { onCellUncovered } : {}),
     ...(afterNeighbors ? { afterNeighbors } : {}),
@@ -425,6 +455,10 @@ function composeHammer(set: RuleSet): HammerRules | undefined {
   };
   return Object.freeze({
     canHit: (s: GameState, entity: EntityRef): boolean => owner(s, entity) !== undefined,
+    kind: (s: GameState, entity: EntityRef): HammerTargetKind | null => {
+      const r = owner(s, entity);
+      return r ? (r.hammerKind ?? 'chain') : null;
+    },
     hit: (ctx: RuleContext, entity: EntityRef): HammerTargetKind => {
       const r = owner(ctx.s, entity);
       if (!r?.onHammer) throw new RangeError('hammer: no rule accepts this target');

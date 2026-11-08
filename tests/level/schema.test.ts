@@ -65,11 +65,12 @@ describe('K-45/1 level schema (TECH §8.2, §2R.2)', () => {
     expect(parsed.seed).toBeUndefined();
   });
 
-  it('K-55 GDD §14 schemaVersion 1 | 2 (backward compatible): missing = 1, the Faz 2R files still parse, 3 is rejected; v2 targets take the D-099 bands', () => {
+  it('K-55 GDD §14 schemaVersion 1 | 2 | 3 (backward compatible; 3 = levels v3, GDD §16): missing = 1, the Faz 2R files still parse, 4 is rejected; v2 targets take the D-099 bands', () => {
     const json = levelJson({ pieces: [['B1_0', 'W', 0, 0]] });
     expect(ok({ ...json, schemaVersion: 1 })).toBe(true);
     expect(ok({ ...json, schemaVersion: 2 })).toBe(true);
-    expect(ok({ ...json, schemaVersion: 3 })).toBe(false);
+    expect(ok({ ...json, schemaVersion: 3 })).toBe(true);
+    expect(ok({ ...json, schemaVersion: 4 })).toBe(false);
     for (let n = 1; n <= 10; n++) {
       // the Faz 2R archive (tests/fixtures/levels-2r/, P4B-01) has no schemaVersion field = 1 …
       const old = JSON.parse(

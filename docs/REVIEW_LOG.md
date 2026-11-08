@@ -2015,3 +2015,24 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
   çentik, film kenarı, yatay kurdele + fiyonk, makas rozeti, krem hamle rozeti "+n", perçinli dikiş, desteksiz hücre
   işareti; Hikaye 2: sonraki katman kenarı + gözetleme, buz sırı). Karışık palet Hikaye 1'de yok (Karar 7; tek ayrılık
   noktası, gerekçesi inceleme dosyasının kapanışında). Bölüm 8 öğreticisi bağlamsal. Koridor testi (Bölüm 3/5/7) gri kutuyla.
+- [code-lead → product-lead] **E1 Bölümler v3 çekirdek + şema + çözücü + üretici (TECH §V3):** `schemaVersion` 3, Y9–Y13,
+  `RULES_VERSION` 4 ve K-56…K-66'nın testleri hazır; GDD başlıkları ÖNERİ kaldığı için `test:rules` onları saymıyor —
+  onayda `### K-xx` başlıkları + TECH §12.4 satırları tek commit'te. **İstek 1 (K-35 olay listesi, GDD §12):** yeni olaylar
+  `unwrapped { by: 'scissors' | 'hammer', pieceId, pieces }` (adım 5; Çekiç adım 1) ve `movesChanged { reason: 'bonus' }`
+  (adım 4, maliyet olayından sonra); Vinç/Altın Mala yerleşimi mini hatta adım 4 bonus + adım 5 makas çalıştırır (GDD bunu
+  söylemiyor; ben "doğru yerleşim"i güçlendirici yerleşimi de sayacak şekilde yorumladım — itiraz varsa tek satırlık değişiklik).
+  **İstek 2:** iki renkli bloğu Vinç döndüremez (`badRotation`): döndürülmüş renk tablosu tutmuyorum; K-66'ya madde olarak
+  eklenmeli ya da "Vinç döndürünce renkler de döner" kararı verilmeli (o zaman durum tamponuna yön alanı girer). **İstek 3:**
+  doğrulayıcı kod numaraları L-40/L-41/L-42 oldu (çözücü L-37…L-39'u kullanıyor); LEVELS §8.10 tablosuna sütun olarak ekleyin.
+  Ek kodlar: `schema_version_low`, `bonus_invalid` (bonusMoves bonus'suz), `trait_locked` (özellik ilk bölümünden önce),
+  `lift_low`, `shape_decisions_low`. **İstek 4:** Y6 saha yerçekimli bölümde palet `stack_invalid` (OBSTACLES v3 tablosunda
+  "katman havada durmaz" var ama Y6 satırı yok). **Ölçüm:** büyük bölüm araması (ışın + genişletme) 6×8 saha, 22 blok, 3 kat
+  fikstüründe ≤ 20 sn'de çözüm buluyor ve çekirdekte tekrar oynatıyor; ama ölü durum kanıtı değil — 6×6/16 blokluk bölümler
+  için D-090 kapısı (`scan_incomplete`, `undetected_dead`) makro çizge gelene kadar kırmızı kalır (LEVELS §8.10 seçim B açık).
+  `traitDelta` (yok sayan bot kipi) bu pakette yok: Bölüm 4/5/7 kapısı ölçülemiyor.
+- [code-lead → design-lead] **E1 v3 sunum bağımlılıkları:** çekirdek `PickFailure` `covered` (palet alt katmanına dokunuş:
+  tepki yok) ve sargılıya dokunuş `rule` döndürüyor; sahne şimdilik ikisine aynı "kımıldamıyor" sallantısını vermiyor (yalnız
+  `immovable`/`rule`). Kaplama kareleri (palet dudağı + çentik, film + kurdele, makas rozeti, krem "+n", iki renkli dikiş) ve
+  `obs.y9…y13.desc` metinleri OBSTACLES kart biçiminde (`TR "…" · EN "…"`) gelince i18n'e eklerim (D-017 testi metni oradan okur).
+- [code-lead → entrepreneur] **E1:** Çekiç artık sargıyı da keser; `booster_used.target` için `wrap` değeri gerekiyor
+  (ANALYTICS.md tablosu + şema; ben şemayı tablo değişince güncellerim, test ikisini eşit istiyor).

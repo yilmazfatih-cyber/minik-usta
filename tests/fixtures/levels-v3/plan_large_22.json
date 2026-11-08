@@ -1,0 +1,19 @@
+{
+  "id": 20,
+  "name": { "tr": "Büyük Deneme", "en": "Big Trial" },
+  "difficulty": "hard",
+  "yard": { "cols": 6, "rows": 8 },
+  "site": { "cols": 2, "rows": 8 },
+  "wall": { "height": 6, "gaps": [] },
+  "segments": [
+    { "name": { "tr": "Kat 1", "en": "Floor 1" }, "rows": ["GG", "GG", "YY", "WY", "WW", "YW", "YY", "WW"] },
+    { "name": { "tr": "Kat 2", "en": "Floor 2" }, "rows": ["YY", "GY", "WW", "GG", "YY", "YG", "WW", "GG"] },
+    { "name": { "tr": "Kat 3", "en": "Floor 3" }, "rows": ["WW", "YY", "GG", "WY", "YW", "GG", "WW", "YY"] }
+  ],
+  "shapes": ["D2", "O4"],
+  "orientations": ["D2_90", "D2_0", "O4_0"],
+  "twoTone": { "pairs": ["WY", "GY"], "max": 3 },
+  "pallets": { "count": 2, "layers": 2 },
+  "traits": { "wrapped": 2 },
+  "blocks": [22, 22]
+}

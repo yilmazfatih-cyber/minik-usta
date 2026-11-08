@@ -62,11 +62,27 @@ export interface DragNode {
   readonly mode: DragMode;
 }
 
-/** Block flags written in level data (GDD K-21). */
-export const DATA_PIECE_FLAGS = ['glass', 'mortar', 'balloon', 'chained', 'wet'] as const;
+/**
+ * Block flags written in level data (GDD K-21). v3 (GDD §16 K-59…K-61, `schemaVersion` 3): `wrapped` / `scissors` (Y11),
+ * `bonus` (Y12), `slippery` (Y13). New flags are appended, so the bit of every older flag is unchanged.
+ */
+export const DATA_PIECE_FLAGS = [
+  'glass',
+  'mortar',
+  'balloon',
+  'chained',
+  'wet',
+  'wrapped',
+  'scissors',
+  'bonus',
+  'slippery',
+] as const;
 export type DataPieceFlag = (typeof DATA_PIECE_FLAGS)[number];
 
-/** All runtime piece flags: data flags + `debris` (S4, added by compile) + `locked` (K-14) + `stuck` (Y8). */
+/**
+ * All runtime piece flags: data flags + `debris` (S4, added by compile) + `locked` (K-14) + `stuck` (Y8). The bit of a
+ * flag is its index: the v3 flags (bits 8–11) come after `stuck`, so every Faz 2R state, hash and golden is unchanged.
+ */
 export const PIECE_FLAGS = [
   'glass',
   'mortar',
@@ -76,6 +92,10 @@ export const PIECE_FLAGS = [
   'locked',
   'debris',
   'stuck',
+  'wrapped',
+  'scissors',
+  'bonus',
+  'slippery',
 ] as const;
 export type PieceFlag = (typeof PIECE_FLAGS)[number];
 
@@ -161,7 +181,15 @@ export interface TeardownMove {
 }
 
 /** K-36 hammer target kinds (analytics `booster_used.target`, TECH §2R.16). */
-export type HammerTargetKind = 'cargo' | 'crate' | 'cementBag' | 'chain' | 'siteDebris' | 'stuckMortar';
+export type HammerTargetKind =
+  | 'cargo'
+  | 'crate'
+  | 'cementBag'
+  | 'chain'
+  | 'siteDebris'
+  | 'stuckMortar'
+  /** v3 (GDD §16 K-59 item 4, K-66 item 3): the hammer cuts one wrap (Y11). */
+  | 'wrap';
 
 /** Pre-level boosters (META §4; economy.json keys). */
 export type PreBooster = 'thermos' | 'trowelStart' | 'openShutter';
@@ -257,13 +285,24 @@ export type GameEventBody =
       readonly t: 'movesChanged';
       readonly movesLeft: number;
       readonly delta: number;
-      readonly reason: 'move' | 'offer' | 'booster';
+      /** `bonus` (v3, GDD §16 K-60): a correctly placed bonus block added `bonusMoves` in step 4. */
+      readonly reason: 'move' | 'offer' | 'booster' | 'bonus';
       readonly cost?: { readonly base: 1 | 2; readonly glass: 0 | 1 };
     }
   | { readonly t: 'crateDamaged'; readonly obstacle: number; readonly hp: number }
   | { readonly t: 'crateBroken'; readonly obstacle: number }
   | { readonly t: 'bagTorn'; readonly obstacle: number }
   | { readonly t: 'chainReleased'; readonly pieceId: PieceId }
+  /**
+   * v3 (GDD §16 K-59): wraps removed. `by: 'scissors'` = step 5 of the move whose correct placement of the scissors block
+   * `pieceId` removed every wrap (`pieces`, id order); `by: 'hammer'` = K-36 cut one wrap (`pieces` = [target]).
+   */
+  | {
+      readonly t: 'unwrapped';
+      readonly by: 'scissors' | 'hammer';
+      readonly pieceId: PieceId;
+      readonly pieces: readonly PieceId[];
+    }
   | { readonly t: 'screwCollected'; readonly at: At; readonly total: number }
   | { readonly t: 'keyCollected'; readonly keyId: string }
   | { readonly t: 'gapUnlocked'; readonly gap: number }

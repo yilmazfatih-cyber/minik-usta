@@ -194,6 +194,16 @@ export interface MoveHooks {
   readonly onYardRelease?: (ctx: RuleContext, pieceId: PieceId) => void;
   /** Step 4 base cost (Y8: 2 when `ctx.scratch.wasStuck`); undefined = 1. The glass penalty is added on top. */
   readonly moveCost?: (ctx: RuleContext, pieceId: PieceId) => number | undefined;
+  /**
+   * v3 step 4, after the cost (Y12 bonus, GDD §16 K-60): moves the correct placement of `pieceId` in this action adds
+   * (0 = none). Also for a crane / Golden Trowel placement (the mini pipeline's step 4).
+   */
+  readonly placementBonus?: (ctx: RuleContext, pieceId: PieceId) => number;
+  /**
+   * v3 step 5 (Y11 scissors, GDD §16 K-59 item 3): `pieceId` was placed correctly in this action (drag, crane or Golden
+   * Trowel). Runs after the neighbour effects, before the hidden item check.
+   */
+  readonly onCorrectPlacement?: (ctx: RuleContext, pieceId: PieceId) => void;
   /** Steps 5–6: a yard entity next to the moved / fallen block (Y1 crate, Y2 bag, Y3 chain). */
   readonly onNeighborMoved?: (ctx: RuleContext, entity: EntityRef, movedPieceId: PieceId) => NeighborEffect;
   /** Steps 5–6: the cell of hidden item `obstacle` (screw Y7, key W7) is empty and not collected yet (K-42). */
@@ -212,8 +222,10 @@ export interface MoveHooks {
 
 /** Obstacle-rule hammer hooks (K-36), composed by the registry from the owners of the entity types. */
 export interface HammerRules {
-  /** The hammer may hit `entity` now (a crate / bag that still stands, a chained yard block). */
+  /** The hammer may hit `entity` now (a crate / bag that still stands, a chained yard block, a v3 wrap). */
   canHit(s: GameState, entity: EntityRef): boolean;
+  /** Target kind of a block entity the hammer may hit (`chain`, v3 `wrap`); null when it may not. */
+  kind?(s: GameState, entity: EntityRef): HammerTargetKind | null;
   /** Step 1 of the mini pipeline: the hit (events, goal counts). Returns the analytics target kind. */
   hit(ctx: RuleContext, entity: EntityRef): HammerTargetKind;
 }
@@ -399,11 +411,13 @@ function dragMove(
     reason: 'move',
     cost: { base: base >= 2 ? 2 : 1, glass: glass > 0 ? 1 : 0 },
   });
+  if (placed) placementBonusStep(ctx, hooks, id);
 
   // --- step 5: neighbour effects of the START cells + hidden item check #1 (K-42)
   em.step = 5;
   if (startZone === Zone.yard) neighbourEffects(ctx, hooks, startCells, id);
   hooks.afterNeighbors?.(ctx);
+  if (placed) hooks.onCorrectPlacement?.(ctx, id);
   uncoverCheck(ctx, hooks);
 
   // --- steps 6–12
@@ -416,6 +430,16 @@ function dragMove(
   em.step = 10;
   runTimers(ctx, hooks);
   return endOfMove(ctx, hooks, opts, { pre, tiling: placed || shifted || delivered });
+}
+
+/** v3 K-35 step 4 tail (Y12, GDD §16 K-60): the bonus of a correct placement, after the cost (`movesChanged{bonus}`). */
+function placementBonusStep(ctx: PipelineContext, hooks: MoveHooks, id: PieceId): void {
+  const bonus = hooks.placementBonus?.(ctx, id) ?? 0;
+  if (bonus <= 0) return;
+  const { s, em } = ctx;
+  const left = hdr(s, H.movesLeft) + bonus;
+  setHdr(s, H.movesLeft, left);
+  em.emit({ t: 'movesChanged', movesLeft: left, delta: bonus, reason: 'bonus' });
 }
 
 /** K-35 step 3 for a block that landed on the site (fall or rail). Returns true for a correct placement. */
@@ -505,7 +529,15 @@ function boosterMove(
   const queueBefore = hdr(s, H.queueLen);
   em.step = 1;
   const moved = boosterEffect(ctx, move, hooks);
+  // v3: a crane / Golden Trowel placement is a correct placement (K-60 bonus at step 4, K-59 scissors at step 5)
+  const placedId =
+    move.kind === 'goldTrowel' || (move.kind === 'crane' && move.to.zone === 'site') ? move.pieceId : -1;
+  if (placedId >= 0) {
+    em.step = 4;
+    placementBonusStep(ctx, hooks, placedId);
+  }
   em.step = 5;
+  if (placedId >= 0) hooks.onCorrectPlacement?.(ctx, placedId);
   uncoverCheck(ctx, hooks);
   yardGravityStep(ctx, hooks);
   em.step = 7;

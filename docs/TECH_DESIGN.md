@@ -1,6 +1,7 @@
 # Teknik tasarım
 
-Sahip: code-lead · Sürüm: **D-099 (2026-11-02)** — yeni §D99: sabit saha şeması (L-36), `RULES_VERSION` 3 (D1 → Söküm), D-099 solver ölçütleri ve kapıları, `levels:gen` üretici, ölçek ölçümleri; §12.4 K-55 satırı · Önceki: **Faz 2R (2026-10-07)** — çapraz inceleme kapanışı: §2R GDD/UX/ASSET kapanışlarına eşitlendi
+Sahip: code-lead · Sürüm: **Bölümler v3 / E1 (2026-11-08)** — yeni §V3: `schemaVersion` 3, blok özellikleri Y9–Y13,
+`RULES_VERSION` 4 (D1 genişlemesi), büyük bölüm araması, K-64 ölçütleri, üretici v3 alanları · Önceki: **D-099 (2026-11-02)** — yeni §D99: sabit saha şeması (L-36), `RULES_VERSION` 3 (D1 → Söküm), D-099 solver ölçütleri ve kapıları, `levels:gen` üretici, ölçek ölçümleri; §12.4 K-55 satırı · Önceki: **Faz 2R (2026-10-07)** — çapraz inceleme kapanışı: §2R GDD/UX/ASSET kapanışlarına eşitlendi
 (kural kararları kesinleşti ve politika sabitleri kalktı §2R.0; uyarlanır hücre boyu ve web geri koruması §2R.1;
 `tut_hand_invalid` L-35 §2R.3, §2R.5; Söküm tek adım + `movesSpent` + adım 12 perf kapısı §2R.4; SVG görsel boru hattı
 §2R.6; iş paketleri son hali ve kesme sırası §2R.12; yeni §2R.15 sunum kancaları ve §2R.16 analytics v6 + geri bildirim
@@ -2002,6 +2003,127 @@ error); üretici varsayılan bütçesi 400 000 durumdur (`--max-states`). Bölü
   `reshuffle` konusu silindi (`RULES_VERSION` 3 çekirdekten `truckHelp{reshuffle}` göndermez). Testler: `tests/services/i18n.test.ts`
   ("v2 bölümlerinin gösterdiği metinlerde kamyon malzeme getirir geçmez", "Usta Kral Usta Dede'nin yerini aldı").
 
+
+## V3. Bölümler v3 teknik deltası: şekiller, blok özellikleri, çözücü ölçeği, üretici (2026-11-08, paket E1)
+
+Kaynak: GDD §16 (ÖNERİ K-56…K-66, K-30 D1 genişlemesi), LEVELS §8 (v3.1, özellikle §8.10 U-v3-0…4), OBSTACLES "Bölümler v3
+blok özellikleri". Kurallar ÖNERİ olduğu için GDD başlıkları henüz `### K-xx` değildir; `test:rules` onları istemez, ama her
+kuralın adında kimliği geçen testi vardır (`tests/core/levelsV3.test.ts`, `tests/tools/solver/large.test.ts`,
+`tests/tools/levelsGenV3.test.ts`). Başlıklar bağlayıcı olunca §12.4 tablosuna K-56…K-66 satırları aynı commit'te eklenir.
+**Geriye uyum:** `schemaVersion` 2 dosyalarının oynanışı bit bit aynıdır (golden `eventLogHash` ve tekrar oynatma testleri
+`RULES_VERSION` 4 altında değişmeden geçer; yalnız golden dosyalarının `rulesVersion` alanı 3 → 4 yazıldı). Tek davranış farkı
+D1 genişlemesidir (V3.2 madde 7); sevk edilen 10 bölümde `D1 states` 0 kaldı (`levels:check`).
+
+### V3.1 Şema ve doğrulayıcı (U-v3-1)
+
+- `schemaVersion` 3 (`SCHEMA_VERSIONS` 1 | 2 | 3; 3 de K-55 sabit sahadır, `isFixedYardLevel`). Yeni alanlar yalnız 3'te:
+  parça başına `colors` (Y9; `^[WYGROCBP]{2,9}$`, hücre sırası şeklin (y, x) sırası, `color` = ilk hücre rengi), `stack`
+  (`{ id 0–7, z 0–3 }`, Y10), `bonusMoves` (1–3, Y12); bayraklar `wrapped`, `scissors`, `bonus`, `slippery`.
+- Şekiller: kimlikler ve hücreler `core/shapes.ts` (sözleşme tablosuyla birebir; test "K-56 … contract cells"). v3 kilidi
+  `KIND_FIRST_LEVEL_V3` (bölüm numarasıyla: L4/J4 2, T4 6, I3 8, S4/Z4 11, I4 21); `schemaVersion` ≤ 2 dosyaları K-44 hikaye
+  tablosunu korur. Ağır Yük (I5/Q9) ayrı kalır (`HEAVY_MIN_LEVEL_ID`). ASCII: `shapeAscii('L4_180')` = `XX / .X / .X`.
+- Mekanik imzaları: `TRAIT_MECHANICS` (Y9 `colors`, Y10 `stack`, Y11 `wrapped|scissors`, Y12 `bonus`, Y13 `slippery`; ilk
+  bölümler 5, 3, 7, 9, 13). OBSTACLES "Veri imzası" tablosuna girene kadar `MECHANIC_IDS`'ten ayrı tutulur
+  (`TRAIT_MECHANIC_IDS`); `deriveMechanics` ikisini birleştirir, K-45/10 "bölüm başına en çok bir yeni mekanik" onları da sayar.
+- Yeni denetimler (kodlar LEVELS §8.10 tablosu; çözücü L-37…L-39'u kullandığı için numaralar L-40…L-42):
+
+| Denetim | Aşama | Kodlar |
+|---|---|---|
+| L-40 (çalışma anı alt kümesinde) | validate + oyun | `schema_version_low` (v3 alanı, sürüm < 3), `colors_invalid`, `stack_invalid` (2–4 katman, ardışık `z`, aynı şekil + çapa, yalnız parti 0, Y6'lı bölümde yasak), `scissors_missing`, `scissors_many`, `bonus_many` (> 2), `bonus_invalid` (`bonusMoves` bonus'suz), `flag_combo_forbidden` (OBSTACLES v3 birleşim tablosu; Hikaye 2+'da sargılı palet katmanı yalnız üst) |
+| L-41 (yalnız `schemaVersion` 3) | validate | `trait_locked` (özellik ilk bölümünden önce: öğretilmemiş özellik yasağı), `piece_unreachable` (K-56), `colors_low_contrast` (Hikaye 1: WY, RY, GW, GY), `stack_mixed` (Hikaye 1), `pallet_capacity` (Kolay error, diğerleri warn), `trait_overlay_many` (warn), `scissors_trivial` (warn), `scissors_blocked` (error), `tile_family_mix` (Kolay/Normal warn) |
+| L-42 | solve | `lift_low` (`liftRatio` < 0,60), `shape_decisions_low` (Normal/Zor/Çok Zor'da `shapeDecisions` < 2) |
+
+- `scissors_blocked` kesin bir D3a türevidir: sargılı bloklar dışarıda, makaslı blok "hedef" olarak arama (`tileSearch`
+  `{ skip, target }`) makası doğru yerleştiremiyorsa error. Makasın **sahadan çıkışı** (erişim) doğrulayıcıda yaklaşık bile
+  denenmez: çözücü `unsolvable` der.
+- U-v3-0 (H1): `tileLevel` artık sütun yüksekliklerine oturan her (sınıf, çapa) çiftiyle dallanır (çalışma anı D3a ile aynı
+  yöntem); L-30 arzı ve K-31 renk kümesi iki renkli bloğu hücre rengiyle sayar.
+
+### V3.2 Çekirdek (`RULES_VERSION` 4)
+
+1. **Bayraklar:** `PIECE_FLAGS` sonuna `wrapped`, `scissors`, `bonus`, `slippery` (bit 8–11). Zobrist sınıfı:
+   `pieceClassBits` bit 25–28'e v3 bayraklarını koyar; `pieceClassExtra` iki renkli bloğun `toneCode`'unu (hücre
+   renklerinin FNV'si) ve palet çapasındaki katmanın `(z + 1) << 29` değerini XOR'lar. Faz 2R parçalarında ikisi de 0'dır,
+   bu yüzden eski hash'ler değişmez. (Palet katmanları aynı konumda aynı sınıfla XOR'da birbirini silerdi; `z` terimi bunu önler.)
+2. **Y9 iki renkli** (çekirdek modeli): `CompiledPiece.cellColors`, `pieceCellColor`; `isCorrectPlacement`, `reasonCells`,
+   `correctSpots(…, cellColors)`, `remainingSupplyByColor`, `coverTotals` ve D3a sınıfları (`cellMasks`, W6 jokeri yok) hücre
+   başına renk okur. Fırça seçemez, Vinç döndüremez (`badRotation`; döndürülmüş renk tablosu yok).
+3. **Y10 palet** (çekirdek modeli): yalnız üst katman `yardOcc`'tadır; alt katmanlar kaydını (zone yard, aynı çapa) korur.
+   `grid.layerBelow`, `isCovered`, `ownCellCode`: üst katman kalkınca hücrelere alttaki yazılır (`writePiece`), tutulan üst
+   katmanın kendi hücreleri dolu sayılır (`collisionMasks`, Vinç `yardSpotFree`), başlangıç düğümü K-07 satır 1 iptalidir.
+   `tryBeginDrag` → `covered` (yeni `PickFailure`). Yerçekimi örtülü katmanı varlık saymaz. Geri Al/Söküm tamponu geri yükler.
+   `stateInvariantErrors` palet örtüşmesini tanır. Çözücünün erişim önbelleği alt katmanlı üst katmanda kapalıdır.
+4. **Y11 sargı + makas** (eklenti `obstacles/Y11_wrap.ts`): `canPick` sargılıyı reddeder (Vinç/Altın Mala da `rulesAllow`
+   üzerinden); yeni kanca `onCorrectPlacement` K-35 adım 5'te (komşu etkilerinden sonra, saklı nesne denetiminden önce) makaslı
+   blok doğru yerleşince bütün sargıları ve makas bayrağını kaldırır; Çekiç tek sargıyı keser (`HammerTargetKind` `wrap`,
+   `HammerRules.kind`).
+5. **Y12 bonus** (eklenti `obstacles/Y12_bonus.ts`): yeni kanca `placementBonus` K-35 adım 4'te maliyetten sonra
+   `bonusMoves`'u ekler ve rozeti (bayrağı) kaldırır. Vinç ve Altın Mala yerleşimi de "doğru yerleşim"dir: mini hat adım 4'te
+   bonusu, adım 5'te makası çalıştırır.
+6. **Y13 kaygan** (çekirdek yerçekimi): `gravity.yard` kapalıyken de `slippery` saha bloğu adım 6'da düşer; diğerleri katıdır.
+   Çözücünün hızlı saha yolu böyle bölümde kapalıdır (`fastYardBlockers`).
+7. **K-30 D1 genişlemesi:** `holdableIgnoringMoves` artık "tutulabilir **ve** iptal dışı bir bırakma hedefi var" demektir
+   (`quickHoldable` yalnız saha içi yukarı adımı sayar). Tutulabilen bloklar yalnız vinç alanına kalkabiliyorsa D1 → yardım →
+   Söküm (`access`). Elle yapılmış tam dolu saha fikstürü bu yüzden step 12 kapalı koşar (S1 testi) ve yeni bir test D1'i doğrular.
+8. **Olay türleri (K-35 olay listesine eklenmeli — product-lead):** `unwrapped { by: 'scissors' | 'hammer', pieceId, pieces }`
+   (adım 5 / Çekiç adım 1), `movesChanged { reason: 'bonus', delta: bonusMoves }` (adım 4, `move` olayından hemen sonra).
+   `HammerTargetKind` `wrap`. Analitik `booster_used.target` enum'u `wrap`'ı henüz içermez (ANALYTICS, entrepreneur).
+
+### V3.3 Çözücü ölçeği (U-v3-2) — API ve süreler
+
+- `tools/solver/large.ts`: `solveLarge(lvl, { widths?, maxMs?, maxExpanded?, hooks? }) → LargeResult { status, best,
+  lowerBound, optimal, width, steps, yao, states, expanded, ms, replayOk, runs }`. Hamle sayısına göre ışın araması,
+  genişlik 8 → 32 → 128 → 512 → 2048; durumlar bütün koşu boyunca Zobrist ile tekilleştirilir; sıralama
+  `8·kalan blok − 2·tutulabilir gereken − gereken` (`neededNow`). Her genişlikte katman başına yalnız en iyi `width` aday
+  tamponlanır (bellek ≈ genişlik × derinlik × durum boyu). Bulunan çözüm çekirdekte tekrar oynatılır (`replayLarge`, strict).
+  `lowerBoundOf` = N (+1 başta doğru yerleşim yoksa); `optimal` yalnız `best = lowerBound` iken doğrudur, aksi halde rapor
+  "optimal değil, en iyi bulunan" yazar.
+- `levels:solve`: tam keşif bitmezse `schemaVersion` 3 bölümde (ya da `--large`) büyük arama koşar; rapora `large` ve `v3`
+  alanları, metne "large-level search … en iyi bulunan" satırı gelir. **Kapılar değişmez:** `scan_incomplete` (D-090 ölü masa
+  kapısı) error kalır; ışın araması ölü durum kanıtı değildir (LEVELS §8.10 seçim B'nin makro çizgesi gelene kadar).
+  `SOLVER_VERSION` 4. Seçenekler `--large`, `--no-large`, `--large-ms N`.
+- Ölçümler (bu makine, Node 22, tek iş parçacığı; fikstür `tests/fixtures/levels-v3/large_22.json` = üretici planı
+  `plan_large_22.json`'un 1. tohumdaki başlangıç dizilimi; 6×8 saha, 2×8 şantiye × 3 kat, 22 blok, 2 palet, 3 iki renkli,
+  2 sargı + makas):
+
+| Plan tohumu | N | Sonuç (en iyi / alt sınır) | Bulan genişlik | Süre (tüm genişlikler) | Üretilen durum |
+|---|---|---|---|---|---|
+| 1 (fikstür) | 22 | 24 / 22, kanıtsız | 512 (32 → 40, 128 → 26) | 17,7 sn | 1,57 M |
+| 3 | 22 | 23 / 22, kanıtsız | 8 | 18,8 sn | 1,51 M |
+| 5 | 22 | 22 / 22, **en iyi (kanıtlı)** | 8 | 0,13 sn | 7 105 |
+| 4 | 22 | çözüm yok (60 sn sınırında 53 sn) — rastgele dizilim büyük olasılıkla çözümsüz; ışın bunu kanıtlayamaz | – | 53,5 sn | 3,51 M |
+
+  Bellek: tohum 1, bütün genişlikler: tepe RSS 409 MB (`process.memoryUsage` ölçümü; katman tamponları + tekilleştirme tablosu). Kapı (≤ 60 sn) çözülebilir üç
+  dizilimde tutuyor; testte genişlik 128 + 512 (≈ 5 sn) koşar.
+- Tam arama küçük bölümlerde doğrulama için kalır (test "on a small level the beam reaches the A* minimum").
+- **Açık (seçim B):** makro çizge + sağlamlık testi (U-v3-2 madde 2) ve D3a "bilinmiyor" oranı ölçümü (Bölüm 6 spike'ı) bu
+  pakette yok; bunlar olmadan 6×6/16 blokluk bölümün tüm-uzay kapısı (`undetected_dead`, `d1_reachable`) kanıtlanamaz.
+
+### V3.4 Ölçütler (K-64) ve üretici (U-v3-3/4)
+
+- `tools/solver/v3metrics.ts`: `liftRatio` (+ `lifted`, `placements`), `visibleAtStart`, `shapeDecisions` (tam çizge
+  gerekir; kanonik yoldaki durumlarda, en iyi dışı bir doğru yerleşimin bloğu en iyi bir adayla aynı hücre renklerine ama başka
+  şekil/yöne sahipse sayılır), `stackParks`, `unwrapAt`, `bonusAt` (oran). **`traitDelta` yok (null):** orta botun "özelliği
+  yok sayan" kipi (U-v3-3) yazılmadı; Bölüm 4/5/7 kapısı ölçülemez.
+- `levels:gen` plan alanları (hepsi isteğe bağlı; olmayan plan eskisiyle bit bit aynı üretir):
+  `orientations: ShapeId[]` (yön havuzu), `twoTone: { pairs, max }` (izinli çiftin iki renkli bölgesini tek iki renkli blok
+  döşer; döşeme başına en çok `max`), `pallets: { count, layers }` (aynı blokları tek tipli palete yığar; paletin sırası en erken
+  katmanınki), `traits: { wrapped, bonus, bonusMoves, slippery }` (tekil bloklara; sargı varsa bir makas eklenir; blok başına
+  en çok bir kaplama), `blocks: [min, max]` (N bandı; başlangıçta 24 tohumlu deneme). Komşu hamlesi 5: palet/özellik ataması
+  yeniden çekilir. Seçenekler `large` / `--large` (tam keşif bitmezse büyük arama; puan `min` bandı + sabit ceza, aday
+  "en iyi bulunan" işaretlenir) ve `largeExpansions` / `--large-expansions N` (varsayılan 3 000; **saat değil açılım bütçesi**,
+  çıktı makine hızından bağımsız). v3 planında `liftRatio` < 0,60 sert ceza. `startLevel(plan, seed)` ilk başlangıç dizilimini
+  verir (fikstür ve ölçek ölçümü). Belirlenimcilik testleri: `levelsGen.test.ts` (değişmedi), `levelsGenV3.test.ts`.
+
+### V3.5 Bilinen eksikler ve sonraki paket
+
+1. C# çekirdeği (D-091) `RULES_VERSION` 4'ün gerisinde: v3 alanları, D1 genişlemesi, `pieceClassBits`/`pieceClassExtra`,
+   yeni olaylar Unity paketinde birebir taşınmalı; TS kâhinli fuzz o zamana kadar v3 alanı üretmemeli.
+2. `traitDelta` (bot kipi), makro çizge (U-v3-2 B), Bölüm 6 spike'ı, `bonus_late` (Hikaye 2, `k` = 1) yok.
+3. Sahne/çizim: palet dudağı, sargı filmi, makas ve "+n" rozetleri, iki renkli dikiş ve `covered` dokunuş tepkisi (design-lead
+   kareleri gelince); bilgi kartı metinleri `obs.y9…y13.desc` OBSTACLES kart biçimine girince i18n'e eklenir (D-017 testi
+   metni oradan okur).
+4. Analitik `booster_used.target` için `wrap` (ANALYTICS.md).
 
 ## 3. Şekiller
 

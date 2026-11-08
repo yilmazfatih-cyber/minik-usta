@@ -14,7 +14,9 @@
  *
  * Usage: `npm run levels:solve [-- --level N[,M|N-M]] [--dir <path>] [--variant no-gaps|hammer-start]
  *   [--max-states N] [--max-ms N] [--jobs N] [--no-cache] [--no-variants] [--no-d3a] [--json] [--allow <file>]
- *   [--out <dir>] [--report] [--update-golden] [--emit-tables]`
+ *   [--out <dir>] [--report] [--update-golden] [--emit-tables] [--large | --no-large] [--large-ms N]`
+ * `--large` / `--no-large`: run / skip the large-level search (best found solution, TECH §V3.3) when the exploration
+ *   is incomplete (default: on for `schemaVersion` 3 levels); `--large-ms` its time limit (default 60 000).
  * `npm run levels:check [-- …]` = this tool with `--check`: `levels:validate` (same `--dir`, `--level`, `--allow`,
  *   `--no-i18n`) and, when it passes, the solve stage; the playtest bot (WP-N) joins when tools/playtest-bot.ts exists.
  *
@@ -217,6 +219,8 @@ async function main(): Promise<number> {
     ...(has('--no-d3a') ? { d3a: false } : {}),
     ...(has('--no-variants') ? { variants: false } : {}),
     ...(variant !== undefined && isVariantName(variant) ? { variant } : {}),
+    ...(has('--large') ? { large: true } : has('--no-large') ? { large: false } : {}),
+    ...(arg('--large-ms') !== undefined ? { largeMs: intArg('--large-ms', 60_000) } : {}),
   };
   const allow: AllowList = arg('--allow') !== undefined ? loadAllowList(arg('--allow')) : loadAllowList();
   const files = listLevelFiles(dir).filter((f) => only === null || only.has(f.fileId));

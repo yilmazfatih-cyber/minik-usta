@@ -81,6 +81,16 @@ export function levelText(r: SolveReport, name: string, allowed: (i: SolveIssue)
         `  delivery fairness (K-51/5): ${m.delivery.map((d) => `segment ${d.forSegment}: D ${d.D}, ${d.states} state(s), dist ${d.distMin ?? 'dead'}…${d.distMax ?? 'dead'}, g ${d.g ?? '∞'}, f ${d.f ?? '∞'}`).join(' · ')}`,
       );
   }
+  const v3 = r.v3;
+  if (v3)
+    lines.push(
+      `  v3 (K-64): liftRatio ${v3.liftRatio ?? '–'} (${v3.lifted}/${v3.placements}) · shapeDecisions ${v3.shapeDecisions ?? '–'} · visibleAtStart ${v3.visibleAtStart} · stackParks ${v3.stackParks} · unwrapAt ${v3.unwrapAt ?? '–'} · bonusAt ${v3.bonusAt ?? '–'} · traitDelta – (bot mode not built)`,
+    );
+  const lg = r.large;
+  if (lg)
+    lines.push(
+      `  large-level search: ${lg.status}${lg.best !== null ? ` · best found ${lg.best} (lower bound ${lg.lowerBound}, ${lg.optimal ? 'optimal' : 'optimal değil, en iyi bulunan'})` : ''} · widths ${lg.runs.map((x) => `${x.width}:${x.cost ?? '–'}`).join(' ')} · ${fmtNum(lg.states)} states · ${fmtNum(lg.ms)} ms${lg.replayOk ? ' · replay ok' : ''}`,
+    );
   for (const v of r.variants) {
     const delta =
       v.min === null || !m ? '' : v.name === 'no-gaps' ? ` (+${v.min - m.min})` : ` (−${m.min - v.min})`;

@@ -6,7 +6,7 @@
 import { DEFAULT_SIZES, MAX_BOARD_ROWS } from '../geometry.ts';
 import { ALWAYS_HEAVY, shapeById } from '../shapes.ts';
 import type { ShapeDef } from '../shapes.ts';
-import { MECHANIC_IDS } from './schema.ts';
+import { MECHANIC_IDS, TRAIT_MECHANIC_IDS } from './schema.ts';
 import type { LevelData, MechanicId, PieceData } from './schema.ts';
 
 export interface MechanicSignature {
@@ -86,9 +86,29 @@ export const MECHANICS: readonly MechanicSignature[] = [
 if (MECHANICS.length !== MECHANIC_IDS.length)
   throw new Error('mechanics table out of sync with MECHANIC_IDS');
 
-/** The level's mechanic set, in table order. */
+/**
+ * v3 block traits (OBSTACLES "v3 imza önerileri", GDD §16; ÖNERİ): same shape as `MECHANICS`, kept in their own table
+ * until the rows move into the OBSTACLES "Veri imzası" table (see `TRAIT_MECHANIC_IDS`). First levels = LEVELS §8.3.
+ */
+export const TRAIT_MECHANICS: readonly MechanicSignature[] = [
+  { id: 'Y9', firstLevel: 5, detect: (l) => allPieces(l).some((p) => p.colors !== undefined) },
+  { id: 'Y10', firstLevel: 3, detect: (l) => allPieces(l).some((p) => p.stack !== undefined) },
+  { id: 'Y11', firstLevel: 7, detect: (l) => anyFlag(l, 'wrapped') || anyFlag(l, 'scissors') },
+  { id: 'Y12', firstLevel: 9, detect: (l) => anyFlag(l, 'bonus') },
+  { id: 'Y13', firstLevel: 13, detect: (l) => anyFlag(l, 'slippery') },
+];
+
+if (TRAIT_MECHANICS.map((m) => m.id).join() !== TRAIT_MECHANIC_IDS.join())
+  throw new Error('trait table out of sync with TRAIT_MECHANIC_IDS');
+
+/** The level's mechanic set: signature table order, then the v3 traits (Y9 … Y13). */
 export function deriveMechanics(level: LevelData): MechanicId[] {
-  return MECHANICS.filter((m) => m.detect(level)).map((m) => m.id);
+  return [...MECHANICS, ...TRAIT_MECHANICS].filter((m) => m.detect(level)).map((m) => m.id);
+}
+
+/** First level of a mechanic id (signature table or v3 trait table); null for an unknown id. */
+export function mechanicFirstLevel(id: MechanicId): number | null {
+  return [...MECHANICS, ...TRAIT_MECHANICS].find((m) => m.id === id)?.firstLevel ?? null;
 }
 
 /** Mechanics of `level` that are not in `previous` (the union of earlier levels' sets), in table order. */

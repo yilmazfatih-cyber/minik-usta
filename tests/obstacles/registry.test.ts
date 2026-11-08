@@ -25,9 +25,9 @@ import { ctxOf, fakeRule } from './obstacles.fixtures.ts';
 const noop = (): void => undefined;
 
 describe('obstacle registry table (TECH 7.1, 7.3)', () => {
-  it('TECH 7.1 ALL_RULES is a valid table: W1, Y3, S1 (Faz 2R: S2 out of the MVP), each in its zone hundred (W → Y → S → G)', () => {
+  it('TECH 7.1 ALL_RULES is a valid table: W1, Y3, the v3 traits Y9–Y13, S1 (Faz 2R: S2 out of the MVP), each in its zone hundred (W → Y → S → G)', () => {
     expect(validateRules(ALL_RULES)).toEqual([]);
-    expect(ALL_RULES.map((r) => r.id)).toEqual(['W1', 'Y3', 'S1']);
+    expect(ALL_RULES.map((r) => r.id)).toEqual(['W1', 'Y3', 'Y9', 'Y10', 'Y11', 'Y12', 'Y13', 'S1']);
     for (const r of ALL_RULES) {
       expect(r.zone).toBe(ruleZone(r.id));
       const base = RULE_ORDER_BASE[r.zone];

@@ -33,6 +33,7 @@ import {
   enqueuePiece,
   filledMask,
   hdr,
+  pieceCellColor,
   pieceColor,
   pieceFlags,
   pieceSeg,
@@ -131,12 +132,15 @@ export function isCorrectPlacement(s: GameState, pieceId: PieceId, cells: readon
   const { siteX, ws, hs } = s.lvl.geo;
   const elev = hdr(s, H.elev);
   const color = pieceColor(s, pieceId);
+  // v3 Y9 (GDD §16 K-57 item 1): a two-tone block is checked per cell; `cells` are in the shape's cell order
+  const twoTone = (s.lvl.pieces[pieceId]?.cellColors ?? null) !== null;
   let outside = false;
   let window = false;
   let wrongColor = false;
   const low: number[] = [];
   for (let sx = 0; sx < ws; sx++) low.push(NO_ROW);
-  for (const c of cells) {
+  for (let i = 0; i < cells.length; i++) {
+    const c = cells[i] as BoardCell;
     const sx = c.x - siteX;
     const sy = c.y - elev;
     if (sx < 0 || sx >= ws || sy < 0) {
@@ -148,7 +152,7 @@ export function isCorrectPlacement(s: GameState, pieceId: PieceId, cells: readon
     const v = plan && sy < hs ? (plan.planColors[sy * ws + sx] ?? PLAN_OUTSIDE) : PLAN_OUTSIDE;
     if (v === PLAN_OUTSIDE) outside = true;
     else if (v === PLAN_DOT) window = true;
-    else if (v !== color) wrongColor = true;
+    else if (v !== (twoTone ? pieceCellColor(s, pieceId, i) : color)) wrongColor = true;
   }
 
   // K-34: missing support per covered column (the piece's own cells never count as a wrong object below itself)
@@ -202,9 +206,10 @@ export function reasonCells(
   const plan = s.lvl.segments[visibleSegment(s)];
   const { siteX, ws, hs } = s.lvl.geo;
   const elev = hdr(s, H.elev);
-  const color = pieceColor(s, pieceId);
   const out: BoardCell[] = [];
-  for (const c of cells) {
+  for (let i = 0; i < cells.length; i++) {
+    const c = cells[i] as BoardCell;
+    const color = pieceCellColor(s, pieceId, i);
     const sx = c.x - siteX;
     const sy = c.y - elev;
     const inside = sx >= 0 && sx < ws && sy >= 0;

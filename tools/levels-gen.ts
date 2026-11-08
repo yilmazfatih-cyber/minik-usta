@@ -1,6 +1,7 @@
 /**
  * `npm run levels:gen -- --plan <plan.json> --targets <targets.json> --seed N [--iterations N] [--starts N]
- * [--count N] [--max-states N] [--max-full N] [--out <dir>]` — the deterministic D-099 level generator (tools/gen/generate.ts;
+ * [--count N] [--max-states N] [--max-full N] [--large] [--large-expansions N] [--out <dir>]` — the deterministic D-099 level
+ * generator, v3 plan fields included (tools/gen/generate.ts;
  * docs/LEVELS.md §7 U-5; docs/TECH_DESIGN.md §D99.5).
  *
  * Writes `<out>/candidate_<rank>.json` (level JSON, `schemaVersion` 2, `targets` = the targets file) and
@@ -54,6 +55,14 @@ export function genReport(plan: GenPlan, res: GenResult): string {
         `- trapCount ${m.trapCount} · greedyTrap ${d.greedyTrap ?? '–'} · greedyExcess ${d.greedyExcess ?? '∞'} · greedyWin ${d.greedyWin.toFixed(2)} · ahaMin ${d.ahaMin} · branch3 ${d.branch3 ?? '–'}`,
         `- complete ${d.complete ? 'evet' : 'hayır'} · undetectedDead ${d.undetectedDead} · D1 ${d.d1States}`,
       );
+    if (c.large)
+      lines.push(
+        `- büyük bölüm araması (U-v3-2): en iyi bulunan min ${c.large.best}${c.large.optimal ? ' (alt sınıra eşit: en iyi)' : ' (kanıtsız: optimal değil, en iyi bulunan)'} · ${c.large.ms} ms · tam uzay kanıtı yok (D-090 kapısı açık)`,
+      );
+    if (c.v3)
+      lines.push(
+        `- v3 (K-64): liftRatio ${c.v3.liftRatio ?? '–'} (${c.v3.lifted}/${c.v3.placements}) · shapeDecisions ${c.v3.shapeDecisions ?? '–'} · visibleAtStart ${c.v3.visibleAtStart} · stackParks ${c.v3.stackParks} · unwrapAt ${c.v3.unwrapAt ?? '–'} · bonusAt ${c.v3.bonusAt ?? '–'} · traitDelta – (bot kipi yok)`,
+      );
     for (const i of c.issues) lines.push(`- ${i.severity} ${i.code}: ${i.message}`);
     lines.push('', '```', c.ascii, '```', '');
   }
@@ -67,7 +76,7 @@ export function main(argv: readonly string[]): number {
   const seed = num(argv, 'seed');
   if (!planPath || !targetsPath || seed === undefined) {
     process.stderr.write(
-      'usage: npm run levels:gen -- --plan <plan.json> --targets <targets.json> --seed N [--iterations N] [--starts N] [--count N] [--max-states N] [--max-full N] [--out <dir>]\n',
+      'usage: npm run levels:gen -- --plan <plan.json> --targets <targets.json> --seed N [--iterations N] [--starts N] [--count N] [--max-states N] [--max-full N] [--large] [--large-expansions N] [--out <dir>]\n',
     );
     return 2;
   }
@@ -78,7 +87,11 @@ export function main(argv: readonly string[]): number {
   const count = num(argv, 'count');
   const maxStates = num(argv, 'max-states');
   const maxFull = num(argv, 'max-full');
+  const largeExpansions = num(argv, 'large-expansions');
+  const large = argv.includes('--large');
   const res = generate(plan, targets, {
+    ...(large ? { large } : {}),
+    ...(largeExpansions !== undefined ? { largeExpansions } : {}),
     seed,
     ...(iterations !== undefined ? { iterations } : {}),
     ...(starts !== undefined ? { starts } : {}),

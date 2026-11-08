@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 3,
+  "id": 20,
+  "chapter": 2,
+  "name": {
+    "tr": "Büyük Deneme",
+    "en": "Big Trial"
+  },
+  "difficulty": "hard",
+  "moves": 99,
+  "goals": [
+    {
+      "type": "build"
+    }
+  ],
+  "gravity": {
+    "build": "normal",
+    "yard": false
+  },
+  "wall": {
+    "height": 6,
+    "gaps": []
+  },
+  "site": {
+    "cols": 2,
+    "rows": 8
+  },
+  "build": {
+    "mode": "segments",
+    "segments": [
+      {
+        "name": {
+          "tr": "Kat 1",
+          "en": "Floor 1"
+        },
+        "rows": ["GG", "GG", "YY", "WY", "WW", "YW", "YY", "WW"]
+      },
+      {
+        "name": {
+          "tr": "Kat 2",
+          "en": "Floor 2"
+        },
+        "rows": ["YY", "GY", "WW", "GG", "YY", "YG", "WW", "GG"]
+      },
+      {
+        "name": {
+          "tr": "Kat 3",
+          "en": "Floor 3"
+        },
+        "rows": ["WW", "YY", "GG", "WY", "YW", "GG", "WW", "YY"]
+      }
+    ]
+  },
+  "yard": {
+    "cols": 6,
+    "rows": 8,
+    "batches": [
+      {
+        "forSegment": 0,
+        "pieces": [
+          {
+            "shape": "D2_90",
+            "color": "Y",
+            "x": 0,
+            "y": 7,
+            "stack": {
+              "id": 0,
+              "z": 0
+            }
+          },
+          {
+            "shape": "D2_90",
+            "color": "Y",
+            "x": 0,
+            "y": 7,
+            "stack": {
+              "id": 0,
+              "z": 1
+            }
+          },
+          {
+            "shape": "D2_90",
+            "color": "W",
+            "x": 4,
+            "y": 7
+          },
+          {
+            "shape": "D2_0",
+            "color": "Y",
+            "x": 2,
+            "y": 6,
+            "colors": "YW"
+          },
+          {
+            "shape": "D2_0",
+            "color": "W",
+            "x": 0,
+            "y": 5,
+            "flags": ["scissors"]
+          },
+          {
+            "shape": "D2_0",
+            "color": "G",
+            "x": 1,
+            "y": 5
+          },
+          {
+            "shape": "O4_0",
+            "color": "W",
+            "x": 4,
+            "y": 5,
+            "colors": "WYYY"
+          },
+          {
+            "shape": "D2_90",
+            "color": "G",
+            "x": 0,
+            "y": 4
+          },
+          {
+            "shape": "D2_0",
+            "color": "Y",
+            "x": 2,
+            "y": 4
+          },
+          {
+            "shape": "D2_0",
+            "color": "G",
+            "x": 3,
+            "y": 4
+          },
+          {
+            "shape": "D2_90",
+            "color": "W",
+            "x": 4,
+            "y": 4,
+            "flags": ["wrapped"]
+          },
+          {
+            "shape": "D2_90",
+            "color": "W",
+            "x": 0,
+            "y": 3
+          },
+          {
+            "shape": "D2_90",
+            "color": "G",
+            "x": 3,
+            "y": 3
+          },
+          {
+            "shape": "D2_90",
+            "color": "G",
+            "x": 0,
+            "y": 2
+          },
+          {
+            "shape": "D2_0",
+            "color": "Y",
+            "x": 2,
+            "y": 2
+          },
+          {
+            "shape": "D2_90",
+            "color": "W",
+            "x": 3,
+            "y": 2,
+            "flags": ["wrapped"]
+          },
+          {
+            "shape": "D2_0",
+            "color": "G",
+            "x": 5,
+            "y": 2,
+            "colors": "GY",
+            "stack": {
+              "id": 1,
+              "z": 0
+            }
+          },
+          {
+            "shape": "D2_0",
+            "color": "G",
+            "x": 5,
+            "y": 2,
+            "colors": "GY",
+            "stack": {
+              "id": 1,
+              "z": 1
+            }
+          },
+          {
+            "shape": "D2_90",
+            "color": "W",
+            "x": 0,
+            "y": 1,
+            "colors": "WY"
+          },
+          {
+            "shape": "D2_90",
+            "color": "Y",
+            "x": 2,
+            "y": 1,
+            "colors": "YW"
+          },
+          {
+            "shape": "D2_90",
+            "color": "G",
+            "x": 1,
+            "y": 0
+          },
+          {
+            "shape": "O4_0",
+            "color": "Y",
+            "x": 4,
+            "y": 0,
+            "colors": "YYWW"
+          }
+        ]
+      }
+    ]
+  },
+  "obstacles": []
+}

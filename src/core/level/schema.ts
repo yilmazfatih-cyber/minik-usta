@@ -48,8 +48,16 @@ export const MECHANIC_IDS = [
  */
 export const LEGACY_MECHANIC_IDS = ['S2'] as const;
 export type LegacyMechanicId = (typeof LEGACY_MECHANIC_IDS)[number];
-/** A mechanic id of the signature table (plus the transitional legacy id). */
-export type MechanicId = (typeof MECHANIC_IDS)[number] | LegacyMechanicId;
+/**
+ * v3 block traits (GDD §16 K-57…K-61, OBSTACLES "Bölümler v3 blok özellikleri", ÖNERİ): Y9 two-tone, Y10 pallet, Y11
+ * wrap + scissors, Y12 bonus, Y13 slippery. Kept apart from `MECHANIC_IDS` until product-lead moves the v3 rows into
+ * the OBSTACLES "Veri imzası" table (that table is read by `mechanics.test` and `rule-coverage`); then the two lists
+ * merge. Derivation: core/level/mechanics.ts `TRAIT_MECHANICS`.
+ */
+export const TRAIT_MECHANIC_IDS = ['Y9', 'Y10', 'Y11', 'Y12', 'Y13'] as const;
+export type TraitMechanicId = (typeof TRAIT_MECHANIC_IDS)[number];
+/** A mechanic id of the signature table (plus the v3 trait ids and the transitional legacy id). */
+export type MechanicId = (typeof MECHANIC_IDS)[number] | TraitMechanicId | LegacyMechanicId;
 
 /** GDD §14.1/3 closed `done` vocabulary (16 events). Each one is a separate union member below. */
 export const TUT_EVENTS = [
@@ -106,7 +114,26 @@ const I18nText = z.strictObject({
   tr: z.string().check(z.minLength(1)),
   en: z.string().check(z.minLength(1)),
 });
-const Flag = z.enum(['glass', 'mortar', 'balloon', 'chained', 'wet']);
+const Flag = z.enum([
+  'glass',
+  'mortar',
+  'balloon',
+  'chained',
+  'wet',
+  // v3 (GDD §16 K-59…K-61; `schemaVersion` 3)
+  'wrapped',
+  'scissors',
+  'bonus',
+  'slippery',
+]);
+
+/** v3 flags: a level that writes one of them must be `schemaVersion` 3 (L-40 `schema_version_low`). */
+export const V3_FLAGS: ReadonlySet<string> = new Set(['wrapped', 'scissors', 'bonus', 'slippery']);
+
+/** Y9 cell colours (GDD §16 K-57): one colour letter per shape cell in (y, x) order; length / variety checks in L-40. */
+const CellColors = z.string().check(z.regex(/^[WYGROCBP]{2,9}$/));
+/** Y10 pallet membership (GDD §16 K-58): pallet `id` 0–7, layer `z` 0–3 (0 = bottom). */
+const Stack = z.strictObject({ id: Int(0, 7), z: Int(0, 3) });
 
 /**
  * K-49 size field. The schema only bounds it loosely; the K-49 ranges and the frame (`Wy + Ws ≤ 8`) are logic checks
@@ -134,6 +161,12 @@ const PiecePlacementInput = z
     flags: z.optional(z.array(Flag)),
     /** OBSTACLES Y4; `wet` ⇔ `wetMoves` (L-26). */
     wetMoves: z.optional(Int(1, 5)),
+    /** v3 Y9 two-tone block: colour per cell in the shape's (y, x) cell order; `color` must equal its first letter. */
+    colors: z.optional(CellColors),
+    /** v3 Y10 pallet layer. */
+    stack: z.optional(Stack),
+    /** v3 Y12: moves a correctly placed `bonus` block adds (default 2; only with `bonus`, L-40). */
+    bonusMoves: z.optional(Int(1, 3)),
   })
   .check(
     z.superRefine((p, ctx) => {
@@ -328,19 +361,22 @@ const Targets = z.strictObject({
 
 /**
  * GDD §14 `schemaVersion` (D-099): 1 = Faz 2R archive (batches, truck, K-25…K-27); 2 = fixed yard (K-55: exactly one
- * batch, `forSegment` 0, no `dropColumns`; D-099 move budget K-52; puzzle gates K-51 items 6–9). Missing = 1.
+ * batch, `forSegment` 0, no `dropColumns`; D-099 move budget K-52; puzzle gates K-51 items 6–9); 3 = v3 block traits
+ * (GDD §16, LEVELS §8.10 U-v3-1: `colors`, `stack`, `bonusMoves`, flags `wrapped` / `scissors` / `bonus` /
+ * `slippery`; every v2 rule holds). Version 3 is written only by files that use a v3 field, so a `RULES_VERSION` 3
+ * client rejects them (schema) instead of misreading them. Missing = 1.
  */
-export const SCHEMA_VERSIONS = [1, 2] as const;
+export const SCHEMA_VERSIONS = [1, 2, 3] as const;
 export type SchemaVersion = (typeof SCHEMA_VERSIONS)[number];
 
 export const LevelSchema = z.strictObject({
-  schemaVersion: z.optional(z.union([z.literal(1), z.literal(2)])),
+  schemaVersion: z.optional(z.union([z.literal(1), z.literal(2), z.literal(3)])),
   id: Int(1, 999),
   chapter: Int(1, 5),
   name: I18nText,
   difficulty: z.enum(['easy', 'normal', 'hard', 'superhard']),
   moves: Int(1, 99),
-  teaches: z.optional(z.enum([...MECHANIC_IDS, ...LEGACY_MECHANIC_IDS])),
+  teaches: z.optional(z.enum([...MECHANIC_IDS, ...TRAIT_MECHANIC_IDS, ...LEGACY_MECHANIC_IDS])),
   /** K-45/1: missing → compile uses `id × 1000 + id`. */
   seed: z.optional(z.int()),
   goals: z.array(Goal).check(z.minLength(1), z.maxLength(3)),
@@ -426,10 +462,13 @@ export type TargetsData = NonNullable<LevelData['targets']>;
 
 /** The level's schema version (GDD §14; missing = 1). */
 export function schemaVersionOf(level: { readonly schemaVersion?: number | undefined }): SchemaVersion {
-  return level.schemaVersion === 2 ? 2 : 1;
+  return level.schemaVersion === 3 ? 3 : level.schemaVersion === 2 ? 2 : 1;
 }
 
-/** K-55 (D-099): a `schemaVersion` 2 level — every block in the yard from the start, no batch or truck refill. */
+/**
+ * K-55 (D-099): a `schemaVersion` 2 or 3 level — every block in the yard from the start, no batch or truck refill
+ * (version 3 only adds the v3 block traits).
+ */
 export function isFixedYardLevel(level: { readonly schemaVersion?: number | undefined }): boolean {
-  return schemaVersionOf(level) === 2;
+  return schemaVersionOf(level) >= 2;
 }

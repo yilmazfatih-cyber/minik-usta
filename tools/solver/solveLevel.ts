@@ -25,13 +25,17 @@ import { isFixedYardLevel } from '../../src/core/level/schema.ts';
 import { replayCanonical } from './verify.ts';
 import type { ReplayCheck } from './verify.ts';
 import { VARIANTS, applyVariant, variantApplies, variantBandOk } from './variants.ts';
+import { largeActions, solveLarge } from './large.ts';
+import { v3Metrics } from './v3metrics.ts';
+import type { V3Metrics } from './v3metrics.ts';
+import { schemaVersionOf } from '../../src/core/level/schema.ts';
 import type { VariantName } from './variants.ts';
 
 /**
  * Bump when the solver's results can change for the same level and rules (cache key with `levelHash` and
- * `RULES_VERSION`, TECH §2R.5).
+ * `RULES_VERSION`, TECH §2R.5). 4 = levels v3 (K-64 measures, v3 gates, large-level search, TECH §V3).
  */
-export const SOLVER_VERSION = 3;
+export const SOLVER_VERSION = 4;
 
 export interface SolveOptions {
   readonly maxStates?: number;
@@ -42,6 +46,31 @@ export interface SolveOptions {
   readonly variants?: boolean;
   /** Solve this variant instead of the level (`--variant`). */
   readonly variant?: VariantName;
+  /**
+   * v3 (U-v3-2): when the exploration is incomplete, run the large-level search for the best found solution (default
+   * true for a `schemaVersion` 3 level). It never replaces the whole-space gates (D-090).
+   */
+  readonly large?: boolean;
+  /** Time limit of the large-level search (default `LARGE_MAX_MS` = 60 000). */
+  readonly largeMs?: number;
+}
+
+/** What the report keeps of a large-level search (tools/solver/large.ts). */
+export interface LargeSummary {
+  readonly status: 'solved' | 'unknown';
+  /** Best found cost: an upper bound of `min` ("en iyi bulunan"). */
+  readonly best: number | null;
+  readonly lowerBound: number;
+  /** Proven minimum (best = lower bound); otherwise "optimal değil, en iyi bulunan". */
+  readonly optimal: boolean;
+  readonly width: number | null;
+  readonly yao: { readonly overWall: number; readonly rail: number; readonly value: number | null };
+  readonly states: number;
+  readonly ms: number;
+  readonly replayOk: boolean;
+  readonly runs: readonly { readonly width: number; readonly cost: number | null; readonly ms: number }[];
+  /** `start` + the found drags. */
+  readonly actions: readonly SessionAction[];
 }
 
 export type SolveStatus = 'solved' | 'unsolvable' | 'unknown' | 'invalid';
@@ -90,6 +119,10 @@ export interface SolveReport {
   /** P4B-02: metrics (measured value or `targets` band) outside the LEVELS §6.6 Tablo B specification; `[]` for older cached reports. */
   readonly specGaps?: readonly SpecGap[];
   readonly stats: SolveStats | null;
+  /** v3 measures (GDD §16 K-64) of the canonical / best found solution; null otherwise (older cached reports: absent). */
+  readonly v3?: V3Metrics | null;
+  /** Large-level search (U-v3-2) of an incomplete exploration; null when not run. */
+  readonly large?: LargeSummary | null;
 }
 
 export interface SolveContext {
@@ -197,8 +230,33 @@ export function solveLevelData(
   const isVariant = opts.variant !== undefined;
 
   const fixedYard = isFixedYardLevel(level);
+  const v3Level = schemaVersionOf(level) === 3;
+  let v3: V3Metrics | null = null;
+  let large: LargeSummary | null = null;
   if (!g.complete) {
     status = 'unknown';
+    if (opts.large ?? v3Level) {
+      const r = solveLarge(lvl, { ...(opts.largeMs !== undefined ? { maxMs: opts.largeMs } : {}) });
+      large = {
+        status: r.status,
+        best: r.best,
+        lowerBound: r.lowerBound,
+        optimal: r.optimal,
+        width: r.width,
+        yao: r.yao,
+        states: r.states,
+        ms: r.ms,
+        replayOk: r.replayOk,
+        runs: r.runs,
+        actions: r.status === 'solved' ? largeActions(r.steps) : [],
+      };
+      if (r.status === 'solved') {
+        v3 = v3Metrics(lvl, r.steps);
+        notes.push(
+          `large-level search (U-v3-2): best found ${r.best} (lower bound ${r.lowerBound})${r.optimal ? ' = min (proven at the lower bound)' : ' — not proven optimal, en iyi bulunan'}; width ${r.width}, ${r.states} states, ${r.ms} ms, replay ok; whole-space gates stay open (D-090)`,
+        );
+      } else notes.push(`large-level search (U-v3-2): no solution within ${r.ms} ms (${r.states} states)`);
+    }
     // K-51 item 7 (a), D-099: the dead-table gate needs a complete scan; a v2 level without one is not shipped
     if (fixedYard)
       out.push(
@@ -267,6 +325,10 @@ export function solveLevelData(
         notes.push(
           `whole space: ${de.edges} move(s) from a live state lead into ${de.states} dead state(s) (${de.shiftEdges} of them shifts whose delivery buries a block, not K-50 ✓-traps); D1/D2/D3a catch ${de.caught} state(s), ${de.states - de.caught} would need the D3b table (cut 1, Faz 3)`,
         );
+      if (v3Level) {
+        v3 = v3Metrics(lvl, steps, { g, dist: res.dist.dist, pathStates: res.pathStates });
+        out.push(...v3Checks(level, v3));
+      }
       if (fixedYard) {
         out.push(...d099Checks(level, metrics.d099));
         specGapList = specGaps(level, metrics);
@@ -333,7 +395,41 @@ export function solveLevelData(
     notes,
     specGaps: specGapList,
     stats: { ...g.stats, complete: g.complete, limit: g.limit, totalMs: Math.round(performance.now() - t0) },
+    v3,
+    large,
   };
+}
+
+/**
+ * v3 solve-stage gates (GDD §16 ÖNERİ K-64; LEVELS §8.6): `lift_low` (error: `liftRatio` < 0.60 on every v3 level),
+ * `shape_decisions_low` (error: `shapeDecisions` < 2 on Normal / Hard / Çok Zor). `traitDelta` needs the bot's
+ * "ignore the trait" mode (U-v3-3) and is not measured yet: a note, never a pass.
+ */
+export function v3Checks(level: LevelData, m: V3Metrics): SolveIssue[] {
+  const out: SolveIssue[] = [];
+  if (m.liftRatio !== null && m.liftRatio < 0.6)
+    out.push(
+      issue(
+        'lift_low',
+        'K-64/1',
+        'L-42',
+        'error',
+        'yard',
+        `liftRatio ${m.liftRatio} (${m.lifted}/${m.placements}) < 0.60: too many blocks slide in from above the wall top (LEVELS §8.1 Karar 9)`,
+      ),
+    );
+  if (level.difficulty !== 'easy' && m.shapeDecisions !== null && m.shapeDecisions < 2)
+    out.push(
+      issue(
+        'shape_decisions_low',
+        'K-64/2',
+        'L-42',
+        'error',
+        'yard',
+        `shapeDecisions ${m.shapeDecisions} < 2 on a ${level.difficulty} level: add a two-tone twin or an overhang shape (LEVELS §8.6)`,
+      ),
+    );
+  return out;
 }
 
 /**

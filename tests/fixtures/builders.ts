@@ -29,6 +29,13 @@ export type PieceSpec = readonly [ShapeId, ColorCode, number, number, (readonly 
 /** `[shape, colour, x (global site column, default 6–7), plan row, segment?]`. */
 export type DebrisSpec = readonly [ShapeId, ColorCode, number, number, number?];
 
+/** v3 per-piece fields (GDD §16 K-57, K-58, K-60). */
+export interface PieceTraits {
+  readonly colors?: string;
+  readonly stack?: { readonly id: number; readonly z: number };
+  readonly bonusMoves?: number;
+}
+
 /** K-49 size fields of `yard` / `site`. */
 export interface SizeSpec {
   readonly cols?: number;
@@ -37,8 +44,10 @@ export interface SizeSpec {
 
 export interface LevelSpec {
   readonly id?: number;
-  /** GDD §14 `schemaVersion` (default 1; 2 = K-55 fixed yard, D-099). */
-  readonly schemaVersion?: 1 | 2;
+  /** GDD §14 `schemaVersion` (default 1; 2 = K-55 fixed yard, D-099; 3 = v3 block traits, GDD §16). */
+  readonly schemaVersion?: 1 | 2 | 3;
+  /** v3 fields of start-batch piece `i` (GDD §16): Y9 `colors`, Y10 `stack`, Y12 `bonusMoves`. */
+  readonly traits?: Readonly<Record<number, PieceTraits>>;
   /** K-49 yard size Wy × Hy (default 6 × 8). */
   readonly yard?: SizeSpec;
   /** K-49 site size Ws × Hs (default 2 × 8). */
@@ -138,7 +147,10 @@ export function levelJson(spec: LevelSpec = {}): LevelInput {
     },
     yard: {
       batches: [
-        { forSegment: 0, pieces: (spec.pieces ?? []).map(piece) },
+        {
+          forSegment: 0,
+          pieces: (spec.pieces ?? []).map((p, i) => ({ ...piece(p), ...(spec.traits?.[i] ?? {}) })),
+        },
         ...(spec.batches ?? []).map((b) => ({
           forSegment: b.forSegment,
           ...(b.dropColumns ? { dropColumns: [...b.dropColumns] } : {}),

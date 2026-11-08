@@ -46,7 +46,7 @@ import { MAX_COLS, MAX_ROWS } from './geometry.ts';
 import type { BoardGeo } from './geometry.ts';
 import { shapeByIndex } from './shapes.ts';
 import type { ShapeDef } from './shapes.ts';
-import { collisionMasks, siteColumnTops, visibleSegment } from './grid.ts';
+import { collisionMasks, isCovered, siteColumnTops, visibleSegment } from './grid.ts';
 import type { BoardCell } from './grid.ts';
 
 /** DragMode of free movement (TECH §2.1). */
@@ -198,14 +198,22 @@ export interface DragSession {
 }
 
 /** Why a piece cannot be picked (scene feedback: K-14 no reaction, K-09 (a) "kımıldamıyor" shake, E-30). */
-export type PickFailure = 'notOnBoard' | 'hiddenSegment' | 'locked' | 'noMoves' | 'rule' | 'immovable';
+export type PickFailure =
+  | 'notOnBoard'
+  | 'hiddenSegment'
+  | 'locked'
+  | 'noMoves'
+  | 'rule'
+  | 'immovable'
+  /** v3 Y10 (GDD §16 K-58 item 3): a pallet layer under another layer; no reaction, no move spent. */
+  | 'covered';
 
 export type DragAttempt =
   { readonly ok: true; readonly session: DragSession } | { readonly ok: false; readonly reason: PickFailure };
 
 /**
  * K-09 pick gate + BFS (TECH §4.1). Checks, in order: the piece is on the board (yard, or site in the visible segment;
- * K-22, K-23), not locked (K-14), `movesLeft > 0` (K-07, E-30), every `canPick` hook (K-09 (c)), and R holds a node
+ * K-22, K-23), not locked (K-14), not a covered pallet layer (v3 K-58 item 3), `movesLeft > 0` (K-07, E-30), every `canPick` hook (K-09 (c)), and R holds a node
  * whose cells differ from the start cells (K-09 (a)). Crates and bags are obstacles, never pieces (K-09 (d)).
  */
 export function tryBeginDrag(
@@ -220,6 +228,7 @@ export function tryBeginDrag(
   if (zone === Zone.site && pieceSeg(s, pieceId) !== visibleSegment(s))
     return { ok: false, reason: 'hiddenSegment' };
   if ((pieceFlags(s, pieceId) & FLAG_BIT.locked) !== 0) return { ok: false, reason: 'locked' };
+  if (s.lvl.hasStacks && isCovered(s, pieceId)) return { ok: false, reason: 'covered' };
   if (hdr(s, H.movesLeft) <= 0) return { ok: false, reason: 'noMoves' };
   if (rules.canPick && !rules.canPick(s, pieceId)) return { ok: false, reason: 'rule' };
   const session = new Session(s, pieceId, rules);

@@ -18,6 +18,11 @@
  * piece ids (0–9, a–z, A–Z = 0…61), crates/bags move to an `obstacles:` line and `locked:` / `stuck:` list flags, so
  * `fromAscii` can rebuild the state.
  *
+ * v3 (GDD §16): a two-tone block (Y9) prints each cell in its own colour; a level with a v3 trait gets a `traits:` line
+ * — colour mode `pallet@(x,y)x<layers> wrapped@(x,y) scissors@(x,y) bonus+<n>@(x,y) slippery@(x,y)` (yard anchors),
+ * ids mode `pallet:<ids bottom→top>@(x,y) wrapped:<id> scissors:<id> bonus:<id> slippery:<id>` (`-` when empty), which
+ * `fromAscii` reads back (covered pallet layers are not drawn: only the top layer is in the occupancy, K-58).
+ *
  * Geometry (K-49, TECH §2R.1): a board that differs from the default 6×8 | 2×8 (yard, site or H) gets a second header
  * line `size 4x4|2x5 H5`; without it the default board is assumed, so pre-2R text reads unchanged. Rows run
  * `rows − 1 … 0` (H + 1 … 0); yard air (x ≤ wy−1, hy ≤ y ≤ H−1) and site air (site columns, hs + e ≤ y ≤ H−1) print
@@ -26,7 +31,8 @@
 import { COLOR_CODES, Zone } from './types.ts';
 import type { PieceId } from './types.ts';
 import { DEFAULT_GEO, geoLabel, hasDefaultBoard } from './geometry.ts';
-import { shapeByIndex } from './shapes.ts';
+import { shapeById, shapeByIndex } from './shapes.ts';
+import type { ShapeId } from './types.ts';
 import {
   FLAG_BIT,
   GF,
@@ -39,8 +45,12 @@ import {
   hdr,
   hiddenCollected,
   obstacleField,
+  pieceCellColor,
   pieceColor,
   pieceFlags,
+  pieceShape,
+  pieceX,
+  pieceY,
   pieceZone,
   queueIds,
   revealedMask,
@@ -74,9 +84,36 @@ function idChar(id: PieceId): string {
   return ch;
 }
 
-function colorChar(s: GameState, id: PieceId, upper: boolean): string {
-  const c = (COLOR_CODES[pieceColor(s, id)] ?? 'W').toLowerCase();
+/** Colour letter of piece `id` at board cell (x, y) (a two-tone block prints its cell's own colour, Y9). */
+function colorChar(s: GameState, id: PieceId, upper: boolean, x = -1, y = -1): string {
+  let color = pieceColor(s, id);
+  if (s.lvl.pieces[id]?.cellColors && x >= 0) {
+    const shape = shapeByIndex(pieceShape(s, id));
+    const ax = pieceX(s, id);
+    const ay = pieceY(s, id) + (pieceZone(s, id) === Zone.site ? hdr(s, H.elev) : 0);
+    const i = shape.cells.findIndex((c) => ax + c.x === x && ay + c.y === y);
+    if (i >= 0) color = pieceCellColor(s, id, i);
+  }
+  const c = (COLOR_CODES[color] ?? 'W').toLowerCase();
   return upper ? c.toUpperCase() : c;
+}
+
+/**
+ * A shape drawn top → bottom, rows joined with ` / ` (LEVELS §8.2 notation): `X` cell, `.` empty; with `colors` (Y9,
+ * the shape's (y, x) cell order) each cell prints its colour letter. `shapeAscii('L4_180')` = `XX / .X / .X`.
+ */
+export function shapeAscii(id: ShapeId, colors?: string): string {
+  const shape = shapeById(id);
+  const rows: string[] = [];
+  for (let y = shape.h - 1; y >= 0; y--) {
+    let row = '';
+    for (let x = 0; x < shape.w; x++) {
+      const i = shape.cells.findIndex((c) => c.x === x && c.y === y);
+      row += i < 0 ? '.' : (colors?.[i] ?? 'X');
+    }
+    rows.push(row);
+  }
+  return rows.join(' / ');
 }
 
 /** Wall boundary character of board row y. */
@@ -98,7 +135,7 @@ function yardChar(s: GameState, x: number, y: number, ids: boolean): string {
   const { hy, h } = s.lvl.geo;
   if (y >= hy && y < h) return AIR_CHAR;
   const v = yardOcc(s, x, y);
-  if (v > 0) return ids ? idChar(v - 1) : colorChar(s, v - 1, false);
+  if (v > 0) return ids ? idChar(v - 1) : colorChar(s, v - 1, false, x, y);
   if (v < 0 && !ids) {
     const o = s.lvl.obstacles[-v - 1];
     if (o?.type === 'crate') return String(obstacleField(s, o.index, OF.hp));
@@ -118,7 +155,46 @@ function siteChar(s: GameState, sx: number, y: number, ids: boolean): string {
   if (v === SITE_TROWEL) return '*';
   if (v <= 0) return '.';
   if (ids) return idChar(v - 1);
-  return colorChar(s, v - 1, (pieceFlags(s, v - 1) & FLAG_BIT.locked) !== 0);
+  return colorChar(s, v - 1, (pieceFlags(s, v - 1) & FLAG_BIT.locked) !== 0, s.lvl.geo.siteX + sx, y);
+}
+
+const TRAIT_IDS = new Set(['Y9', 'Y10', 'Y11', 'Y12', 'Y13']);
+const V3_FLAG_NAMES = ['wrapped', 'scissors', 'bonus', 'slippery'] as const;
+
+/** v3 `traits:` line entries (see the module comment); null when the level has no v3 trait. */
+function traitEntries(s: GameState, ids: boolean): string[] | null {
+  const { lvl } = s;
+  if (!lvl.mechanics.some((m) => TRAIT_IDS.has(m))) return null;
+  const out: string[] = [];
+  const P = lvl.layout.counts.pieces;
+  // pallets: layers still at their pallet anchor in the yard, bottom → top
+  const pallets = new Map<string, PieceId[]>();
+  for (let id = 0; id < P; id++) {
+    const p = lvl.pieces[id];
+    if (!p || p.stackId < 0 || pieceZone(s, id) !== Zone.yard) continue;
+    if (pieceX(s, id) !== p.x || pieceY(s, id) !== p.y) continue;
+    const key = `${p.x},${p.y}`;
+    const list = pallets.get(key) ?? [];
+    list.push(id);
+    pallets.set(key, list);
+  }
+  for (const [at, layers] of pallets) {
+    if (layers.length < 2) continue;
+    layers.sort((a, b) => (lvl.pieces[a]?.stackZ ?? 0) - (lvl.pieces[b]?.stackZ ?? 0));
+    out.push(ids ? `pallet:${layers.map(idChar).join(',')}@(${at})` : `pallet@(${at})x${layers.length}`);
+  }
+  for (const name of V3_FLAG_NAMES) {
+    for (let id = 0; id < P; id++) {
+      if ((pieceFlags(s, id) & FLAG_BIT[name]) === 0) continue;
+      const zone = pieceZone(s, id);
+      if (ids) out.push(`${name}:${id}`);
+      else if (zone === Zone.yard) {
+        const tag = name === 'bonus' ? `bonus+${lvl.pieces[id]?.bonusMoves ?? 0}` : name;
+        out.push(`${tag}@(${pieceX(s, id)},${pieceY(s, id)})`);
+      }
+    }
+  }
+  return out;
 }
 
 /** The board as Appendix A text (lines joined with `\n`, no trailing newline). */
@@ -168,6 +244,8 @@ export function toAscii(s: GameState, opts: AsciiOptions = {}): string {
   }
   const queue = queueIds(s);
   if (queue.length > 0) lines.push(`queue: ${queue.join(' ')}`);
+  const traits = traitEntries(s, ids);
+  if (traits) lines.push(`traits: ${traits.length > 0 ? traits.join(' ') : '-'}`);
   if (ids) {
     const obs: string[] = [];
     for (const o of lvl.obstacles) {
@@ -231,6 +309,8 @@ export interface AsciiBoard {
   readonly obstacles: readonly string[];
   readonly locked: readonly number[];
   readonly stuck: readonly number[];
+  /** v3 `traits:` entries (null when the line is absent). */
+  readonly traits: readonly string[] | null;
 }
 
 const HEADER_RE = /^L(\d+) turn (\d+) moves (\d+) seg (\d+)\/(\d+) elev (\d+)( ids)?$/;
@@ -263,6 +343,7 @@ export function parseAscii(text: string): AsciiBoard {
   let obstacles: string[] = [];
   let locked: number[] = [];
   let stuck: number[] = [];
+  let traits: string[] | null = null;
   const nums = (rest: string): number[] => rest.trim().split(/\s+/).filter(Boolean).map(Number);
   for (const line of lines.slice(sized ? 2 : 1)) {
     if (COLS_RE.test(line)) continue;
@@ -293,7 +374,10 @@ export function parseAscii(text: string): AsciiBoard {
     else if (line.startsWith('obstacles:')) obstacles = line.slice(10).trim().split(/\s+/).filter(Boolean);
     else if (line.startsWith('locked:')) locked = nums(line.slice(7));
     else if (line.startsWith('stuck:')) stuck = nums(line.slice(6));
-    else if (line.trim() !== '') throw new SyntaxError(`ascii: unexpected line "${line}"`);
+    else if (line.startsWith('traits:')) {
+      const rest = line.slice(7).trim();
+      traits = rest === '-' ? [] : rest.split(/\s+/).filter(Boolean);
+    } else if (line.trim() !== '') throw new SyntaxError(`ascii: unexpected line "${line}"`);
   }
   if (seen.size !== rows) throw new SyntaxError(`ascii: the board needs rows ${rows - 1} … 0`);
   return {
@@ -313,6 +397,7 @@ export function parseAscii(text: string): AsciiBoard {
     obstacles,
     locked,
     stuck,
+    traits,
   };
 }
 
@@ -383,6 +468,29 @@ export function fromAscii(lvl: CompiledLevel, text: string): GameState {
     setPieceField(s, id, PF.y, onSite ? ay - board.elev : ay);
     setPieceField(s, id, PF.seg, onSite ? board.seg : compiled.segment);
     occupyPiece(s, id);
+  }
+  // v3: covered pallet layers (not drawn) and the v3 flags, from the `traits:` line
+  if (board.traits) {
+    for (let id = 0; id < P; id++) for (const name of V3_FLAG_NAMES) setFlag(s, id, name, false);
+    for (const e of board.traits) {
+      const flag = /^(wrapped|scissors|bonus|slippery):(\d+)$/.exec(e);
+      if (flag) {
+        setFlag(s, Number(flag[2]), flag[1] as (typeof V3_FLAG_NAMES)[number], true);
+        continue;
+      }
+      const pallet = /^pallet:([^@]+)@\((\d),(\d)\)$/.exec(e);
+      if (!pallet) throw new SyntaxError(`ascii: bad traits entry "${e}"`);
+      const layers = (pallet[1] ?? '').split(',').map((ch) => ID_CHARS.indexOf(ch));
+      const x = Number(pallet[2]);
+      const y = Number(pallet[3]);
+      // bottom → top; only the top is drawn (and so already placed): the others lie under it
+      for (const id of layers.slice(0, -1)) {
+        setPieceField(s, id, PF.zone, Zone.yard);
+        setPieceField(s, id, PF.x, x);
+        setPieceField(s, id, PF.y, y);
+        setPieceField(s, id, PF.seg, -1);
+      }
+    }
   }
   for (const id of board.queue) enqueuePiece(s, id);
   for (const id of board.locked) setFlag(s, id, 'locked', true);

@@ -21,6 +21,7 @@ import { DEFAULT_GEO, MAX_COLS, MAX_ROWS, MAX_SEGMENTS, MAX_SITE_COLS, SEGMENT_S
 import type { BoardGeo } from './geometry.ts';
 import { GAP_STRIDE, H, OBSTACLE_STRIDE, PF, PIECE_STRIDE } from './state.ts';
 import type { GameState, StateLayout } from './state.ts';
+import type { CompiledLevel } from './level/compile.ts';
 
 /** Fixed seed of the table generator (changing it changes every golden hash). */
 export const ZOBRIST_SEED = 0x5eed2b1d;
@@ -83,14 +84,33 @@ export function buildZobrist(layout: StateLayout, cycle: number, geo: BoardGeo =
 const MUL0 = 0x9e3779b1;
 const MUL1 = 0x85ebca77;
 
-/** Packs the piece class into one int: canonical shape (6 bits) | colour (3) | flags (8) | counter (8). */
-function pieceClass(buf: Int32Array, base: number): number {
+/**
+ * Packs the piece class into one int: canonical shape (6 bits) | colour (3) | flags (8) | counter (8) | v3 flags
+ * `wrapped`, `scissors`, `bonus`, `slippery` (4, bits 25–28). A Faz 2R piece has no v3 flag, so its class is unchanged.
+ */
+export function pieceClassBits(buf: Int32Array, base: number): number {
   return (
     ((buf[base + PF.shape] ?? 0) & 63) |
     (((buf[base + PF.color] ?? 0) & 7) << 6) |
     (((buf[base + PF.flags] ?? 0) & 255) << 9) |
-    (((buf[base + PF.counter] ?? 0) & 255) << 17)
+    (((buf[base + PF.counter] ?? 0) & 255) << 17) |
+    ((((buf[base + PF.flags] ?? 0) >> 8) & 15) << 25)
   );
+}
+
+/**
+ * v3 static part of a piece's class at a position (0 for every Faz 2R piece, so their hashes are unchanged):
+ * - Y9 two-tone: `toneCode` of its cell colours (two blocks of one shape and first colour but different cell colours
+ *   are different classes);
+ * - Y10 pallet: a layer lying at its pallet anchor in the yard gets `(z + 1) << 29`, so the layers of one pallet (same
+ *   class, same position) never cancel in the XOR and "layer z is still on the pallet" is part of the hash.
+ */
+export function pieceClassExtra(lvl: CompiledLevel, id: number, zone: number, x: number, y: number): number {
+  const p = lvl.pieces[id];
+  if (!p) return 0;
+  let extra = p.toneCode;
+  if (p.stackId >= 0 && zone === Zone.yard && x === p.x && y === p.y) extra ^= (p.stackZ + 1) << 29;
+  return extra;
 }
 
 /**
@@ -121,7 +141,7 @@ export function hashState(s: GameState, out: Uint32Array = new Uint32Array(2)): 
   const queueLen = buf[H.queueLen] ?? 0;
   for (let q = 0; q < queueLen; q++) {
     const id = buf[layout.queue + q] ?? 0;
-    const cls = pieceClass(buf, layout.pieces + id * PIECE_STRIDE);
+    const cls = pieceClassBits(buf, layout.pieces + id * PIECE_STRIDE) ^ (lvl.pieces[id]?.toneCode ?? 0);
     h0 ^= fmix32(Math.imul(cls, MUL0) ^ (z.pos0[POS_QUEUE + q] ?? 0));
     h1 ^= fmix32(Math.imul(cls, MUL1) ^ (z.pos1[POS_QUEUE + q] ?? 0));
   }
@@ -139,7 +159,9 @@ export function hashState(s: GameState, out: Uint32Array = new Uint32Array(2)): 
       buf[base + PF.y] ?? 0,
       buf[base + PF.seg] ?? 0,
     );
-    const cls = pieceClass(buf, base);
+    const cls =
+      pieceClassBits(buf, base) ^
+      pieceClassExtra(lvl, id, zone, buf[base + PF.x] ?? 0, buf[base + PF.y] ?? 0);
     h0 ^= fmix32(Math.imul(cls, MUL0) ^ (z.pos0[pos] ?? 0));
     h1 ^= fmix32(Math.imul(cls, MUL1) ^ (z.pos1[pos] ?? 0));
   }

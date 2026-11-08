@@ -140,6 +140,27 @@ export const KIND_FIRST_CHAPTER: Readonly<Record<ShapeKind, number>> = {
   Q9: 1,
 };
 
+/**
+ * v3 shape unlocks by level id (GDD §16 ÖNERİ K-56, LEVELS §8.2; `schemaVersion` 3 files only — earlier files keep the
+ * K-44 chapter table): story 1 → B1 D2 O4 C3, L4 / J4 from level 2, T4 from 6, I3 from 8; story 2 → + S4 Z4 (11);
+ * story 3 → + I4 (21). Ağır Yük (I5, Q9) stays apart (K-44, `HEAVY_MIN_LEVEL_ID`; it is not material).
+ */
+export const KIND_FIRST_LEVEL_V3: Readonly<Record<ShapeKind, number>> = {
+  B1: 1,
+  D2: 1,
+  O4: 1,
+  C3: 1,
+  L4: 2,
+  J4: 2,
+  T4: 6,
+  I3: 8,
+  S4: 11,
+  Z4: 11,
+  I4: 21,
+  I5: 0,
+  Q9: 0,
+};
+
 /** Heavy shapes (I5, Q9 and every w ≥ 3 orientation) are allowed only from this level id (GDD K-44 "8. bölüm"). */
 export const HEAVY_MIN_LEVEL_ID = 8;
 

@@ -130,12 +130,25 @@ describe('S1 Kayan Şantiye — sliding site (OBSTACLES S1, GDD K-22, K-25, K-26
     expect(queueIds(s)).toEqual([25]);
     expect(pieceZone(s, 25)).toBe(Zone.queue);
 
-    const next = run(s, dragTo(24, 6, 8)); // frees the only two cells; the waiting block lands there
+    // step 12 off: on this hand-made full yard with a closed site no block has a real release any more, which the
+    // v3 D1 widening (RULES_VERSION 4) would tear down; this test is about the step-9 delivery
+    const next = run(s, dragTo(24, 6, 8), { noTruckHelp: true }); // frees the only two cells; the waiting block lands there
     expect(find(next.ev, 'deliveryArrived')).toMatchObject({ pieces: [25], step: 9 });
     expect(find(next.ev, 'deliveryQueued').queued).toBe(0);
     expect(pieceZone(s, 25)).toBe(Zone.yard);
     expect(next.res.won).toBe(false); // K-48 (3): the fixture's filler blocks are still in the yard
     expect(find(next.ev, 'segmentCompleted').seg).toBe(1);
+    expectConsistent(s);
+  });
+
+  it('S1 K-30 v3 D1 widening: the same full yard with a closed site (no release but cancels) is D1 and torn down (access)', () => {
+    const s = initialState(fullYard());
+    run(s, dragTo(0, 6, 8));
+    const next = run(s, dragTo(24, 6, 8));
+    expect(find(next.ev, 'deadlockDetected').reason).toBe('noMoves');
+    expect(find(next.ev, 'teardown').cause).toBe('access');
+    expect(next.res.teardownCause).toBe('access');
+    expect(pieceZone(s, 25)).toBe(Zone.queue);
     expectConsistent(s);
   });
 });

@@ -16,6 +16,14 @@
  * 4. Search: hill climbing with a fixed number of iterations over neighbours of the best layout — swap two sequence
  *    items, move one item, change one drop column, re-tile one segment. Ties keep the earlier candidate.
  * 5. Output: the best `count` distinct candidates (level JSON with `targets` and the metric report).
+ *
+ * Levels v3 (GDD §16, LEVELS §8.10 U-v3-4; every field optional — a plan without them generates exactly as before):
+ * `orientations` (an explicit orientation pool instead of every rotation of `shapes`), `twoTone` (tilings may cover a
+ * two-colour region of an allowed pair with one two-tone block, Y9), `pallets` (identical blocks stacked into
+ * single-type pallets, Y10), `traits` (wrapped + scissors, bonus, slippery blocks, Y11–Y13), `blocks` (the N band) and
+ * `large` (a layout the full exploration cannot finish is measured with the large-level search: best found `min`, no
+ * whole-space proof — such a candidate is marked and never error-free for a shipped level, D-090). A plan with any v3
+ * field writes `schemaVersion` 3. The v3 lift gate (K-64 `liftRatio` ≥ 0.60) is a hard score term.
  */
 import { mulberry32 } from '../../src/core/rng.ts';
 import type { Rng } from '../../src/core/rng.ts';
@@ -36,6 +44,9 @@ import { StateSpace } from '../solver/space.ts';
 import { computeMetrics, coverOf, movesBand, puzzleChecks } from '../solver/metrics.ts';
 import type { PuzzleMetrics, SolveIssue } from '../solver/metrics.ts';
 import { d099Checks } from '../solver/puzzle.ts';
+import { solveLarge } from '../solver/large.ts';
+import { v3Metrics } from '../solver/v3metrics.ts';
+import type { V3Metrics } from '../solver/v3metrics.ts';
 
 // --- input ----------------------------------------------------------------------------------------------------------
 
@@ -60,6 +71,33 @@ export interface GenPlan {
   readonly cargo?: readonly ShapeId[];
   readonly tutorial?: LevelInput['tutorial'];
   readonly seed?: number;
+  // --- levels v3 (GDD §16; LEVELS §8.10 U-v3-4) ---
+  /** Explicit orientation pool (`L4_180`, `T4_0` …); replaces the rotations of `shapes` (no turning, K-44). */
+  readonly orientations?: readonly ShapeId[];
+  /** Y9: a region of two colours of an allowed pair (`WY`, `GY` …, letters sorted) may be one two-tone block. */
+  readonly twoTone?: { readonly pairs: readonly string[]; readonly max: number };
+  /** Y10: `count` single-type pallets of `layers` identical blocks (K-65 item 1). */
+  readonly pallets?: { readonly count: number; readonly layers: number };
+  /** Y11–Y13 trait density: blocks per trait (wrapped needs one scissors block, which is added). */
+  readonly traits?: {
+    readonly wrapped?: number;
+    readonly bonus?: number;
+    readonly bonusMoves?: number;
+    readonly slippery?: number;
+  };
+  /** Material block count band `[min, max]` (pallet layers included); tilings outside it are skipped. */
+  readonly blocks?: readonly [number, number];
+}
+
+/** The plan uses a levels v3 field: the output is `schemaVersion` 3. */
+export function isV3Plan(plan: GenPlan): boolean {
+  return (
+    plan.orientations !== undefined ||
+    plan.twoTone !== undefined ||
+    plan.pallets !== undefined ||
+    plan.traits !== undefined ||
+    plan.blocks !== undefined
+  );
 }
 
 /** `--targets` file: the level `targets` bands (schema `Targets`, GDD §14). */
@@ -77,6 +115,13 @@ export interface GenOptions {
   readonly maxStates?: number;
   /** Full solves at most (default 40): the cheap bound filters the rest. */
   readonly maxFull?: number;
+  /**
+   * v3 (U-v3-2): measure a layout whose exploration hits `maxStates` with the large-level search (best found `min`,
+   * `optimal` only at the lower bound). Default false (such a layout is rejected, LEVELS §6.3).
+   */
+  readonly large?: boolean;
+  /** Expansion budget of one large-level search (default 3 000; deterministic, never a time limit). */
+  readonly largeExpansions?: number;
   /** Called after every full solve (CLI progress on stderr; never changes the result). */
   readonly onSolved?: (info: {
     readonly iteration: number;
@@ -90,6 +135,8 @@ export interface GenOptions {
 interface Placed {
   readonly shape: ShapeDef;
   readonly color: ColorCode;
+  /** v3 Y9: colour per cell (shape cell order) of a two-tone block; absent for one colour. */
+  readonly colors?: string;
   /** Site anchor (local column, plan row from the bottom). */
   readonly x: number;
   readonly y: number;
@@ -99,6 +146,12 @@ const TILING_CAP = 400;
 
 /** Shapes of the plan: every distinct rotation of each kind whose width fits the site (no heavy shape, K-44). */
 export function planShapes(plan: GenPlan): ShapeDef[] {
+  if (plan.orientations) {
+    const ids = new Set<string>(plan.orientations.map((id) => shapeById(id).canonical));
+    return SHAPES.filter((s) => ids.has(s.id) && !s.heavy && s.w <= plan.site.cols).sort(
+      (a, b) => a.index - b.index,
+    );
+  }
   const kinds = new Set(plan.shapes);
   return SHAPES.filter(
     (s) => kinds.has(s.kind) && s.id === s.canonical && !s.heavy && s.w <= plan.site.cols,
@@ -109,13 +162,18 @@ export function planShapes(plan: GenPlan): ShapeDef[] {
  * Every exact cover of a segment plan (rows top → bottom) by the shapes, colour per piece, up to `TILING_CAP`, in a
  * fixed order: the lowest empty cell (row, then column) is covered by each shape whose first cell can sit there.
  */
-export function tilings(rows: readonly string[], shapes: readonly ShapeDef[]): Placed[][] {
+export function tilings(
+  rows: readonly string[],
+  shapes: readonly ShapeDef[],
+  twoTone?: GenPlan['twoTone'],
+): Placed[][] {
   const h = rows.length;
   const w = rows[0]?.length ?? 0;
   const color = (x: number, y: number): string => rows[h - 1 - y]?.[x] ?? '.';
   const filled = new Uint8Array(w * h);
   const out: Placed[][] = [];
   const cur: Placed[] = [];
+  let toned = 0;
   const firstCell = (s: ShapeDef): { x: number; y: number } =>
     [...s.cells].sort((a, b) => a.y - b.y || a.x - b.x)[0] ?? { x: 0, y: 0 };
   const rec = (): void => {
@@ -137,16 +195,29 @@ export function tilings(rows: readonly string[], shapes: readonly ShapeDef[]): P
       const f = firstCell(s);
       const x0 = ex - f.x;
       const y0 = ey - f.y;
-      const ok = s.cells.every((cell) => {
+      const inside = s.cells.every((cell) => {
         const x = x0 + cell.x;
         const y = y0 + cell.y;
-        return x >= 0 && x < w && y >= 0 && y < h && filled[y * w + x] === 0 && color(x, y) === c;
+        return x >= 0 && x < w && y >= 0 && y < h && filled[y * w + x] === 0;
       });
-      if (!ok) continue;
+      if (!inside) continue;
+      const cellColors = s.cells.map((cell) => color(x0 + cell.x, y0 + cell.y)).join('');
+      const set = [...new Set(cellColors)].sort().join('');
+      const mono = set.length === 1;
+      // v3 Y9: one two-tone block over a region of an allowed colour pair (at most `twoTone.max` per tiling)
+      const two = !mono && twoTone !== undefined && twoTone.pairs.includes(set) && toned < twoTone.max;
+      if (!mono && !two) continue;
       for (const cell of s.cells) filled[(y0 + cell.y) * w + x0 + cell.x] = 1;
-      cur.push({ shape: s, color: c as ColorCode, x: x0, y: y0 });
+      if (two) toned++;
+      const first = cellColors[0] as ColorCode;
+      cur.push(
+        two
+          ? { shape: s, color: first, colors: cellColors, x: x0, y: y0 }
+          : { shape: s, color: c as ColorCode, x: x0, y: y0 },
+      );
       rec();
       cur.pop();
+      if (two) toned--;
       for (const cell of s.cells) filled[(y0 + cell.y) * w + x0 + cell.x] = 0;
     }
   };
@@ -162,6 +233,12 @@ interface Item {
   readonly color: ColorCode | null;
   /** Build order key (segment, row, column) of a material block; cargo: −1. */
   readonly order: number;
+  /** v3 Y9 cell colours. */
+  readonly colors?: string;
+  /** v3 Y10: layers of a single-type pallet (absent = one block). */
+  readonly layers?: number;
+  /** v3 Y11–Y13 data flags of the block. */
+  readonly flags?: readonly string[];
 }
 
 /** A candidate: one tiling per segment and the drop sequence with a column per item. */
@@ -174,10 +251,74 @@ export interface Layout {
 function itemsOf(plan: GenPlan, tiles: readonly (readonly Placed[])[]): Item[] {
   const items: Item[] = [];
   tiles.forEach((t, k) => {
-    for (const p of t) items.push({ shape: p.shape, color: p.color, order: k * 1000 + p.y * 10 + p.x });
+    for (const p of t)
+      items.push({
+        shape: p.shape,
+        color: p.color,
+        order: k * 1000 + p.y * 10 + p.x,
+        ...(p.colors !== undefined ? { colors: p.colors } : {}),
+      });
   });
   for (const c of plan.cargo ?? []) items.push({ shape: shapeById(c), color: null, order: -1 });
   return items;
+}
+
+/** N of a tiling choice (pallet grouping does not change it). */
+function tilingBlocks(tiles: readonly (readonly Placed[])[]): number {
+  return tiles.reduce((n, t) => n + t.length, 0);
+}
+
+/**
+ * v3 Y10–Y13 (only for a plan with `pallets` / `traits`; the PRNG is not touched otherwise): stacks `count` groups of
+ * `layers` identical blocks into single-type pallets (K-65 item 1: same shape, colours, no flag; the earliest build
+ * order of the group is the pallet's order), then flags single blocks: `wrapped`, one `scissors` when something is
+ * wrapped, `bonus`, `slippery` — never a pallet and at most one overlay per block (K-65 item 2).
+ */
+function applyV3(plan: GenPlan, items: Item[], rng: Rng): Item[] {
+  let out = items;
+  const pal = plan.pallets;
+  if (pal && pal.count > 0 && pal.layers >= 2) {
+    for (let p = 0; p < pal.count; p++) {
+      const groups = new Map<string, number[]>();
+      out.forEach((it, i) => {
+        if (it.color === null || (it.layers ?? 1) > 1) return;
+        const key = `${it.shape.id}:${it.color}:${it.colors ?? ''}`;
+        const list = groups.get(key) ?? [];
+        list.push(i);
+        groups.set(key, list);
+      });
+      const keys = [...groups.keys()].filter((k) => (groups.get(k)?.length ?? 0) >= pal.layers).sort();
+      if (keys.length === 0) break;
+      const pick = groups.get(keys[rng.nextInt(keys.length)] as string) ?? [];
+      const members = [...pick]
+        .sort((a, b) => (out[a]?.order ?? 0) - (out[b]?.order ?? 0))
+        .slice(0, pal.layers);
+      const head = out[members[0] as number] as Item;
+      const merged: Item = { ...head, layers: pal.layers };
+      const drop = new Set(members);
+      out = [...out.filter((_, i) => !drop.has(i)), merged];
+    }
+  }
+  const tr = plan.traits;
+  if (tr) {
+    const singles = (): number[] =>
+      out.flatMap((it, i) => (it.color !== null && (it.layers ?? 1) === 1 && !it.flags ? [i] : []));
+    const flag = (name: string, n: number): void => {
+      for (let k = 0; k < n; k++) {
+        const pool = singles();
+        if (pool.length === 0) return;
+        const i = pool[rng.nextInt(pool.length)] as number;
+        out = out.map((it, j) => (j === i ? { ...it, flags: [name] } : it));
+      }
+    };
+    if ((tr.wrapped ?? 0) > 0) {
+      flag('wrapped', tr.wrapped ?? 0);
+      flag('scissors', 1);
+    }
+    flag('bonus', tr.bonus ?? 0);
+    flag('slippery', tr.slippery ?? 0);
+  }
+  return out;
 }
 
 /** Drops the items in sequence order (gravity; column = anchor x). Null when an item does not fit the yard. */
@@ -185,10 +326,10 @@ export function dropLayout(
   plan: GenPlan,
   items: readonly Item[],
   columns: readonly number[],
-): { shape: ShapeDef; color: ColorCode | null; x: number; y: number }[] | null {
+): { shape: ShapeDef; color: ColorCode | null; x: number; y: number; item: Item }[] | null {
   const { cols, rows } = plan.yard;
   const occ = new Uint8Array(cols * rows);
-  const out: { shape: ShapeDef; color: ColorCode | null; x: number; y: number }[] = [];
+  const out: { shape: ShapeDef; color: ColorCode | null; x: number; y: number; item: Item }[] = [];
   for (let i = 0; i < items.length; i++) {
     const it = items[i] as Item;
     const x0 = columns[i] ?? 0;
@@ -203,7 +344,7 @@ export function dropLayout(
     if (y0 < 0 || !free(y0)) return null;
     while (y0 > 0 && free(y0 - 1)) y0--;
     for (const c of it.shape.cells) occ[(y0 + c.y) * cols + x0 + c.x] = 1;
-    out.push({ shape: it.shape, color: it.color, x: x0, y: y0 });
+    out.push({ shape: it.shape, color: it.color, x: x0, y: y0, item: it });
   }
   return out;
 }
@@ -217,8 +358,37 @@ export function levelOf(
 ): LevelInput | null {
   const dropped = dropLayout(plan, layout.items, layout.columns);
   if (!dropped) return null;
+  let stackId = 0;
+  const pieces = dropped
+    // the level lists the blocks top-down, left to right (LEVELS tables read the yard from the top)
+    .map((d, i) => ({ d, i }))
+    .sort((a, b) => b.d.y - a.d.y || a.d.x - b.d.x || a.i - b.i)
+    .flatMap(({ d }) => {
+      const it = d.item;
+      const base = {
+        shape: d.shape.id,
+        ...(d.color !== null ? { color: d.color } : {}),
+        x: d.x,
+        y: d.y,
+        ...(it.colors !== undefined ? { colors: it.colors } : {}),
+        ...(it.flags
+          ? {
+              flags: [...it.flags] as NonNullable<
+                LevelInput['yard']['batches'][number]['pieces'][number]['flags']
+              >,
+            }
+          : {}),
+        ...(it.flags?.includes('bonus') && plan.traits?.bonusMoves !== undefined
+          ? { bonusMoves: plan.traits.bonusMoves }
+          : {}),
+      };
+      const layers = it.layers ?? 1;
+      if (layers <= 1) return [base];
+      const id = stackId++;
+      return Array.from({ length: layers }, (_, z) => ({ ...base, stack: { id, z } }));
+    });
   return {
-    schemaVersion: 2,
+    schemaVersion: isV3Plan(plan) ? 3 : 2,
     id: plan.id,
     chapter: Math.ceil(plan.id / 10),
     name: { ...plan.name },
@@ -237,21 +407,7 @@ export function levelOf(
     yard: {
       cols: plan.yard.cols,
       rows: plan.yard.rows,
-      batches: [
-        {
-          forSegment: 0,
-          pieces: dropped
-            // the level lists the blocks top-down, left to right (LEVELS tables read the yard from the top)
-            .map((d, i) => ({ d, i }))
-            .sort((a, b) => b.d.y - a.d.y || a.d.x - b.d.x || a.i - b.i)
-            .map(({ d }) => ({
-              shape: d.shape.id,
-              ...(d.color !== null ? { color: d.color } : {}),
-              x: d.x,
-              y: d.y,
-            })),
-        },
-      ],
+      batches: [{ forSegment: 0, pieces }],
     },
     obstacles: [],
     ...(plan.tutorial ? { tutorial: plan.tutorial } : {}),
@@ -268,7 +424,14 @@ export interface Measure {
   readonly issues: readonly (SolveIssue | { code: string; severity: string; message: string })[];
   readonly states: number;
   readonly notes: readonly string[];
+  /** v3 measures (K-64) of the canonical / best-found solution; absent for a v2 plan. */
+  readonly v3?: V3Metrics | null;
+  /** Large-level search result (`GenOptions.large`): best found min, proven only at the lower bound. */
+  readonly large?: { readonly best: number; readonly optimal: boolean; readonly ms: number } | null;
 }
+
+/** K-64 lift gate of a v3 plan (LEVELS §8.6: `liftRatio` ≥ 0.60 on every level). */
+export const LIFT_MIN = 0.6;
 
 const HARD = 1000;
 /** LEVELS §7 U-5 item 4: the puzzle-intelligence metrics first, then the size metrics. */
@@ -424,7 +587,13 @@ export function measureCheap(plan: GenPlan, layout: Layout, targets: GenTargets,
 }
 
 /** Validates and solves one layout; the score is 0 inside every band without hard failures. */
-export function measure(plan: GenPlan, layout: Layout, targets: GenTargets, maxStates: number): Measure {
+export function measure(
+  plan: GenPlan,
+  layout: Layout,
+  targets: GenTargets,
+  maxStates: number,
+  opts: { readonly large?: boolean; readonly largeExpansions?: number } = {},
+): Measure {
   const notes: string[] = [];
   const probe = levelOf(plan, layout, 99);
   if (!probe)
@@ -442,6 +611,8 @@ export function measure(plan: GenPlan, layout: Layout, targets: GenTargets, maxS
     };
   const lvl = compile(v.level);
   const g = explore(lvl, { maxStates, maxMs: Infinity });
+  if (!g.complete && opts.large)
+    return measureLarge(plan, layout, targets, lvl, g.count, opts.largeExpansions);
   if (!g.complete)
     return {
       score: HARD * 40,
@@ -476,7 +647,50 @@ export function measure(plan: GenPlan, layout: Layout, targets: GenTargets, maxS
     score += i.severity === 'error' ? HARD : 25;
   }
   score += bandScore(targets, (key) => metricValue(m, key));
-  return { score, level, metrics: m, issues, states: g.count, notes };
+  if (!isV3Plan(plan)) return { score, level, metrics: m, issues, states: g.count, notes };
+  const v3 = v3Metrics(lvl, res.canonical, { g, dist: res.dist.dist, pathStates: res.pathStates });
+  if (v3.liftRatio !== null && v3.liftRatio < LIFT_MIN) score += HARD;
+  return { score, level, metrics: m, issues, states: g.count, notes, v3 };
+}
+
+/**
+ * A v3 layout the full exploration cannot finish (U-v3-2): the large-level search gives the best found `min`; the
+ * score uses it for the `min` band and the lift gate, plus a fixed penalty (no whole-space proof, D-090) so a complete
+ * candidate always ranks first.
+ */
+function measureLarge(
+  plan: GenPlan,
+  layout: Layout,
+  targets: GenTargets,
+  lvl: ReturnType<typeof compile>,
+  states: number,
+  largeExpansions = 3_000,
+): Measure {
+  const r = solveLarge(lvl, { maxMs: Infinity, maxExpanded: largeExpansions });
+  if (r.status !== 'solved' || r.best === null)
+    return {
+      score: HARD * 35,
+      level: levelOf(plan, layout, 99),
+      metrics: null,
+      issues: [],
+      states,
+      notes: ['large: none'],
+    };
+  const band = movesBand(r.best, plan.difficulty, plan.teaches !== undefined, true);
+  const level = levelOf(plan, layout, band.lo, targets) as LevelInput;
+  const v3 = v3Metrics(lvl, r.steps);
+  let score = 100 + bandScore(targets, (key) => (key === 'min' ? r.best : false));
+  if (v3.liftRatio !== null && v3.liftRatio < LIFT_MIN) score += HARD;
+  return {
+    score,
+    level,
+    metrics: null,
+    issues: [],
+    states: states + r.states,
+    notes: [`large: best ${r.best}${r.optimal ? ' (optimal)' : ' (best found, not proven)'}`],
+    v3,
+    large: { best: r.best, optimal: r.optimal, ms: r.ms },
+  };
 }
 
 // --- search ---------------------------------------------------------------------------------------------------------
@@ -487,6 +701,9 @@ export interface Candidate {
   readonly iteration: number;
   readonly level: LevelInput;
   readonly metrics: PuzzleMetrics | null;
+  /** v3 measures (K-64) and the large-level result (absent for a v2 plan / a complete solve). */
+  readonly v3?: V3Metrics | null;
+  readonly large?: Measure['large'];
   readonly issues: readonly { code: string; severity: string; message: string }[];
   readonly states: number;
   readonly ascii: string;
@@ -558,20 +775,29 @@ function landing(shape: ShapeDef, x0: number, occ: Uint8Array, cols: number, row
 
 /** Start layout `k`: the reverse stack (later build order falls first) with seeded columns. */
 function startLayout(plan: GenPlan, all: readonly Placed[][][], rng: Rng): Layout | null {
-  const tiling = all.map((list) => rng.nextInt(Math.max(1, list.length)));
-  const items = itemsOf(
-    plan,
-    tiling.map((t, k) => all[k]?.[t] ?? []),
-  ).sort((a, b) => b.order - a.order);
-  // cargo first (bottom), then the later floors, the first needed blocks last (on top)
-  const ordered = [...items.filter((i) => i.order < 0), ...items.filter((i) => i.order >= 0)];
-  const columns = randomColumns(plan, ordered, rng);
-  return columns ? { tiling, items: ordered, columns } : null;
+  let tiling = all.map((list) => rng.nextInt(Math.max(1, list.length)));
+  // v3 `blocks` band: a few more seeded picks until N fits (the PRNG is not touched without the field)
+  const band = plan.blocks;
+  for (let k = 0; band && k < 24; k++) {
+    const n = tilingBlocks(tiling.map((t, j) => all[j]?.[t] ?? []));
+    if (n >= band[0] && n <= band[1]) break;
+    tiling = all.map((list) => rng.nextInt(Math.max(1, list.length)));
+  }
+  return startLayoutWith(plan, all, tiling, rng);
+}
+
+/** Drop order: cargo first (bottom), then the later floors, the first needed blocks last (on top). */
+function dropOrder(items: readonly Item[]): Item[] {
+  const sorted = [...items].sort((a, b) => b.order - a.order);
+  return [...sorted.filter((i) => i.order < 0), ...sorted.filter((i) => i.order >= 0)];
 }
 
 function neighbour(plan: GenPlan, all: readonly Placed[][][], base: Layout, rng: Rng): Layout | null {
   const n = base.items.length;
-  const op = rng.nextInt(4);
+  // v3 plans with pallets / traits get a fifth move: re-roll the pallet and trait assignment (same tiling)
+  const reroll = plan.pallets !== undefined || plan.traits !== undefined;
+  const op = rng.nextInt(reroll ? 5 : 4);
+  if (op === 4) return startLayoutWith(plan, all, base.tiling, rng);
   const items = [...base.items];
   const columns = [...base.columns];
   let tiling = [...base.tiling];
@@ -612,11 +838,12 @@ function startLayoutWith(
   tiling: readonly number[],
   rng: Rng,
 ): Layout | null {
-  const items = itemsOf(
+  const raw = itemsOf(
     plan,
     tiling.map((t, k) => all[k]?.[t] ?? []),
-  ).sort((a, b) => b.order - a.order);
-  const ordered = [...items.filter((i) => i.order < 0), ...items.filter((i) => i.order >= 0)];
+  );
+  const v3 = plan.pallets !== undefined || plan.traits !== undefined;
+  const ordered = dropOrder(v3 ? applyV3(plan, raw, rng) : raw);
   const columns = randomColumns(plan, ordered, rng);
   return columns ? { tiling: [...tiling], items: ordered, columns } : null;
 }
@@ -631,10 +858,27 @@ function firstMisfit(plan: GenPlan, items: readonly Item[], columns: readonly nu
 const layoutKey = (plan: GenPlan, l: Layout): string => {
   const d = dropLayout(plan, l.items, l.columns) ?? [];
   return d
-    .map((p) => `${p.shape.id}${p.color ?? '-'}@${p.x},${p.y}`)
+    .map(
+      (p) =>
+        `${p.shape.id}${p.color ?? '-'}${p.item.colors ?? ''}${(p.item.layers ?? 1) > 1 ? `x${p.item.layers}` : ''}${p.item.flags?.join('+') ?? ''}@${p.x},${p.y}`,
+    )
     .sort()
     .join(' ');
 };
+
+/**
+ * Level JSON of the first start layout of `seed` (no measure, no search; `moves` 99): fixtures and the solver scale
+ * measurements (U-v3-2) use it to get a deterministic big layout. Null when no layout fits.
+ */
+export function startLevel(plan: GenPlan, seed: number): LevelInput | null {
+  const rng = mulberry32(seed);
+  const all = plan.segments.map((sg) => tilings(sg.rows, planShapes(plan), plan.twoTone));
+  for (let k = 0; k < 6; k++) {
+    const l = startLayout(plan, all, rng);
+    if (l) return levelOf(plan, l, 99);
+  }
+  return null;
+}
 
 /** The generator (LEVELS §7 U-5): deterministic for the same plan, targets, options and solver version. */
 export function generate(plan: GenPlan, targets: GenTargets, opts: GenOptions): GenResult {
@@ -644,7 +888,7 @@ export function generate(plan: GenPlan, targets: GenTargets, opts: GenOptions): 
   const count = opts.count ?? 3;
   const maxStates = opts.maxStates ?? 400_000;
   const shapes = planShapes(plan);
-  const all = plan.segments.map((sg) => tilings(sg.rows, shapes));
+  const all = plan.segments.map((sg) => tilings(sg.rows, shapes, plan.twoTone));
   if (all.some((t) => t.length === 0))
     throw new Error('levels:gen: a segment plan has no tiling with the plan shapes');
 
@@ -664,7 +908,10 @@ export function generate(plan: GenPlan, targets: GenTargets, opts: GenOptions): 
       return null;
     }
     fullRuns++;
-    const m = measure(plan, l, targets, maxStates);
+    const m = measure(plan, l, targets, maxStates, {
+      ...(opts.large !== undefined ? { large: opts.large } : {}),
+      ...(opts.largeExpansions !== undefined ? { largeExpansions: opts.largeExpansions } : {}),
+    });
     seen.set(key, { layout: l, m, iteration, full: true });
     opts.onSolved?.({ iteration, score: m.score, states: m.states });
     return m;
@@ -691,7 +938,7 @@ export function generate(plan: GenPlan, targets: GenTargets, opts: GenOptions): 
     trace.push(best.m.score);
   }
   const ranked = [...seen.values()]
-    .filter((e) => e.full && e.m.level !== null && e.m.metrics !== null)
+    .filter((e) => e.full && e.m.level !== null && (e.m.metrics !== null || (e.m.large ?? null) !== null))
     .sort((a, b) => a.m.score - b.m.score || a.iteration - b.iteration);
   const candidates: Candidate[] = ranked.slice(0, count).map((e, i) => {
     const level = e.m.level as LevelInput;
@@ -702,6 +949,8 @@ export function generate(plan: GenPlan, targets: GenTargets, opts: GenOptions): 
       iteration: e.iteration,
       level,
       metrics: e.m.metrics,
+      ...(e.m.v3 !== undefined ? { v3: e.m.v3 } : {}),
+      ...(e.m.large !== undefined ? { large: e.m.large } : {}),
       issues: e.m.issues.map((x) => ({ code: x.code, severity: x.severity, message: x.message })),
       states: e.m.states,
       ascii: data ? toAscii(createInitialState(compile(data))) : '',

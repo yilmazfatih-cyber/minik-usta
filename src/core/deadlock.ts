@@ -2,7 +2,9 @@
  * Deadlock check and truck help — K-35 step 12 (docs/GDD.md K-30, K-29, K-35, K-55 item 8; TECH_DESIGN §2R.4, §D99).
  * Pure: no clock, no DOM, no randomness.
  *
- * - D1 `noMoves`: no block can be held by K-09 (a)–(d) (the counter condition (e) is ignored). Help: rules lift chains
+ * - D1 `noMoves`: no block can be held by K-09 (a)–(d) (the counter condition (e) is ignored), or — v3 widening (GDD §16
+ *   "K-30 değişikliği", `RULES_VERSION` 4) — blocks can be held but none has a release other than a cancel (K-07 rows
+ *   1, 3, 4, 5: back to its start, over the yard in the crane area, straddling, closed site). Help: rules lift chains
  *   and wetness (`onTruckHelp`); still D1 → Söküm with cause `access` (`RULES_VERSION` 3, D-099: the yard is never
  *   re-laid; the Faz 2R seeded reshuffle was removed — every `RULES_VERSION` ≤ 2 attempt is voided on load, K-43 item 4).
  * - D2 `color`: per colour, remaining supply ≠ remaining demand (K-47). Skipped on W6 levels (CL-2R-04).
@@ -33,6 +35,7 @@ import {
   PIECE_STRIDE,
   filledMask,
   hdr,
+  pieceCellColor,
   pieceColor,
   pieceFlags,
   pieceSeg,
@@ -49,11 +52,11 @@ import { shapeByIndex } from './shapes.ts';
 import type { ShapeDef } from './shapes.ts';
 import { PLAN_DOT } from './level/compile.ts';
 import type { CompiledLevel } from './level/compile.ts';
-import { isCargoShape, tryBeginDrag } from './movement.ts';
+import { tryBeginDrag } from './movement.ts';
 import type { DragRules } from './movement.ts';
 import { computeFall } from './gravity.ts';
 import type { FallRules } from './gravity.ts';
-import { visibleSegment } from './grid.ts';
+import { isCovered, layerBelow, visibleSegment } from './grid.ts';
 import { isRemainingSupply, remainingDemandByColor, remainingSupplyByColor } from './goals.ts';
 import { hashState } from './hash.ts';
 import type { MoveHooks, RuleContext } from './moves.ts';
@@ -97,18 +100,20 @@ export function isFullCover(lvl: CompiledLevel): boolean {
 // --- D1 ------------------------------------------------------------------------------------------------------------
 
 /**
- * Cheap sufficient test of K-09 (a)–(d) for a yard block (µs, no BFS): unlocked, allowed by the rules and free to move
- * one cell up (every column's top cell has an empty cell above it, inside the frame; Ağır Yük inside the yard). A
- * vertical step inside the yard columns never crosses the wall boundary or the site's open sky, so that node is valid.
+ * Cheap sufficient test of K-09 (a)–(d) plus a non-cancel release (v3 D1 widening) for a yard block (µs, no BFS):
+ * unlocked, allowed by the rules, not a pallet layer with a layer below (its own cells stay full, K-58) and free to
+ * move one cell up inside the yard (every column's top cell has an empty yard cell above it). A vertical step inside
+ * the yard columns never crosses the wall boundary or the site's open sky, so that node is valid, and a node fully in
+ * the yard is a yard release (K-07 row 2), never a cancel.
  */
 export function quickHoldable(s: GameState, id: PieceId, rules?: DragRules): boolean {
   if (pieceZone(s, id) !== Zone.yard || (pieceFlags(s, id) & FLAG_BIT.locked) !== 0) return false;
+  if (s.lvl.hasStacks && (isCovered(s, id) || layerBelow(s, id) >= 0)) return false;
   if (rules?.canPick && !rules.canPick(s, id)) return false;
   const shape = shapeByIndex(pieceShape(s, id));
   const x0 = pieceX(s, id);
   const y0 = pieceY(s, id);
-  const limit = isCargoShape(shape) ? s.lvl.geo.hy : s.lvl.geo.rows;
-  if (y0 + shape.h + 1 > limit) return false;
+  if (y0 + shape.h + 1 > s.lvl.geo.hy) return false;
   for (let c = 0; c < shape.w; c++) {
     const v = yardOcc(s, x0 + c, y0 + (shape.colTop[c] ?? 0) + 1);
     if (v !== 0 && v !== id + 1) return false;
@@ -116,17 +121,29 @@ export function quickHoldable(s: GameState, id: PieceId, rules?: DragRules): boo
   return true;
 }
 
-/** K-09 (a)–(d) for one piece; (e) the counter is ignored (D1). */
+/**
+ * K-09 (a)–(d) for one piece AND (v3 D1 widening, GDD §16 "K-30 değişikliği") some reachable node is a real release —
+ * not a K-07 cancel (start, crane area over the yard, straddle, closed site); (e) the counter is ignored (D1).
+ */
 export function holdableIgnoringMoves(s: GameState, id: PieceId, rules?: DragRules): boolean {
   if (quickHoldable(s, id, rules)) return true;
   const left = hdr(s, H.movesLeft);
-  if (left > 0) return tryBeginDrag(s, id, rules).ok;
+  if (left > 0) return hasRelease(s, id, rules);
   setHdr(s, H.movesLeft, 1);
   try {
-    return tryBeginDrag(s, id, rules).ok;
+    return hasRelease(s, id, rules);
   } finally {
     setHdr(s, H.movesLeft, left);
   }
+}
+
+/** The block can be held and some node of R is a non-cancel release (K-07 rows 2, 6, 7). */
+function hasRelease(s: GameState, id: PieceId, rules?: DragRules): boolean {
+  const attempt = tryBeginDrag(s, id, rules);
+  if (!attempt.ok) return false;
+  const session = attempt.session;
+  for (const n of session.reachableNodes()) if (session.classify(n).kind !== 'cancel') return true;
+  return false;
 }
 
 /** D1 (K-30): no block on the board can be held by K-09 (a)–(d). */
@@ -206,7 +223,13 @@ export function columnHeights(
  * height, every cell a plan cell of the block's colour (`?` resolved). `exclude` = a piece whose own cells count as
  * empty (a debris / stuck block lifted by the crane). Left to right. Empty when every segment is complete.
  */
-export function correctSpots(s: GameState, shape: ShapeDef, color: number, exclude: PieceId = -1): Anchor[] {
+export function correctSpots(
+  s: GameState,
+  shape: ShapeDef,
+  color: number,
+  exclude: PieceId = -1,
+  cellColors: readonly number[] | null = null,
+): Anchor[] {
   const out: Anchor[] = [];
   const { lvl } = s;
   if (color < 0 || hdr(s, H.deliveryCursor) >= lvl.segments.length) return out;
@@ -229,7 +252,9 @@ export function correctSpots(s: GameState, shape: ShapeDef, color: number, exclu
       if (!c) continue;
       const sx = x0 + c.x;
       const sy = y0 + c.y;
-      if ((plan.planColors[sy * ws + sx] ?? -2) !== color) ok = false;
+      // v3 Y9 (K-57): a two-tone block needs each cell's own colour
+      const want = cellColors ? (cellColors[i] ?? color) : color;
+      if ((plan.planColors[sy * ws + sx] ?? -2) !== want) ok = false;
       else {
         const v = siteOcc(s, seg, sx, sy);
         if (v !== 0 && v !== self) ok = false;
@@ -250,7 +275,8 @@ export function neededNow(s: GameState): PieceId[] {
   for (let id = 0; id < P; id++) {
     if (pieceZone(s, id) !== Zone.yard || s.lvl.pieces[id]?.cls !== 'material') continue;
     if ((pieceFlags(s, id) & FLAG_BIT.locked) !== 0) continue;
-    if (correctSpots(s, shapeByIndex(pieceShape(s, id)), pieceColor(s, id)).length > 0) out.push(id);
+    const cc = s.lvl.pieces[id]?.cellColors ?? null;
+    if (correctSpots(s, shapeByIndex(pieceShape(s, id)), pieceColor(s, id), -1, cc).length > 0) out.push(id);
   }
   return out;
 }
@@ -288,6 +314,8 @@ export const D3A_STATS = { expansions: 0 };
 interface TileClass {
   readonly shape: ShapeDef;
   readonly colorMask: number;
+  /** v3 Y9 (K-57): colour bit per shape cell of a two-tone class (no W6 joker: a paint gate does not paint it); null = `colorMask` for every cell. */
+  readonly cellMasks: readonly number[] | null;
   /** Segment index from which the class may be used (batch availability). */
   readonly from: number;
   count: number;
@@ -353,19 +381,25 @@ export function tileRemaining(s: GameState, budget: number = D3A_MAX_EXPANSIONS)
     if (!isRemainingSupply(s, id)) continue;
     const shape = shapeByIndex(pieceShape(s, id));
     const color = pieceColor(s, id);
+    const cc = lvl.pieces[id]?.cellColors ?? null;
     let mask = color >= 0 ? 1 << color : 0;
-    for (const j of jokers) if (shape.h <= j.size) mask |= 1 << j.color;
+    if (!cc) for (const j of jokers) if (shape.h <= j.size) mask |= 1 << j.color;
+    const cellMasks = cc ? shape.cells.map((_, i) => 1 << pieceCellColor(s, id, i)) : null;
     const from = lvl.mode === 'segments' && pieceZone(s, id) === Zone.pending ? batchFrom(lvl, id) : 0;
-    const key = `${shape.index}:${mask}:${from}`;
+    const key = `${shape.index}:${mask}:${from}:${cellMasks ? cellMasks.join('.') : ''}`;
     const cls = byKey.get(key);
     if (cls) cls.count += 1;
-    else byKey.set(key, { shape, colorMask: mask, from, count: 1 });
+    else byKey.set(key, { shape, colorMask: mask, cellMasks, from, count: 1 });
     supplyCells += shape.cellCount;
   }
   if (supplyCells !== cells) return 'dead';
   if (cells === 0) return 'ok';
   const classes = [...byKey.values()].sort(
-    (a, b) => a.shape.index - b.shape.index || a.colorMask - b.colorMask || a.from - b.from,
+    (a, b) =>
+      a.shape.index - b.shape.index ||
+      a.colorMask - b.colorMask ||
+      a.from - b.from ||
+      (a.cellMasks ?? []).join('.').localeCompare((b.cellMasks ?? []).join('.')),
   );
 
   // numeric memo key radices
@@ -468,8 +502,10 @@ export function tileRemaining(s: GameState, budget: number = D3A_MAX_EXPANSIONS)
           else if (y0 + (sh.colTop[j] ?? 0) >= hs) fits = false;
         }
         if (!fits) continue;
-        for (const c of sh.cells) {
-          if (((planBit[base + (y0 + c.y) * ws + x0 + c.x] ?? 0) & cls.colorMask) === 0) {
+        for (let ci = 0; ci < sh.cells.length; ci++) {
+          const c = sh.cells[ci] as (typeof sh.cells)[number];
+          const want = cls.cellMasks ? (cls.cellMasks[ci] ?? 0) : cls.colorMask;
+          if (((planBit[base + (y0 + c.y) * ws + x0 + c.x] ?? 0) & want) === 0) {
             fits = false;
             break;
           }

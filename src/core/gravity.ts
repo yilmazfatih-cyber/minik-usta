@@ -43,7 +43,7 @@ import {
   yardOcc,
 } from './state.ts';
 import type { GameState } from './state.ts';
-import { occupyPiece, vacatePiece, visibleSegment } from './grid.ts';
+import { isCovered, occupyPiece, vacatePiece, visibleSegment } from './grid.ts';
 import type { BoardCell } from './grid.ts';
 import { FREE, blockCells } from './movement.ts';
 import { isCorrectPlacement } from './placement.ts';
@@ -409,14 +409,21 @@ export function settleYard(s: GameState, hooks: SettleHooks = {}): YardMotion[] 
   );
 }
 
-/** Movable yard entities: bags always fall; with Y6 blocks fall and balloons rise; anything else is solid. */
+/**
+ * Movable yard entities: bags always fall; with Y6 blocks fall and balloons rise; v3 Y13 (GDD §16 K-61) a `slippery`
+ * block falls even without Y6; anything else is solid. A covered pallet layer (K-58) is never an entity: it is not in
+ * the occupancy and lies under its pallet's top layer.
+ */
 function yardEntities(s: GameState): Ent[] {
   const yardOn = s.lvl.gravity.yard;
   const ents: Ent[] = [];
-  if (yardOn) {
+  const slippery = !yardOn && s.lvl.pieces.some((p) => (p.flags & FLAG_BIT.slippery) !== 0);
+  if (yardOn || slippery) {
     const P = s.lvl.layout.counts.pieces;
     for (let id = 0; id < P; id++) {
       if (pieceZone(s, id) !== Zone.yard) continue;
+      if (!yardOn && (pieceFlags(s, id) & FLAG_BIT.slippery) === 0) continue;
+      if (s.lvl.hasStacks && isCovered(s, id)) continue;
       const balloon = (pieceFlags(s, id) & FLAG_BIT.balloon) !== 0;
       ents.push({
         kind: 'piece',

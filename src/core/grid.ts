@@ -66,6 +66,38 @@ export function vacatePiece(s: GameState, id: PieceId): void {
   writePiece(s, id, 0);
 }
 
+// --- v3 Y10 pallets (GDD §16 K-58) -------------------------------------------------------------------------------------
+
+/**
+ * The pallet layer directly below `id` that still lies under it (same anchor, in the yard), or −1. Only the top layer of
+ * a pallet is in `yardOcc`; the layers below keep their record (zone yard, same anchor) and fill the same cells.
+ */
+export function layerBelow(s: GameState, id: PieceId): PieceId {
+  const b = s.lvl.pieces[id]?.stackBelow ?? -1;
+  if (b < 0 || pieceZone(s, id) !== Zone.yard || pieceZone(s, b) !== Zone.yard) return -1;
+  return pieceX(s, b) === pieceX(s, id) && pieceY(s, b) === pieceY(s, id) ? b : -1;
+}
+
+/**
+ * K-58 item 3: a pallet layer under another layer (not the top). Its cells hold the top layer in `yardOcc`, so it is
+ * neither picked (K-09) nor targeted by a booster (K-66) nor moved by yard gravity.
+ */
+export function isCovered(s: GameState, id: PieceId): boolean {
+  const p = s.lvl.pieces[id];
+  if (!p || p.stackId < 0 || pieceZone(s, id) !== Zone.yard) return false;
+  const first = shapeByIndex(pieceShape(s, id)).cells[0];
+  if (!first) return false;
+  return yardOcc(s, pieceX(s, id) + first.x, pieceY(s, id) + first.y) !== id + 1;
+}
+
+/**
+ * K-58 item 4: the cells of the held block count as empty for its drag (its own start), except a pallet layer with a
+ * layer below it: its cells stay full (the layer below). The occupancy code to skip, or 0 for none.
+ */
+export function ownCellCode(s: GameState, id: PieceId): number {
+  return layerBelow(s, id) >= 0 ? 0 : id + 1;
+}
+
 function writePiece(s: GameState, id: PieceId, value: number): void {
   const zone = pieceZone(s, id);
   if (zone !== Zone.yard && zone !== Zone.site) return;
@@ -73,6 +105,11 @@ function writePiece(s: GameState, id: PieceId, value: number): void {
   const x = pieceX(s, id);
   const y = pieceY(s, id);
   if (zone === Zone.yard) {
+    // K-58 item 2: a pallet's cells stay full while a layer is left — vacating the top writes the layer below
+    if (value === 0) {
+      const below = layerBelow(s, id);
+      if (below >= 0) value = below + 1;
+    }
     for (const c of shape.cells) setYardOcc(s, x + c.x, y + c.y, value);
   } else {
     const seg = pieceSeg(s, id);
@@ -122,7 +159,8 @@ export function collisionMasks(
 ): Uint8Array {
   out.fill(0);
   const { wy, ws, hs, h, rows, siteX } = s.lvl.geo;
-  const skip = exclude + 1;
+  // K-58 item 4: a pallet layer's own cells stay blocked (the layer below fills them)
+  const skip = exclude >= 0 && s.lvl.hasStacks ? ownCellCode(s, exclude) : exclude + 1;
   for (let y = 0; y < rows; y++) {
     let row = 0;
     for (let x = 0; x < wy; x++) {
@@ -190,6 +228,23 @@ export function stateInvariantErrors(s: GameState): string[] {
     const shape = shapeByIndex(pieceShape(s, id));
     const x = pieceX(s, id);
     const y = pieceY(s, id);
+    // K-58: a covered pallet layer shares the cells of the layer above it (same pallet, same anchor, higher z)
+    if (zone === Zone.yard && isCovered(s, id)) {
+      const first = shape.cells[0];
+      const top = first ? yardOcc(s, x + first.x, y + first.y) - 1 : -1;
+      const tp = lvl.pieces[top];
+      const me = lvl.pieces[id];
+      const ok =
+        tp !== undefined &&
+        me !== undefined &&
+        tp.stackId === me.stackId &&
+        tp.stackZ > me.stackZ &&
+        pieceZone(s, top) === Zone.yard &&
+        pieceX(s, top) === x &&
+        pieceY(s, top) === y;
+      if (!ok) errors.push(`piece ${id}: covered pallet layer without its pallet's upper layer on it`);
+      continue;
+    }
     for (const c of shape.cells) {
       const cx = x + c.x;
       const cy = y + c.y;

@@ -34,10 +34,10 @@ import { FREE, isSiteClosed, railMode, tryBeginDrag } from '../../src/core/movem
 import type { DragSession } from '../../src/core/movement.ts';
 import { computeFall } from '../../src/core/gravity.ts';
 import { movePiece, yardPlace } from '../../src/core/placement.ts';
-import { hashState, piecePosition } from '../../src/core/hash.ts';
+import { hashState, pieceClassBits, pieceClassExtra, piecePosition } from '../../src/core/hash.ts';
 import { fmix32 } from '../../src/core/rng.ts';
 import { shapeByIndex } from '../../src/core/shapes.ts';
-import { collisionMasks, visibleSegment } from '../../src/core/grid.ts';
+import { collisionMasks, layerBelow, visibleSegment } from '../../src/core/grid.ts';
 import { MAX_COLS, MAX_ROWS } from '../../src/core/geometry.ts';
 import { GAP_STRIDE, GF } from '../../src/core/state.ts';
 
@@ -115,15 +115,6 @@ export type SuccessorCallback = (lo: number, hi: number, info: number) => void;
 const MUL0 = 0x9e3779b1;
 const MUL1 = 0x85ebca77;
 
-function pieceClassBits(buf: Int32Array, base: number): number {
-  return (
-    ((buf[base + PF.shape] ?? 0) & 63) |
-    (((buf[base + PF.color] ?? 0) & 7) << 6) |
-    (((buf[base + PF.flags] ?? 0) & 255) << 9) |
-    (((buf[base + PF.counter] ?? 0) & 255) << 17)
-  );
-}
-
 /** Which rule hooks or level features make a yard move more than "move the block". */
 export function fastYardBlockers(lvl: CompiledLevel, hooks: MoveHooks): string[] {
   const out: string[] = [];
@@ -136,6 +127,7 @@ export function fastYardBlockers(lvl: CompiledLevel, hooks: MoveHooks): string[]
   if (lvl.gravity.yard) out.push('yard gravity');
   if (lvl.obstacles.some((o) => o.type === 'cement_bag')) out.push('cement bags');
   if (lvl.pieces.some((p) => (p.flags & FLAG_BIT.balloon) !== 0)) out.push('balloons');
+  if (lvl.pieces.some((p) => (p.flags & FLAG_BIT.slippery) !== 0)) out.push('slippery blocks (Y13)');
   if (isTimed(lvl)) out.push('timers');
   return out;
 }
@@ -244,7 +236,9 @@ export class Expander {
       this.lastFromX = fx;
       this.lastFromY = fy;
       const lowest: number[] = [];
-      const cls = pieceClassBits(buf, base);
+      const clsBits = pieceClassBits(buf, base);
+      // v3: the class may depend on the position (a pallet layer at its pallet anchor, core/hash.ts)
+      const cls = clsBits ^ pieceClassExtra(lvl, id, Zone.yard, fx, fy);
       const oldPos = zone === Zone.yard ? piecePosition(lvl.geo.siteX, Zone.yard, fx, fy, -1) : -1;
       const oldLo = oldPos >= 0 ? fmix32(Math.imul(cls, MUL0) ^ (z.pos0[oldPos] ?? 0)) : 0;
       const oldHi = oldPos >= 0 ? fmix32(Math.imul(cls, MUL1) ^ (z.pos1[oldPos] ?? 0)) : 0;
@@ -267,8 +261,9 @@ export class Expander {
         if (drop === DROP_YARD) {
           if (fastState && zone === Zone.yard) {
             const pos = piecePosition(lvl.geo.siteX, Zone.yard, ix, iy, -1);
-            const nlo = (lo ^ oldLo ^ fmix32(Math.imul(cls, MUL0) ^ (z.pos0[pos] ?? 0))) >>> 0;
-            const nhi = (hi ^ oldHi ^ fmix32(Math.imul(cls, MUL1) ^ (z.pos1[pos] ?? 0))) >>> 0;
+            const ncls = clsBits ^ pieceClassExtra(lvl, id, Zone.yard, ix, iy);
+            const nlo = (lo ^ oldLo ^ fmix32(Math.imul(ncls, MUL0) ^ (z.pos0[pos] ?? 0))) >>> 0;
+            const nhi = (hi ^ oldHi ^ fmix32(Math.imul(ncls, MUL1) ^ (z.pos1[pos] ?? 0))) >>> 0;
             this.pendingFast = true;
             this.materialized = false;
             this.lastIx = ix;
@@ -353,7 +348,8 @@ export class Expander {
     const cache = this.reachCache;
     let key = 0;
     let env: Uint8Array | null = null;
-    if (cache && zone === Zone.yard) {
+    // v3 Y10: a pallet layer with a layer below has its own start cells blocked; its R is not shared (no cache)
+    if (cache && zone === Zone.yard && !(this.lvl.hasStacks && layerBelow(s, id) >= 0)) {
       const buf = s.buf;
       const base = this.lvl.layout.pieces + id * PIECE_STRIDE;
       const startCode = (buf[base + PF.y] ?? 0) * MAX_COLS + (buf[base + PF.x] ?? 0);

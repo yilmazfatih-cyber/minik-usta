@@ -26,6 +26,7 @@ import {
   STATE_FLAG,
   cloneState,
   hdr,
+  isTwoTone,
   obstacleField,
   pieceColor,
   pieceFlags,
@@ -42,7 +43,7 @@ import type { GameState } from './state.ts';
 import { shapeById, shapeByIndex } from './shapes.ts';
 import type { ShapeDef } from './shapes.ts';
 import { isCargoShape } from './movement.ts';
-import { visibleSegment } from './grid.ts';
+import { isCovered, ownCellCode, visibleSegment } from './grid.ts';
 import {
   lockPiece,
   movePiece,
@@ -148,7 +149,8 @@ export function hammerTargetKind(
   if (zone === Zone.yard && isCargoShape(shapeByIndex(pieceShape(s, id)))) return 'cargo';
   if (isSiteWrongObject(s, id))
     return (pieceFlags(s, id) & FLAG_BIT.debris) !== 0 ? 'siteDebris' : 'stuckMortar';
-  if (zone === Zone.yard && hooks.hammer?.canHit(s, { kind: 'piece', id })) return 'chain';
+  if (zone === Zone.yard && hooks.hammer?.canHit(s, { kind: 'piece', id }))
+    return hooks.hammer.kind?.(s, { kind: 'piece', id }) ?? 'chain';
   return null;
 }
 
@@ -176,7 +178,7 @@ export type HammerEffect =
       readonly from: At;
       readonly target: ReturnTarget;
     }
-  | { readonly kind: 'crate' | 'cementBag' | 'chain'; readonly entity: EntityRef };
+  | { readonly kind: 'crate' | 'cementBag' | 'chain' | 'wrap'; readonly entity: EntityRef };
 
 /** Applies a hammer hit to a valid target (check `hammerTargetKind` first; throws otherwise). */
 export function applyHammer(ctx: RuleContext, target: HammerTarget, hooks: MoveHooks): HammerEffect {
@@ -202,7 +204,7 @@ export function applyHammer(ctx: RuleContext, target: HammerTarget, hooks: MoveH
   }
   const entity: EntityRef = { kind: 'piece', id };
   hooks.hammer?.hit(ctx, entity);
-  return { kind: 'chain', entity };
+  return { kind: kind === 'wrap' ? 'wrap' : 'chain', entity };
 }
 
 // --- K-37 Crane ----------------------------------------------------------------------------------------------------
@@ -211,19 +213,25 @@ export function applyHammer(ctx: RuleContext, target: HammerTarget, hooks: MoveH
 export function craneSelectable(s: GameState, id: PieceId, hooks: MoveHooks): boolean {
   if (!validId(s, id) || won(s)) return false;
   const zone = pieceZone(s, id);
-  if (zone === Zone.yard) return !locked(s, id) && rulesAllow(s, id, hooks);
+  // v3 K-66 item 1: a covered pallet layer is no target
+  if (zone === Zone.yard)
+    return !locked(s, id) && !(s.lvl.hasStacks && isCovered(s, id)) && rulesAllow(s, id, hooks);
   return isSiteWrongObject(s, id);
 }
 
 type CraneMove = Extract<Move, { kind: 'crane' }>;
 
-/** K-37 (a): every cell of `shape` at `(x, y)` inside the yard and empty (the piece itself excluded). */
+/**
+ * K-37 (a): every cell of `shape` at `(x, y)` inside the yard and empty (the piece itself excluded — except a pallet
+ * layer's own cells, which the layer below keeps full, v3 K-58 item 4).
+ */
 function yardSpotFree(s: GameState, shape: ShapeDef, x: number, y: number, self: PieceId): boolean {
   const { wy, hy } = s.lvl.geo;
   if (x < 0 || y < 0 || x + shape.w > wy || y + shape.h > hy) return false;
+  const own = s.lvl.hasStacks ? ownCellCode(s, self) : self + 1;
   for (const c of shape.cells) {
     const v = yardOcc(s, x + c.x, y + c.y);
-    if (v !== 0 && v !== self + 1) return false;
+    if (v !== 0 && v !== own) return false;
   }
   return true;
 }
@@ -237,12 +245,15 @@ export function craneSiteSpots(
   if (!validId(s, id) || !isMaterialPiece(s, id)) return out;
   const shape = shapeByIndex(pieceShape(s, id));
   if (isCargoShape(shape)) return out;
+  const cc = s.lvl.pieces[id]?.cellColors ?? null;
   const seen = new Set<number>();
   for (const rotation of [0, 90, 180, 270] as const) {
     const t = turned(shape, rotation);
     if (seen.has(t.index)) continue;
     seen.add(t.index);
-    for (const at of correctSpots(s, t, pieceColor(s, id), id)) out.push({ rotation, at });
+    // v3 Y9: a two-tone block keeps its orientation (no rotated colour table)
+    if (cc && t.index !== shape.index) continue;
+    for (const at of correctSpots(s, t, pieceColor(s, id), id, cc)) out.push({ rotation, at });
   }
   return out;
 }
@@ -265,7 +276,9 @@ function craneTargetBlock(s: GameState, move: CraneMove, hooks: MoveHooks): Boos
   }
   if (!isMaterialPiece(s, id) || isCargoShape(shape)) return 'noTarget';
   if (t.w > s.lvl.geo.ws) return 'badRotation';
-  const ok = correctSpots(s, t, pieceColor(s, id), id).some((a) => a.ix === x && a.iy === y);
+  const cc = s.lvl.pieces[id]?.cellColors ?? null;
+  if (cc && t.index !== shape.index) return 'badRotation';
+  const ok = correctSpots(s, t, pieceColor(s, id), id, cc).some((a) => a.ix === x && a.iy === y);
   return ok ? null : 'notCorrect';
 }
 
@@ -336,9 +349,19 @@ export function hasCraneTarget(s: GameState, hooks: MoveHooks): boolean {
 
 // --- K-38 Paint brush ----------------------------------------------------------------------------------------------
 
-/** K-38: block A / B of a swap: a yard material block that is not locked (buried, chained or wet allowed). */
+/**
+ * K-38: block A / B of a swap: a yard material block that is not locked (buried, chained, wet or wrapped allowed); v3
+ * (K-66 item 2, K-57 item 6): not a covered pallet layer and not a two-tone block.
+ */
 export function paintSelectable(s: GameState, id: PieceId): boolean {
-  return validId(s, id) && pieceZone(s, id) === Zone.yard && isMaterialPiece(s, id) && !locked(s, id);
+  return (
+    validId(s, id) &&
+    pieceZone(s, id) === Zone.yard &&
+    isMaterialPiece(s, id) &&
+    !locked(s, id) &&
+    !isTwoTone(s, id) &&
+    !(s.lvl.hasStacks && isCovered(s, id))
+  );
 }
 
 /** K-38: `b` may be swapped with `a` (equal cell counts, different colours). */
@@ -394,6 +417,7 @@ export function trowelSelectable(s: GameState, id: PieceId, hooks: MoveHooks): b
     pieceZone(s, id) === Zone.yard &&
     isMaterialPiece(s, id) &&
     !locked(s, id) &&
+    !(s.lvl.hasStacks && isCovered(s, id)) &&
     rulesAllow(s, id, hooks)
   );
 }
@@ -404,7 +428,8 @@ export function trowelSelectable(s: GameState, id: PieceId, hooks: MoveHooks): b
  */
 export function trowelSpots(s: GameState, id: PieceId, opts: { readonly precheck?: boolean } = {}): Anchor[] {
   if (!validId(s, id) || pieceZone(s, id) !== Zone.yard || !isMaterialPiece(s, id)) return [];
-  const spots = correctSpots(s, shapeByIndex(pieceShape(s, id)), pieceColor(s, id));
+  const cc = s.lvl.pieces[id]?.cellColors ?? null;
+  const spots = correctSpots(s, shapeByIndex(pieceShape(s, id)), pieceColor(s, id), -1, cc);
   if (opts.precheck !== true) return spots;
   return spots.filter((at) => {
     const copy = cloneState(s);

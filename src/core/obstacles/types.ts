@@ -48,6 +48,12 @@ export const RULE_IDS = [
   'Y6',
   'Y7',
   'Y8',
+  // v3 block traits (GDD §16 K-57…K-61, ÖNERİ)
+  'Y9',
+  'Y10',
+  'Y11',
+  'Y12',
+  'Y13',
   'S1',
   'S2',
   'S3',
@@ -141,6 +147,10 @@ export interface ObstacleRule {
   readonly onYardRelease?: Hook<MoveHooks['onYardRelease']>;
   /** K-35 step 4 base cost (Y8 stuck: 2); undefined = no opinion. Several rules → the largest; none → 1 (K-07). */
   readonly moveCost?: Hook<MoveHooks['moveCost']>;
+  /** v3 K-35 step 4 tail: moves a correct placement adds (Y12 bonus, K-60); the sum of every rule's value. */
+  readonly placementBonus?: Hook<MoveHooks['placementBonus']>;
+  /** v3 K-35 step 5: a correct placement happened (Y11 scissors, K-59); every rule, in order. */
+  readonly onCorrectPlacement?: Hook<MoveHooks['onCorrectPlacement']>;
   /** K-35 steps 5–6: a yard entity of the owned obstacle type / piece flag next to the moved or fallen block. */
   readonly onNeighborMoved?: Hook<MoveHooks['onNeighborMoved']>;
   /** K-35 steps 5–6 (K-42): the cell of a hidden item of the owned obstacle type is empty (Y7 screw, W7 key). */
@@ -155,6 +165,8 @@ export interface ObstacleRule {
   readonly canHammer?: (s: GameState, entity: EntityRef) => boolean;
   /** K-36: the hammer hit on an owned entity (step 1 of the mini pipeline). Returns the analytics target kind. */
   readonly onHammer?: (ctx: RuleContext, entity: EntityRef) => HammerTargetKind;
+  /** K-36 target kind of an owned block entity before the hit (UI, `boosterApplied.detail`); default `chain`. */
+  readonly hammerKind?: HammerTargetKind;
   /** K-30 D1 help, first stage: lift the rule's blockers (Y3 chains, Y4 wetness). True when something changed. */
   readonly onTruckHelp?: Hook<MoveHooks['onTruckHelp']>;
 }

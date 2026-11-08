@@ -104,6 +104,10 @@ const JUSTIFIED: Readonly<Record<string, readonly (readonly [RegExp, string])[]>
   'src/core/hash.ts': [
     [/^const HEADER_TERMS = 8;$/, 'eight hashed header fields'],
     [/& 7\) << 6\)|& 255\) << 9\)/, 'piece class bit packing (colour 3 bits, flags 8 bits)'],
+    [
+      />> 8\) & 15\) << 25\)/,
+      'piece class bit packing (v3 flags: bits 8–11 of the flags → class bits 25–28)',
+    ],
     [/^mixField\((5|6|7), /, 'hashed header term index'],
     [/padStart\(8, '0'\)/, 'hex digits of a 32-bit lane'],
   ],

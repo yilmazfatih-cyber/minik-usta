@@ -106,7 +106,26 @@ export interface CompiledPiece {
   readonly y: number;
   /** Debris segment; −1 otherwise. */
   readonly segment: number;
+  /**
+   * v3 Y9 two-tone block (GDD §16 K-57): colour index per shape cell, in the shape's (y, x) cell order (= `ShapeDef.cells`
+   * order of the canonical shape, which has the same cell set); null for a one-colour block. Static: the paint brush
+   * cannot pick a two-tone block (K-57 item 6) and the crane may not turn it (it has no rotated colour table).
+   */
+  readonly cellColors: readonly number[] | null;
+  /** v3 Y10 pallet (GDD §16 K-58): pallet id, or −1. */
+  readonly stackId: number;
+  /** Layer (0 = bottom), −1 outside a pallet. */
+  readonly stackZ: number;
+  /** The layer directly below this one in its pallet (same anchor), or −1. */
+  readonly stackBelow: PieceId;
+  /** v3 Y12 (GDD §16 K-60): moves added by a correct placement of a `bonus` block (default 2); 0 without `bonus`. */
+  readonly bonusMoves: number;
+  /** v3 Y9: non-zero 32-bit code of `cellColors` (Zobrist piece class, core/hash.ts); 0 for a one-colour block. */
+  readonly toneCode: number;
 }
+
+/** v3 Y12 default `bonusMoves` (GDD §16 K-60 item 1). */
+export const DEFAULT_BONUS_MOVES = 2;
 
 export interface CompiledGap {
   readonly index: number;
@@ -187,6 +206,8 @@ export interface CompiledLevel {
   readonly supplyByBatch: readonly (readonly number[])[];
   /** K-47 / K-48 `N`: material blocks of the level (cargo excluded). */
   readonly materialCount: number;
+  /** v3 Y10: the level has at least one pallet (core pallet paths run only then). */
+  readonly hasStacks: boolean;
   readonly batches: readonly CompiledBatch[];
   readonly obstacles: readonly CompiledObstacle[];
   /** Obstacle indices of screws and keys, in hidden-section order. */
@@ -266,6 +287,10 @@ export function compile(level: LevelData): CompiledLevel {
       const shape = shapeById(p.shape);
       const flags = (p.flags ?? []).reduce((m, f) => m | FLAG_BIT[f], 0);
       const cls = pieceClassOf(p.shape);
+      const cellColors =
+        cls === 'material' && p.colors !== undefined && p.colors.length === shape.cellCount
+          ? Object.freeze([...p.colors].map((c) => colorIndex(c as ColorCode)))
+          : null;
       pieces.push({
         id,
         origin: k === 0 ? 'yard' : 'truck',
@@ -281,6 +306,12 @@ export function compile(level: LevelData): CompiledLevel {
         x: p.x,
         y: k === 0 ? p.y : geo.hy,
         segment: -1,
+        cellColors,
+        toneCode: toneCodeOf(cellColors),
+        stackId: k === 0 && p.stack ? p.stack.id : -1,
+        stackZ: k === 0 && p.stack ? p.stack.z : -1,
+        stackBelow: -1,
+        bonusMoves: p.flags?.includes('bonus') ? (p.bonusMoves ?? DEFAULT_BONUS_MOVES) : 0,
       });
       tutorialPieceIds.set(k === 0 ? `piece:${i}` : `piece:k${k}_${i}`, id);
       return id;
@@ -309,10 +340,17 @@ export function compile(level: LevelData): CompiledLevel {
       x: d.x,
       y: d.y,
       segment: d.segment ?? 0,
+      cellColors: null,
+      toneCode: 0,
+      stackId: -1,
+      stackZ: -1,
+      stackBelow: -1,
+      bonusMoves: 0,
     });
     tutorialPieceIds.set(`debris:${i}`, id);
   });
   const staticPieceCount = pieces.length;
+  linkStacks(pieces);
   const cover = coverTotals(level, segments, pieces);
 
   let hiddenCount = 0;
@@ -380,6 +418,7 @@ export function compile(level: LevelData): CompiledLevel {
     demandBySegment: cover.demandBySegment,
     supplyByBatch: cover.supplyByBatch,
     materialCount: cover.materialCount,
+    hasStacks: pieces.some((p) => p.stackId >= 0),
     batches: Object.freeze(batches),
     obstacles: Object.freeze(obstacles.map((o) => Object.freeze(o))),
     hiddenItems: Object.freeze(hiddenItems),
@@ -391,6 +430,35 @@ export function compile(level: LevelData): CompiledLevel {
     zobrist: buildZobrist(layout, cycle, geo),
     hashFields: Object.freeze(hashedFieldOffsets(layout, geo)),
   });
+}
+
+/**
+ * v3 Y10: sets `stackBelow` of every pallet layer = the layer of the same pallet with `z − 1` at the same anchor (the
+ * validator guarantees one shape and anchor per pallet and consecutive `z`, L-40 `stack_invalid`; a broken pallet just
+ * gets no link).
+ */
+function linkStacks(pieces: CompiledPiece[]): void {
+  for (let i = 0; i < pieces.length; i++) {
+    const p = pieces[i];
+    if (!p || p.stackId < 0 || p.stackZ <= 0) continue;
+    const below = pieces.find(
+      (q) => q.stackId === p.stackId && q.stackZ === p.stackZ - 1 && q.x === p.x && q.y === p.y,
+    );
+    if (below) pieces[i] = { ...p, stackBelow: below.id };
+  }
+}
+
+/** FNV-1a of the cell colour indices, forced non-zero (0 = one-colour block). */
+function toneCodeOf(cellColors: readonly number[] | null): number {
+  if (!cellColors) return 0;
+  let h = 0x811c9dc5;
+  for (const c of cellColors) h = Math.imul(h ^ (c + 1), 0x01000193);
+  return (h | 1) >>> 0;
+}
+
+/** Colour index of cell `i` (shape (y, x) order) of a compiled piece whose current colour is `color` (Y9, K-57). */
+export function cellColorOf(p: CompiledPiece | undefined, color: number, i: number): number {
+  return p?.cellColors ? (p.cellColors[i] ?? color) : color;
 }
 
 /** K-44: I5 and Q9 (every orientation) are Ağır Yük; every other shape is a material block. */
@@ -431,8 +499,12 @@ function coverTotals(
     const cells = shapeById(p.dataShape).cellCount;
     const k = p.origin === 'debris' ? p.segment : p.batch;
     const row = supplyByBatch[k];
-    if (row) row[p.colorIndex] = (row[p.colorIndex] ?? 0) + cells;
-    supply[p.colorIndex] = (supply[p.colorIndex] ?? 0) + cells;
+    // Y9 (K-57 item 2): a two-tone block supplies each cell in its own colour
+    for (let i = 0; i < cells; i++) {
+      const c = cellColorOf(p, p.colorIndex, i);
+      if (row) row[c] = (row[c] ?? 0) + 1;
+      supply[c] = (supply[c] ?? 0) + 1;
+    }
     materialCount += 1;
   }
   return Object.freeze({

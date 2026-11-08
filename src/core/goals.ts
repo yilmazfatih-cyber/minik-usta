@@ -21,7 +21,7 @@ import {
   filledMask,
   goalValue,
   hdr,
-  pieceColor,
+  pieceCellColor,
   pieceFlags,
   pieceShape,
   pieceZone,
@@ -140,8 +140,12 @@ export function remainingSupplyByColor(s: GameState): number[] {
   const P = s.lvl.layout.counts.pieces;
   for (let id = 0; id < P; id++) {
     if (!isRemainingSupply(s, id)) continue;
-    const c = pieceColor(s, id);
-    if (c >= 0 && c < out.length) out[c] = (out[c] ?? 0) + shapeByIndex(pieceShape(s, id)).cellCount;
+    const n = shapeByIndex(pieceShape(s, id)).cellCount;
+    // v3 Y9 (K-57 item 2): a two-tone block supplies each cell in its own colour
+    for (let i = 0; i < n; i++) {
+      const c = pieceCellColor(s, id, i);
+      if (c >= 0 && c < out.length) out[c] = (out[c] ?? 0) + 1;
+    }
   }
   return out;
 }

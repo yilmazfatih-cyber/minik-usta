@@ -14,7 +14,7 @@ describe('core types', () => {
     expect(VERDICT_REASONS).toEqual(['debris', 'outside', 'window', 'color', 'support']);
   });
 
-  it('zones and piece flags', () => {
+  it('zones and piece flags (v3 GDD §16: wrapped, scissors, bonus, slippery appended after stuck, bits 8–11)', () => {
     expect(Zone).toEqual({ yard: 0, site: 1, queue: 2, gone: 3, pending: 4 });
     expect(PIECE_FLAGS).toEqual([
       'glass',
@@ -25,6 +25,10 @@ describe('core types', () => {
       'locked',
       'debris',
       'stuck',
+      'wrapped',
+      'scissors',
+      'bonus',
+      'slippery',
     ]);
   });
 });
