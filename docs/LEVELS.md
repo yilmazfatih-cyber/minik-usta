@@ -1196,18 +1196,18 @@ koddaki `firstLevel` ile birlikte 5 → 1 olur, §7 U-2).
 
 | # | Ad (TR / EN) | Zorluk | Tek fikir (öğretilen) | Kaynak | Yeni imza | Saha Wy×Hy | Şantiye Ws×Hs × S | H / duvar / geçit | E | Renkler | Şekiller | N |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | Ağaç Basamakları / Tree Steps | Kolay (tanıtım) | Kaldır, duvarı aş, bırak; kat bitince kalan bloklar sonraki kat için sahada bekler | T2 | S1 | 5×4 | 2×4 × 2 | 4 / 3 / — | 4 | W, Y | D2, O4 | 6 |
-| 2 | Platform / Platform | Kolay | Şekil ve gölge: `C3` çifti; yanlış zamanda denenen blok kaybolmaz | T2 | — | 5×4 | 2×4 × 2 | 4 / 3 / — | 4 | G, W, Y | C3, D2 | 6 |
-| 3 | Ön Duvar / Front Wall | Kolay | Kazı: sonraki katın `O4`'ü bu katın bloklarının üstünde; tek cebe çek | T1 | — | 5×4 | 2×4 × 2 | 4 / 3 / — | 4 | G, W, Y | D2, O4 | 7 |
-| 4 | Pencere Pervazı / Window Sill | Kolay (tanıtım) | Geçit dipteki bloğa kestirmedir (ikinci katın tabanı raydan) | T8 | W1 | 4×5 | 2×4 × 2 | 5 / 4 / y0 boy 2 | 4 | G, W, Y | D2 | 8 |
-| 5 | İki Odalı Ev / Two-Room House | Normal | Bekletme: yerleşebilecek dikey W'yi sonraki kata sakla; park yerini seç | T5 (+T3) | — | 5×4 | 2×4 × 2 | 4 / 3 / — | 4 | R, W, Y | D2 | 8 |
-| 6 | Uzun Gövde / Tall Trunk | Normal (tanıtım) | Yüksek duvar: her blok Vinç Alanı'na kalkar; kapağı yükseğe park et | T7 | W2 | 4×5 | 2×4 × 2 | 5 / 5 / — | 4 | G, W, Y | C3, D2 | 7 |
-| 7 | Çatı Altı / Under the Roof | Normal | Takas ve yer açma: `O4` W sonraki kata kalır; önce dipte yer aç | T4 (+T6) | — | 5×4 | 2×4 × 2 | 4 / 4 / — | 4 | G, R, W | D2, O4 | 7 |
-| 8 | Bahçe Çiti / Garden Fence | Normal (tanıtım) | Ağır Yük kapaktır, yalnız saha içinde kayar ve park yeri açar; Çekiç onu kırar | T9 (ilk yarı) | Y5 | 6×5 | 2×4 × 2 (+ Q9) | 5 / 5 / — | 5 | R, W, Y | D2, O4, Q9 | 7 |
-| 9 | İp Merdiven / Rope Ladder | Normal (tanıtım) | Dar geçitten yalnız tek sıra boyundaki blok geçer; önce onu satır 0'a indir | T8 (+T6) | W3 | 4×5 | 2×4 × 2 | 5 / 5 / y0 boy 1 | 4 | G, R, W | D2, O4 | 7 |
-| 10 | Ağaç Ev Tamam! / Treehouse Done! | **Zor** | Final: yığını doğru sırayla yeniden diz; Vinç açılır | T6 + T1 | — | 4×5 | 2×4 × 2 | 5 / 5 / — | 4 | G, R, W | D2, O4 | 7 |
+| 1 | Ağaç Basamakları / Tree Steps | Kolay (tanıtım) | Kaldır, duvarı aş, bırak; dikey ve yatay domino dama deseni kurar | T2 | S1 | 5×4 | 2×4 × 2 | 4 / 3 / — | 4 | W, Y | D2 | 8 |
+| 2 | Köşe Destekleri / Corner Braces | Kolay | Yeni şekiller L ve J: çıkıntılı blok ancak altı dolunca oturur | T2 | — | 6×5 | 2×6 × 2 | 6 / 5 / — | 6 | G, W, Y | D2, J4, L4 | 8 |
+| 3 | Köşe Taşları / Corner Stones | Kolay | `C3` köşe çifti iç içe oturur; ilk köşe bir kapak altında (kazı 2) | T1 | — | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | G, W, Y | C3, D2 | 8 |
+| 4 | Ön Duvar / Front Wall | Kolay | Aynalı köşeler (`C3_0` / `C3_270` R, `C3_180` / `C3_90` Y); R ilk kez | T1 | — | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | R, W, Y | C3, D2 | 8 |
+| 5 | Renkli Pencere / Two-Tone Window | Normal (tanıtım) | İki renkli blok: her hücre kendi rengine; `WY` ile `YW` aynalı ikiz | T5 | Y9 | 5×4 | 2×4 × 2 | 4 / 3 / — | 4 | G, W, Y | D2 | 8 |
+| 6 | Uzun Gövde / Tall Trunk | Normal | T şekli: önce alt köşe (`C3_270`), sonra T, sonra üst köşe | T1 | — | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | G, W, Y | C3, D2, T4 | 8 |
+| 7 | Paketli Malzeme / Wrapped Supplies | Normal (tanıtım) | Sargılı blok tutulamaz; makaslı blok doğru yerleşince bütün sargılar açılır | T1 | Y11 | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | G, R, Y | C3, D2 | 9 |
+| 8 | İp Merdiven / Rope Ladder | Normal | `I3` direkleri üç satırı birden kapatır; iki köşe (`C3_180` / `C3_90`) direğe yaslanır | T1 | — | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | G, W, Y | C3, D2, I3 | 8 |
+| 9 | Çatı Altı / Under the Roof | Normal (tanıtım) | Bonus blok doğru yerleşince +2 hamle (Hikaye 1'de ödül anı) | T1 | Y12 | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | G, W, Y | D2, J4, L4 | 8 |
+| 10 | Ağaç Ev Tamam! / Treehouse Done! | **Zor** | Final: T kilidi + sargı/makas + iki renkli; Vinç açılır | T1 + T5 | — | 6×4 | 2×5 × 2 | 5 / 4 / — | 4 | G, W, Y | C3, D2, T4 | 8 |
 
-**A2 notu (2026-11-02):** tablo gerçekleşen veridir (`levels/*.json`); D0 taslağı (6×4 sahalar, 2×5 katlar, Bölüm 10'da
+**E2 notu (2026-11-09):** tablo E2 bölüm turunun gerçekleşen verisidir (`levels/*.json`, §8.12); D-099 A2 satırları git geçmişindedir (`2035fc6`). **A2 notu (2026-11-02):** D0 taslağı (6×4 sahalar, 2×5 katlar, Bölüm 10'da
 6×8 saha ve üç kat) git geçmişindedir (`806311d`). Fark ve gerekçe §6.10'dadır.
 
 Geometri gerekçeleri (§6.5, D0 taslağı; A2 gerçekleşeni §6.10): 1–5 "her blok kalkar" düzenidir (6×4, duvar = saha tepesi, şantiye bir satır yüksek; E 4 ile
@@ -1950,3 +1950,72 @@ rastgele yerleşim + yerel arama (takas/kaydırma), tohum `id × 1000 + id` (bel
 6. (G1b) D-101 (Usta Kral) web `DECISIONS.md`'ye yazılsın (DL-V3-20; orkestratör dosyası).
 7. (G1b) Koridor testi (§8.6) için 5 kişilik oyuncu bulma ve gri kutu derlemesi kimin işi? (Öneri: code-lead derleme,
    proje sahibi oyuncu.)
+
+### 8.12 E2 bölüm turu sonucu (product-lead, 2026-11-09) — ölçülen gerçek ve v3.2 ÖNERİ
+
+**Ne yapıldı.** `levels/level_001…010.json` v3 planına göre yeniden kuruldu (Tablo A, §6.6, E2 notu). Her bölüm için
+rastgele + yerçekimli yerleşim adayları üretildi (bölüm başına 16–60 aday), hepsi resmî `levels:solve` ile tam tarandı
+(`--max-states 2 500 000`), sonra seçilen aday elle bitirildi (Bölüm 1, 2 ve 7 elle kuruldu). Toplam ≈ 650 aday tarandı.
+`levels:validate` 10/10 temiz; `levels:solve` 10/10 çözülür, tuzak 0, `deadRate` 0, yakalanmayan çıkmaz 0, D1 0, YAO 1,00,
+hamle bütçesi K-52 bandında; **6 hata kalır: `shape_decisions_low` (Bölüm 5–10)** — aşağıda B3. Playtest botu
+(`levels:bot`, WP-N) hâlâ yok; oranlar **beceri botu vekilidir** (tam DP, ε acemi 0,25 · orta 0,12 · usta 0,06).
+
+**Tanıtım sırası (gerçekleşen).** 1 S1 (D2 iki yönelim) · 2 L4/J4 · 3 C3 · 4 R rengi + aynalı C3 · 5 Y9 İki Renkli ·
+6 T4 · 7 Y11 Sargı + Makas · 8 I3 (Çekiç açılır) · 9 Y12 Bonus · 10 final (Vinç açılır). Bölüm başına en çok bir yeni
+fikir (K-45 madde 10); `teaches`: 1 S1, 5 Y9, 7 Y11, 9 Y12. Y10 Palet bu turda **yok** (B1).
+
+| # | Etiket | Hedef (G1b §8.5–8.6) | Gerçek: saha / şantiye / E | N (hedef → gerçek) | Şekiller · özellik | `min` (N + kazı) | hamle | `firstNeedDepth` | durum sayısı | beceri botu a / o / u | orta bot bandı | kapı durumu |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Kolay (tanıtım S1) | ≥ %95 | 5×4 / 2×4×2 / 4 | 8 → 8 | D2 | 8 (8+0) | 12 | 0 | 767 033 | 0,89 / 0,99 / 1,00 | ✓ | yeşil |
+| 2 | Kolay | ≥ %92 | 6×5 / 2×6×2 / 6 | 8 → 8 | D2, L4, J4 | 8 (8+0) | 12 | 0 | 76 593 | 0,76 / 0,97 / 1,00 | ✓ | yeşil |
+| 3 | Kolay | ≥ %92 | 6×4 / 2×5×2 / 4 | 10 → 8 | D2, C3 | 10 (8+2) | 14 | 2 | 90 554 | 0,75 / 0,97 / 1,00 | ✓ | yeşil |
+| 4 | Kolay | ≥ %90 | 6×4 / 2×5×2 / 4 | 10 → 8 | D2, C3 (4 yönelim) | 10 (8+2) | 14 | 1 | 106 100 | 0,70 / 0,96 / 0,99 | ✓ | yeşil |
+| 5 | Normal (tanıtım Y9) | %80–90 | 5×4 / 2×4×2 / 4 | 12 → 8 | D2 · 4 iki renkli | 10 (8+2) | 14 | 2 | 289 240 | 0,62 / 0,93 / 0,99 | +3 puan üstte | `shape_decisions_low` |
+| 6 | Normal | %65–80 | 6×4 / 2×5×2 / 4 | 14 → 8 | D2, C3, T4 · 1 iki renkli | 10 (8+2) | 12 | 1 | 640 996 | 0,45 / 0,83 / 0,96 | +3 puan üstte | `shape_decisions_low` |
+| 7 | Normal (tanıtım Y11) | %80–90 | 6×4 / 2×5×2 / 4 | 14 → 9 | D2, C3 · 2 sargılı, 1 makas, 2 iki renkli | 10 (9+1) | 14 | 1 | 634 701 | 0,68 / 0,95 / 0,99 | +5 puan üstte | `shape_decisions_low` |
+| 8 | Normal | %65–80 | 6×4 / 2×5×2 / 4 | 16 → 8 | D2, C3, I3 | 12 (8+4) | 14 | 3 | 182 718 | 0,32 / 0,73 / 0,91 | ✓ | `shape_decisions_low` |
+| 9 | Normal (tanıtım Y12) | %75–85 | 6×4 / 2×5×2 / 4 | 16 → 8 | D2, L4, J4 · 1 bonus (+2), 2 iki renkli | 10 (8+2) | 14 | 1 | 417 473 | 0,72 / 0,96 / 1,00 | +11 puan üstte | `shape_decisions_low` |
+| 10 | **Zor** | %50–60 | 6×4 / 2×5×2 / 4 | 16 → 8 | D2, C3, T4 · 1 sargılı, 1 makas, 2 iki renkli | 12 (8+4) | 13 | 3 | 103 142 | 0,15 / 0,49 / 0,74 | −1 puan altta | `shape_decisions_low` |
+
+Toplam blok 81 (A2: 70, G1b hedefi 124). Bütün bölümlerde `liftRatio` 1,00 (v3 dosyalarında ölçüldü; 3 ve 4 `schemaVersion`
+2'dir, yeni alan kullanmaz), `trapCount` 0, `undetectedDead` 0, `greedyWin` 1,00 (Bölüm 6, 8, 10'da `puzzle_greedy_easy`
+uyarısı; Bölüm 10'da ayrıca `puzzle_greedy_wins`). `levels:check` 10 bölümde 58 sn (4 iş parçacığı, önbelleksiz).
+
+**Eğlence denetimi (her bölüm için "aha" ve karar).** 1: dikey/yatay domino dama deseni, karar 4 (ilk hamlede 18 seçenek).
+2: L'yi erken denemek "!" verir; küçük dikey blok önce. 3: ilk köşe iki kapak altında; kapakları "sonraki katın yerine"
+park et. 4: iki kırmızı köşe aynı renk ama ayna şekil; yanlış köşe bu katta oturmaz. 5: `WY` / `YW` ikizleri; tek `WY`
+gömülü (ilk hamle kazı). 6: T'nin çıkıntısı köşeye yaslanır (alt köşe → T → üst köşe). 7: makas kapak altında; makas oturunca
+iki paket birden açılır. 8: iki direk üç satırı birden kapatır; ilk G döşemesi 3 kazı derinde (bölümün Normal'in zor ucu).
+9: bonus iki renkli blok üçüncü yerleşim; sayaç +2 zıplar. 10: final; 3 kazı derinde ilk blok, bütçe `min` + 1.
+**Ölçülen "aha" (`ahaMin`) her bölümde 0'dır:** kazı var ama açgözlü oyun da kazanır (`greedyWin` 1,00). Bu turun bulmaca
+derinliği hedefin altındadır; nedeni B2–B3.
+
+**Bulgular (ölçümle; ayrıntı ve sayılar REVIEW_LOG E2 kaydında).**
+- **B1 — Palet (Y10) bugünkü D-090 kapısıyla yayımlanamaz.** 6×4 ve 5×5 sahalarda 2 tek tipli paletli ≈ 40 çözülebilir
+  adayın, araç hatası (`unused_block` + `solver_replay_mismatch`) veren 6'sı dışında hepsinde `undetected_dead` > 0 çıktı (4–266 durum). Mekanizma: palet
+  katmanı kaldırılınca geri dönemez ve sahada 2 hücre yer kaplar; boş alan **azalabilen tek kaynak** budur. Oyuncu katmanları
+  park ederek üst satırı yatay bloklarla mühürler, alttaki dikey cep içinde bir blok kıpırdar (D1 değil), hiçbir blok sahadan
+  çıkamaz → D1/D2/D3a yakalamaz, Söküm gelmez. `pallet_capacity` (tek paletin `max`'ı) bunu önlemez.
+- **B2 — Tam tarama sınırı blok sayısını 8–9'a bağlar.** 6×4 sahada E = 4 ile 8 parça 0,1–0,8 M durum; 9 parça (2'si sargılı)
+  0,63 M; 10 parça (5 sınıf domino) ve 6×5 sahada E = 6–10 her denemede > 2,5 M (`scan_incomplete`). Sargı durumu ancak makas
+  yerleşene kadar küçültür. G1b'nin 10–16 blokluk eğrisi (§8.5) ve 6×6 sahalar bu kapıyla kurulamaz.
+- **B3 — `shapeDecisions` ≥ 2 kapısı (K-64, L-42) bu ölçekte sağlanamıyor.** 2×2 tek renkli bölgeler (D2_90 ×2 ya da D2_0 ×2),
+  aynalı C3'ler ve iki renkli ikizlerle ≈ 300 Normal aday: en yüksek değer 1. Ölçüt "eşit renkli ama başka şekilli doğru
+  yerleşim **kesin olarak** daha pahalı" ister; 8 parçalık sahada iki seçenek neredeyse her zaman eşit maliyetlidir. 2×4
+  bölgede karışık H/V arz ise tuzak üretir (K-63).
+- **B4 — `firstNeedDepth` ≥ 1 ile özdeş sınıflar çatışır.** Aynı sınıftan iki blok varsa ikisi de gömülü olmalı; plan
+  ilk ihtiyacı tek kopyalı bloğa verecek biçimde yazıldı (Bölüm 5'te tek `WY`, Bölüm 7'de makas).
+
+**v3.2 ÖNERİ (DECISIONS P-E2-1).** (1) Y10 Palet, code-lead'in iki yolundan biri gelene kadar Hikaye 1 dışında: (a) D3b
+erişim tablosu (K-30; solver çıkmaz listesini bölümle dağıtır) ya da (b) **K-58 madde 9 ÖNERİ: palet katmanı yalnız
+şantiyeye bırakılabilir, sahaya park edilemez** (boş alan hiç azalmaz → yeni erişim çıkmazı doğmaz; L4 "son katmanı park et"
+aha'sı "hangi paletten çekeceğini seç"e döner). Benim tercihim (b): kural basit, kanıtı ucuz, sunumu tek cümle. (2) K-64
+`shapeDecisions` Hikaye 1'de **izlenir** (kapı değil); kapı makro çizge ile bölüm ölçeği büyüyünce (Hikaye 2) ≥ 1 ile
+başlar. (3) Blok sayısı eğrisi Hikaye 1'de 8–9'da kalır; 10–16 blok ve 6×6 sahalar makro çizge (U-v3-2 seçim B)
+kanıtlanınca gelir. (4) Bölüm 6–10'un bulmaca derinliği (`ahaMin` ≥ 1, `greedyWin` < 0,70) için code-lead'in `levels:gen`
+v3'ü bu sabit-nesne planlarıyla (§8.12 tablosu) ve `--max-states 2 500 000` ile koşulur; ilk tur bu belgeyle kapanır.
+
+**Açık iş (bu turda yapılmadı, sahibi):** LEVELS §0 "JSON eşlemesi" listesi, §1 eğri tablosu ve §2 bölüm kartları (blok
+tablosu, gri kutu, öğretici listesi, kanonik çözüm metni) yeni JSON'a göre yeniden yazılmadı (product-lead, sonraki tur;
+`tests/review/data.review.test.ts` bu bölümleri JSON'la karşılaştırır). Testlerin içerik sabitleri (code-lead): REVIEW_LOG
+E2 kaydı.

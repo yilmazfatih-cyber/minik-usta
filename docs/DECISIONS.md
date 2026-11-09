@@ -665,3 +665,14 @@ R–Y, W–G, G–Y (K-65 madde 3); Bölüm 4, 7, 9, 10 birebir renk eşlemesiyl
 (e) güçlendirici × özellik kuralları (ÖNERİ K-66) ve K-30 D1 genişlemesi; (f) R rengi Bölüm 4'e; Bölüm 3–5 sahası 6×5;
 (g) çözücü kanıtı: makro çizge sağlamlık testi (B), olmazsa Bölüm 6–10 iki kata iner (A); Bölüm 6 spike'ı gelmeden 7–10
 JSON'u yazılmaz. Ayrıntı ve kapanışlar: LEVELS §8, `docs/review_inbox/levels-v3-design-review.md` sonu.
+
+### ÖNERİ P-E2-1 — v3.2: Hikaye 1 kanıt sınırında kalır; palet park kuralı; `shapeDecisions` izlenir (product-lead, 2026-11-09)
+**Durum:** ÖNERİ. **Bağlam:** E2 bölüm turu (LEVELS §8.12), ≈ 650 aday tam tarandı. **Öneri:** (1) Hikaye 1 blok sayısı
+8–9, saha ≤ 6×4/6×5, E 4–6 (D-090 tam tarama sınırı; 10+ parça her denemede > 2,5 M durum). 10–16 blok ve 6×6 saha makro çizge
+kanıtıyla (U-v3-2 B) Hikaye 2'de. (2) Y10 Palet için K-58 madde 9: kaldırılan katman yalnız şantiyeye bırakılır (sahaya park
+yok); D3b tablosu daha ucuzsa o. İkisinden biri gelene kadar palet Hikaye 1'de yok; Y10'un ilk bölümü 13'e (Y13 14'e) kayar.
+(3) K-64 `shapeDecisions` Hikaye 1'de izleme ölçütüdür; L-42 bu hikayede uyarı. (4) Çekiç Bölüm 8'de hedefsiz: seçenek A
+açılış 10'a (Vinç ile aynı bölüm), B Bölüm 8'e bir sargı + makas (8 parça sınırında Bölüm 8'in I3 fikri zayıflar). Öneri A.
+**Gerekçe:** proje sahibinin "kurallar korunur" şartı (D-090 dahil) ile "daha çok blok" isteği bu çözücü ölçeğinde çakışıyor;
+kanıtsız bölüm yayımlamak yerine çeşitliliği şekil + özellikle (C3, L/J, T, I3, iki renkli, sargı, bonus) verdim.
+**Proje sahibine:** blok sayısı bugün 6–8'den 8–9'a çıktı, 16–22 hedefi bu turda yok; nedeni ve yolu yukarıda.

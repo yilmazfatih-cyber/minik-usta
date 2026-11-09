@@ -1,45 +1,45 @@
 {
   "level": 7,
   "file": "level_007.json",
-  "levelHash": "68c601e97981b5b4",
+  "levelHash": "d1ac856c8077651a",
   "rulesVersion": 4,
   "solverVersion": 4,
   "variant": null,
   "schemaVersion": 2,
   "status": "solved",
-  "geometry": "5x4|2x4 H4",
+  "geometry": "6x4|2x5 H5",
   "difficulty": "normal",
-  "teaches": null,
-  "moves": 13,
+  "teaches": "Y11",
+  "moves": 14,
   "metrics": {
-    "N": 7,
-    "min": 11,
-    "minShifts": 4,
+    "N": 9,
+    "min": 10,
+    "minShifts": 1,
     "minIsNPlusShifts": true,
     "shiftsBySegment": [
-      4,
+      1,
       0
     ],
     "firstNeedDepth": 1,
     "F0": [
-      "piece:2",
-      "piece:5",
-      "piece:6"
+      "piece:2"
     ],
     "cover": {
       "piece:0": 0,
       "piece:1": 0,
       "piece:2": 1,
-      "piece:3": 0,
-      "piece:4": 1,
+      "piece:3": 1,
+      "piece:4": 2,
       "piece:5": 2,
-      "piece:6": 2
+      "piece:6": 0,
+      "piece:7": 3,
+      "piece:8": 1
     },
     "firstNeedCover": 1,
     "scope": {
-      "maxShifts": 5,
-      "states": 929,
-      "placementEdges": 441
+      "maxShifts": 2,
+      "states": 268,
+      "placementEdges": 310
     },
     "trapCount": 0,
     "deadRate": 0,
@@ -51,99 +51,90 @@
       "caught": 0
     },
     "delivery": [],
-    "liveStates": 133422,
-    "wonStates": 2,
-    "budget": 13,
+    "liveStates": 634701,
+    "wonStates": 1,
+    "budget": 14,
     "choices": [
-      5,
-      6,
-      7
+      7,
+      9,
+      12
     ],
     "bestChoices": [
-      1,
+      2,
       1,
       1
     ],
     "yao": {
-      "overWall": 7,
+      "overWall": 9,
       "rail": 0,
       "value": 1
     },
     "d099": {
-      "maxCover": 2,
-      "canonShifts": 4,
-      "parkedBlocks": 4,
+      "maxCover": 3,
+      "canonShifts": 1,
+      "parkedBlocks": 1,
       "reparks": 0,
-      "maxDigRun": 3,
+      "maxDigRun": 1,
       "seg": {
         "piece:0": 0,
-        "piece:1": 1,
+        "piece:1": 0,
         "piece:2": 0,
         "piece:3": 1,
         "piece:4": 0,
-        "piece:5": 0,
-        "piece:6": 1
+        "piece:5": 1,
+        "piece:6": 1,
+        "piece:7": 0,
+        "piece:8": 1
       },
-      "depLater": 2,
+      "depLater": 0,
       "depEarlier": 2,
-      "crossDeps": 4,
-      "carryShifts": 2,
+      "crossDeps": 2,
+      "carryShifts": 0,
       "E0": 4,
-      "parkPeak": 8,
-      "parkSlack": 0.5,
+      "parkPeak": 2,
+      "parkSlack": 2,
       "choicesAll": [
-        5,
-        6,
         7,
-        11,
+        9,
         12,
-        16,
-        28,
-        26,
-        25,
-        28,
+        15,
+        19,
+        19,
+        23,
+        27,
+        20,
         15
       ],
       "bestChoicesAll": [
-        1,
-        1,
-        1,
+        2,
         1,
         1,
         1,
         2,
         1,
         1,
-        4,
+        1,
+        1,
         1
       ],
-      "decisionPoints": 11,
-      "forced": 9,
+      "decisionPoints": 10,
+      "forced": 8,
       "digStart": 1,
-      "greedyMin": 13,
-      "greedyExcess": 2,
+      "greedyMin": 10,
+      "greedyExcess": 0,
       "greedyTrap": null,
       "greedyWin": 1,
-      "greedyStates": 62,
+      "greedyStates": 19,
       "skillWin": {
-        "novice": 0.3093491323414987,
-        "mid": 0.7282494090669317,
-        "expert": 0.91586039579106
+        "novice": 0.6841682918950944,
+        "mid": 0.953146627388556,
+        "expert": 0.9940596702315925
       },
-      "ahaMin": 2,
-      "ahaMoves": [
-        {
-          "n": 1,
-          "kind": "prep"
-        },
-        {
-          "n": 2,
-          "kind": "prep"
-        }
-      ],
+      "ahaMin": 0,
+      "ahaMoves": [],
       "pieces3": [
-        4,
-        4,
+        3,
+        3,
         3
       ],
       "goodPieces3": [
@@ -151,21 +142,21 @@
         1,
         1
       ],
-      "branch3": 0.27,
+      "branch3": 0.33,
       "complete": true,
       "undetectedDead": 0,
       "d1States": 0
     }
   },
   "band": {
-    "row": "normal",
+    "row": "easy",
     "version": 2,
-    "T": 2,
-    "floor": 2,
+    "T": 4,
+    "floor": 4,
     "A": 2,
-    "nominal": 13,
-    "lo": 13,
-    "hi": 15
+    "nominal": 14,
+    "lo": 14,
+    "hi": 16
   },
   "canonical": [
     {
@@ -175,27 +166,9 @@
     },
     {
       "kind": "drag",
-      "pieceId": 5,
+      "pieceId": 0,
       "to": {
-        "ix": 1,
-        "iy": 0,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 3,
-      "to": {
-        "ix": 0,
-        "iy": 0,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 1,
-      "to": {
-        "ix": 0,
+        "ix": 4,
         "iy": 2,
         "mode": 0
       }
@@ -204,7 +177,7 @@
       "kind": "drag",
       "pieceId": 2,
       "to": {
-        "ix": 5,
+        "ix": 6,
         "iy": 0,
         "mode": 0
       }
@@ -213,52 +186,16 @@
       "kind": "drag",
       "pieceId": 4,
       "to": {
-        "ix": 3,
-        "iy": 2,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 5,
-      "to": {
-        "ix": 5,
+        "ix": 6,
         "iy": 1,
         "mode": 0
       }
     },
     {
       "kind": "drag",
-      "pieceId": 4,
+      "pieceId": 7,
       "to": {
-        "ix": 5,
-        "iy": 2,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 0,
-      "to": {
-        "ix": 5,
-        "iy": 3,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 6,
-      "to": {
-        "ix": 5,
-        "iy": 0,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 3,
-      "to": {
-        "ix": 5,
+        "ix": 6,
         "iy": 2,
         "mode": 0
       }
@@ -268,7 +205,52 @@
       "pieceId": 1,
       "to": {
         "ix": 6,
+        "iy": 3,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 0,
+      "to": {
+        "ix": 6,
+        "iy": 4,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 6,
+      "to": {
+        "ix": 6,
+        "iy": 0,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 8,
+      "to": {
+        "ix": 6,
+        "iy": 1,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 5,
+      "to": {
+        "ix": 6,
         "iy": 2,
+        "mode": 0
+      }
+    },
+    {
+      "kind": "drag",
+      "pieceId": 3,
+      "to": {
+        "ix": 6,
+        "iy": 3,
         "mode": 0
       }
     }
@@ -277,21 +259,21 @@
     {
       "n": 1,
       "kind": "shift",
-      "pieceId": 5,
-      "ref": "piece:5",
+      "pieceId": 0,
+      "ref": "piece:0",
       "shape": "D2_90",
-      "color": "W",
+      "color": "Y",
       "from": [
         0,
-        0
+        3
       ],
       "to": [
-        1,
-        0
+        4,
+        2
       ],
       "node": {
-        "ix": 1,
-        "iy": 0,
+        "ix": 4,
+        "iy": 2,
         "mode": 0
       },
       "cost": 1,
@@ -300,21 +282,21 @@
     },
     {
       "n": 2,
-      "kind": "shift",
-      "pieceId": 3,
-      "ref": "piece:3",
-      "shape": "D2_0",
+      "kind": "overWall",
+      "pieceId": 2,
+      "ref": "piece:2",
+      "shape": "D2_90",
       "color": "R",
       "from": [
         0,
-        1
+        2
       ],
       "to": [
-        0,
+        6,
         0
       ],
       "node": {
-        "ix": 0,
+        "ix": 6,
         "iy": 0,
         "mode": 0
       },
@@ -324,22 +306,22 @@
     },
     {
       "n": 3,
-      "kind": "shift",
-      "pieceId": 1,
-      "ref": "piece:1",
-      "shape": "D2_0",
-      "color": "R",
+      "kind": "overWall",
+      "pieceId": 4,
+      "ref": "piece:4",
+      "shape": "D2_90",
+      "color": "Y",
       "from": [
-        2,
-        2
+        0,
+        1
       ],
       "to": [
-        0,
-        2
+        6,
+        1
       ],
       "node": {
-        "ix": 0,
-        "iy": 2,
+        "ix": 6,
+        "iy": 1,
         "mode": 0
       },
       "cost": 1,
@@ -349,21 +331,21 @@
     {
       "n": 4,
       "kind": "overWall",
-      "pieceId": 2,
-      "ref": "piece:2",
+      "pieceId": 7,
+      "ref": "piece:7",
       "shape": "D2_90",
-      "color": "W",
+      "color": "R",
       "from": [
-        3,
-        2
-      ],
-      "to": [
-        5,
+        0,
         0
       ],
+      "to": [
+        6,
+        2
+      ],
       "node": {
-        "ix": 5,
-        "iy": 0,
+        "ix": 6,
+        "iy": 2,
         "mode": 0
       },
       "cost": 1,
@@ -372,22 +354,22 @@
     },
     {
       "n": 5,
-      "kind": "shift",
-      "pieceId": 4,
-      "ref": "piece:4",
+      "kind": "overWall",
+      "pieceId": 1,
+      "ref": "piece:1",
       "shape": "D2_90",
-      "color": "G",
+      "color": "Y",
       "from": [
-        1,
-        1
+        2,
+        3
       ],
       "to": [
-        3,
-        2
+        6,
+        3
       ],
       "node": {
-        "ix": 3,
-        "iy": 2,
+        "ix": 6,
+        "iy": 3,
         "mode": 0
       },
       "cost": 1,
@@ -397,21 +379,21 @@
     {
       "n": 6,
       "kind": "overWall",
-      "pieceId": 5,
-      "ref": "piece:5",
+      "pieceId": 0,
+      "ref": "piece:0",
       "shape": "D2_90",
-      "color": "W",
+      "color": "Y",
       "from": [
-        1,
-        0
+        4,
+        2
       ],
       "to": [
-        5,
-        1
+        6,
+        4
       ],
       "node": {
-        "ix": 5,
-        "iy": 1,
+        "ix": 6,
+        "iy": 4,
         "mode": 0
       },
       "cost": 1,
@@ -421,69 +403,69 @@
     {
       "n": 7,
       "kind": "overWall",
-      "pieceId": 4,
-      "ref": "piece:4",
+      "pieceId": 6,
+      "ref": "piece:6",
       "shape": "D2_90",
-      "color": "G",
+      "color": "Y",
       "from": [
-        3,
-        2
+        4,
+        1
       ],
       "to": [
-        5,
-        2
+        6,
+        0
       ],
       "node": {
-        "ix": 5,
-        "iy": 2,
+        "ix": 6,
+        "iy": 0,
         "mode": 0
       },
       "cost": 1,
-      "segment": 0,
+      "segment": 1,
       "queueAfter": 0
     },
     {
       "n": 8,
       "kind": "overWall",
-      "pieceId": 0,
-      "ref": "piece:0",
+      "pieceId": 8,
+      "ref": "piece:8",
       "shape": "D2_90",
-      "color": "G",
+      "color": "Y",
       "from": [
-        3,
-        3
+        4,
+        0
       ],
       "to": [
-        5,
-        3
+        6,
+        1
       ],
       "node": {
-        "ix": 5,
-        "iy": 3,
+        "ix": 6,
+        "iy": 1,
         "mode": 0
       },
       "cost": 1,
-      "segment": 0,
+      "segment": 1,
       "queueAfter": 0
     },
     {
       "n": 9,
       "kind": "overWall",
-      "pieceId": 6,
-      "ref": "piece:6",
-      "shape": "O4_0",
-      "color": "W",
+      "pieceId": 5,
+      "ref": "piece:5",
+      "shape": "C3_0",
+      "color": "G",
       "from": [
-        3,
+        2,
         0
       ],
       "to": [
-        5,
-        0
+        6,
+        2
       ],
       "node": {
-        "ix": 5,
-        "iy": 0,
+        "ix": 6,
+        "iy": 2,
         "mode": 0
       },
       "cost": 1,
@@ -495,43 +477,19 @@
       "kind": "overWall",
       "pieceId": 3,
       "ref": "piece:3",
-      "shape": "D2_0",
-      "color": "R",
+      "shape": "C3_180",
+      "color": "Y",
       "from": [
-        0,
-        0
-      ],
-      "to": [
-        5,
-        2
-      ],
-      "node": {
-        "ix": 5,
-        "iy": 2,
-        "mode": 0
-      },
-      "cost": 1,
-      "segment": 1,
-      "queueAfter": 0
-    },
-    {
-      "n": 11,
-      "kind": "overWall",
-      "pieceId": 1,
-      "ref": "piece:1",
-      "shape": "D2_0",
-      "color": "R",
-      "from": [
-        0,
-        2
+        2,
+        1
       ],
       "to": [
         6,
-        2
+        3
       ],
       "node": {
         "ix": 6,
-        "iy": 2,
+        "iy": 3,
         "mode": 0
       },
       "cost": 1,
@@ -542,50 +500,50 @@
   "replay": {
     "ok": true,
     "message": null,
-    "eventLogHash": "ea5ab16124b0b5d0",
-    "events": 51
+    "eventLogHash": "1a4dfd4577023966",
+    "events": 58
   },
   "variants": [],
   "issues": [
     {
-      "code": "puzzle_greedy_easy",
-      "rule": "K-51/9",
-      "check": "L-39",
-      "severity": "warn",
+      "code": "shape_decisions_low",
+      "rule": "K-64/2",
+      "check": "L-42",
+      "severity": "error",
       "path": "yard",
-      "message": "greedyWin 1.00 > 0.70 (ahaMin 2): greedy play finishes the level inside the budget"
+      "message": "shapeDecisions 0 < 2 on a normal level: add a two-tone twin or an overhang shape (LEVELS §8.6)"
     }
   ],
   "notes": [
-    "targets_diverge_from_spec (8): min 11 vs spec [14, 16], targets [11, 13] · minShifts 4 vs spec [4, 5], targets [3, 5] · firstNeedDepth 1 vs spec [2, 2], targets [1, 2] · depLater 2 vs spec [2, 3], targets [1, 3] · parkSlack 0.5 vs spec [0.8, 1.5], targets [0.4, 1] · forced 9 vs spec [3, 5], targets [6, 10] · greedyWin 1 vs spec [0.3, 0.6], targets [0.5, 1] · branch3 0.27 vs spec [0.15, 0.3], targets [0.15, 0.35]"
+    "targets_diverge_from_spec (11): min 10 vs spec [14, 16], targets [10, 10] · minShifts 1 vs spec [4, 5], targets [1, 1] · firstNeedDepth 1 vs spec [2, 2], targets [1, 1] · depLater 0 vs spec [2, 3] · crossDeps 2 vs spec [3, ∞] · parkSlack 2 vs spec [0.8, 1.5] · forced 8 vs spec [3, 5] · greedyExcess 0 vs spec [1, 3] · greedyWin 1 vs spec [0.3, 0.6], targets [0.9, 1] · ahaMin 0 vs spec [1, 2], targets [0, 0] · branch3 0.33 vs spec [0.15, 0.3]"
   ],
   "specGaps": [
     {
       "metric": "min",
-      "actual": 11,
+      "actual": 10,
       "spec": [
         14,
         16
       ],
       "targets": [
-        11,
-        13
+        10,
+        10
       ],
       "actualOut": true,
       "targetsOut": true
     },
     {
       "metric": "minShifts",
-      "actual": 4,
+      "actual": 1,
       "spec": [
         4,
         5
       ],
       "targets": [
-        3,
-        5
+        1,
+        1
       ],
-      "actualOut": false,
+      "actualOut": true,
       "targetsOut": true
     },
     {
@@ -597,52 +555,65 @@
       ],
       "targets": [
         1,
-        2
-      ],
-      "actualOut": true,
-      "targetsOut": true
-    },
-    {
-      "metric": "depLater",
-      "actual": 2,
-      "spec": [
-        2,
-        3
-      ],
-      "targets": [
-        1,
-        3
-      ],
-      "actualOut": false,
-      "targetsOut": true
-    },
-    {
-      "metric": "parkSlack",
-      "actual": 0.5,
-      "spec": [
-        0.8,
-        1.5
-      ],
-      "targets": [
-        0.4,
         1
       ],
       "actualOut": true,
       "targetsOut": true
     },
     {
+      "metric": "depLater",
+      "actual": 0,
+      "spec": [
+        2,
+        3
+      ],
+      "targets": null,
+      "actualOut": true,
+      "targetsOut": false
+    },
+    {
+      "metric": "crossDeps",
+      "actual": 2,
+      "spec": [
+        3,
+        99
+      ],
+      "targets": null,
+      "actualOut": true,
+      "targetsOut": false
+    },
+    {
+      "metric": "parkSlack",
+      "actual": 2,
+      "spec": [
+        0.8,
+        1.5
+      ],
+      "targets": null,
+      "actualOut": true,
+      "targetsOut": false
+    },
+    {
       "metric": "forced",
-      "actual": 9,
+      "actual": 8,
       "spec": [
         3,
         5
       ],
-      "targets": [
-        6,
-        10
-      ],
+      "targets": null,
       "actualOut": true,
-      "targetsOut": true
+      "targetsOut": false
+    },
+    {
+      "metric": "greedyExcess",
+      "actual": 0,
+      "spec": [
+        1,
+        3
+      ],
+      "targets": null,
+      "actualOut": true,
+      "targetsOut": false
     },
     {
       "metric": "greedyWin",
@@ -652,44 +623,65 @@
         0.6
       ],
       "targets": [
-        0.5,
+        0.9,
         1
       ],
       "actualOut": true,
       "targetsOut": true
     },
     {
+      "metric": "ahaMin",
+      "actual": 0,
+      "spec": [
+        1,
+        2
+      ],
+      "targets": [
+        0,
+        0
+      ],
+      "actualOut": true,
+      "targetsOut": true
+    },
+    {
       "metric": "branch3",
-      "actual": 0.27,
+      "actual": 0.33,
       "spec": [
         0.15,
         0.3
       ],
-      "targets": [
-        0.15,
-        0.35
-      ],
-      "actualOut": false,
-      "targetsOut": true
+      "targets": null,
+      "actualOut": true,
+      "targetsOut": false
     }
   ],
   "stats": {
-    "states": 133422,
-    "expanded": 133422,
-    "edges": 1777964,
-    "ms": 6870,
-    "bytes": 32110718,
-    "dragSessions": 43990,
-    "applyMoves": 99594,
-    "fastYardMoves": 1678370,
-    "d3aRuns": 1063,
-    "d3aMaxExpansions": 8,
+    "states": 634701,
+    "expanded": 634701,
+    "edges": 6565606,
+    "ms": 37024,
+    "bytes": 126620727,
+    "dragSessions": 3412216,
+    "applyMoves": 305256,
+    "fastYardMoves": 6260350,
+    "d3aRuns": 1347,
+    "d3aMaxExpansions": 10,
     "d3aUnknown": 0,
     "complete": true,
     "limit": null,
-    "totalMs": 7320
+    "totalMs": 38171
   },
-  "v3": null,
+  "v3": {
+    "liftRatio": 1,
+    "lifted": 9,
+    "placements": 9,
+    "visibleAtStart": 9,
+    "shapeDecisions": 0,
+    "stackParks": 0,
+    "unwrapAt": 0.2,
+    "bonusAt": null,
+    "traitDelta": null
+  },
   "large": null,
-  "cacheKey": "e4b78ca9:rules4:solver4:level:var:d3a"
+  "cacheKey": "7166ab1d:rules4:solver4:level:var:d3a"
 }

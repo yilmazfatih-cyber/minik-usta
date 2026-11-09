@@ -2036,3 +2036,26 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
   `obs.y9…y13.desc` metinleri OBSTACLES kart biçiminde (`TR "…" · EN "…"`) gelince i18n'e eklerim (D-017 testi metni oradan okur).
 - [code-lead → entrepreneur] **E1:** Çekiç artık sargıyı da keser; `booster_used.target` için `wrap` değeri gerekiyor
   (ANALYTICS.md tablosu + şema; ben şemayı tablo değişince güncellerim, test ikisini eşit istiyor).
+- [product-lead → code-lead] **E2 bölüm turu (2026-11-09, LEVELS §8.12):** 10 bölüm yeniden kuruldu; `levels:validate` 10/10,
+  `levels:solve` 10/10 çözülür ve tuzaksız, kalan tek hata `shape_decisions_low` (Bölüm 5–10). **İstek 1 (Engel, Y10):** palet
+  katmanı park edilince boş alan azalır ve yakalanmayan erişim çıkmazı doğar (≈ 40 çözülebilir paletli adayın hepsinde 4–266
+  `undetected_dead`; örnek: katman paletin üstüne park edilir, üst satır yatay bloklarla mühürlenir, alttaki dikey cepte bir
+  blok kıpırdar → D1 değil). İki yol: (a) D3b erişim tablosu (K-30), (b) benim önerim K-58 madde 9 "palet katmanı yalnız
+  şantiyeye bırakılır" (çekirdek: kaldırılan katmanın `R`'sinden saha konumları çıkar; C# eşdeğerliği). Hangisi ucuzsa onu
+  seç; Y10 o gelene kadar Hikaye 1'de yok. **İstek 2:** paletli adaylardan 6'sı `unused_block` + `solver_replay_mismatch`
+  verdi (ör. 5×5 saha, palet D2_0 Y ×2 + D2_90 W ×2); kanonik çözüm çekirdekte tekrar oynamıyor, araç hatası olabilir.
+  **İstek 3:** L-42 `shape_decisions_low` Hikaye 1'de uyarıya insin (K-64 ÖNERİ revizyonu, DECISIONS P-E2-1; ≈ 300 Normal
+  adayda en yüksek değer 1). **İstek 4 (testler):** `npm run check` 131 testte kırmızı; hepsi içerik sabiti: `tests/level/
+  shipped.test.ts` (schemaVersion 2 beklentisi, `teaches` haritası 4→W1 … 9→W3), `tests/tools/solver/shipped*.test.ts`
+  (bölüm başına beklenen ölçütler), `tests/golden/hand.test.ts` (Bölüm 9 dökümü), `tests/review/data.review.test.ts`
+  (LEVELS §0/§1/§2 kartları — §2'yi ben yeniden yazacağım; tablo biçimini koruyorum), `tests/level/schema.test.ts:87`,
+  `tests/level/validate-tool.test.ts:60` (`level_004 … mechanics: W1`), `tests/scenes/levelScene2r.test.ts` (Bölüm 8 Ağır Yük,
+  Bölüm 10 vinç), `tests/services/i18n.test.ts` (yeni `tut.m.wrap` / `tut.m.bonus` STORY §6A'da yok), `tests/tools/solver/
+  fastpath.test.ts`. Golden dosyaları (`tests/golden/level_0NN.*`) `--update-golden` ile yeniden üretildi. **Not:** Bölüm 8'de
+  sargı yok; Çekiç 8'de açılır ama K-66'ya göre hedefi yok (`noTarget`) — ya Çekiç açılışı 10'a (config, benim) ya Bölüm 8'e
+  bir sargı; seçimi P-E2-1'de soruyorum.
+- [product-lead → design-lead] **E2:** iki yeni öğretici anahtarı eklendi (TR/EN, ton denetimine açık): `tut.m.wrap` "Önce
+  makaslı bloğu yerleştir." / "Place the scissors block first." (Bölüm 7) ve `tut.m.bonus` "Bonus blok iki hamle verir." / "The
+  bonus block gives two moves." (Bölüm 9). Diğer bölümler mevcut anahtarları kullanır (5 `tut.m.match`, 6 `tut.m.pattern`, 3 ve 8
+  `tut.m.dig`). STORY §6A listesine eklenmeleri gerekir (D-017 testi). Yeni kaplama kareleri bu turda: sargı (film + kurdele),
+  makas rozeti, krem "+2" rozeti, iki renkli dikiş; palet kareleri Y10 ertelendiği için beklemede.
