@@ -5,6 +5,8 @@ Sahip: product-lead · Sürüm: D-099 bölüm turu (2026-11-02, paket A2: Bölü
 
 **v3 notu (G1, 2026-11-08):** Bölüm 1–10'un "Bölümler v3" yeniden tasarım önerisi (yeni şekiller, blok özellikleri,
 blok sayısı eğrisi, 10 bölüm planı, code-lead notları) **§8**'dedir; ÖNERİ'dir, onaya kadar §1–§7 ve JSON'lar bağlayıcıdır.
+**v3c notu (2026-11-09, D-103…D-105):** Bölüm 6–10'un 3 sütunlu şantiye planı, palet ve bonus kararları **§8.13**'tedir
+(plan; JSON değişmedi).
 
 Bu belge 50 bölümün taslağıdır. **Faz 2R dikey dilimi Bölüm 1–10'dur (R2-06):** §2'de her biri yeni kurallarla (tam örtü
 K-47/K-48, değişken boyut K-49, bulmaca ölçütleri K-50/K-51, hamle bütçesi K-52, hafif öğretici K-53) yeniden
@@ -1546,7 +1548,7 @@ yalnız renkle eşleşir, şekil kararı yoktur. Bölüm başına 6–8 blok, 9/
 
 ### 8.1 Kararlar ve seçenekler
 
-**Karar 1 — Şantiye genişliği.** (A) Ws = 2 kalır, şekiller yalnız 2 genişlikli yönelimlerle (L/J/T/I3 dikey) gelir;
+**Karar 1 — Şantiye genişliği.** (**D-103 ile geçersiz:** Bölüm 6–10 Ws = 3; §8.13.) (A) Ws = 2 kalır, şekiller yalnız 2 genişlikli yönelimlerle (L/J/T/I3 dikey) gelir;
 (B) Ws = 3'e (S9) Hikaye 1'de geçilir, artı/yatay L/T açılır; (C) Ws = 2–3 karışık. **Seçim A.** Gerekçe: Wy + Ws ≤ 8
 (K-49, 120 px hücre) Ws = 3'te sahayı 5 sütuna indirir ("daha çok blok" isteğiyle çelişir); 3 renk sınırında 3 sütunlu
 tuzaksız döşeme kurulamadı (§2.0 madde 4); ölçek (§8.10). Artı ve yatay şekiller S9 ile Hikaye 2'de (18) gelir.
@@ -2019,3 +2021,206 @@ v3'ü bu sabit-nesne planlarıyla (§8.12 tablosu) ve `--max-states 2 500 000` i
 tablosu, gri kutu, öğretici listesi, kanonik çözüm metni) yeni JSON'a göre yeniden yazılmadı (product-lead, sonraki tur;
 `tests/review/data.review.test.ts` bu bölümleri JSON'la karşılaştırır). Testlerin içerik sabitleri (code-lead): REVIEW_LOG
 E2 kaydı.
+
+### 8.13 v3c — Bölüm 6–10 yeniden planı: 3 sütunlu şantiye, palet yalnız şantiyeye, bonus ödül anı (KABUL kararlarının planı, product-lead paketi P1, 2026-11-09)
+
+Sahip: product-lead · Durum: **plan** (kurallar KABUL: D-103, D-104, D-105; GDD K-49, K-56 "D-103 eki", K-58 madde 9,
+K-60 madde 6–7, K-62, K-63 "D-103 eki"). Bu alt bölüm JSON değildir: `levels/level_006…010.json` bu pakette değişmez;
+yayın verisi v3b (701b8f3) kalır, v3c JSON'u code-lead'in U-v3c paketi (aşağıda) ve product-lead'in bölüm turu ile gelir.
+Testler bu alt bölümü okumaz. Yöntem: stüdyo şablonu (game-designer: oyuncu fantezisi ve "aha"; level-designer: blok
+kütlesi, gri kutu, ritim; systems-designer: kapasite ve bütçe hesabı; `balance-check`: bant ve bütçe).
+
+**Kararların bu plana çevrilişi (özet).** D-103: Bölüm 6–10 Ws = 3, 9 sütunluk tahta (6 saha + 3 şantiye), hücre 108
+design px (K-49 madde 5); Bölüm 1–5 Ws = 2 kalır. D-104: palet katmanı yalnız şantiyeye gider (sahaya iptal, şantiyede
+hatalıysa kendi paletine geri seker); Hikaye 1'de palet yerdedir; `pallet_capacity` kalkar; palet 4 bölümde (7 tanıtım,
+8, 9, 10). D-105: bonus her yerde ödül anıdır (`k` = 0); 7 ve 9'da birer bonus, doğru yerleşince "+2" patlaması.
+
+#### 8.13.1 Bölüm 1–5 kontrolü (değişmez)
+
+| # | Saha / şantiye (JSON) | Ws | v3c kurallarıyla durum |
+|---|---|---|---|
+| 1 | 5×4 / 2×4 | 2 | K-49 madde 2 (Ws = 2) ✓; palet, bonus, 3 genişlikli şekil yok → K-58/K-62/K-56 eki etkilemez |
+| 2 | 6×5 / 2×6 | 2 | ✓ (L4/J4 dikey; 2 genişlik) |
+| 3 | 5×5 / 2×5 | 2 | ✓ |
+| 4 | 6×5 / 2×4 | 2 | ✓ |
+| 5 | 6×6 / 2×5 | 2 | ✓ (Y9 tanıtımı; iki renkli çiftler W–Y, R–Y, W–G — K-65 madde 3'ün v3c metniyle uyumlu) |
+
+Bölüm 1–5'in planı, JSON'u ve bütçesi değişmez. Açık kalan tek nokta v3b'den gelir: Bölüm 5'te 10 000 yürüyüşte 182
+örnekten 1 yakalanmayan çıkmaz tahmini (D-102 madde 4); v3c bunu değiştirmez, code-lead'in makro çizge kanıtını bekler.
+
+#### 8.13.2 Kapasite hesabı (systems-designer): neden 17–20 blok, neden palet
+
+Sabitler: saha en çok 6×8 (C = 48; K-49), K-02 `E = C − F ≥ 2`, domino payı ≤ %50, `min` ≤ 22. Bunlardan:
+1. **Plan alanı alt sınırı:** N blokta en çok ⌊N/2⌋ domino (2 hücre), kalanlar en az 3 hücre (C3) → `Σ ≥ 2·⌊N/2⌋ +
+   3·⌈N/2⌉`. N = 18 → Σ ≥ 45; N = 20 → 50; N = 22 → 55. Ws = 3'te Σ = 3 · Hs · S ∈ {45, 48, 54, 60, …}.
+2. **Saha tavanı:** paletsiz `F = Σ ≤ 46`. Paletsiz bölümde N ≤ 18 ve yalnız Σ 45; N = 18 Σ 45 bütün 9 domino dışı bloğu
+   C3 yapar (şekil çeşitliliği yok). Bu yüzden **Bölüm 6 (paletsiz) N = 17**: 8 domino + 7 C3 + 2 geniş L/J = Σ 45.
+3. **Palet kazancı:** k katmanlı, s hücreli palet ayak izini `s · (k − 1)` azaltır (D2×3 → 4, C3×3 → 6). Σ 54 olan
+   bölümlerde iki palet (4 + 6 = 10) `F = 44, E = 4` verir.
+4. **`min` sınırı:** `min = N + minShifts` (cam/harç yok). Final için en az 2 kazı ("aha" için sıra kararı) → N ≤ 20.
+   **Bölüm 10 N = 20** (D-103'ün 22 hedefinden 2 eksik; 22 blokla `min` ≤ 22 yalnız sıfır kazıyla mümkün, final
+   düşünmeden kazanılırdı). Seçenek: `min` tavanı 24'e çıkarsa N 22 + 2 kazı kurulabilir (Σ 60, üç palet, kazanç ≥ 14);
+   karar proje sahibinin (§8.13.7 soru 1).
+
+Sonuç eğrisi: **N = 17, 18, 19, 20, 20** (toplam 94; v3b'de 6–10: 14+13+14+14+16 = 71, +%32). Bölüm 1–10 toplamı 141
+(v3b 118).
+
+#### 8.13.3 Fikir sırası (game-designer): bölüm başına tek yeni fikir
+
+| # | Yeni fikir (`teaches`) | Pekiştirilen | Neden bu sırada |
+|---|---|---|---|
+| 6 | **S9 Geniş Şantiye** — 3 sütun, yatay yatan L/J (düz tabanlı `L4_270`, `J4_90`) | iki renkli (5) | Geometri değişikliği tek başına öğretilir; özellik yok |
+| 7 | **Y10 Palet** (yalnız şantiyeye) | geniş şantiye; **bonus** ödül anı (yeni fikir sayılmaz, K-60 madde 6) | Kolay bir dilimle; paletin "nereye gider" kuralı tek cümle |
+| 8 | **Y11 Sargı + Makas** | palet (2. bölüm), iki renkli | Palet katmanları sargısız (K-65); makas tekil blokta |
+| 9 | **Y13 Kaygan** | palet (3.), sargı yok; **bonus** ödül anı | Park kararı: kaygan çukura düşer; palet boşalınca açılan köşe güvenli park yeri |
+| 10 | — (final kombinasyon, Zor) | palet + sargı/makas + kaygan + iki renkli + geniş şekiller | Yeni fikir yok (brif ilke 3) |
+
+Bilinçli dışarıda bırakılanlar: **T4 ve I3** kural gereği 6/8'den izinlidir (K-56) ama v3c kullanmaz (beş bölüme beş
+fikir sığar; T4/I3 yeni parça olarak birer fikir sayılır). **S4, Z4, P5 (artı)** Ws = 3'te serbesttir (K-56 eki) ama
+Hikaye 2'ye kalır; önerilen sıra: 11 I3 kiriş (`I3_90`), 12 T4 çatı (`T4_90` çentik), 13 S4/Z4, 16 P5 artı (Zor 15'ten
+sonraki nefes bölümü değil, 16 Normal tanıtım). Bu sıra Hikaye 2 planında kesinleşir.
+
+Tanıtım bölümü bütçe ve bant kuralı (K-52 D-099, §0): 6–9 `teaches` doludur → Normal tanıtım P = 4, orta bot bandı
+%80–90. Sonuç: 6–9 nazik, 10 sert. Testere dişini korumak için 9'un hedefi bandın alt yarısıdır (%80–84) ve 10 Zor
+bandın üst yarısındadır (%50–60, G1b DL-V3-15).
+
+#### 8.13.4 Bölüm planı tablosu (level-designer)
+
+Plan satırları ve blok koordinatları üretici (`levels:gen` v3c) ile bulunur; aşağıdaki tablo üreticinin girdisidir ve
+bölümün kabul ölçütüdür. Renk kümesi her bölümde 3 (K-31). İki renkli çiftler yalnız W–Y, R–Y, W–G (K-65 madde 3).
+"Geniş" = 3 genişlikli yönelim (K-56 eki).
+
+| # | Ad (çalışma) | Saha (C) / şantiye (Ws×Hs×S) / H / duvar | Σ | N | Şekil karışımı (domino payı) | Palet (yerde, tek tipli) | F / E | Özellikli bloklar | Renkler |
+|---|---|---|---|---|---|---|---|---|---|
+| 6 | Geniş Temel | 6×8 (48) / 3×5×3 / 8 / 7 | 45 | 17 | D2 ×8 (D2_0 ×4, D2_90 ×4) · C3 ×7 (dört yönelim) · `L4_270` ×1 · `J4_90` ×1 — %47 | — | 45 / 3 | iki renkli ×2 (D2_90 "WY", "YW") | W Y G |
+| 7 | Palet Yığını | 6×8 (48) / 3×4×4 / 8 / 7 | 48 | 18 | D2 ×9 (3'ü palette) · C3 ×6 · `L4_270`, `J4_90`, `L4_0` — %50 | A: `D2_90` W ×3 | 44 / 4 | bonus ×1 (tekil C3, 2. dilim; ödül) | W Y R |
+| 8 | Paketli Kat | 6×8 (48) / 3×6×3 / 8 / 7 | 54 | 19 | D2 ×9 (3'ü palette) · C3 ×4 (3'ü palette) · `L4_270`, `J4_90`, `L4_90`, `J4_270`, `L4_0` · O4 ×1 — %47 | A: `D2_90` Y ×3 · B: `C3_0` W ×3 | 44 / 4 | sargılı ×2 (`L4_90`, bir `D2_0`), makas ×1 (tekil C3, 2 kazı altında), iki renkli ×2 ("WG") | W Y G |
+| 9 | Kaygan Çatı | 6×8 (48) / 3×6×3 / 8 / 7 | 54 | 20 | D2 ×10 (3'ü palette) · C3 ×6 (3'ü palette) · `L4_270`, `J4_90`, `L4_0`, `J4_0` — %50 | A: `D2_90` G ×3 · B: `C3_270` W ×3 | 44 / 4 | kaygan ×2 (tekil `D2_90`, `D2_0`), bonus ×1 (2. katın ilk tekil bloğu; ödül), iki renkli ×3 ("WY" ×2, "WG") | W Y G |
+| 10 | Ağaç Ev Tamam! | 6×8 (48) / 3×6×3 / 8 / 7 | 54 | 20 | D2 ×10 (3'ü palette) · C3 ×6 (3'ü palette) · `L4_90`, `J4_270`, `L4_270`, `J4_90` — %50 | A: `D2_90` Y ×3 · B: `C3_0` G ×3 | 44 / 4 | sargılı ×2, makas ×1 (Y paletinin ihtiyacı olan zeminin altında), kaygan ×1, iki renkli ×4 ("WY" ×2, "WG" ×2) | W Y G |
+
+Ortak: duvar 7 = H − 1 (boyu 3 dikey L4/J4 için açık yükseklik, K-56); saha üst satırı y7 duvar tepesinin üstündedir →
+**Karar 9 B** (y7'ye yalnız kanonik çözümde ilk hamlesi park olan blok) ve `liftRatio` ≥ 0,60 kapısı. Palet katmanları
+sargılı/makaslı/bonus/kaygan olamaz (K-65 madde 1–2, K-58 madde 9 f). Hikaye 1 paleti yerdedir (y = 0; `C3_0`, `C3_270`,
+`D2_90` hepsi tabandan oturur).
+
+**Gri kutu (Bölüm 7, üretici girdisi; diğerleri aynı çerçeve).** `P` palet ayak izi, `#` blok, `.` boş, `|` duvar
+(yükseklik 7), sağda 3 sütunluk şantiye (4 katlık dilimin 1. katı, `?` plan):
+
+```
+y9  . . . . . .   .   . . .    ← Vinç Alanı (9 sütun boyunca)
+y8  . . . . . .   .   . . .
+y7  # # . . # .   .   . . .    ← saha üst satırı (duvarın üstü): yalnız ilk hamlesi park olan blok
+y6  # # # # # #   |   . . .
+y5  # # # # . #   |   . . .
+y4  # # # # # #   |   . . .
+y3  # # # # # #   |   ? ? ?
+y2  # # # # # #   |   ? ? ?
+y1  # # # # # #   |   ? ? ?
+y0  P P # # # #   |   ? ? ?    ← palet A (D2_90 W ×3) sol alt köşede, üstü (0,1)–(1,1) bir blokla kapalı
+     x0 … x5     x5|6  x6–x8
+```
+
+#### 8.13.5 Hedef ölçütler (LEVELS §8.6 adlarıyla) ve bütçe
+
+| # | Etiket (puan) | Orta bot / vekil bandı | `minShifts` | `min` hedefi | P | Hamle (`a` = 0) | `firstNeedDepth` | `maxDigRun` | `parkSlack` | YAO | `liftRatio` | `trapCount` / `plan_trap` / `deadRate` | `traitDelta` | `shapeDecisions` | `visibleAtStart` |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 6 | Normal tanıtım S9 (4) | %80–90 | 2–3 | 19–20 | 4 | 23–24 | 1 | ≤ 2 | 1,0–2,0 | ≥ 0,75 | ≥ 0,60 | 0 / 0 / 0 | — (geometri) | izle | ≥ 12 |
+| 7 | Normal tanıtım Y10 (4) | %80–90 | 1–2 | 19–20 | 4 | 23–24 | 0–1 | ≤ 2 | 1,0–2,0 | ≥ 0,75 | ≥ 0,60 | 0 / 0 / 0 | izle (kural öğrenme) | izle | ≥ 12 |
+| 8 | Normal tanıtım Y11 (5) | %80–90 | 2–3 | 21–22 | 4 | 25–26 | 1–2 | ≤ 3 | 0,8–1,5 | ≥ 0,70 | ≥ 0,60 | 0 / 0 / 0 | Y11 ≥ 10, Y10 ≥ 10 | izle | ≥ 13 |
+| 9 | Normal tanıtım Y13 (6) | %80–84 (alt yarı) | 2 | 22 | 4 | 26 | 1–2 | ≤ 3 | 0,8–1,5 | ≥ 0,70 | ≥ 0,60 | 0 / 0 / 0 | Y13 izle; Y12 muaf | izle | ≥ 13 |
+| 10 | **Zor** (8) | **%50–60** | 2 | 22 | 1 | 23 | ≤ 2 | ≤ 3 | 0,6–1,2 | ≥ 0,60 | ≥ 0,60 | 0 / 0 / 0 | — | izle | ≥ 14 |
+
+Notlar: (1) Bantlar **bonuslu** orandır (K-62: bot bonusu gerçek oyundaki gibi alır). Bonus `traitDelta`'dan muaftır.
+(2) `ahaMin` ve `greedyWin` bu ölçekte tam çizge istediğinden ölçülemez (v3b CL-V3-03); yerine oyun vekili (`policy.loose`)
+ve beceri botu vekili raporlanır; bölüm 10'da `policy.loose` ≤ 0,50 (açgözlü oyun kaybeder). (3) `shapeDecisions`
+Hikaye 1'de izleme ölçütüdür (P-E2-1 madde 3; L-42 uyarı). (4) **Ölü masa kapısı (D-090) bu ölçekte:** `plan_trap` tam
+tarama (kanıt) + 10 000 yürüyüşte yakalanmayan çıkmaz 0 (tahmin; CL-V3-01 B) + D3a "bilinmiyor" oranı < %1. Makro çizge
+kanıtı (U-v3-2 B) gelene kadar bu bölümler "tahminle geçti" etiketi taşır (§8.13.7 soru 2). (5) `min` çözücünün en iyi
+bulduğu değerdir (ışın araması); alt sınırla farkı > 2 ise bütçe `alt sınır + P` ile yeniden denetlenir (bot bandı
+tutmazsa bölüm yeniden üretilir).
+
+#### 8.13.6 Öğretici, "aha" ve tasarım niyeti
+
+| # | Öğretici (K-53, ≤ 2 adım) | Beklenen "aha" (oyuncu ne keşfetmeli) | Tasarım niyeti |
+|---|---|---|---|
+| 6 | 1 adım: `tut.m.widesite` «Şantiye genişledi: yatay blok da sığar.» / «The site is wider: flat blocks fit too.» (el, `L4_270`'i 1. katın düz tabanına gösterir; `done: placeCorrect`) | "Yatay L bir satırı tek hamlede kapatır ama çıkıntısı bir köşeyi yükseltir: o köşenin yanına gelecek C3'ü buna göre seç." | 3 sütunlu planda şekil yönü kararı; iki renkli ikizler (5'ten) tuzak kırıcı olarak satır ortasında |
+| 7 | 2 adım: `tut.m.pallet` «Paletten hep en üstteki alınır.»; `tut.m.palletsite` «Palet bloğu yalnız şantiyeye gider.» / «Pallet blocks go only to the site.» (ikinci adım ilk iptalde ya da ilk palet yerleşiminde) | "Paletin üç W'si üç ayrı kata gider; paleti erken boşaltan sol alt köşede iki park hücresi kazanır." Bonus: 2. dilimde tekil C3 → "+2" patlar | Paletin kuralı tek cümle; karar kolay: palet sahayı tıkamaz, boşalınca yer açar. Bonus ilk kez görülür (ödül) |
+| 8 | 1 adım: `tut.m.wrap` «Önce makaslı bloğu yerleştir.» (mevcut anahtar) | "Makas iki kazı altında; üstündeki Y paletinin iki katmanını şantiyeye vermek hem kazıdır hem inşa. Makas oturunca iki paket birden açılır." | Uzaktan sıra bağımlılığı; palet katmanları kazı yerine yerleşimle "kazar" (palet pekiştirme: `traitDelta` Y10) |
+| 9 | 1 adım: `tut.m.slippery` «Kaygan blok boşlukta durmaz, kayar.» / «Slippery blocks slide into gaps.» (yeni anahtar; el, kaygan bloğu düz zemine gösterir) | "Kaygan bloğu kazdığın çukura park edersen düşüp gereken bloğu yeniden gömer; paletin boşalttığı düz köşe güvenli park yeri." | Park yeri kararı; palet boşaltma zamanlaması kaygan için yer açar. Bonus 2. katta (ödül) |
+| 10 | 0 adım (final) | "Önce makas, sonra Y paleti: makasın oturacağı zemin paletin ilk iki katmanı; kaygan blok en son boşalan palet köşesine." Bütçe `min + 1`: bir yanlış kazı affedilir, iki yanlış kaybettirir | Kombinasyon finali; zorluk tuzaktan değil sıradan ve paydan (`trapCount` 0) |
+
+Yeni i18n anahtarları (TR/EN; ton denetimi design-lead, ekleme code-lead): `tut.m.widesite`, `tut.m.palletsite`,
+`tut.m.slippery`; `obs.y10.desc` için önerilen ek cümle OBSTACLES Y10 kartında (i18n değişikliği code-lead). STORY §6A listesine eklenmeleri gerekir (D-017).
+
+#### 8.13.7 Açık sorular (orkestratöre / proje sahibine)
+
+1. **Blok sayısı 17/18/19/20/20 (D-103 hedefi 18/18/20/20/22).** 6'da 17: paletsiz bölümde 6×8 saha tavanı (Σ ≤ 46) ile
+   şekil çeşitliliği birlikte en çok 17'ye izin verir (18 yalnız D2 + C3 ile olur). 10'da 20: `min` ≤ 22 ile 22 blok
+   sıfır kazı demektir. Seçenek A (önerim): bu eğri. Seçenek B: `min` tavanı 24 → Bölüm 10 N 22 (Σ 60, üç palet),
+   Bölüm 6 N 18 (yalnız D2 + C3).
+2. **D-090 kanıt sınıfı.** 17–20 blokta tam tarama bitmez; kapı `plan_trap` (kanıt) + rastgele yürüyüş (tahmin) +
+   D3a "bilinmiyor" < %1'dir. Makro çizge (U-v3-2 B) gelene kadar bu bölümlerin "ölü masa yok" iddiası tahmindir.
+   Proje sahibi bu kanıt sınıfını yayın için kabul ediyor mu?
+3. **Hücre 108 px** (K-49 madde 5): D-103'teki 112 yerine; yan pay 27 px. design-lead ve code-lead onaylasın.
+4. **T4 ve I3 6–10'da yok** (çeşitlilik ↔ tek yeni fikir). v3b'deki T4 (6) ve I3 (8–10) kalkar; yerine geniş L/J/C3
+   yönelimleri gelir. Kabul mü?
+5. **6–9'un dördü tanıtım** (S9, Y10, Y11, Y13) → P 4 ve %80–90 bandı; final Zor'a sert geçiş. Alternatif: kaygan
+   Hikaye 2'ye (13) kalır, 9 Normal pekiştirme (P 2, %65–80) olur ve eğri yumuşar. Önerim: alternatif; ancak bu
+   paketin listesi kaygan istediği için plan kaygan ile yazıldı.
+
+#### 8.13.8 Uygulama notları (code-lead'e; U-v3c)
+
+**U-v3c-1 Ağırlık hatası (önce).** `src/core/shapes.ts` `heavy: w >= 3 || ALWAYS_HEAVY.has(kind)` bugün bütün 3
+genişlikli yönelimleri (`I3_90`, `L4_90/270`, `J4_90/270`, `T4_90/270`, `S4_90`, `Z4_90`) Ağır Yük sayar: duvarı hiç
+aşamazlar ve D-103 boşa çıkar. GDD K-44 "Ağırlık (Faz 2R)" yalnız I5/Q9'u ağır sayar. Düzeltme: `heavy =
+ALWAYS_HEAVY.has(kind)`; TECH §3 "Y5: w ≥ 3" cümlesi ve C# eşi aynı pakette. Test adı: "K-44 K-49 3-wide material crosses
+the wall".
+
+**U-v3c-2 Yeni tür P5.** `SHAPE_KINDS` sonuna `P5` (mevcut indeksler ve Zobrist anahtarları değişmesin; 0..51 → 0..55),
+`BASE_CELLS.P5 = [[1,0],[0,1],[1,1],[2,1],[1,2]]`, dört yönelim `P5_0`'a indirgenir. Kanonik sıra (K-50 madde 4) dizge
+sırasıyla kendiliğinden `O4` < `P5` < `Q9`. `KIND_FIRST_LEVEL_V3.P5` = 16 (Hikaye 2 planı), ama Ws = 3 bölümde S4, Z4,
+P5 için `shape_locked` üretilmez (K-56 eki madde 2). Unity: hücre maskesi karoları genel; P5 için sanat gerekmez
+(design-lead teyit).
+
+**U-v3c-3 Doğrulayıcı.** L-28: `board_too_wide` eşiği Wy + Ws > 9; Ws ∈ {2, 3}; Ws = 3 yalnız `id ≥ 6` (`size_out_of_range`,
+yol `site.cols`); Ws 4 aralığı kalkar. `pallet_capacity` kalkar (K-58 madde 8). Yeni: `pallet_not_grounded` (error,
+Hikaye 1; K-58 madde 9 g), `plan_trap` (K-63 eki; Ws = 3 bölümde zorunlu tam tarama; Hikaye 1'de error). `tile_family_mix`
+Ws = 3'te üretilmez. `flag_combo_forbidden`: `stack` + `slippery`/`mortar`/`glass` (OBSTACLES v3 birleşim tablosu zaten
+✗). `bonus_late` emekli (üretilmez). K-65 madde 3 metni G–Y'siz (kod zaten öyle).
+
+**U-v3c-4 Palet katmanı yalnız şantiyeye (K-58 madde 9).** Tutulan katmanın `R` kümesi: şantiye konumları (doğru ve
+hatalı) + başlangıç (iptal). Bırakma sonucu park/saha içi taşıma olacaksa → iptal, olay `cancelled { pieceId, reason:
+'palletSiteOnly' }`, maliyet 0. Hatalı şantiye yerleşimi → K-07 maliyeti 1, Usta Serisi 0, katman eski `z` ve `stackBelow`
+ilişkisiyle paletine döner (K-17 adım 1–3 atlanır). Vinç'in saha hedefi palet katmanı için kapalı. Geri Al / Söküm
+değişmez (çekirdek tampon). Çözücü hamle üreticisi palet katmanı için yalnız şantiye hamlesi üretir (dallanma azalır).
+Unity sunumu: sahanın üstündeki katman "iptal" görünümü (design-lead, UX).
+
+**U-v3c-5 3 sütunda yerleşim ve D3a.** K-34, `buildFront`, `verdict.missingSupport`, Altın Mala `P` kümesi ve D3a
+`tileRemaining` sütun döngüleri Ws'den bağımsız olmalı (bugünkü kodda `Ws = 2` varsayımı aranmalı: `site.ts`,
+`placement.ts`, `deadlock.ts`). U-v3-0 H1 düzeltmesi düz olmayan profilleri (`T4_90` 1,0,1; `P5_0` 1,0,1; `L4_90` 0,1,1)
+kapsamalı. D3a bellek anahtarı = (dilim, üç sütun yüksekliği, kalan çoklu küme). Ölçüm: 20 bloklu Bölüm 9–10
+taslaklarında D3a "bilinmiyor" oranı `D3A_MAX_EXPANSIONS` = 20 000 ile; > %1 ise sınır artırılır ya da bölüm küçülür.
+Performans kapısı: hamle sonu hattı 4× CPU yavaşlatmada kare bütçesini aşmaz (`npm run perf`).
+
+**U-v3c-6 Bonus olayı (K-60 madde 7, K-62).** Adım 4: `movesChanged { reason: 'bonus', delta: bonusMoves, pieceId }`
+(alan eksikse eklenir). Unity `LevelHud`: sayaçta "+n" patlaması, ses, karakter kısa sevinci, toplam ≤ 900 ms, giriş
+kilitlenmez; "(+2)" ön gösterimi yok. Doğrulayıcı bütçe formülü değişmez. Bot ve vekiller bonusu uygular.
+
+**U-v3c-7 Yerleşim: hücre basamağı (K-49 madde 5).** `BoardLayout.AdaptiveCellPx` (Unity) ve web `createLayout`: sütun
+sayısı 9 iken hücre 108 (12'nin katı), duvar `WallW · k` = 54, tahta 1026, yan pay 27. Bugünkü formül `max(CellPx=120, …)`
+9 sütunda 120 verir ve tahta 1140 px olur (ekrandan taşar); taban 9 sütun için 108'e iner. Tepsi kenar payı kuralı
+(UX §5.8 madde 9, `min(24, yardX − 32)`) 27 px'te yan kenar çizmez. Ekran görüntüleri 390×844 ve 360×800'de 9 sütunlu
+bir tahta ile (design-lead incelemesi). Dokunma: 108 design px, 390 CSS px genişlikte ≈ 39 CSS px (bugünkü 120 → 43).
+
+**U-v3c-8 Üretici ve çözücü parametreleri (`levels:gen` v3c).** Girdi: §8.13.4 satırı (boyutlar, Σ, N, şekil çoklu
+kümesi, paletler, özellik atamaları, renk kümesi). Kısıtlar: `plan_trap` 0; palet yerde; domino payı ≤ %50; Karar 9 B;
+K-02 bandı; `firstNeedDepth` ≤ 2; `maxDigRun` ≤ 3; makas en az 1 kazı altında ve `scissors_blocked` yok; kaygan blok
+başta desteğinde. Amaç: §8.13.5 bantları (önce `liftRatio`, `minShifts`, vekil bandı). Plan üretimi önce yapılır
+(plan + blok kümesi, `plan_trap` tam tarama), sonra saha yerleşimi aranır. Kapı: bölüm başına ≤ 120 sn, ≤ 2 GB; ışın
+genişliği 8–512; yürüyüş 10 000; tohum `id × 1000 + id`.
+
+**U-v3c-9 Mekanik ilk bölüm tablosu.** OBSTACLES "Veri imzası" ve `mechanics.ts` `firstLevel`: S9 6, Y10 7, Y12 7, Y11 8,
+Y13 9. v3b JSON'u (Y13 Bölüm 8, Y11 Bölüm 7) bu tabloyla çakıştığı için tablo v3c JSON'uyla **aynı commit'te** değişir.
+
+**U-v3c-10 C# eşdeğerliği (D-091).** U-v3c-1…7'nin C# karşılıkları, golden ve DiffFuzz kâhini 3 sütunlu tahtalar ve
+palet iptal/geri sekme dizileriyle genişler.

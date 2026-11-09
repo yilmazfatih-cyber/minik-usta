@@ -47,7 +47,7 @@ sütunu: kural sabit koordinata bağlı mı? Uyumsuzlar yeniden tanımlandı ya 
 | S6 Asansör İskele | ✓ | **Değişti:** `H = max(Hy, Hs + b)`, `Hs + b ≤ 8` | Genelleştirildi (Faz 3) |
 | S7 Gizli Plan | ✓ | ✓ | Değişmedi (Faz 3) |
 | S8 Balonlu Blok | ✓ | ✓ | Değişmedi; S2 olmadan şantiyedeki anlamı daralır (yalnız sütun tepesine doğru), Faz 3'te yeniden değerlendirilir |
-| S9 Geniş Şantiye (yeni) | ✓ | Ws ≥ 3 | **Yeni imza**; ilk bölüm 12 (Faz 3); kapsam MVP (Faz 3), yalnız veri |
+| S9 Geniş Şantiye (yeni) | ✓ | Ws = 3 | **Yeni imza**; ilk bölüm **6** (D-103, v3c; eski 12); Bölüm 1–5'te Ws = 2; Wy + Ws ≤ 9 |
 | G-H, G-L | ✓ | ✓ (yönlendirme şantiye sütunları içinde) | Değişmedi (Faz 3) |
 
 **D-099 uyumu (sabit saha, GDD K-55; `schemaVersion` 2):** bütün bloklar ilk andan sahadadır, dilim geçişinde kamyon
@@ -348,19 +348,23 @@ kuyruğa yalnız S3 kırılması (GDD K-17 adım 3) ve S4 molozun Çekiç'le inm
   Normal `B1` W aynı yerde (7,4) `.` hücresine düşerdi → hatalı.
 - **Bilgi kartı** (`obs.s8.desc`): TR "Balonlu blok yukarı süzülür ve tavana asılır." · EN "Balloon blocks float up and hang from the ceiling."
 
-### S9 — Geniş Şantiye (YENİ, Faz 2R, R2-02)
-- **Bölge:** şantiye · **İlk bölüm:** 12 (Faz 3; hikaye bölümü 2'nin imzasız tek bölümü, LEVELS §3 madde 7) ·
-  **Kapsam:** MVP (Faz 3) — yalnız veridir (`site.cols ≥ 3`, K-49; yerleşim ve prosedürel blok çizimi zaten genel).
-  Ek kod ya da sanat gerektirirse etiket "Sonra (Hikaye 6+)" olur ve 12 imzasız kalır (EN-2R-08). Engel sayısı 26
-  kalır (S2 MVP dışı).
-- **Kural:** `site.cols = Ws ≥ 3`. Plan Ws sütundur; genişliği ≤ Ws olan yönelimler (ör. `L4_90`, `T4_90`, hikaye bölümü
-  2+) şantiyeye girebilir. Duvar sınırı x = Wy−1 | Wy kalır; Wy + Ws ≤ 8 (`board_too_wide`). Rüzgâr (W8) ve G-L
-  yönlendirmesi şantiye sütunları içinde 1 sütun kaydırır; 2 genişlikli blok da yönlendirilebilir (genişliği Ws olan
-  yönlendirilemez).
-- **Neden 1–10'da yok:** hikaye bölümü 1'de en çok 3 renk vardır; 3 sütunlu bir planda dikey `D2` ve `C3` bloklarının
-  rengi, aynı renkte başka bir dikey hücre çiftiyle her zaman çakıştı ve Normal bölümde yasak olan ✓-tuzakları (K-51)
-  doğdu (LEVELS §2.0 tuzak kaynağı; karalama çözücüsüyle 2 tasarımda doğrulandı). Hikaye bölümü 2'deki 4 renkle kurulur.
-- **Veri:** `site: { cols: 3 | 4, rows }`.
+### S9 — Geniş Şantiye (YENİ, Faz 2R, R2-02; D-103 ile Hikaye 1'e alındı, 2026-11-09)
+- **Bölge:** şantiye · **İlk bölüm:** **6** (D-103; Bölüm 6–10'un hepsi Ws = 3; eski plan 12/18) · **Kapsam:** MVP. Çekirdekte
+  3 genişlikli yönelimlerin malzeme sayılması, yeni tür P5 ve 9 sütunluk hücre basamağı gerekir (LEVELS §8.13 U-v3c).
+  Engel sayısı 26 kalır (S2 MVP dışı).
+- **Kural:** `site.cols = Ws = 3` (Bölüm 1–5'te Ws = 2 zorunlu, K-49 madde 2). Plan 3 sütundur; genişliği ≤ 3 olan bütün
+  yönelimler şantiyeye girebilir (K-56 "D-103 eki": `I3_90`, `L4_90/270`, `J4_90/270`, `T4_90/270`, `S4_90`, `Z4_90`,
+  `P5_0`; S4, Z4, P5 Ws = 3'te tür kilidinden muaf). 3 genişlikli yönelimler malzeme bloğudur (duvarı aşar; Ağır Yük
+  yalnız I5/Q9). Duvar sınırı x = Wy−1 | Wy; **Wy + Ws ≤ 9** (`board_too_wide`); 9 sütunda hücre 108 design px (K-49
+  madde 5). Rüzgâr (W8) ve G-L yönlendirmesi şantiye sütunları içinde 1 sütun kaydırır; genişliği Ws olan blok
+  yönlendirilemez.
+- **1–10'daki tuzak riski (eski "neden 1–10'da yok"):** 3 renkte dikey `D2`/`C3` bloklarının 3 sütunlu planda ✓-tuzağı
+  ürettiği gözlenmişti (LEVELS §2.0). v3c'de bu bir kapıyla önlenir: Ws = 3 bölümde plan düzeyi tuzak taraması zorunlu,
+  `plan_trap` Bölüm 1–10'da error (K-63 "D-103 eki"). Üretici iki renkli blokları ve düz tabanlı geniş şekilleri tuzak
+  kırıcı olarak kullanır (LEVELS §8.13).
+- **Veri:** `site: { cols: 3, rows }`.
+- **Öğretici (Bölüm 6, 1 adım):** `tut.m.widesite` TR «Şantiye genişledi: yatay blok da sığar.» · EN «The site is wider:
+  flat blocks fit too.» (ton denetimi design-lead).
 - **Bilgi kartı** (`obs.s9.desc`): TR "Şantiye genişledi! Geniş bloklar artık sığar." · EN "The site is wider! Wide blocks fit now."
 
 ### G-H — Ağır yerçekimi
@@ -591,35 +595,44 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
   ("WY/YW" pencere) yalnız doğru iki renkliyle dolar. Ölçü: `traitDelta` ≥ 10 (Bölüm 5), `shapeDecisions` ≥ 2.
 - **Bilgi kartı** (ÖNERİ, anahtar `obs.y9.desc`): TR «İki renkli blok: her rengi kendi yerine gelmeli.» · EN «Two-tone block: each color must match its spot.»
 
-### Y10 — Palet (ÖNERİ)
-- **Bölge:** saha · **İlk bölüm (öneri):** 3
+### Y10 — Palet (KABUL, D-104 ile kesinleşti)
+- **Bölge:** saha (bırakma yalnız şantiyede) · **İlk bölüm:** **7** (v3c tanıtım; ayrıca 8, 9, 10)
 - **Kural:** Palet, aynı şekilde 2–4 malzeme bloğunun aynı hücrelerde üst üste (z) durduğu yığındır. Yalnız en üst katman
   tutulabilir (K-09); alttaki katmanlar paletin hücrelerini doldurur. Üst katman kaldırılınca bir alttaki aynı anda
-  "üst" olur (hücreler dolu kalır). Kaldırılan katman palete geri **konamaz**; başlangıç konumuna bırakılırsa hamle
-  iptaldir (K-07 satır 1) ve katman yeniden üst olur. Son katman kalkınca hücreler boşalır. Her katman ayrı bloktur:
-  blok sayısına, arz/talebe (K-47) ve kazanma koşuluna (K-48) girer. **Hikaye 1'de palet tek tiplidir** (bütün katmanlar
-  aynı şekil, renk ve bayrak; K-65 madde 1); bu yüzden katman sırası bilgisi gerekmez. **Kapasite:** başlangıç boş hücre
-  sayısı `E ≥ 2 + max(hücre × (katman − 1))` (`pallet_capacity`, K-58 madde 8).
-- **Veri:** parçada `stack: { id, z }` (aynı `id`'li parçalar aynı şekil ve çapa; `z` 0 = en alt, ardışık).
-- **Örnek:** Bölüm 4 v3.1: palet `D2_90` W×3 (2,1)–(3,1); altında `C3_0` R (1,0) (hücreleri (1,0), (2,0), (1,1); sağ
-  kolu paletin altında), (3,0) başka bir blokla dolu. İki üst W 1. katın iki alt satırına doğrudan konur
-  (2 hamle); üçüncü W park edilir (1 hamle) → palet boşalır, `C3_0` R'nin üstü açılır. Saha 6×5, E 10 ≥ 2 + 2 × 2 = 6.
+  "üst" olur (hücreler dolu kalır). **Kaldırılan katman yalnız şantiyeye bırakılır (D-104, GDD K-58 madde 9):** şantiyede
+  doğruysa yerleşir; şantiyede hatalıysa maliyet 1 ile kendi paletine üst katman olarak geri seker; sahaya, saha üstü
+  havaya ya da Vinç Alanı'na bırakılırsa iptaldir (hamle yok, katman palete döner). Oyuncu katmanı palete kendisi geri
+  koyamaz. Son katman yerleşince palet hücreleri boşalır (yeni park yeri). Her katman ayrı bloktur: blok sayısına,
+  arz/talebe (K-47) ve kazanma koşuluna (K-48) girer. **Hikaye 1'de palet tek tiplidir** (K-65 madde 1) **ve yerdedir**:
+  her sütundaki en alt hücresi y = 0 (`pallet_not_grounded`, K-58 madde 9 g; paletin altında blok yok). Eski kapasite
+  kuralı (`pallet_capacity`, madde 8) D-104 ile kalktı: katman sahaya inmediği için palet boş alanı azaltamaz.
+- **Veri:** parçada `stack: { id, z }` (aynı `id`'li parçalar aynı şekil ve çapa; `z` 0 = en alt, ardışık). Palet
+  katmanı `slippery`, harç ve cam bayrağı taşıyamaz (`flag_combo_forbidden`).
+- **Örnek:** Bölüm 7 v3c: palet `D2_90` W×3 (0,0)–(1,0). Üst W sahaya (3,6) bırakılır → iptal, sayaç aynı. Şantiyede W
+  satırına → doğru, palet 2 katman. Y hücresine → hatalı, sayaç −1, W palete döner. Üçüncü W de yerleşince (0,0)–(1,0)
+  boşalır.
 - **Okunurluk (G1b, DL-V3-01/02/03/17):** taban açık gri-mavi metal kızaktır (nötr `ui` tonu; ahşap rengi ve ağaç damarı
   yok — W "Ahşap" bloğuyla karışmasın), 2 çıta, yalnız bloğun altında 16 design px dudak olarak görünür, hücrenin
   ortasını kaplamaz. Katman sayısı dudakta 2–4 **çentikle** gösterilir (rakam yok; "+2" bonus ve Islak Beton sayacıyla
   karışmasın); katman başına 6 design px yükselen gölge "yığın" okunur. Üst katman kalkınca alttaki 120 ms "pop" ile
-  yükselir (JUICE). Hikaye 2'de karışık palet: üst bloğun altından 28 design px'lik sembollü "sonraki katman" kenarı +
-  basılı tutunca gözetleme (katmanlar vinç alanında yelpaze, 400 ms, hamle harcamaz); bunlar çizilmeden karışık palet
-  yayımlanmaz.
-- **Güçlendiriciler (K-66):** Vinç ve Altın Mala yalnız üst katmanı hedefler; Çekiç hedefsiz; Fırça Hikaye 2+'da yalnız
-  üst katman.
-- **Eğlence gerekçesi:** ekranı taşırmadan **blok kütlesini** artırır (2 hücrelik yerde 2–3 blok); paletin altındaki
-  gereken blok "z kazısı" kararı üretir ("katmanları şimdi mi harcayayım, park mı edeyim?"). Ölçü: `traitDelta` ≥ 10
-  (Bölüm 4), `stackParks` izlenir.
+  yükselir (JUICE). **v3c (D-104):** katman tutulup sahanın üstüne getirilince "iptal" görünümü (soluk katman, gölge yok)
+  ve bırakınca palete kayan dönüş; şantiyede gölge her bloktaki gibi. Hikaye 2'de karışık palet: "sonraki katman"
+  kenarı + basılı tutunca gözetleme; bunlar çizilmeden karışık palet yayımlanmaz.
+- **Güçlendiriciler (K-66, K-58 madde 9 e):** Vinç ve Altın Mala yalnız üst katmanı hedefler ve yalnız şantiyede doğru
+  konuma koyar (Vinç'in saha hedefi palet katmanına kapalı); Çekiç hedefsiz; Fırça Hikaye 2+'da yalnız üst katman.
+- **Eğlence gerekçesi:** ekranı taşırmadan **blok kütlesini** artırır (2–4 hücrelik yerde 2–4 blok; 9 sütunlu tahtada
+  18–20 blok bu yüzden sığar). v3c'deki karar: "paleti erken boşaltıp park yeri kazanmak mı, önce paletin ihtiyacı olan
+  zemini kurmak mı?" (palet katmanlarının şantiyedeki yerleri birbirinin üstündedir; hangi paletten ne zaman çekileceği
+  sıra kararıdır). Ölçü: `traitDelta` ≥ 10 (Bölüm 8), `palletEmptyAt` izlenir.
+- **Öğretici (Bölüm 7, 2 adım):** `tut.m.pallet` «Paletten hep en üstteki alınır.» / «Take from the top of the pallet.»;
+  `tut.m.palletsite` TR «Palet bloğu yalnız şantiyeye gider.» · EN «Pallet blocks go only to the site.» (ton denetimi
+  design-lead).
 - **Bilgi kartı** (ÖNERİ, anahtar `obs.y10.desc`): TR «Paletten hep en üstteki alınır.» · EN «Take from the top of the pallet.»
+  v3c ek cümlesi (i18n'e code-lead ekler, ton denetimi design-lead; eklenince bu satır kartla birleşir): TR "Palet bloğu
+  yalnız şantiyeye gider." · EN "Pallet blocks go only to the site." (aynı metin `tut.m.palletsite` taslağıdır).
 
 ### Y11 — Sargılı Blok ve Makas (ÖNERİ)
-- **Bölge:** saha (tetik şantiyede) · **İlk bölüm (öneri):** 7
+- **Bölge:** saha (tetik şantiyede) · **İlk bölüm:** 7 (v3b yayını) → **8 (v3c planı, LEVELS §8.13)**
 - **Kural:** `wrapped` bayraklı blok tutulamaz (K-09 (c)), Vinçle ve Altın Mala'yla seçilemez; rengi ve şekli görünür.
   Bölümde tam bir `scissors` bayraklı blok vardır. Makaslı blok K-16'ya göre **doğru** yerleştiği hamlenin 5. adımında
   (K-35) sahadaki bütün sargılar kalkar. Çekiç (K-36) tek sargıyı keser (bloğu kırmaz). Geri Al ve Söküm sargıları geri
@@ -639,11 +652,12 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
 - **Bilgi kartı** (ÖNERİ, anahtar `obs.y11.desc`): TR «Makaslı bloğu yerleştir, paketler açılsın.» · EN «Place the scissors block to unwrap the rest.»
 
 ### Y12 — Bonus Blok (ÖNERİ)
-- **Bölge:** saha (tetik şantiyede) · **İlk bölüm (öneri):** 9 (Hikaye 1'de yalnız burada)
+- **Bölge:** saha (tetik şantiyede) · **İlk bölüm:** 9 (v3b) → **7 (v3c; ayrıca 9)** · **D-105:** her hikayede ödül anı
 - **Kural:** `bonus` bayraklı blok doğru yerleştiği hamlenin 4. adımında (K-35, maliyetten sonra) hamle sayacına
   `bonusMoves` (varsayılan 2) ekler. Hatalı yerleşim ve kaydırma bir şey vermez. Bölümde en çok 2 bonus blok. Geri Al ve
-  Söküm bonusu geri alır. **Hikaye 1'de ödül anıdır:** bütçeye girmez (K-62 `k` = 0), karar sayımına ve `traitDelta`
-  kapısına girmez. Bağlayıcı son tarihli bonus (`k` = 1, HUD "19 (+2)") Hikaye 2'de.
+  Söküm bonusu geri alır. **Her hikayede ödül anıdır (D-105):** bütçeye girmez (K-62 `k` = 0 her zaman), karar sayımına
+  ve `traitDelta` kapısına girmez. Doğru yerleşince HUD sayacında "+2" patlaması, ses ve karakterin kısa sevinci (K-60
+  madde 7). Bağlayıcı son tarihli bonus (`k` = 1, HUD "19 (+2)") RET.
 - **Veri:** `flags: ["bonus"]`, isteğe bağlı `bonusMoves: 1–3` (varsayılan 2).
 - **Örnek:** Sayaç 6; bonus blok doğru konur → 6 − 1 + 2 = 7.
 - **Okunurluk (G1b, DL-V3-03/20):** HUD hamle sayacının simgesi + "+2" rozeti; krem zemin, `ui.ink` 4 px kontur, Ø 56
@@ -653,8 +667,8 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
   zorluk isteği). Karar yarattığı iddia edilmez (design-lead karşı-olgusal testi: hiçbir çözüm değişmez).
 - **Bilgi kartı** (ÖNERİ, anahtar `obs.y12.desc`): TR «Bonus blok yerine oturunca +2 hamle verir.» · EN «A bonus block gives +2 moves when placed.»
 
-### Y13 — Kaygan Blok (ÖNERİ; Hikaye 2)
-- **Bölge:** saha · **İlk bölüm (öneri):** 13
+### Y13 — Kaygan Blok (KABUL)
+- **Bölge:** saha · **İlk bölüm:** 8 (v3b yayını) → **9 (v3c planı)** · palet katmanı kaygan olamaz
 - **Kural:** `slippery` bayraklı blok sahada desteksiz kalamaz: `gravity.yard` kapalı olsa da hamle sonu 6. adımda (K-35)
   altında boşluk varsa düşer (K-20 kuralıyla, yalnız bu blok). Şantiyede sıradan bloktur.
 - **Veri:** `flags: ["slippery"]`.
@@ -673,7 +687,11 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
 | Y12 | `bonus` | 9 (öneri) |
 | Y13 | `slippery` | 13 (öneri) |
 
-**Taşınan ilk bölümler (ÖNERİ, v3 eğrisi; LEVELS §8.2):** W1 Sabit Geçit 4 → 11, W2 Yüksek Duvar 6 → 12 (yalnız
+**v3c ilk bölümleri (D-103…D-105, LEVELS §8.13; "Veri imzası" tablosu code-lead'in v3c bölüm paketinde bunlarla
+güncellenir — tablo testlerce okunduğu için bu pakette değişmedi):** S9 Geniş Şantiye 6 · Y10 Palet 7 · Y12 Bonus 7 ·
+Y11 Sargı + Makas 8 · Y13 Kaygan 9 · Y9 İki Renkli 5 (değişmez).
+
+**Taşınan ilk bölümler (ÖNERİ, v3 eğrisi; LEVELS §8.2; S9 satırı D-103 ile geçersiz):** W1 Sabit Geçit 4 → 11, W2 Yüksek Duvar 6 → 12 (yalnız
 boyu ≤ 2 şekillerle), Y5 Ağır Yük 8 → 14, W3 Dar Geçit 9 → 16; S9 Geniş Şantiye 12 → 18. Hikaye 1 yeni oyuncaklara
 (şekil + 4 özellik) ayrılır; eski mekanikler Hikaye 2'de bir ritimle döner. Karışık palet (Y10 genişlemesi) ve bağlayıcı
 bonus Hikaye 2'de birer tanıtım bölümüyle gelir.

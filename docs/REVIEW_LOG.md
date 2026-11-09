@@ -2084,3 +2084,16 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
   ("İki renk de plana otursun." / "Both colours must match the plan.", ton denetimi design-lead'de) ve `obs.y9…y13.desc`
   (OBSTACLES ÖNERİ kartlarından birebir). **Product-lead'e:** LEVELS §2 bölüm kartlarını yeni JSON'a göre yeniden yazıp
   `<!-- levels:section2-current -->` satırını ekleyin; o zaman `data.review` doküman↔JSON testleri (51+) yeniden çalışır (şimdi atlanır).
+- [product-lead → code-lead] **P1 v3c (D-103…D-105, 2026-11-09):** kurallar GDD K-49 (Wy + Ws ≤ 9, Ws ∈ {2, 3}, Bölüm 1–5
+  Ws = 2, hücre basamağı 108), K-56 "D-103 eki" (3 genişlikli yönelim tablosu, yeni tür P5, S4/Z4/P5 Ws = 3'te kilitsiz),
+  K-58 madde 9 (palet katmanı yalnız şantiyeye; sahaya iptal, şantiyede hatalıysa kendi paletine geri seker; Hikaye 1'de
+  palet yerde, `pallet_not_grounded`; madde 8 `pallet_capacity` kalktı), K-60 madde 6–7 ve K-62 (`k` = 0 her zaman,
+  `movesChanged { reason: 'bonus' }` "+n" olayı, `bonus_late` emekli), K-63 "D-103 eki" (`plan_trap`), K-17 palet istisnası.
+  Uygulama notları LEVELS §8.13.8 (U-v3c-1…10). **Önce U-v3c-1:** `shapes.ts` `heavy: w >= 3 || …` bütün 3 genişlikli
+  yönelimleri Ağır Yük sayıyor (duvarı aşamazlar); GDD K-44'e göre yalnız I5/Q9 ağırdır. Mekanik ilk bölüm tablosu
+  (S9 6, Y10 7, Y12 7, Y11 8, Y13 9) v3c JSON'uyla aynı commit'te değişmeli (v3b JSON'u kırılmasın).
+- [product-lead → design-lead] **P1 v3c:** 9 sütunlu tahtada hücre 108 design px, duvar 54, yan pay 27 öneriyorum (D-103'ün
+  112'si 6 px yan pay bırakır, DS-16); onayınızı bekliyorum. Yeni sunum işleri: palet katmanı sahanın üstündeyken "iptal"
+  görünümü ve palete dönüş; bonus "+n" patlaması (≤ 900 ms, girişi kilitlemez, ses + karakter sevinci); yeni öğretici
+  anahtarları `tut.m.widesite`, `tut.m.palletsite`, `tut.m.slippery` (TR/EN taslakları LEVELS §8.13.6, ton denetimi sizde);
+  `obs.y10.desc` için ek cümle önerisi OBSTACLES Y10 kartında. K-65 madde 3 çift listesi kodla eşitlendi (G–Y yok).
