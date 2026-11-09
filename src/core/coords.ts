@@ -1,7 +1,7 @@
 /**
  * Grid geometry and the wall boundary (docs/GDD.md §0, K-01…K-05, K-49; TECH_DESIGN §2.2 edge model, §2R.1).
  *
- * Internal coordinates are the global ones (no conversion) in the 8 × 10 MAXIMUM FRAME (geometry.ts): cell and drag
+ * Internal coordinates are the global ones (no conversion) in the 9 × 10 MAXIMUM FRAME (geometry.ts): cell and drag
  * node codes never depend on the level. What a cell is comes from the level geometry `geo` (`s.lvl.geo`): x 0 … wy−1
  * yard, x wy … wy+ws−1 site, y 0 … h−1 board, y h … h+1 crane area. The wall is the ZERO-WIDTH boundary between
  * x = wy−1 and x = wy: it has no cells. A row of the boundary is described by bit `y` of a `geo.rows`-bit row mask.
@@ -43,7 +43,7 @@ export const ROW_MASK_ALL = DEFAULT_GEO.rowMaskAll;
 
 // --- frame encoding (level independent) ------------------------------------------------------------------------------
 
-/** Frame cell index `y * 8 + x` (TECH §2.1; the same for every geometry). */
+/** Frame cell index `y * 9 + x` (TECH §2.1; the same for every geometry). */
 export function cellIndex(x: number, y: number): CellIndex {
   return y * MAX_COLS + x;
 }
@@ -54,7 +54,7 @@ export function cellY(cell: CellIndex): number {
   return Math.floor(cell / MAX_COLS);
 }
 
-/** Integer code of a drag node: `(mode * 10 + iy) * 8 + ix` (TECH §2.1, §2R.0 item 2: the frame code, every geometry). */
+/** Integer code of a drag node: `(mode * 10 + iy) * 9 + ix` (TECH §2.1, §2R.0 item 2: the frame code, every geometry). */
 export function dragNodeCode(node: DragNode): number {
   return (node.mode * MAX_ROWS + node.iy) * MAX_COLS + node.ix;
 }

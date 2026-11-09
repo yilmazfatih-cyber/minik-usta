@@ -2,7 +2,7 @@
   "level": 10,
   "file": "level_010.json",
   "levelHash": "4073179f156e18cc",
-  "rulesVersion": 4,
+  "rulesVersion": 5,
   "solverVersion": 6,
   "variant": null,
   "schemaVersion": 2,
@@ -34,7 +34,7 @@
   "issues": [],
   "notes": [
     "fast yard path off (slippery blocks (Y13))",
-    "large-level search (U-v3-2): best found 20 (lower bound 17) — not proven optimal, en iyi bulunan; width 32, 359449 states, 18348 ms, replay ok",
+    "large-level search (U-v3-2): best found 20 (lower bound 17) — not proven optimal, en iyi bulunan; width 32, 359449 states, 16712 ms, replay ok",
     "play proxy (CL-V3-03; not ahaMin): placement-first player wins 0 within 21 moves, 0.01 within 29",
     "dead-state gate (CL-V3-01 B, estimate not proof; D-090 whole-space scan not run): 10000 random walks: won 2486, rescued by D1/D2/D3a 333, unresolved 7181 (probed 200: solvable 200, undetected dead 0) → estimated 0.00 %"
   ],
@@ -43,7 +43,7 @@
     "states": 2003,
     "expanded": 600,
     "edges": 5986,
-    "ms": 827,
+    "ms": 859,
     "bytes": 260953,
     "dragSessions": 4422,
     "applyMoves": 6363,
@@ -53,7 +53,7 @@
     "d3aUnknown": 0,
     "complete": false,
     "limit": "maxStates",
-    "totalMs": 405864
+    "totalMs": 386683
   },
   "v3": {
     "liftRatio": 0.75,
@@ -78,28 +78,28 @@
       "value": 1
     },
     "states": 359449,
-    "ms": 18348,
+    "ms": 16712,
     "replayOk": true,
     "runs": [
       {
         "width": 8,
         "cost": 26,
-        "ms": 335
+        "ms": 312
       },
       {
         "width": 32,
         "cost": 20,
-        "ms": 932
+        "ms": 800
       },
       {
         "width": 128,
         "cost": 20,
-        "ms": 4007
+        "ms": 3153
       },
       {
         "width": 512,
         "cost": 20,
-        "ms": 13073
+        "ms": 12446
       }
     ],
     "actions": [
@@ -305,5 +305,5 @@
       "loose": 0.01
     }
   },
-  "cacheKey": "83f03545:rules4:solver6:level:var:d3a"
+  "cacheKey": "83f03545:rules5:solver6:level:var:d3a"
 }

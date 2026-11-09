@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { samplePlan } from './sample-plan.ts';
 import type { PlanSpec } from './sample-plan.ts';
 import type { Layout } from './generate.ts';
-import { levelOf, neighbour, planShapes, startLayout, tilings } from './generate.ts';
+import { levelOf, neighbour, planTilings, startLayout } from './generate.ts';
 import { mulberry32 } from '../../src/core/rng.ts';
 import { validateLevelJson } from '../../src/core/level/logic.ts';
 import { compile } from '../../src/core/level/compile.ts';
@@ -132,7 +132,7 @@ function main(argv: readonly string[]): void {
       continue;
     }
     const rng = mulberry32(seed * 31 + 7);
-    const all = plan.segments.map((sg) => tilings(sg.rows, planShapes(plan), plan.twoTone));
+    const all = planTilings(plan);
     let l: Layout | null = null;
     for (let t = 0; t < 40 && !l; t++) l = startLayout(plan, all, rng);
     if (!l) continue;

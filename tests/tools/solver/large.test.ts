@@ -1,7 +1,7 @@
 /**
  * Levels v3 solver scale (docs/TECH_DESIGN.md §V3.3; LEVELS §8.10 U-v3-2; GDD §16 ÖNERİ K-64): the large-level search
  * (beam + widening, best found, core replay), the v3 measures and the solve-stage integration. Fixture:
- * tests/fixtures/levels-v3/large_22.json = the first start layout of `plan_large_22.json`, seed 1 (6 × 8 yard, 2 × 8 site,
+ * tests/fixtures/levels-v3/large_22.json = the first start layout of `plan_large_22.json`, seed 3 (6 × 8 yard, 2 × 8 site,
  * 3 floors, 22 blocks: 2 pallets, 3 two-tone, 2 wrapped + scissors).
  */
 import { readFileSync } from 'node:fs';
@@ -31,7 +31,8 @@ const compiled = (json: unknown) => {
 
 describe('U-v3-2 large-level search (6 × 8 yard, 22 blocks)', () => {
   it('K-64 U-v3-2 the fixture is the deterministic start layout of the plan: 6 × 8 yard, N 22, pallets, schemaVersion 3, no validator error', () => {
-    expect(startLevel(PLAN, 1)).toEqual(LARGE);
+    // seed 3 (v3c, D-104): seed 1's layout needs a pallet layer parked in the yard, which K-58 item 9 forbids
+    expect(startLevel(PLAN, 3)).toEqual(LARGE);
     const { lvl, issues } = compiled(LARGE);
     expect(issues.filter((i) => i.severity === 'error')).toEqual([]);
     expect([lvl.geo.wy, lvl.geo.hy, lvl.materialCount, lvl.hasStacks]).toEqual([6, 8, 22, true]);

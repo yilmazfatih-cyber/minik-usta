@@ -85,7 +85,7 @@ const GEOMETRY_CORE = [
 /** Justified literals per file: a line pattern and why the number is not a board size. */
 const JUSTIFIED: Readonly<Record<string, readonly (readonly [RegExp, string])[]>> = {
   'src/core/geometry.ts': [
-    [/^export const MAX_COLS = 8;$/, 'the maximum frame (K-49 Wy + Ws ≤ 8): the single source'],
+    [/^export const MAX_COLS = 9;$/, 'the maximum frame (K-49 Wy + Ws ≤ 9, D-103): the single source'],
     [/^export const MAX_ROWS = 10;$/, 'the maximum frame (K-49 H ≤ 8 + 2 crane rows): the single source'],
     [/^export const MAX_SEGMENTS = 5;$/, 'GDD K-22: 1 ≤ S ≤ 5'],
     [/^export const DEFAULT_SIZES: .*\{ wy: 6, hy: 8, ws: 2, hs: 8, eMax: 0 \}\);$/, 'GDD K-49 defaults'],
@@ -98,7 +98,7 @@ const JUSTIFIED: Readonly<Record<string, readonly (readonly [RegExp, string])[]>
   'src/core/movement.ts': [
     [/D2_EPSILON = 1e-9;$/, 'float tolerance'],
     [/^const NEIGHBOURS = new Int16Array\(8\);$/, 'neighbour scratch (4 FREE steps + rails ≤ 3 + spare)'],
-    [/row: (0 \| 1 \| 3 \| 4 \| 5|5|6|7)\b/, 'GDD K-07 release table row numbers'],
+    [/row: (0 \| 1 \| 2 \| 3 \| 4 \| 5|5|6|7)\b/, 'GDD K-07 release table row numbers'],
     [/(4|5) \* space/, 'five per-session arrays in one arena'],
   ],
   'src/core/hash.ts': [

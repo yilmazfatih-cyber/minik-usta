@@ -2,7 +2,7 @@
   "level": 4,
   "file": "level_004.json",
   "levelHash": "dc0071fb4eaadc35",
-  "rulesVersion": 4,
+  "rulesVersion": 5,
   "solverVersion": 6,
   "variant": null,
   "schemaVersion": 2,
@@ -33,7 +33,7 @@
   "variants": [],
   "issues": [],
   "notes": [
-    "large-level search (U-v3-2): best found 12 (lower bound 11) — not proven optimal, en iyi bulunan; width 8, 57327 states, 831 ms, replay ok",
+    "large-level search (U-v3-2): best found 12 (lower bound 11) — not proven optimal, en iyi bulunan; width 8, 57327 states, 918 ms, replay ok",
     "play proxy (CL-V3-03; not ahaMin): placement-first player wins 0.11 within 16 moves, 0.14 within 21",
     "dead-state gate (CL-V3-01 B, estimate not proof; D-090 whole-space scan not run): 10000 random walks: won 3362, rescued by D1/D2/D3a 259, unresolved 6379 (probed 200: solvable 200, undetected dead 0) → estimated 0.00 %"
   ],
@@ -42,7 +42,7 @@
     "states": 2001,
     "expanded": 359,
     "edges": 5462,
-    "ms": 71,
+    "ms": 46,
     "bytes": 389387,
     "dragSessions": 1441,
     "applyMoves": 396,
@@ -52,7 +52,7 @@
     "d3aUnknown": 0,
     "complete": false,
     "limit": "maxStates",
-    "totalMs": 32639
+    "totalMs": 31687
   },
   "v3": {
     "liftRatio": 1,
@@ -77,28 +77,28 @@
       "value": 1
     },
     "states": 57327,
-    "ms": 831,
+    "ms": 918,
     "replayOk": true,
     "runs": [
       {
         "width": 8,
         "cost": 12,
-        "ms": 21
+        "ms": 20
       },
       {
         "width": 32,
         "cost": 12,
-        "ms": 52
+        "ms": 42
       },
       {
         "width": 128,
         "cost": 12,
-        "ms": 201
+        "ms": 194
       },
       {
         "width": 512,
         "cost": 12,
-        "ms": 557
+        "ms": 662
       }
     ],
     "actions": [
@@ -232,5 +232,5 @@
       "loose": 0.14
     }
   },
-  "cacheKey": "e9fb3392:rules4:solver6:level:var:d3a"
+  "cacheKey": "e9fb3392:rules5:solver6:level:var:d3a"
 }

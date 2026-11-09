@@ -362,6 +362,10 @@ export function returnTarget(s: GameState, pieceId: PieceId, opts: ReturnOptions
   const start = opts.start ?? piecePlace(s, pieceId);
   const shape = shapeByIndex(pieceShape(s, pieceId));
   const geo = s.lvl.geo;
+  // v3c K-58 item 9 (b), K-17 exception (D-104): a pallet layer always bounces back onto its own pallet as the top layer
+  // (steps 1–3 skipped; the board is frozen during the drag, so the pallet's cells are free for it)
+  if (start.zone === 'yard' && (s.lvl.pieces[pieceId]?.stackId ?? -1) >= 0)
+    return { step: 1, to: start, dropFrom: null };
   if (opts.skipStart !== true && startCellsEmpty(s, pieceId, shape, start))
     return { step: 1, to: start, dropFrom: null };
   for (const x of nearestColumnsFirst(geo, start.x, shape.w)) {

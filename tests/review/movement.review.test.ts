@@ -218,7 +218,10 @@ describe('K-05 crane area', () => {
       for (let height = 0; height <= 8; height++) {
         const d = grab(initialState({ wall: { height }, pieces: [[shape.id, 'W', 0, 0]] }), 0);
         const onSite = d.reachableNodes().some((n) => n.mode === FREE && n.ix >= 6);
-        expect(onSite, `${shape.id} at wall height ${height}`).toBe(!shape.heavy && shape.h <= 10 - height);
+        // default board: a 2-column site, so a 3-wide material block has no site node (D-103: width is not weight)
+        expect(onSite, `${shape.id} at wall height ${height}`).toBe(
+          !shape.heavy && shape.w <= 2 && shape.h <= 10 - height,
+        );
       }
     }
   });
@@ -1335,7 +1338,7 @@ describe('round 3 — K-05 blockedByWallHeight (presentation signal of the open 
     // durması bir sunum olayıdır (blockedByWallHeight)"; TECH §4.4: box height h > 10 − wall.height.
     let fired = 0;
     let quiet = 0;
-    for (const shape of CANONICAL.filter((sh) => !sh.heavy)) {
+    for (const shape of CANONICAL.filter((sh) => !sh.heavy && sh.w <= 2)) {
       for (let height = 0; height <= 8; height++) {
         const label = `${shape.id} height ${height}`;
         const d = grab(initialState({ wall: { height }, pieces: [[shape.id, 'W', 0, 0]] }), 0);

@@ -1193,7 +1193,7 @@ describe('edge model equivalence (TECH §2.2, §4.2)', () => {
   });
 
   it('K-08 node codes follow the TECH §2.1 layout and stay inside the per-level node space', () => {
-    expect(NODES_PER_MODE).toBe(80);
+    expect(NODES_PER_MODE).toBe(90);
     const d = drag(initialState({ pieces: [['B1_0', 'W', 0, 0]] }), 0);
     expect(d.isReachable({ ix: 0, iy: 1, mode: 1 })).toBe(false); // no gaps → no RAIL mode
     expect(d.distanceFromStart({ ix: 0, iy: 1, mode: 1 })).toBe(-1);

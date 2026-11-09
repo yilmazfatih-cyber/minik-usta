@@ -43,7 +43,7 @@ function toSite(s: GameState, id: number, x: number, y: number, seg = 0, locked 
   refreshSiteMasks(s, seg);
 }
 
-const rows = (m: Uint8Array): string[] =>
+const rows = (m: Uint16Array): string[] =>
   [...m].map((r) => [...Array(8).keys()].map((x) => ((r >> x) & 1 ? '#' : '.')).join('')).reverse();
 
 describe('grid operations', () => {

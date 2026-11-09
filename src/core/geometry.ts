@@ -2,9 +2,9 @@
  * Board geometry of one level (docs/GDD.md K-49, §0; docs/TECH_DESIGN.md §2R.0 item 2, §2R.1). Pure, no state.
  *
  * Every encoding (drag node code, Zobrist position table, collision row masks) stays in the MAXIMUM FRAME of
- * `MAX_COLS × MAX_ROWS` = 8 × 10 cells: node code `(mode·10 + iy)·8 + ix` and yard hash position `y·8 + x` never change
- * with the level. What a cell MEANS (yard, site, wall boundary, yard air, site air, crane area) comes from the level's
- * `BoardGeo` (`CompiledLevel.geo`, read as `s.lvl.geo`). K-49 limits (`Wy + Ws ≤ 8`, `H ≤ 8`) fit the frame.
+ * `MAX_COLS × MAX_ROWS` = 9 × 10 cells (D-103, RULES_VERSION 5; 8 × 10 before): node code `(mode·10 + iy)·9 + ix` and
+ * yard hash position `y·9 + x` never change with the level. What a cell MEANS (yard, site, wall boundary, yard air, site air, crane area) comes from the level's
+ * `BoardGeo` (`CompiledLevel.geo`, read as `s.lvl.geo`). K-49 limits (`Wy + Ws ≤ 9`, D-103; `H ≤ 8`) fit the frame.
  *
  * Regions (global coordinates, x = 0 left, y = 0 bottom):
  * - yard `x 0 … wy−1, y 0 … hy−1`; yard air `x ≤ wy−1, hy ≤ y ≤ h−1` (only when hy < h);
@@ -13,15 +13,21 @@
  * - crane area rows `h` and `h + 1` over every column (K-05).
  */
 
-/** Maximum frame width: K-49 `Wy + Ws ≤ 8`. Every column bit mask fits in 8 bits. */
-export const MAX_COLS = 8;
+/**
+ * Maximum frame width: K-49 `Wy + Ws ≤ 9` (D-103 wide site: 6 yard + 3 site columns). A column bit mask needs 9 bits,
+ * so collision rows are `Uint16Array`.
+ */
+export const MAX_COLS = 9;
 /** Maximum frame height: K-49 `H ≤ 8` plus the 2 crane-area rows. */
 export const MAX_ROWS = 10;
 /** Crane area rows above the board (K-05). */
 export const CRANE_ROWS = 2;
 /** Highest board height H (K-49); the crane area takes the remaining frame rows. */
 export const MAX_BOARD_ROWS = MAX_ROWS - CRANE_ROWS;
-/** Widest site the encodings support (K-49 code-lead limit: Ws 1–4; `ws · hs ≤ 32` bit masks per segment). */
+/**
+ * Widest site the encodings support (frame limit Ws 1–4; `ws · hs ≤ 32` bit masks per segment). The product range is
+ * narrower: K-49 (D-103) Ws ∈ {2, 3} (`SITE_COLS_RANGE`, core/level/logic.ts).
+ */
 export const MAX_SITE_COLS = 4;
 /** Zobrist / mask slots of one site segment in the maximum frame: `MAX_SITE_COLS × MAX_BOARD_ROWS` (§2R.1 hash). */
 export const SEGMENT_SLOTS = MAX_SITE_COLS * MAX_BOARD_ROWS;
@@ -75,7 +81,7 @@ function assertInt(name: string, v: number, lo: number, hi: number): void {
 }
 
 /**
- * Builds a level geometry. Throws when the sizes do not fit the maximum frame (wy ≥ 1, ws 1–4, wy + ws ≤ 8, hy and hs
+ * Builds a level geometry. Throws when the sizes do not fit the maximum frame (wy ≥ 1, ws 1–4, wy + ws ≤ 9, hy and hs
  * 1–8, eMax 0–3); the validator's K-49 ranges (`size_out_of_range`, `board_too_wide`) are narrower.
  *
  * H is clamped to MAX_BOARD_ROWS: a valid level never needs the clamp (`elevator_overflow` asks `hs + b ≤ 8`), but

@@ -5,7 +5,9 @@ import {
   FORBIDDEN_SHAPES,
   HEAVY_MIN_LEVEL_ID,
   KIND_FIRST_CHAPTER,
+  KIND_FIRST_LEVEL_V3,
   SHAPES,
+  WIDE_SITE_FREE_KINDS,
   SHAPE_IDS,
   isShapeId,
   rotateClockwise,
@@ -16,39 +18,43 @@ import {
 import { SHAPE_KINDS } from '../../src/core/types.ts';
 import type { ShapeId } from '../../src/core/types.ts';
 
-/** TECH_DESIGN §3.3, transcribed literally: id → [cells, "w×h", heavy]. */
+/**
+ * TECH_DESIGN §3.3, transcribed literally: id → [cells, "w×h", heavy]. D-103 (K-44, K-49 item 4): heavy = Ağır Yük
+ * (I5, Q9) only; a 3-wide material orientation is no longer heavy. P5 (K-56 D-103 annex) is appended.
+ */
 const TECH_TABLE: Record<string, [string, string, boolean]> = {
   B1_0: ['(0,0)', '1x1', false],
   D2_0: ['(0,0)(0,1)', '1x2', false],
   D2_90: ['(0,0)(1,0)', '2x1', false],
   I3_0: ['(0,0)(0,1)(0,2)', '1x3', false],
-  I3_90: ['(0,0)(1,0)(2,0)', '3x1', true],
+  I3_90: ['(0,0)(1,0)(2,0)', '3x1', false],
   I4_0: ['(0,0)(0,1)(0,2)(0,3)', '1x4', false],
-  I4_90: ['(0,0)(1,0)(2,0)(3,0)', '4x1', true],
+  I4_90: ['(0,0)(1,0)(2,0)(3,0)', '4x1', false],
   O4_0: ['(0,0)(1,0)(0,1)(1,1)', '2x2', false],
   C3_0: ['(0,0)(1,0)(0,1)', '2x2', false],
   C3_90: ['(0,0)(0,1)(1,1)', '2x2', false],
   C3_180: ['(1,0)(0,1)(1,1)', '2x2', false],
   C3_270: ['(0,0)(1,0)(1,1)', '2x2', false],
   S4_0: ['(0,0)(0,1)(1,1)(1,2)', '2x3', false],
-  S4_90: ['(1,0)(2,0)(0,1)(1,1)', '3x2', true],
+  S4_90: ['(1,0)(2,0)(0,1)(1,1)', '3x2', false],
   I5_0: ['(0,0)(1,0)(2,0)(3,0)(4,0)', '5x1', true],
   I5_90: ['(0,0)(0,1)(0,2)(0,3)(0,4)', '1x5', true],
   Q9_0: ['(0,0)(1,0)(2,0)(0,1)(1,1)(2,1)(0,2)(1,2)(2,2)', '3x3', true],
   L4_0: ['(0,0)(1,0)(0,1)(0,2)', '2x3', false],
-  L4_90: ['(0,0)(0,1)(1,1)(2,1)', '3x2', true],
+  L4_90: ['(0,0)(0,1)(1,1)(2,1)', '3x2', false],
   L4_180: ['(1,0)(1,1)(0,2)(1,2)', '2x3', false],
-  L4_270: ['(0,0)(1,0)(2,0)(2,1)', '3x2', true],
+  L4_270: ['(0,0)(1,0)(2,0)(2,1)', '3x2', false],
   J4_0: ['(0,0)(1,0)(1,1)(1,2)', '2x3', false],
-  J4_90: ['(0,0)(1,0)(2,0)(0,1)', '3x2', true],
+  J4_90: ['(0,0)(1,0)(2,0)(0,1)', '3x2', false],
   J4_180: ['(0,0)(0,1)(0,2)(1,2)', '2x3', false],
-  J4_270: ['(2,0)(0,1)(1,1)(2,1)', '3x2', true],
+  J4_270: ['(2,0)(0,1)(1,1)(2,1)', '3x2', false],
   T4_0: ['(0,0)(0,1)(1,1)(0,2)', '2x3', false],
-  T4_90: ['(1,0)(0,1)(1,1)(2,1)', '3x2', true],
+  T4_90: ['(1,0)(0,1)(1,1)(2,1)', '3x2', false],
   T4_180: ['(1,0)(0,1)(1,1)(1,2)', '2x3', false],
-  T4_270: ['(0,0)(1,0)(2,0)(1,1)', '3x2', true],
+  T4_270: ['(0,0)(1,0)(2,0)(1,1)', '3x2', false],
   Z4_0: ['(1,0)(0,1)(1,1)(0,2)', '2x3', false],
-  Z4_90: ['(0,0)(1,0)(1,1)(2,1)', '3x2', true],
+  Z4_90: ['(0,0)(1,0)(1,1)(2,1)', '3x2', false],
+  P5_0: ['(1,0)(0,1)(1,1)(2,1)(1,2)', '3x3', false],
 };
 
 /** TECH §3.3 "(=…)" aliases: same cell set as the listed canonical id. */
@@ -74,6 +80,9 @@ const TECH_ALIASES: Record<string, ShapeId> = {
   Q9_90: 'Q9_0',
   Q9_180: 'Q9_0',
   Q9_270: 'Q9_0',
+  P5_90: 'P5_0',
+  P5_180: 'P5_0',
+  P5_270: 'P5_0',
 };
 
 const cellsText = (id: ShapeId): string =>
@@ -82,15 +91,17 @@ const cellsText = (id: ShapeId): string =>
     .join('');
 
 describe('K-44 shapes', () => {
-  it('K-44 generates 52 shape ids in kind × rotation index order', () => {
-    expect(SHAPES).toHaveLength(52);
-    expect(SHAPE_IDS).toHaveLength(52);
+  it('K-44 K-56 generates 56 shape ids in kind × rotation index order (P5 appended: older indices unchanged)', () => {
+    expect(SHAPES).toHaveLength(56);
+    expect(SHAPE_IDS).toHaveLength(56);
+    expect(shapeById('Q9_270').index).toBe(51);
+    expect(shapeById('P5_0').index).toBe(52);
     SHAPES.forEach((s, i) => {
       expect(s.index).toBe(i);
       expect(shapeByIndex(i)).toBe(s);
       expect(SHAPE_KINDS[Math.floor(i / 4)]).toBe(s.kind);
     });
-    expect(new Set(SHAPE_IDS).size).toBe(52);
+    expect(new Set(SHAPE_IDS).size).toBe(56);
   });
 
   it('K-44 generated table equals TECH_DESIGN §3.3 cell by cell', () => {
@@ -104,7 +115,7 @@ describe('K-44 shapes', () => {
       expect(cellsText(alias as ShapeId), alias).toBe(cellsText(canonical));
       expect(shapeById(alias as ShapeId).canonical, alias).toBe(canonical);
     }
-    expect(Object.keys(TECH_TABLE).length + Object.keys(TECH_ALIASES).length).toBe(52);
+    expect(Object.keys(TECH_TABLE).length + Object.keys(TECH_ALIASES).length).toBe(56);
   });
 
   it('K-44 0° cells come from BRIEF §5 and rotation is clockwise with bottom-left normalisation', () => {
@@ -128,16 +139,15 @@ describe('K-44 shapes', () => {
   it('K-44 BRIEF §5 notes hold for the generated table', () => {
     // "D2 90° = yatay Lento (2×1)"
     expect([shapeById('D2_90').w, shapeById('D2_90').h]).toEqual([2, 1]);
-    // "I3 / I4 yatay hali Ağır"
-    expect(shapeById('I3_90').heavy && shapeById('I4_90').heavy).toBe(true);
+    // BRIEF "I3 / I4 yatay hali Ağır" is replaced by K-44 / K-49 item 4 (D-103): width makes no weight
+    expect(shapeById('I3_90').heavy || shapeById('I4_90').heavy).toBe(false);
     expect(shapeById('I3_0').heavy || shapeById('I4_0').heavy).toBe(false);
     // "C3 4 yönelimin hepsi geçer"
     for (const r of [0, 90, 180, 270] as const) expect(shapeById(`C3_${r}`).heavy).toBe(false);
-    // "L4/J4/T4 dikey halleri geçer, yatay halleri Ağır"; "S4/Z4 dikey hali geçer, yatay hali Ağır"
-    for (const k of ['L4', 'J4', 'T4', 'S4', 'Z4'] as const) {
-      for (const r of [0, 180] as const) expect(shapeById(`${k}_${r}`).heavy, `${k}_${r}`).toBe(false);
-      for (const r of [90, 270] as const) expect(shapeById(`${k}_${r}`).heavy, `${k}_${r}`).toBe(true);
-    }
+    // D-103: L4/J4/T4/S4/Z4 horizontal orientations are material (3-wide, cross the wall on a 3-column site)
+    for (const k of ['L4', 'J4', 'T4', 'S4', 'Z4', 'P5'] as const)
+      for (const r of [0, 90, 180, 270] as const)
+        expect(shapeById(`${k}_${r}`).heavy, `${k}_${r}`).toBe(false);
     // "I5 her zaman Ağır (yalnızca yatay kullanılır)", "Q9 her zaman Ağır"
     for (const r of [0, 90, 180, 270] as const) {
       expect(shapeById(`I5_${r}`).heavy).toBe(true);
@@ -146,10 +156,10 @@ describe('K-44 shapes', () => {
     expect(shapeById('I5_0').w).toBe(5);
   });
 
-  it('K-44 heavy = width ≥ 3 or kind I5/Q9, so every non-heavy shape is at most 2 wide', () => {
+  it('K-44 K-49 3-wide material crosses the wall: heavy = kind I5/Q9 only (D-103), every other shape is at most 3 wide', () => {
     for (const s of SHAPES) {
-      expect(s.heavy).toBe(s.w >= 3 || ALWAYS_HEAVY.has(s.kind));
-      if (!s.heavy) expect(s.w).toBeLessThanOrEqual(2);
+      expect(s.heavy).toBe(ALWAYS_HEAVY.has(s.kind));
+      if (!s.heavy && s.kind !== 'I4') expect(s.w).toBeLessThanOrEqual(3);
     }
     // I5_90 is 1 wide but stays heavy (ALWAYS_HEAVY, S-2).
     expect(shapeById('I5_90').w).toBe(1);
@@ -188,7 +198,10 @@ describe('K-44 shapes', () => {
       I4: 4,
       I5: 1,
       Q9: 1,
+      P5: 2,
     });
+    expect(KIND_FIRST_LEVEL_V3.P5).toBe(16);
+    expect([...WIDE_SITE_FREE_KINDS].sort()).toEqual(['P5', 'S4', 'Z4']);
     expect(HEAVY_MIN_LEVEL_ID).toBe(8);
   });
 

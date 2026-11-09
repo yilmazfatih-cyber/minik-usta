@@ -203,7 +203,7 @@ export const SHIPPED: Readonly<Record<number, ShippedExpectation>> = {
     yao: [14, 0],
     band: [22, 25],
     warnings: [],
-    eventLogHash: 'bf5e1b46f786bde0',
+    eventLogHash: '31c975a9be3a67b4',
     policyLoose: 0.03,
     policyTight: 0,
   },

@@ -42,7 +42,7 @@ import {
 import type { GameState } from './state.ts';
 import { shapeById, shapeByIndex } from './shapes.ts';
 import type { ShapeDef } from './shapes.ts';
-import { isCargoShape } from './movement.ts';
+import { isCargoShape, isPalletLayer } from './movement.ts';
 import { isCovered, ownCellCode, visibleSegment } from './grid.ts';
 import {
   lockPiece,
@@ -91,7 +91,9 @@ export type BoosterReject =
   | 'notCorrect'
   | 'precheck'
   | 'noTrowel'
-  | 'legacyTrowel';
+  | 'legacyTrowel'
+  /** v3c K-58 item 9 (e), D-104: the crane has no yard target for a pallet layer (site only). */
+  | 'palletSiteOnly';
 
 function won(s: GameState): boolean {
   return (hdr(s, H.flags) & STATE_FLAG.won) !== 0;
@@ -270,6 +272,7 @@ function craneTargetBlock(s: GameState, move: CraneMove, hooks: MoveHooks): Boos
   const { x, y } = move.to;
   if (!Number.isInteger(x) || !Number.isInteger(y)) return 'noTarget';
   if (move.to.zone === 'yard') {
+    if (s.lvl.hasStacks && isPalletLayer(s, id)) return 'palletSiteOnly';
     if (t.index !== shape.index) return 'badRotation';
     if (pieceZone(s, id) === Zone.yard && pieceX(s, id) === x && pieceY(s, id) === y) return 'sameSpot';
     return yardSpotFree(s, shape, x, y, id) ? null : 'notEmpty';
@@ -335,6 +338,7 @@ export function hasCraneTarget(s: GameState, hooks: MoveHooks): boolean {
   for (let id = 0; id < P; id++) {
     if (!craneSelectable(s, id, hooks)) continue;
     if (craneSiteSpots(s, id).length > 0) return true;
+    if (s.lvl.hasStacks && isPalletLayer(s, id)) continue; // K-58 item 9 (e): no yard target
     const shape = shapeByIndex(pieceShape(s, id));
     const inYard = pieceZone(s, id) === Zone.yard;
     for (let y = 0; y + shape.h <= hy; y++) {

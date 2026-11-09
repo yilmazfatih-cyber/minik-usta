@@ -1,7 +1,7 @@
 {
   "level": 9,
   "levelHash": "d4dcfbdc9b3c16d9",
-  "rulesVersion": 4,
+  "rulesVersion": 5,
   "solverVersion": 6,
   "min": 18,
   "yao": { "overWall": 14, "rail": 0 },
@@ -26,5 +26,5 @@
     { "kind": "drag", "pieceId": 12, "to": { "ix": 7, "iy": 1, "mode": 0 } },
     { "kind": "drag", "pieceId": 11, "to": { "ix": 6, "iy": 4, "mode": 0 } }
   ],
-  "eventLogHash": "bf5e1b46f786bde0"
+  "eventLogHash": "31c975a9be3a67b4"
 }

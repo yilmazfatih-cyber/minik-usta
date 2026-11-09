@@ -23,10 +23,10 @@ import { shapeById } from '../../src/core/shapes.ts';
 const rows = (mask: number): number[] => [...Array(10).keys()].filter((y) => (mask >> y) & 1);
 
 describe('K-01 board and grid (edge model R-03)', () => {
-  it('K-01 the core grid is 8 × 10: board y 0–7 plus crane rows 8–9; internal = global coordinates', () => {
-    expect([MAX_COLS, MAX_ROWS, MAX_COLS * MAX_ROWS, DEFAULT_GEO.h]).toEqual([8, 10, 80, 8]);
-    expect(cellIndex(3, 9)).toBe(75);
-    expect([cellX(75), cellY(75)]).toEqual([3, 9]);
+  it('K-01 K-49 the core grid is 9 × 10 (D-103): board y 0–7 plus crane rows 8–9; internal = global coordinates', () => {
+    expect([MAX_COLS, MAX_ROWS, MAX_COLS * MAX_ROWS, DEFAULT_GEO.h]).toEqual([9, 10, 90, 8]);
+    expect(cellIndex(3, 9)).toBe(84);
+    expect([cellX(84), cellY(84)]).toEqual([3, 9]);
   });
 
   it('K-01 D2_0 anchored at (3,8) fits, anchored at (3,9) leaves the grid', () => {
@@ -117,12 +117,12 @@ describe('drag node codes (TECH §2.1)', () => {
   it('round-trips (mode * 10 + iy) * 8 + ix', () => {
     for (const mode of [0, 1, 3]) {
       for (let iy = 0; iy < 10; iy++) {
-        for (let ix = 0; ix < 8; ix++) {
+        for (let ix = 0; ix < 9; ix++) {
           const node = { ix, iy, mode };
           expect(dragNodeFromCode(dragNodeCode(node))).toEqual(node);
         }
       }
     }
-    expect(dragNodeCode({ ix: 6, iy: 3, mode: 1 })).toBe((1 * 10 + 3) * 8 + 6);
+    expect(dragNodeCode({ ix: 6, iy: 3, mode: 1 })).toBe((1 * 10 + 3) * 9 + 6);
   });
 });

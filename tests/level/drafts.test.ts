@@ -149,11 +149,14 @@ describe('K-45 GDD counter-examples on levels 1–10', () => {
     expect(codes(validateDraft(4, json))).toEqual(['too_many_new_mechanics']);
   });
 
-  it('K-49 GDD example: Wy = 6, Ws = 3 is board_too_wide', () => {
+  it('K-49 GDD example (D-103): Wy = 6, Ws = 4 is board_too_wide (10 > 9) and size_out_of_range; Ws = 3 in level 1 is size_out_of_range', () => {
     const json = draft(1);
     json.yard.cols = 6;
+    json.site = { cols: 4, rows: 5 };
+    expect(codes(validateDraft(1, json))).toEqual(['board_too_wide', 'size_out_of_range']);
     json.site = { cols: 3, rows: 5 };
-    expect(codes(validateDraft(1, json))).toEqual(['board_too_wide']);
+    expect(codes(validateDraft(1, json))).toContain('size_out_of_range');
+    expect(codes(validateDraft(1, json))).not.toContain('board_too_wide');
   });
 
   it('K-44 GDD example: an L4_90 W on a 2-column site is piece_too_wide', () => {

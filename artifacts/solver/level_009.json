@@ -2,7 +2,7 @@
   "level": 9,
   "file": "level_009.json",
   "levelHash": "d4dcfbdc9b3c16d9",
-  "rulesVersion": 4,
+  "rulesVersion": 5,
   "solverVersion": 6,
   "variant": null,
   "schemaVersion": 2,
@@ -27,13 +27,13 @@
   "replay": {
     "ok": true,
     "message": null,
-    "eventLogHash": "bf5e1b46f786bde0",
+    "eventLogHash": "31c975a9be3a67b4",
     "events": 94
   },
   "variants": [],
   "issues": [],
   "notes": [
-    "large-level search (U-v3-2): best found 18 (lower bound 15) — not proven optimal, en iyi bulunan; width 32, 157563 states, 2735 ms, replay ok",
+    "large-level search (U-v3-2): best found 18 (lower bound 15) — not proven optimal, en iyi bulunan; width 32, 157563 states, 2286 ms, replay ok",
     "play proxy (CL-V3-03; not ahaMin): placement-first player wins 0 within 22 moves, 0.03 within 29",
     "dead-state gate (CL-V3-01 B, estimate not proof; D-090 whole-space scan not run): 10000 random walks: won 8477, rescued by D1/D2/D3a 722, unresolved 801 (probed 200: solvable 200, undetected dead 0) → estimated 0.00 %"
   ],
@@ -42,7 +42,7 @@
     "states": 2006,
     "expanded": 334,
     "edges": 4375,
-    "ms": 162,
+    "ms": 303,
     "bytes": 383997,
     "dragSessions": 1391,
     "applyMoves": 228,
@@ -52,7 +52,7 @@
     "d3aUnknown": 0,
     "complete": false,
     "limit": "maxStates",
-    "totalMs": 76664
+    "totalMs": 71779
   },
   "v3": {
     "liftRatio": 0.64,
@@ -77,28 +77,28 @@
       "value": 1
     },
     "states": 157563,
-    "ms": 2735,
+    "ms": 2286,
     "replayOk": true,
     "runs": [
       {
         "width": 8,
         "cost": 19,
-        "ms": 159
+        "ms": 188
       },
       {
         "width": 32,
         "cost": 18,
-        "ms": 337
+        "ms": 350
       },
       {
         "width": 128,
         "cost": 18,
-        "ms": 616
+        "ms": 424
       },
       {
         "width": 512,
         "cost": 18,
-        "ms": 1621
+        "ms": 1322
       }
     ],
     "actions": [
@@ -286,5 +286,5 @@
       "loose": 0.03
     }
   },
-  "cacheKey": "7d2fb61c:rules4:solver6:level:var:d3a"
+  "cacheKey": "7d2fb61c:rules5:solver6:level:var:d3a"
 }

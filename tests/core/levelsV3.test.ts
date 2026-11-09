@@ -286,7 +286,7 @@ describe('K-58 pallet (Y10)', () => {
     expect(codes(moved)).toContain('stack_invalid');
   });
 
-  it('K-58 item 8 pallet_capacity: E < 2 + max(cells × (layers − 1)) is an error on Easy, a warning on Normal', () => {
+  it('K-58 item 8 retired (D-104): pallet_capacity is never raised; item 9 g pallet_not_grounded in story 1', () => {
     const crowded: LevelSpec = {
       id: 3,
       yard: { cols: 3, rows: 4 },
@@ -304,15 +304,27 @@ describe('K-58 pallet (Y10)', () => {
       ],
       traits: { 0: { stack: { id: 0, z: 0 } }, 1: { stack: { id: 0, z: 1 } }, 2: { stack: { id: 0, z: 2 } } },
     };
-    const severities = (spec: LevelSpec): string[] =>
-      validateLevelJson(json(spec))
-        .issues.filter((i) => i.code === 'pallet_capacity')
-        .map((i) => i.severity);
-    // C 12, footprint F 8 (the 3-layer pallet counts 2 cells), E 4 < 2 + 2 × (3 − 1) = 6
-    expect(severities(crowded)).toEqual(['error']);
-    expect(severities({ ...crowded, difficulty: 'normal' })).toEqual(['warn']);
-    const roomy = { ...crowded, pieces: crowded.pieces?.slice(0, 6) }; // F 6, E 6 ≥ 6
-    expect(severities(roomy)).toEqual([]);
+    const issueCodes = (spec: LevelSpec): string[] => validateLevelJson(json(spec)).issues.map((i) => i.code);
+    // C 12, footprint F 8, E 4 < 2 + 2 × (3 − 1) = 6 was an Easy error before D-104
+    expect(issueCodes(crowded)).not.toContain('pallet_capacity');
+    expect(issueCodes(crowded)).not.toContain('pallet_not_grounded');
+    // the same pallet lifted one row (a G block under it): not on the ground in story 1
+    const lifted: LevelSpec = {
+      ...crowded,
+      pieces: [
+        ['D2_90', 'W', 0, 1],
+        ['D2_90', 'W', 0, 1],
+        ['D2_90', 'W', 0, 1],
+        ['D2_90', 'G', 0, 0],
+        ['B1_0', 'W', 0, 2],
+        ['B1_0', 'W', 1, 2],
+        ['B1_0', 'W', 2, 0],
+        ['B1_0', 'W', 2, 1],
+      ],
+    };
+    const hit = validateLevelJson(json(lifted)).issues.filter((i) => i.code === 'pallet_not_grounded');
+    expect(hit.map((i) => [i.severity, i.check])).toEqual([['error', 'L-41']]);
+    expect(issueCodes({ ...lifted, id: 11, chapter: 2 })).not.toContain('pallet_not_grounded');
   });
 });
 
@@ -635,13 +647,13 @@ describe('K-63 tiling families, K-65 story-1 readability, K-66 boosters, K-30 D1
     expect(paintSelectable(s, 0)).toBe(false);
     expect(paintSelectable(s, 1)).toBe(true);
     expect(paintSelectable(s, 3)).toBe(true); // a wrapped block may be painted (colour visible, K-66 item 2)
-    // the crane moving the top layer in the yard may not put it back onto its own cells (the layer below keeps them)
+    // K-58 item 9 (e), D-104: the crane has no yard target for a pallet layer (site only)
     expect(
       craneRejection(s, { kind: 'crane', pieceId: 1, to: { zone: 'yard', x: 1, y: 0 }, rotation: 90 }, hooks),
-    ).toBe('notEmpty');
+    ).toBe('palletSiteOnly');
     expect(
-      craneRejection(s, { kind: 'crane', pieceId: 1, to: { zone: 'yard', x: 0, y: 1 }, rotation: 90 }, hooks),
-    ).toBeNull();
+      craneRejection(s, { kind: 'crane', pieceId: 1, to: { zone: 'yard', x: 0, y: 1 }, rotation: 0 }, hooks),
+    ).toBe('palletSiteOnly');
   });
 
   it('K-30 v3 D1 widening: blocks that can be held but whose only releases are cancels count as D1 (noMoves)', () => {
@@ -666,7 +678,7 @@ describe('K-63 tiling families, K-65 story-1 readability, K-66 boosters, K-30 D1
     expect(top).not.toBeNull(); // K-09 (a): it can be held …
     expect(top?.reachableNodes().every((n) => top.classify(n).kind === 'cancel')).toBe(true); // … but never released
     expect(noMoves(s, hooks.drag)).toBe(true);
-    expect(RULES_VERSION).toBe(4);
+    expect(RULES_VERSION).toBe(5);
     // one empty yard cell: the B1 can step into it → a real release, no D1
     const room = v3({ ...spec, pieces: spec.pieces?.slice(0, 4) });
     expect(noMoves(room, levelHooks(room.lvl).drag)).toBe(false);

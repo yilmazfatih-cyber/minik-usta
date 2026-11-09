@@ -158,16 +158,25 @@ export interface BoardGeometry {
 export const ADAPTIVE_SIDE_RESERVE_PX = 60;
 /** TECH §2R.1: the cell is a multiple of 12 px (a whole number of CSS px at 360 px width: 12 / 3 = 4). */
 export const ADAPTIVE_CELL_STEP_PX = 12;
+/**
+ * GDD K-49 item 5 (D-103 wide site): the floor of the cell on a 9-column board (6 yard + 3 site columns). 108 is the only
+ * 12-step value in 100…112: 9 · 108 + wall 54 (k 0,9) = 1026 px board, 27 px on both sides at 1080. No level gets a
+ * cell below 100 design px (touch target).
+ */
+export const WIDE_BOARD_CELL_PX = 108;
+/** Columns from which the wide-board floor applies (Wy + Ws ≥ 9, K-49 item 5). */
+export const WIDE_BOARD_COLS = 9;
 
 /**
  * DL-2R-14 / TECH §2R.1 cell size of a level, chosen once and device independent (FIT budget):
  * `c = max(120, min(cellMaxPx, ⌊960 / cols / 12⌋·12, ⌊1200 / (h + 2) / 12⌋·12))` with 960 = 1080 − 2·60 and
  * 1200 = `board.boardBottomY` − `top.groupBottomY` − `board.minGapTopPx`. Without `layout.adaptive.cellMaxPx` every
- * level gets 120 (R2-02 "hücre 120 px korunur").
+ * level gets 120 (R2-02 "hücre 120 px korunur"). A 9-column board (D-103) has the floor `WIDE_BOARD_CELL_PX` = 108.
  */
 export function adaptiveCellPx(tokens: Tokens, geo: BoardGeo): number {
   const L = tokens.layout;
-  const base = L.grid.cellPx;
+  // K-49 item 5 (D-103): 9 columns → 108 (the 120 floor would make the board 1140 px wide, wider than the screen)
+  const base = geo.cols >= WIDE_BOARD_COLS ? Math.min(L.grid.cellPx, WIDE_BOARD_CELL_PX) : L.grid.cellPx;
   const max = L.adaptive.cellMaxPx ?? base;
   const step = ADAPTIVE_CELL_STEP_PX;
   const budgetW = tokens.meta.designWidth - 2 * ADAPTIVE_SIDE_RESERVE_PX;

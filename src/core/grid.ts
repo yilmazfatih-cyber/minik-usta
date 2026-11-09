@@ -155,8 +155,8 @@ export function refreshSiteMasks(s: GameState, seg: number): void {
 export function collisionMasks(
   s: GameState,
   exclude: PieceId,
-  out: Uint8Array = new Uint8Array(MAX_ROWS),
-): Uint8Array {
+  out: Uint16Array = new Uint16Array(MAX_ROWS),
+): Uint16Array {
   out.fill(0);
   const { wy, ws, hs, h, rows, siteX } = s.lvl.geo;
   // K-58 item 4: a pallet layer's own cells stay blocked (the layer below fills them)

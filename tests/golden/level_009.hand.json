@@ -2,7 +2,7 @@
   "level": 9,
   "source": "docs/LEVELS.md §2 Bölüm 9 — Kanonik çözüm (solver, GDD K-50 madde 4)",
   "levelHash": "d4dcfbdc9b3c16d9",
-  "rulesVersion": 4,
+  "rulesVersion": 5,
   "geo": { "yard": [6, 7], "site": [2, 6], "H": 7, "wall": 4 },
   "budget": 22,
   "minMoves": 18,
@@ -196,7 +196,7 @@
     { "kind": "drag", "pieceId": 12, "to": { "ix": 7, "iy": 1, "mode": 0 } },
     { "kind": "drag", "pieceId": 11, "to": { "ix": 6, "iy": 4, "mode": 0 } }
   ],
-  "eventLogHash": "bf5e1b46f786bde0",
+  "eventLogHash": "31c975a9be3a67b4",
   "finalAscii": [
     "L9 turn 18 moves 6 seg 3/3 elev 0",
     "size 6x7|2x6 H7",

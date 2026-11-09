@@ -14,7 +14,7 @@ export interface Cell {
 }
 
 export interface ShapeDef {
-  /** 0..51 = kindIndex * 4 + rotationIndex. */
+  /** 0..55 = kindIndex * 4 + rotationIndex. */
   readonly index: number;
   readonly id: ShapeId;
   readonly kind: ShapeKind;
@@ -31,7 +31,10 @@ export interface ShapeDef {
   /** Lowest / highest occupied y offset of column c (open sky and falling, K-11). */
   readonly colBottom: readonly number[];
   readonly colTop: readonly number[];
-  /** Y5: `w ≥ 3` or kind I5/Q9 (GDD K-44). Heavy pieces never cross the boundary. */
+  /**
+   * Ağır Yük (Y5): kind I5 or Q9 only (GDD K-44 "Ağırlık", K-49 item 4 / D-103: width never makes a block heavy, so a
+   * 3-wide material orientation crosses the wall like any block). Heavy pieces never cross the boundary.
+   */
   readonly heavy: boolean;
   /** First id (in rotation order 0, 90, 180, 270) with the same cell set, e.g. `O4_90 → O4_0`. */
   readonly canonical: ShapeId;
@@ -115,6 +118,14 @@ export const BASE_CELLS: Readonly<Record<ShapeKind, readonly (readonly [number, 
     [1, 2],
     [2, 2],
   ],
+  /** The plus (GDD K-56 D-103 annex item 3): every rotation is the same cell set, canonical `P5_0`. */
+  P5: [
+    [1, 0],
+    [0, 1],
+    [1, 1],
+    [2, 1],
+    [1, 2],
+  ],
 };
 
 /** Always heavy, whatever the orientation (GDD K-44; a crane turn keeps the weight, K-37). */
@@ -138,6 +149,7 @@ export const KIND_FIRST_CHAPTER: Readonly<Record<ShapeKind, number>> = {
   I4: 4,
   I5: 1,
   Q9: 1,
+  P5: 2,
 };
 
 /**
@@ -159,9 +171,16 @@ export const KIND_FIRST_LEVEL_V3: Readonly<Record<ShapeKind, number>> = {
   I4: 21,
   I5: 0,
   Q9: 0,
+  P5: 16,
 };
 
-/** Heavy shapes (I5, Q9 and every w ≥ 3 orientation) are allowed only from this level id (GDD K-44 "8. bölüm"). */
+/**
+ * GDD K-56 D-103 annex item 2: on a 3-column site (Ws = 3) these kinds are free of the kind lock (`shape_locked` is not
+ * raised); the T4 (6+) and I3 (8+) level locks, I4 and Ağır Yük stay.
+ */
+export const WIDE_SITE_FREE_KINDS: ReadonlySet<ShapeKind> = new Set<ShapeKind>(['S4', 'Z4', 'P5']);
+
+/** Heavy shapes (Ağır Yük: I5, Q9) are allowed only from this level id (GDD K-44 "8. bölüm"). */
 export const HEAVY_MIN_LEVEL_ID = 8;
 
 function normalise(cells: readonly (readonly [number, number])[]): Cell[] {
@@ -217,7 +236,7 @@ function buildShapes(): ShapeDef[] {
           colRows: Object.freeze(colRows),
           colBottom: Object.freeze(colBottom),
           colTop: Object.freeze(colTop),
-          heavy: w >= 3 || ALWAYS_HEAVY.has(kind),
+          heavy: ALWAYS_HEAVY.has(kind),
           canonical: `${kind}_${canonicalRotation}` as ShapeId,
           canonicalIndex,
         }),
@@ -227,12 +246,12 @@ function buildShapes(): ShapeDef[] {
   return out;
 }
 
-/** All 52 shapes, indexed by `ShapeDef.index`. */
+/** All 56 shapes, indexed by `ShapeDef.index`. */
 export const SHAPES: readonly ShapeDef[] = Object.freeze(buildShapes());
 
 const SHAPE_BY_ID: ReadonlyMap<string, ShapeDef> = new Map(SHAPES.map((s) => [s.id, s]));
 
-/** All 52 ids in index order. */
+/** All 56 ids in index order. */
 export const SHAPE_IDS: readonly ShapeId[] = Object.freeze(SHAPES.map((s) => s.id));
 
 export function isShapeId(value: string): value is ShapeId {
@@ -246,7 +265,7 @@ export function shapeById(id: ShapeId): ShapeDef {
   return s;
 }
 
-/** Shape by index 0..51; throws when out of range. */
+/** Shape by index 0..55; throws when out of range. */
 export function shapeByIndex(index: number): ShapeDef {
   const s = SHAPES[index];
   if (!s) throw new RangeError(`unknown shape index ${index}`);

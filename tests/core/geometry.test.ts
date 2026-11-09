@@ -94,6 +94,7 @@ const G: readonly GeoCase[] = [
   { wy: 6, hy: 8, ws: 2, hs: 8 },
   { wy: 5, hy: 7, ws: 3, hs: 7 },
   { wy: 4, hy: 6, ws: 4, hs: 6 },
+  { wy: 6, hy: 8, ws: 3, hs: 5 }, // D-103 wide site (levels 6–10 v3c): 9 columns
 ];
 
 const label = (g: GeoCase): string => `${g.wy}x${g.hy}|${g.ws}x${g.hs}`;
@@ -185,7 +186,7 @@ describe('K-49 board geometry (core/geometry.ts)', () => {
     expect([g.wy, g.hy, g.ws, g.hs, g.eMax, g.h, g.rows, g.cols]).toEqual([6, 8, 2, 8, 0, 8, 10, 8]);
     expect([g.siteX, g.boundaryX, g.craneRow, g.segCells]).toEqual([6, 5, 8, 16]);
     expect([g.yardBits, g.siteBits, g.rowMaskAll]).toEqual([0b00111111, 0b11000000, 0b1111111111]);
-    expect([MAX_COLS, MAX_ROWS]).toEqual([8, 10]);
+    expect([MAX_COLS, MAX_ROWS]).toEqual([9, 10]);
     expect(Object.isFrozen(g)).toBe(true);
     expect(hasDefaultBoard(g)).toBe(true);
     expect(geoLabel(g)).toBe('6x8|2x8 H8');
@@ -209,9 +210,11 @@ describe('K-49 board geometry (core/geometry.ts)', () => {
     expect(makeGeo({ wy: 4, hy: 8, ws: 2, hs: 5, eMax: 2 }).h).toBe(8);
   });
 
-  it('K-49 makeGeo rejects boards outside the 8 × 10 frame (Wy + Ws ≤ 8, Ws ≤ 4, Hy and Hs ≤ 8, positive sizes)', () => {
+  it('K-49 makeGeo rejects boards outside the 9 × 10 frame (Wy + Ws ≤ 9, Ws ≤ 4, Hy and Hs ≤ 8, positive sizes); 6 | 3 fits (D-103)', () => {
+    expect(makeGeo({ wy: 6, hy: 8, ws: 3, hs: 8, eMax: 0 }).cols).toBe(9);
     const bad: Parameters<typeof makeGeo>[0][] = [
-      { wy: 6, hy: 8, ws: 3, hs: 8, eMax: 0 }, // board_too_wide
+      { wy: 6, hy: 8, ws: 4, hs: 8, eMax: 0 }, // board_too_wide
+      { wy: 7, hy: 8, ws: 3, hs: 8, eMax: 0 },
       { wy: 3, hy: 8, ws: 5, hs: 8, eMax: 0 },
       { wy: 4, hy: 9, ws: 2, hs: 8, eMax: 0 },
       { wy: 4, hy: 8, ws: 2, hs: 9, eMax: 0 },
@@ -350,8 +353,8 @@ describe('K-49 state arrays, compile, hash and ASCII follow the geometry', () =>
     expect([L.yardOcc, L.siteOcc, L.filled, L.wrongOcc, L.pieces]).toEqual([18, 78, 110, 114, 118]);
   });
 
-  it('K-49 Zobrist positions stay in the 8 × 10 frame for every geometry: yard y·8 + x, site 80 + seg·32 + sy·4 + sx, queue from 240', () => {
-    expect([POS_SITE, POS_QUEUE]).toEqual([80, 240]);
+  it('K-49 Zobrist positions stay in the 9 × 10 frame for every geometry: yard y·9 + x, site 90 + seg·32 + sy·4 + sx, queue from 250', () => {
+    expect([POS_SITE, POS_QUEUE]).toEqual([90, 250]);
     for (const c of G) {
       const g = geoOf(c);
       const seen = new Set<number>();
@@ -367,7 +370,7 @@ describe('K-49 state arrays, compile, hash and ASCII follow the geometry', () =>
           }
       expect(seen.size, label(c)).toBe(c.wy * c.hy + MAX_SEGMENTS * c.ws * c.hs);
     }
-    expect(piecePosition(6, Zone.site, 7, 3, 1)).toBe(80 + 32 + 12 + 1);
+    expect(piecePosition(6, Zone.site, 7, 3, 1)).toBe(90 + 32 + 12 + 1);
   });
 
   it('K-49 ASCII: a non-default board prints `size Wy×Hy|Ws×Hs H`, rows H + 1 … 0 and `·` for yard and site air; ids text round-trips in every geometry', () => {

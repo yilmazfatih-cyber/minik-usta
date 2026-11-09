@@ -89,6 +89,36 @@ export interface GenPlan {
   readonly blocks?: readonly [number, number];
   /** Highest share of 2-cell dominoes among the blocks (CL-V3-04: 0.5 after level 3); tilings above it are skipped. */
   readonly maxDominoShare?: number;
+  /**
+   * v3c (U-v3c-8): the fixed tiling of every segment (sample-plan.ts writes the one it painted), so the pallet groups and
+   * the trap-free plan it was checked with are the ones the generator lays out. Absent: every tiling of the rows.
+   */
+  readonly tiling?: readonly (readonly PlanPiece[])[];
+}
+
+/** One piece of a fixed segment tiling (`GenPlan.tiling`): data orientation, colour(s), site anchor (plan rows up). */
+export interface PlanPiece {
+  readonly shape: ShapeId;
+  readonly color: ColorCode;
+  readonly colors?: string;
+  readonly x: number;
+  readonly y: number;
+}
+
+/** The tilings the generator may pick per segment: the plan's fixed tiling, or every exact cover of the rows. */
+export function planTilings(plan: GenPlan): Placed[][][] {
+  if (plan.tiling)
+    return plan.tiling.map((seg) => [
+      seg.map((p) => ({
+        shape: shapeById(shapeById(p.shape).canonical),
+        color: p.color,
+        ...(p.colors !== undefined ? { colors: p.colors } : {}),
+        x: p.x,
+        y: p.y,
+      })),
+    ]);
+  const shapes = planShapes(plan);
+  return plan.segments.map((sg) => tilings(sg.rows, shapes, plan.twoTone));
 }
 
 /** The plan uses a levels v3 field: the output is `schemaVersion` 3. */
@@ -134,7 +164,7 @@ export interface GenOptions {
 
 // --- tiling ---------------------------------------------------------------------------------------------------------
 
-interface Placed {
+export interface Placed {
   readonly shape: ShapeDef;
   readonly color: ColorCode;
   /** v3 Y9: colour per cell (shape cell order) of a two-tone block; absent for one colour. */
@@ -340,6 +370,15 @@ function applyV3(plan: GenPlan, items: Item[], rng: Rng): Item[] {
   return out;
 }
 
+/** Story 1 (levels 1–10): a pallet stands on the ground (GDD K-58 item 9 g, `pallet_not_grounded`; U-v3c-8). */
+const PALLET_GROUND_LAST_LEVEL = 10;
+
+/** A pallet item of a story-1 plan must land with the lowest cell of every column at y = 0 (K-58 item 9 g). */
+function groundOk(plan: GenPlan, it: Item, y0: number): boolean {
+  if ((it.layers ?? 1) <= 1 || plan.id > PALLET_GROUND_LAST_LEVEL) return true;
+  return it.shape.colBottom.every((b) => y0 + b === 0);
+}
+
 /** Drops the items in sequence order (gravity; column = anchor x). Null when an item does not fit the yard. */
 export function dropLayout(
   plan: GenPlan,
@@ -362,6 +401,7 @@ export function dropLayout(
     let y0 = rows - it.shape.h;
     if (y0 < 0 || !free(y0)) return null;
     while (y0 > 0 && free(y0 - 1)) y0--;
+    if (!groundOk(plan, it, y0)) return null;
     for (const c of it.shape.cells) occ[(y0 + c.y) * cols + x0 + c.x] = 1;
     out.push({ shape: it.shape, color: it.color, x: x0, y: y0, item: it });
   }
@@ -760,7 +800,7 @@ function randomColumns(
       const options: { x: number; y: number }[] = [];
       for (let x0 = 0; x0 + it.shape.w <= cols; x0++) {
         const y = landing(it.shape, x0, occ, cols, rows);
-        if (y !== null) options.push({ x: x0, y });
+        if (y !== null && groundOk(plan, it, y)) options.push({ x: x0, y });
       }
       const fixed = i < keep ? base?.[i] : undefined;
       let pick = fixed !== undefined ? options.find((o) => o.x === fixed) : undefined;
@@ -811,10 +851,21 @@ export function startLayout(plan: GenPlan, all: readonly Placed[][][], rng: Rng)
   return startLayoutWith(plan, all, tiling, rng);
 }
 
-/** Drop order: cargo first (bottom), then the later floors, the first needed blocks last (on top). */
-function dropOrder(items: readonly Item[]): Item[] {
+/**
+ * Drop order: cargo first (bottom), then the later floors, the first needed blocks last (on top). Story 1 (v3c): pallets
+ * right after the cargo — a pallet stands on the ground (K-58 item 9 g), and its layers only go to the site, so nothing
+ * may wait under it.
+ */
+function dropOrder(plan: GenPlan, items: readonly Item[]): Item[] {
   const sorted = [...items].sort((a, b) => b.order - a.order);
-  return [...sorted.filter((i) => i.order < 0), ...sorted.filter((i) => i.order >= 0)];
+  if (plan.id > PALLET_GROUND_LAST_LEVEL)
+    return [...sorted.filter((i) => i.order < 0), ...sorted.filter((i) => i.order >= 0)];
+  const pallet = (i: Item): boolean => (i.layers ?? 1) > 1;
+  return [
+    ...sorted.filter((i) => i.order < 0),
+    ...sorted.filter((i) => i.order >= 0 && pallet(i)),
+    ...sorted.filter((i) => i.order >= 0 && !pallet(i)),
+  ];
 }
 
 export function neighbour(plan: GenPlan, all: readonly Placed[][][], base: Layout, rng: Rng): Layout | null {
@@ -875,7 +926,7 @@ function startLayoutWith(
     tiling.map((t, k) => all[k]?.[t] ?? []),
   );
   const v3 = plan.pallets !== undefined || plan.traits !== undefined;
-  const ordered = dropOrder(v3 ? applyV3(plan, raw, rng) : raw);
+  const ordered = dropOrder(plan, v3 ? applyV3(plan, raw, rng) : raw);
   const columns = randomColumns(plan, ordered, rng);
   return columns ? { tiling: [...tiling], items: ordered, columns } : null;
 }
@@ -904,7 +955,7 @@ const layoutKey = (plan: GenPlan, l: Layout): string => {
  */
 export function startLevel(plan: GenPlan, seed: number): LevelInput | null {
   const rng = mulberry32(seed);
-  const all = plan.segments.map((sg) => tilings(sg.rows, planShapes(plan), plan.twoTone));
+  const all = planTilings(plan);
   for (let k = 0; k < 6; k++) {
     const l = startLayout(plan, all, rng);
     if (l) return levelOf(plan, l, 99);
@@ -919,8 +970,7 @@ export function generate(plan: GenPlan, targets: GenTargets, opts: GenOptions): 
   const starts = opts.starts ?? 6;
   const count = opts.count ?? 3;
   const maxStates = opts.maxStates ?? 400_000;
-  const shapes = planShapes(plan);
-  const all = plan.segments.map((sg) => tilings(sg.rows, shapes, plan.twoTone));
+  const all = planTilings(plan);
   if (all.some((t) => t.length === 0))
     throw new Error('levels:gen: a segment plan has no tiling with the plan shapes');
 

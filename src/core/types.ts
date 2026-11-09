@@ -7,7 +7,10 @@
 export const COLOR_CODES = ['W', 'Y', 'G', 'R', 'O', 'C', 'B', 'P'] as const;
 export type ColorCode = (typeof COLOR_CODES)[number];
 
-/** Shape kinds (BRIEF §5). The array order fixes the shape index: `kindIndex * 4 + rotationIndex`. */
+/**
+ * Shape kinds (BRIEF §5). The array order fixes the shape index: `kindIndex * 4 + rotationIndex`. `P5` (the plus, GDD
+ * K-56 D-103 annex) is appended last, so every older index, hash class and golden stays unchanged (0..51 → 0..55).
+ */
 export const SHAPE_KINDS = [
   'B1',
   'D2',
@@ -22,6 +25,7 @@ export const SHAPE_KINDS = [
   'Z4',
   'I5',
   'Q9',
+  'P5',
 ] as const;
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
 
@@ -29,13 +33,13 @@ export type ShapeKind = (typeof SHAPE_KINDS)[number];
 export const ROTATIONS = [0, 90, 180, 270] as const;
 export type Rotation = (typeof ROTATIONS)[number];
 
-/** `TÜR_AÇI`, e.g. `C3_90`; internal index 0..51 (core/shapes.ts). */
+/** `TÜR_AÇI`, e.g. `C3_90`; internal index 0..55 (core/shapes.ts). */
 export type ShapeId = `${ShapeKind}_${Rotation}`;
 
 /** Stable piece index inside one level (batch 0 in array order, then batches k ≥ 1, then debris; core/level/compile.ts). */
 export type PieceId = number;
 
-/** Grid cell index `iy * 8 + ix` on the 8 × 10 core grid (TECH §2.2). */
+/** Grid cell index `iy * 9 + ix` on the 9 × 10 core grid (D-103) (TECH §2.2). */
 export type CellIndex = number;
 
 /**
@@ -55,7 +59,7 @@ export interface Anchor {
 /** 0 = FREE, 1 + gapIndex = RAIL(gap) (TECH §2.1, §4.2). */
 export type DragMode = number;
 
-/** A drag graph node. Integer code: `(mode * 10 + iy) * 8 + ix` (core/coords.ts `dragNodeCode`). */
+/** A drag graph node. Integer code: `(mode * 10 + iy) * 9 + ix` (core/coords.ts `dragNodeCode`). */
 export interface DragNode {
   readonly ix: number;
   readonly iy: number;
@@ -211,7 +215,9 @@ export type GameEventBody =
   | {
       readonly t: 'moveCancelled';
       readonly pieceId: PieceId;
-      readonly reason: 'sameSpot' | 'craneOverYard' | 'straddle' | 'siteClosed' | 'invalid';
+      /** `palletSiteOnly` (v3c, GDD K-58 item 9 c): a lifted pallet layer released off the site; cost 0. */
+      readonly reason:
+        'sameSpot' | 'craneOverYard' | 'straddle' | 'siteClosed' | 'invalid' | 'palletSiteOnly';
     }
   | {
       readonly t: 'pieceMoved';
@@ -285,8 +291,13 @@ export type GameEventBody =
       readonly t: 'movesChanged';
       readonly movesLeft: number;
       readonly delta: number;
-      /** `bonus` (v3, GDD §16 K-60): a correctly placed bonus block added `bonusMoves` in step 4. */
+      /**
+       * `bonus` (v3, GDD K-60 items 1 and 7, K-62; D-105): a correctly placed bonus block added `bonusMoves` (= `delta`)
+       * in step 4 — the "+n" reward moment of the HUD (≤ 900 ms, never blocks input). `pieceId` = that block.
+       */
       readonly reason: 'move' | 'offer' | 'booster' | 'bonus';
+      /** Only with `reason: 'bonus'`: the bonus block whose correct placement paid the moves. */
+      readonly pieceId?: PieceId;
       readonly cost?: { readonly base: 1 | 2; readonly glass: 0 | 1 };
     }
   | { readonly t: 'crateDamaged'; readonly obstacle: number; readonly hp: number }

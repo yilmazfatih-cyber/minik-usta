@@ -38,6 +38,8 @@ interface Case {
   readonly rule: string;
   readonly severity?: 'error' | 'warn';
   readonly ctx?: LogicContext;
+  /** Other codes the fixture necessarily raises (sorted together with `code`). */
+  readonly also?: readonly string[];
 }
 
 const I18N = { tr: new Set(['tut.m.dig', 'tut.m.free']), en: new Set(['tut.m.dig', 'tut.m.free']) };
@@ -77,10 +79,12 @@ const CASES: readonly Case[] = [
     rule: 'K-45/2',
   },
   {
-    name: 'K-45/2 K-49 board_too_wide Wy 6 + Ws 3 > 8',
+    // D-103: Wy + Ws ≤ 9 with Wy ≤ 6 and Ws ≤ 3, so a too-wide board always has an out-of-range size as well
+    name: 'K-45/2 K-49 board_too_wide Wy 6 + Ws 4 > 9 (D-103; Ws 4 is also size_out_of_range)',
     file: 'board_too_wide',
     code: 'board_too_wide',
     rule: 'K-45/2',
+    also: ['size_out_of_range'],
   },
   { name: 'K-45/2 overlap two blocks on one cell', file: 'overlap', code: 'overlap', rule: 'K-45/2' },
   {
@@ -426,7 +430,7 @@ describe('K-45 invalid fixtures (tests/level/fixtures/invalid, Faz 2R)', () => {
         expect(i.rule).toBe(c.rule);
         expect(i.severity).toBe(c.severity ?? 'error');
       }
-      expect(codes(issues)).toEqual([c.code]);
+      expect(codes(issues)).toEqual([c.code, ...(c.also ?? [])].sort());
     });
   }
 
@@ -588,7 +592,7 @@ describe('K-45 Faz 2R logic details', () => {
     expect(only(cargo, 'L-03')).toEqual([]); // F = 9 + 12, E = 3
   });
 
-  it('K-49 K-45/2 size ranges: Wy 3–6, Hy 4–8, Hs 4–8, Ws 2–3 in story chapters 1–3 and 2–4 in 4–5', () => {
+  it('K-49 K-45/2 size ranges (D-103): Wy 3–6, Hy 4–8, Hs 4–8, Ws 2 in levels 1–5 and 2–3 from level 6, Wy + Ws ≤ 9', () => {
     const sizes = (id: number, yard: [number, number], site: [number, number]): string[] =>
       checkLevel(
         level({
@@ -602,18 +606,23 @@ describe('K-45 Faz 2R logic details', () => {
         },
       ).map((i) => `${i.code}@${i.path}`);
     expect(sizes(1, [4, 4], [2, 5])).toEqual([]);
-    expect(sizes(1, [3, 8], [3, 4])).toEqual([]);
+    // K-49 item 2: levels 1–5 keep the 2-column site (the learning curve)
+    expect(sizes(1, [3, 8], [3, 4])).toEqual(['size_out_of_range@site.cols']);
+    expect(sizes(5, [6, 8], [3, 5])).toEqual(['size_out_of_range@site.cols']);
+    expect(sizes(6, [3, 8], [3, 4])).toEqual([]);
+    // K-49 example (level 6 v3c): Wy 6 + Ws 3 = 9 columns is valid
+    expect(sizes(6, [6, 8], [3, 5])).toEqual([]);
+    expect(sizes(12, [6, 5], [2, 5])).toEqual([]);
     expect(sizes(1, [2, 4], [2, 5])).toEqual(['size_out_of_range@yard.cols']);
     expect(sizes(1, [4, 3], [2, 5])).toEqual(['size_out_of_range@yard.rows']);
     expect(sizes(1, [4, 4], [2, 3])).toEqual(['size_out_of_range@site.rows']);
+    // Ws 4 is not used in the MVP (any level); K-49 example Wy 6, Ws 4 → board_too_wide (10 > 9) and size_out_of_range
     expect(sizes(30, [4, 4], [4, 5])).toEqual(['size_out_of_range@site.cols']);
-    expect(sizes(31, [4, 4], [4, 5])).toEqual([]);
-    expect(sizes(41, [5, 4], [4, 5])).toEqual(['board_too_wide@site.cols']);
-    // K-49 example: Wy = 6, Ws = 3 → board_too_wide
-    expect(sizes(12, [6, 5], [3, 5])).toEqual(['board_too_wide@site.cols']);
+    expect(sizes(41, [4, 4], [4, 5])).toEqual(['size_out_of_range@site.cols']);
+    expect(sizes(41, [6, 4], [4, 5])).toEqual(['size_out_of_range@site.cols', 'board_too_wide@site.cols']);
   });
 
-  it('K-49 a level outside the 8 × 10 frame stops after L-28: no geometry, no other check', () => {
+  it('K-49 a level outside the 9 × 10 frame stops after L-28: no geometry, no other check', () => {
     const json = { ...(loadFixture('valid', 'base') as LevelInput) };
     const wide = { ...json, yard: { ...json.yard, cols: 7 }, site: { cols: 3, rows: 6 } };
     expect(codes(validateLevelJson(wide).issues)).toEqual(['board_too_wide', 'size_out_of_range']);
@@ -792,7 +801,7 @@ describe('K-45 Faz 2R logic details', () => {
     expect(run('plan_has_window')).toEqual(['plan_has_window']);
     expect(loadLevel(loadFixture('invalid', 'plan_size_rows')).ok).toBe(false);
     expect(run('gap_touches_top')).toEqual(['gap_touches_top']);
-    expect(run('board_too_wide')).toEqual(['board_too_wide']);
+    expect(run('board_too_wide').sort()).toEqual(['board_too_wide', 'size_out_of_range']);
     expect(run('piece_too_wide')).toEqual(['piece_too_wide']);
     const wide = loadLevel(loadFixture('invalid', 'board_too_wide'));
     expect(wide.ok).toBe(false);

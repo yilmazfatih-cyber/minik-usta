@@ -3,7 +3,7 @@
  *
  * Edge model (R-03, D-010): the wall is the zero-width boundary between x = wy−1 and x = wy (`geo.boundaryX |
  * geo.siteX`; default board 5 | 6). A drag node is `(ix, iy, mode)`, mode FREE (0) or RAIL(g) (1 + gap index); integer
- * code `mode * 80 + iy * 8 + ix` in the 8 × 10 maximum frame for every geometry (= coords.dragNodeCode, §2R.0 item 2).
+ * code `mode * 90 + iy * 9 + ix` in the 9 × 10 maximum frame for every geometry (= coords.dragNodeCode, §2R.0 item 2).
  * `beginDrag` runs the K-09 pick gate and ONE BFS over the nodes (the board is frozen while dragging, K-08, so the
  * reachable set R never changes); the session then answers the scene's read-only queries: reachability, the K-07
  * release class (cancel preview), K-08 sticky follow with its tie-break rules and hysteresis, the BFS path the view
@@ -56,7 +56,7 @@ export function railMode(gap: number): DragMode {
   return gap + 1;
 }
 
-/** Nodes per mode: the 8 × 10 maximum frame of anchors (every geometry, §2R.0 item 2). */
+/** Nodes per mode: the 9 × 10 maximum frame of anchors (every geometry, §2R.0 item 2). */
 export const NODES_PER_MODE = MAX_COLS * MAX_ROWS;
 /** K-08: a new node is taken only when its squared distance is at least this much smaller than the current one. */
 export const HYSTERESIS_D2 = 0.2;
@@ -107,12 +107,16 @@ export function isSiteClosed(s: GameState): boolean {
   return hdr(s, H.deliveryCursor) >= s.lvl.segments.length;
 }
 
-/** `moveCancelled.reason` values of a release (TECH §6.3); `invalid` = the node is not in R. */
-export type DropCancelReason = 'sameSpot' | 'craneOverYard' | 'straddle' | 'siteClosed' | 'invalid';
+/**
+ * `moveCancelled.reason` values of a release (TECH §6.3); `invalid` = the node is not in R. `palletSiteOnly` (v3c, GDD
+ * K-58 item 9 c, D-104): a lifted pallet layer released anywhere but on the site (yard, yard air, wall top, crane area).
+ */
+export type DropCancelReason =
+  'sameSpot' | 'craneOverYard' | 'straddle' | 'siteClosed' | 'invalid' | 'palletSiteOnly';
 
 /** Result of the K-07 release table (TECH §4.3). `row` is the GDD K-07 row number (0 = not a reachable node). */
 export type DropClass =
-  | { readonly kind: 'cancel'; readonly reason: DropCancelReason; readonly row: 0 | 1 | 3 | 4 | 5 }
+  | { readonly kind: 'cancel'; readonly reason: DropCancelReason; readonly row: 0 | 1 | 2 | 3 | 4 | 5 }
   | { readonly kind: 'yard'; readonly row: 2 }
   | { readonly kind: 'siteFree'; readonly row: 6 }
   | { readonly kind: 'siteRail'; readonly row: 7; readonly gap: number };
@@ -124,6 +128,16 @@ const DROP_CRANE_OVER_YARD: DropClass = Object.freeze({ kind: 'cancel', reason: 
 const DROP_STRADDLE: DropClass = Object.freeze({ kind: 'cancel', reason: 'straddle', row: 4 });
 const DROP_SITE_CLOSED: DropClass = Object.freeze({ kind: 'cancel', reason: 'siteClosed', row: 5 });
 const DROP_SITE_FREE: DropClass = Object.freeze({ kind: 'siteFree', row: 6 });
+/** K-58 item 9 (c): a lifted pallet layer whose release would park it in the yard (rows 2–4) cancels, cost 0. */
+const DROP_PALLET_SITE_ONLY: DropClass = Object.freeze({ kind: 'cancel', reason: 'palletSiteOnly', row: 2 });
+
+/**
+ * v3c K-58 item 9 (D-104): the piece is a pallet layer still on its pallet (a layer never lies in the yard elsewhere: it
+ * cannot be parked, and a wrong placement bounces it back onto its pallet). Its releases go to the site only.
+ */
+export function isPalletLayer(s: GameState, pieceId: PieceId): boolean {
+  return (s.lvl.pieces[pieceId]?.stackId ?? -1) >= 0 && pieceZone(s, pieceId) === Zone.yard;
+}
 
 /** True for the K-07 rows that cancel (no move spent, nothing changes). */
 export function isCancelled(drop: DropClass): boolean {
@@ -162,6 +176,11 @@ export interface DragSession {
   readonly start: DragNode;
   /** Ağır Yük (K-44): R holds yard nodes only and `follow` may emit `blockedCargo`. */
   readonly cargo: boolean;
+  /**
+   * v3c K-58 item 9 (D-104): a lifted pallet layer. Every release whose result is not on the site cancels with
+   * `palletSiteOnly` (no yard shadow; the scene shows the "cancel" look over the yard).
+   */
+  readonly palletLayer: boolean;
   /** FREE start, plus RAIL(g) for debris whose rows are all inside an open gap (TECH §4.1/3). */
   readonly startNodes: readonly DragNode[];
   readonly current: DragNode;
@@ -262,6 +281,8 @@ class Session implements DragSession {
   readonly start: DragNode;
   readonly cargo: boolean;
   readonly startNodes: readonly DragNode[];
+  /** v3c K-58 item 9: a lifted pallet layer (releases off the site cancel with `palletSiteOnly`). */
+  readonly palletLayer: boolean;
   reachableCount = 0;
   canCrossWall = false;
   canEnterRail = false;
@@ -278,7 +299,7 @@ class Session implements DragSession {
   private readonly rows: readonly number[];
   private readonly colRows: readonly number[];
   private readonly colBottom: readonly number[];
-  private readonly masks: Uint8Array;
+  private readonly masks: Uint16Array;
   private readonly colTop: Int8Array;
   private readonly openFree: number;
   /** Per gap: rows of the gap when passable, else 0 (`openRail[g]`, TECH §2.2). */
@@ -320,6 +341,7 @@ class Session implements DragSession {
     this.w = this.shape.w;
     this.h = this.shape.h;
     this.cargo = isCargoShape(this.shape);
+    this.palletLayer = lvl.hasStacks && isPalletLayer(s, pieceId);
     this.maxX = this.cargo ? geo.wy : geo.cols;
     this.maxY = this.cargo ? geo.hy : geo.rows;
     this.rows = this.shape.rows;
@@ -458,10 +480,12 @@ class Session implements DragSession {
     const boundaryX = this.geo.boundaryX;
     const right = node.ix + this.w - 1;
     if (node.mode === FREE && right <= boundaryX) {
+      // K-58 item 9 (c): a pallet layer is never parked; over the yard it cancels whatever the row
+      if (this.palletLayer) return DROP_PALLET_SITE_ONLY;
       // rows 2 / 3: over the yard; any cell at y ≥ hy (yard air or crane area) cancels (K-05, E-56)
       return node.iy + this.h - 1 < this.geo.hy ? DROP_YARD : DROP_CRANE_OVER_YARD;
     }
-    if (node.ix <= boundaryX) return DROP_STRADDLE; // row 4 (E-06, E-28)
+    if (node.ix <= boundaryX) return this.palletLayer ? DROP_PALLET_SITE_ONLY : DROP_STRADDLE; // row 4 (E-06, E-28)
     if (this.siteClosed) return DROP_SITE_CLOSED; // row 5 (E-27)
     if (node.mode === FREE) return DROP_SITE_FREE; // row 6: falls (K-11)
     return this.railDrops[node.mode - 1] ?? DROP_INVALID; // row 7: stays on the rail (K-12)

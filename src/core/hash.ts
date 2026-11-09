@@ -5,8 +5,8 @@
  *
  * - class(p) = (canonical shape, colour, flags, counter) — NOT the piece id, so swapping two identical blocks gives
  *   the same hash (the solver never opens a symmetric state twice).
- * - position in the 8 × 10 maximum frame for every geometry (TECH §2R.1): yard anchor (y·8 + x, 0…79), site
- *   (80 + seg·32 + sy·4 + sx, 80…239; sx = x − wy) or queue slot (240 + index, FIFO order).
+ * - position in the 9 × 10 maximum frame for every geometry (TECH §2R.1; D-103): yard anchor (y·9 + x, 0…89), site
+ *   (90 + seg·32 + sy·4 + sx, 90…249; sx = x − wy) or queue slot (250 + index, FIFO order).
  * - K and F mix a fixed random table entry (splitmix32, constant seed → deterministic for golden tests) with the
  *   value through the bijective `fmix32`, so distinct values on one position never cancel. The class space
  *   (52 × 8 × 2⁸ × counter) is too large to tabulate, hence the mixing instead of a pure lookup.
@@ -26,7 +26,7 @@ import type { CompiledLevel } from './level/compile.ts';
 /** Fixed seed of the table generator (changing it changes every golden hash). */
 export const ZOBRIST_SEED = 0x5eed2b1d;
 
-/** Frame positions (§2R.1): yard 0..79 (`y·8 + x`), site 80..239 (`80 + seg·32 + sy·4 + sx`), queue from 240. */
+/** Frame positions (§2R.1): yard 0..89 (`y·9 + x`), site 90..249 (`90 + seg·32 + sy·4 + sx`), queue from 250. */
 export const POS_SITE = MAX_COLS * MAX_ROWS;
 export const POS_QUEUE = POS_SITE + MAX_SEGMENTS * SEGMENT_SLOTS;
 
@@ -42,7 +42,7 @@ export interface ZobristTables {
 }
 
 /**
- * Zobrist position of a piece record (§2R.1): yard anchor `y·8 + x`, site `80 + seg·32 + sy·4 + (x − siteX)`; the
+ * Zobrist position of a piece record (§2R.1): yard anchor `y·9 + x`, site `90 + seg·32 + sy·4 + (x − siteX)`; the
  * queue slot `240 + i` is added by `hashState`. The same frame for every geometry (`siteX` = `geo.siteX`).
  */
 export function piecePosition(siteX: number, zone: number, x: number, y: number, seg: number): number {

@@ -8,7 +8,7 @@
  * `rule` the K-45 item (or K id), `check` the internal L-xx number. Any `error` means the level must not load.
  *
  * Order (Faz 2R): identity, then the K-49 sizes (L-28). Every later check reads the level geometry (`geoFromLevel`),
- * which only exists when the sizes fit the 8 × 10 frame; a level that does not fit stops after L-28. Checks whose
+ * which only exists when the sizes fit the 9 × 10 frame; a level that does not fit stops after L-28. Checks whose
  * answer is meaningless on a broken base are gated, not skipped silently: cover (L-10, L-30) and debris colours (L-29)
  * need plans of exactly Hs × Ws without `.` and with every `?` resolved; the tiling (L-11) also needs valid shapes
  * (L-04) and an exact cover (L-10, L-30), because D3a on a short or unplaceable supply only repeats those errors.
@@ -22,6 +22,7 @@ import {
   HEAVY_MIN_LEVEL_ID,
   KIND_FIRST_CHAPTER,
   KIND_FIRST_LEVEL_V3,
+  WIDE_SITE_FREE_KINDS,
   shapeById,
 } from '../shapes.ts';
 import type { ShapeDef } from '../shapes.ts';
@@ -156,9 +157,18 @@ export const SIZE_RANGES = {
   /** Site plan height Hs. */
   siteRows: [4, 8],
 } as const;
-/** Site width Ws: 2–3 in story chapters 1–3 (levels 1–30), 2–4 in chapters 4–5 (K-49). */
-export function siteColsRange(chapter: number): readonly [number, number] {
-  return chapter <= 3 ? [2, 3] : [2, MAX_SITE_COLS];
+/** K-49 item 2 (D-103): the last level id that must keep the 2-column site (the learning curve). */
+export const NARROW_SITE_LAST_LEVEL = 5;
+/** K-49 item 1 (D-103): the widest site of the product (Ws ∈ {2, 3}; the frame allows `MAX_SITE_COLS`). */
+export const WIDE_SITE_COLS = 3;
+/** K-49 item 1 (D-103): `Wy + Ws ≤ 9` (`board_too_wide`; 108 px cells at 9 columns, item 5). */
+export const MAX_BOARD_COLS = MAX_COLS;
+/**
+ * Site width Ws (K-49 items 1–2, D-103): exactly 2 in levels 1–5, 2–3 from level 6 on. Ws 1 and Ws 4 are not used in
+ * the MVP (the frame of geometry.ts still encodes up to `MAX_SITE_COLS`).
+ */
+export function siteColsRange(levelId: number): readonly [number, number] {
+  return levelId <= NARROW_SITE_LAST_LEVEL ? [2, 2] : [2, Math.min(WIDE_SITE_COLS, MAX_SITE_COLS)];
 }
 /** Free yard cells at the start (K-02): `2 ≤ E ≤ ⌊0,4·C⌋`. */
 export const YARD_EMPTY_MIN = 2;
@@ -224,7 +234,7 @@ export function levelSizes(level: LevelData): LevelSizes {
     hs: level.site?.rows ?? DEFAULT_SIZES.hs,
   };
 }
-/** The sizes fit the 8 × 10 frame, so `geoFromLevel` can build the geometry (geometry.ts `makeGeo` limits). */
+/** The sizes fit the 9 × 10 frame, so `geoFromLevel` can build the geometry (geometry.ts `makeGeo` limits). */
 export function fitsFrame(z: LevelSizes): boolean {
   const inRange = (v: number, lo: number, hi: number): boolean => Number.isInteger(v) && v >= lo && v <= hi;
   return (
@@ -479,8 +489,8 @@ function checkIdentity(level: LevelData, ctx: LogicContext, push: Push): void {
 }
 
 /**
- * L-28 (K-49, K-45/2): `size_out_of_range` (Wy 3–6, Hy 4–8, Hs 4–8, Ws 2–3 in story chapters 1–3 and 2–4 in 4–5),
- * `board_too_wide` (Wy + Ws > 8). Returns whether the sizes fit the frame (false: the geometry cannot be built and the
+ * L-28 (K-49, K-45/2; D-103): `size_out_of_range` (Wy 3–6, Hy 4–8, Hs 4–8, Ws 2 in levels 1–5 and 2–3 from level 6),
+ * `board_too_wide` (Wy + Ws > 9). Returns whether the sizes fit the frame (false: the geometry cannot be built and the
  * remaining checks are skipped).
  */
 function checkSizes(level: LevelData, push: Push): boolean {
@@ -497,14 +507,14 @@ function checkSizes(level: LevelData, push: Push): boolean {
   };
   out('yard.cols', 'Wy', z.wy, SIZE_RANGES.yardCols);
   out('yard.rows', 'Hy', z.hy, SIZE_RANGES.yardRows);
-  out('site.cols', 'Ws', z.ws, siteColsRange(level.chapter), ` in story chapter ${level.chapter}`);
+  out('site.cols', 'Ws', z.ws, siteColsRange(level.id), ` in level ${level.id}`);
   out('site.rows', 'Hs', z.hs, SIZE_RANGES.siteRows);
-  if (z.wy + z.ws > MAX_COLS)
+  if (z.wy + z.ws > MAX_BOARD_COLS)
     push(
       'L-28',
       'board_too_wide',
       'site.cols',
-      `Wy + Ws = ${z.wy} + ${z.ws} > ${MAX_COLS} (K-49, 120 px cells)`,
+      `Wy + Ws = ${z.wy} + ${z.ws} > ${MAX_BOARD_COLS} (K-49, D-103: 108 px cells at 9 columns)`,
     );
   return fitsFrame(z);
 }
@@ -626,10 +636,12 @@ function checkShapes(level: LevelData, geo: BoardGeo, push: Push): boolean {
     // v3 (`schemaVersion` 3, GDD §16 ÖNERİ K-56): unlock by level id; earlier files keep the K-44 chapter table
     const firstLevel = schemaVersionOf(level) === 3 && !cargo ? KIND_FIRST_LEVEL_V3[shape.kind] : 0;
     const first = KIND_FIRST_CHAPTER[shape.kind];
+    // K-56 D-103 annex item 2: S4, Z4 and P5 are free of the kind lock on a 3-column site
+    const wideFree = geo.ws >= WIDE_SITE_COLS && WIDE_SITE_FREE_KINDS.has(shape.kind);
     if (firstLevel > 0) {
-      if (firstLevel > level.id)
+      if (firstLevel > level.id && !wideFree)
         bad('shape_locked', path, `${shape.kind} unlocks at level ${firstLevel} (v3 table, K-56)`);
-    } else if (first > level.chapter)
+    } else if (first > level.chapter && !wideFree)
       bad(
         'shape_locked',
         path,
@@ -867,13 +879,11 @@ interface TileOptions {
   readonly target?: (b: Placed) => boolean;
 }
 
-function tileSearch(
+/** D3a classes of the level's material blocks (TECH §2R.4 step 1) with their counts; `targets[i]` = `opts.target`. */
+function tileClasses(
   level: LevelData,
-  plans: readonly SegmentPlan[],
-  geo: BoardGeo,
-  budget: number,
   opts: TileOptions,
-): TileResult {
+): { classes: TileClass[]; counts: number[]; targets: boolean[] } {
   const carousel = level.build.mode === 'carousel';
   const paint = level.wall.gaps.flatMap((g) => (g.type === 'paint' ? [g] : []));
   const classes: TileClass[] = [];
@@ -901,6 +911,168 @@ function tileSearch(
     counts[i] = (counts[i] ?? 0) + 1;
   }
 
+  return { classes, counts, targets };
+}
+
+/**
+ * The anchor x of class `t` on the column profile `heights` when it fits there (K-34: every block column starts exactly
+ * at its column's height, nothing above Hs) and every cell has the plan colour; returns the anchor y or −1.
+ */
+function tileFit(
+  t: TileClass,
+  plan: SegmentPlan,
+  heights: readonly number[],
+  ax: number,
+  hs: number,
+  ws: number,
+): number {
+  const s = t.shape;
+  if (ax + s.w > ws) return -1;
+  const ay = (heights[ax] ?? 0) - (s.colBottom[0] ?? 0);
+  if (ay < 0) return -1;
+  for (let j = 0; j < s.w; j++) {
+    const x = ax + j;
+    if (ay + (s.colBottom[j] ?? 0) !== heights[x] || ay + (s.colTop[j] ?? 0) >= hs) return -1;
+  }
+  if (t.cellColors) {
+    for (let ci = 0; ci < s.cells.length; ci++) {
+      const c = s.cells[ci] as { x: number; y: number };
+      if (plan.cells[localIndex(ax + c.x, ay + c.y, ws)] !== t.cellColors[ci]) return -1;
+    }
+    return ay;
+  }
+  const first = s.cells[0];
+  const color = first ? plan.cells[localIndex(ax + first.x, ay + first.y, ws)] : null;
+  if (!color || color === '.' || !t.colors.includes(color)) return -1;
+  for (const c of s.cells) if (plan.cells[localIndex(ax + c.x, ay + c.y, ws)] !== color) return -1;
+  return ay;
+}
+
+/** Result of the K-63 D-103 plan-level trap scan. */
+export interface PlanTrapResult {
+  /** `unknown`: the state budget was spent before the scan finished (no proof either way). */
+  readonly status: 'done' | 'unknown';
+  /** Correct placements that lead from a tileable state to an untileable one (`trapCount`, K-50). */
+  readonly traps: number;
+  /** Distinct (segment, profile, remaining classes) states visited. */
+  readonly states: number;
+  /** The start state can be tiled at all (false = `untileable`, L-11 reports it). */
+  readonly tileable: boolean;
+  /** First trap found (DFS order): segment, class shape, anchor in plan coordinates. */
+  readonly example: {
+    readonly seg: number;
+    readonly shape: ShapeId;
+    readonly x: number;
+    readonly y: number;
+  } | null;
+}
+
+/** State budget of the plan trap scan (a 3 × 6 plan with 20 blocks needs about 10⁴ states). */
+export const PLAN_TRAP_BUDGET = 400_000;
+
+/**
+ * K-63 D-103 annex (`plan_trap`): the full plan-level trap scan. Visits EVERY state reachable by correct bottom-up
+ * placements (colour, shape, K-34 support; yard access, pallet order, wraps and the bonus are ignored) from the start —
+ * state = (segment, column heights, remaining class counts), the D3a model — and counts the placements that go from a
+ * state that can still be tiled to one that cannot. Exact (no sampling); `unknown` only when `budget` states are spent.
+ */
+export function planTrapScan(
+  level: LevelData,
+  plans: readonly SegmentPlan[],
+  geo: BoardGeo = geoFromLevel(level),
+  budget: number = PLAN_TRAP_BUDGET,
+): PlanTrapResult {
+  const { classes, counts } = tileClasses(level, {});
+  const S = plans.length;
+  const { ws, hs } = geo;
+  const heights: number[] = Array.from({ length: ws }, () => 0);
+  const memo = new Map<string, boolean>();
+  let traps = 0;
+  let over = false;
+  let example: PlanTrapResult['example'] = null;
+  const visit = (seg: number): boolean => {
+    while (seg < S && heights.every((h) => h === hs)) {
+      heights.fill(0);
+      seg++;
+    }
+    if (seg >= S) return true;
+    const key = `${seg}|${heights.join(',')}|${counts.join(',')}`;
+    const known = memo.get(key);
+    if (known !== undefined) return known;
+    if (memo.size >= budget) {
+      over = true;
+      return true;
+    }
+    memo.set(key, false);
+    const plan = plans[seg];
+    let any = false;
+    const dead: { shape: ShapeId; x: number; y: number }[] = [];
+    if (plan) {
+      for (let ti = 0; ti < classes.length; ti++) {
+        const t = classes[ti] as TileClass;
+        if (!counts[ti] || t.from > seg) continue;
+        for (let ax = 0; ax + t.shape.w <= ws; ax++) {
+          const ay = tileFit(t, plan, heights, ax, hs, ws);
+          if (ay < 0) continue;
+          const saved = heights.slice();
+          for (let j = 0; j < t.shape.w; j++) heights[ax + j] = ay + (t.shape.colTop[j] ?? 0) + 1;
+          counts[ti] = (counts[ti] ?? 0) - 1;
+          const ok = visit(seg);
+          counts[ti] = (counts[ti] ?? 0) + 1;
+          for (let j = 0; j < ws; j++) heights[j] = saved[j] ?? 0;
+          if (ok) any = true;
+          else dead.push({ shape: t.shape.id, x: ax, y: ay });
+        }
+      }
+    }
+    if (any) {
+      traps += dead.length;
+      if (!example && dead[0]) example = { seg, ...dead[0] };
+    }
+    memo.set(key, any);
+    return any;
+  };
+  const tileable = visit(0);
+  return { status: over ? 'unknown' : 'done', traps, states: memo.size, tileable, example };
+}
+
+/**
+ * K-63 D-103 annex: `plan_trap` on a 3-column site — error in levels 1–10 (story 1) and on Easy / Normal later, warn on
+ * Hard / Very Hard; a scan that spends its budget gives the `plan_trap_unknown` warning (no proof).
+ */
+function checkPlanTraps(level: LevelData, plans: readonly SegmentPlan[], geo: BoardGeo, push: Push): void {
+  const res = planTrapScan(level, plans, geo);
+  if (!res.tileable && res.status === 'done') return; // L-11 `untileable` reports a plan that cannot be tiled at all
+  const strict = level.chapter === 1 || level.difficulty === 'easy' || level.difficulty === 'normal';
+  if (res.traps > 0) {
+    const e = res.example;
+    push(
+      'L-41',
+      'plan_trap',
+      'build.segments',
+      `${res.traps} correct placement(s) leave a plan the remaining blocks cannot tile` +
+        (e ? `, e.g. ${e.shape} at site (${e.x}, ${e.y}) of segment ${e.seg}` : '') +
+        ' (K-63 D-103 annex; trap-free plans are a generator constraint)',
+      strict ? 'error' : 'warn',
+    );
+  } else if (res.status === 'unknown')
+    push(
+      'L-41',
+      'plan_trap_unknown',
+      'build.segments',
+      `the plan trap scan stopped after ${res.states} states: no proof of a trap-free plan (K-63 D-103 annex)`,
+      'warn',
+    );
+}
+
+function tileSearch(
+  level: LevelData,
+  plans: readonly SegmentPlan[],
+  geo: BoardGeo,
+  budget: number,
+  opts: TileOptions,
+): TileResult {
+  const { classes, counts, targets } = tileClasses(level, opts);
   const S = plans.length;
   const { ws, hs } = geo;
   const heights: number[] = Array.from({ length: ws }, () => 0);
@@ -1573,7 +1745,12 @@ const V3_FORBIDDEN_PAIRS: readonly (readonly [string, string, string])[] = [
   ['scissors', 'wet', 'two locks on one block'],
   ['bonus', 'wet', 'two number badges on one block (K-65 item 4)'],
 ];
-/** Flags a pallet layer can never carry (OBSTACLES v3 table: a layer neither floats nor breaks nor locks). */
+/** K-65 item 2 (v3c): overlay traits; at most one per block in story 1 (a pallet layer is one more). */
+const OVERLAY_FLAGS: readonly string[] = ['wrapped', 'scissors', 'bonus', 'slippery'];
+/**
+ * Flags a pallet layer can never carry (OBSTACLES v3 table: a layer neither floats nor breaks nor locks; K-58 item 9 f,
+ * D-104: slippery, mortar and glass in every story).
+ */
 const STACK_FORBIDDEN_FLAGS: readonly string[] = ['slippery', 'glass', 'mortar', 'chained', 'wet', 'balloon'];
 
 /** The piece writes a v3 field (`colors`, `stack`, `bonusMoves`, a v3 flag). */
@@ -1723,8 +1900,10 @@ function checkTraits(level: LevelData, push: Push): void {
 /**
  * L-41 (validate stage, design rules): `shape_locked` is L-04; here `trait_locked` (a v3 trait before its first level:
  * nothing untaught), `piece_unreachable` (K-56), `colors_low_contrast` (K-65 item 3, story 1), `stack_mixed` (K-65
- * item 1, story 1), `pallet_capacity` (K-58 item 8), `trait_overlay_many` (K-65 item 2, story 1),
- * `scissors_trivial` / `scissors_blocked` (K-59 item 6), `tile_family_mix` (K-63, Easy / Normal).
+ * item 1, story 1), `pallet_not_grounded` (K-58 item 9 g, story 1), `trait_overlay_many` (K-65 item 2, story 1),
+ * `scissors_trivial` / `scissors_blocked` (K-59 item 6), `tile_family_mix` (K-63, Easy / Normal, Ws = 2 only) and
+ * `plan_trap` (K-63 D-103 annex, Ws = 3). `pallet_capacity` (K-58 item 8) is retired by D-104 (a lifted layer never lands
+ * in the yard) and `bonus_late` by D-105 (K-62 `k` = 0); neither code is produced or reused.
  */
 function checkTraitDesign(
   level: LevelData,
@@ -1767,8 +1946,7 @@ function checkTraitDesign(
         );
     }
     if (story1) {
-      const overlays =
-        ['wrapped', 'scissors', 'bonus'].filter((f) => flagsOf(p).includes(f)).length + (p.stack ? 1 : 0);
+      const overlays = OVERLAY_FLAGS.filter((f) => flagsOf(p).includes(f)).length + (p.stack ? 1 : 0);
       if (overlays > 1)
         push(
           'L-41',
@@ -1779,9 +1957,8 @@ function checkTraitDesign(
         );
     }
   });
-  // pallets: story-1 single type, capacity
+  // pallets: story-1 single type (K-65 item 1) and on the ground (K-58 item 9 g)
   const pallets = palletsOf(level);
-  let worst = 0;
   for (const [id, layers] of pallets) {
     const first = layers[0]?.piece;
     if (!first) continue;
@@ -1800,28 +1977,16 @@ function checkTraitDesign(
           layers[0]?.path ?? 'yard',
           `pallet ${id}: in story 1 every layer is the same block without flags (K-65 item 1)`,
         );
+      const shape = shapeById(first.shape);
+      const grounded = shape.colBottom.every((b) => first.y + b === 0);
+      if (!grounded)
+        push(
+          'L-41',
+          'pallet_not_grounded',
+          layers[0]?.path ?? 'yard',
+          `pallet ${id} (${first.shape} at y ${first.y}): in story 1 the lowest cell of every column is at y = 0 (K-58 item 9 g)`,
+        );
     }
-    worst = Math.max(worst, shapeById(first.shape).cellCount * (layers.length - 1));
-  }
-  if (pallets.size > 0) {
-    const footprint = new Set<number>();
-    pieces.forEach((p) => {
-      if (p.stack && pieces.some((q) => q.stack?.id === p.stack?.id && (q.stack?.z ?? 0) > (p.stack?.z ?? 0)))
-        return;
-      for (const c of cellsAt(shapeById(p.shape), p.x, p.y)) footprint.add(c.y * geo.wy + c.x);
-    });
-    for (const o of level.obstacles)
-      if (o.type === 'crate' || o.type === 'cement_bag') footprint.add(o.y * geo.wy + o.x);
-    const empty = geo.wy * geo.hy - footprint.size;
-    const need = 2 + worst;
-    if (empty < need)
-      push(
-        'L-41',
-        'pallet_capacity',
-        'yard',
-        `E = ${empty} empty cells < 2 + max(cells × (layers − 1)) = ${need} (K-58 item 8)`,
-        level.difficulty === 'easy' ? 'error' : 'warn',
-      );
   }
   // scissors: trivial (not under a dig) / blocked (its correct placement needs a wrapped block first)
   const sIndex = pieces.findIndex((p) => flagsOf(p).includes('scissors'));
@@ -1864,8 +2029,11 @@ function checkTraitDesign(
         );
     }
   }
-  // K-63 tiling families (Easy / Normal): one "bottom row full" and one "column" orientation per colour
-  if (level.difficulty === 'easy' || level.difficulty === 'normal') {
+  // K-63 tiling families (Easy / Normal) on a 2-column site: one "bottom row full" and one "column" orientation per
+  // colour. On a 3-column site (D-103 annex) the full plan-level trap scan replaces it.
+  if (geo.ws >= WIDE_SITE_COLS) {
+    if (plansUsable) checkPlanTraps(level, plans, geo, push);
+  } else if (level.difficulty === 'easy' || level.difficulty === 'normal') {
     const fam = new Map<string, { bottom: Set<string>; column: Set<string> }>();
     for (const p of pieces) {
       if (p.colors !== undefined || isCargo(shapeById(p.shape))) continue;

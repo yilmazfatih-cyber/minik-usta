@@ -432,14 +432,17 @@ function dragMove(
   return endOfMove(ctx, hooks, opts, { pre, tiling: placed || shifted || delivered });
 }
 
-/** v3 K-35 step 4 tail (Y12, GDD §16 K-60): the bonus of a correct placement, after the cost (`movesChanged{bonus}`). */
+/**
+ * v3 K-35 step 4 tail (Y12, GDD K-60, K-62; D-105 `k` = 0): the bonus of a correct placement, after the cost
+ * (`movesChanged{reason: 'bonus', delta, pieceId}`, the HUD "+n" moment). Crane and Golden Trowel placements pay it too.
+ */
 function placementBonusStep(ctx: PipelineContext, hooks: MoveHooks, id: PieceId): void {
   const bonus = hooks.placementBonus?.(ctx, id) ?? 0;
   if (bonus <= 0) return;
   const { s, em } = ctx;
   const left = hdr(s, H.movesLeft) + bonus;
   setHdr(s, H.movesLeft, left);
-  em.emit({ t: 'movesChanged', movesLeft: left, delta: bonus, reason: 'bonus' });
+  em.emit({ t: 'movesChanged', movesLeft: left, delta: bonus, reason: 'bonus', pieceId: id });
 }
 
 /** K-35 step 3 for a block that landed on the site (fall or rail). Returns true for a correct placement. */

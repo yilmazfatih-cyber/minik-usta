@@ -2162,6 +2162,54 @@ bölümler 1–2 için K-50 ölçütleri, büyük bölümler için `best`/`lower
 kartı karşılaştırmaları, LEVELS.md'ye `<!-- levels:section2-current -->` satırı eklenene dek atlanır (kartlar product-lead'in
 dosyası, v3 turunda yeniden yazılmadı); JSON'u `shipped.test.ts`, çözücü ve golden testleri korur.
 
+### V3.7 Paket P2 (v3c): geniş şantiye, palet yalnız şantiyeye, bonus ödül anı (D-103 … D-105; RULES_VERSION 5)
+
+**Çerçeve.** `MAX_COLS` 8 → **9** (`core/geometry.ts`; K-49 Wy + Ws ≤ 9). Kodlamalar çerçeveye bağlı olduğu için değişti:
+hücre `y·9 + x`, sürükleme düğümü `(mode·10 + iy)·9 + ix` (`NODES_PER_MODE` 90), Zobrist konumu saha `y·9 + x` (0…89), şantiye
+`90 + seg·32 + sy·4 + sx`, kuyruk 250'den. Çarpışma satırları 9 bit ister: `collisionMasks` ve `Session.masks` `Uint16Array`,
+çözücü erişim önbelleği anahtarı (`Expander.env`) `Uint16Array`. Kayıtlı oyun günlükleri (`levelHash` + `rulesVersion`) bu
+yüzden **RULES_VERSION 5** ile geçersiz sayılır (E-67). Golden'lar: `min`, kanonik günlük ve YAO değişmedi; yalnız
+`rulesVersion` ve bonuslu Bölüm 9'un `eventLogHash`'i (bonus olayına `pieceId`) yenilendi.
+
+**Şekiller.** `SHAPE_KINDS` sonuna `P5` (artı): indeks 52…55, eski indeksler ve sınıf bitleri aynı (6 bit şekil alanı ≤ 63).
+`heavy` artık yalnız I5/Q9 (U-v3c-1; eski `w ≥ 3` kuralı 3 genişlikli malzemeyi duvarın önünde tutardı). `WIDE_SITE_FREE_KINDS`
+= S4, Z4, P5: Ws = 3 bölümde `shape_locked` üretilmez. `KIND_FIRST_LEVEL_V3.P5` = 16, `KIND_FIRST_CHAPTER.P5` = 2.
+
+**Doğrulayıcı.** `siteColsRange(levelId)`: Bölüm 1–5 Ws = 2, 6+ Ws ∈ {2, 3}; `board_too_wide` Wy + Ws > 9 (Ws 4 her bölümde
+`size_out_of_range`). `pallet_capacity` ve `bonus_late` emekli (üretilmez, kimlik yeniden kullanılmaz). Yeni: `pallet_not_grounded`
+(L-41, Hikaye 1, error), `plan_trap` (L-41, yalnız Ws = 3; Bölüm 1–10 ve Kolay/Normal error, Zor/Çok Zor warn) ve bütçe
+biterse `plan_trap_unknown` (warn). `tile_family_mix` Ws = 3'te üretilmez. K-65 madde 2 kaplama listesine `slippery` eklendi.
+
+`planTrapScan(level, plans, geo?, budget?)` (`core/level/logic.ts`, dışa açık) → `{ status: 'done' | 'unknown', traps,
+states, tileable, example }`. Durum = (dilim, sütun yükseklikleri, kalan sınıf sayıları) — D3a modeli; ulaşılabilir **bütün**
+durumlar ziyaret edilir, döşenebilir bir durumdan döşenemeyen duruma giden her doğru yerleşim bir tuzaktır. Bütçe
+`PLAN_TRAP_BUDGET` = 400 000 durum. Ölçüm: 3 × 5 × 3 / 17 blok ve 3 × 6 × 3 / 20 blok planlarında tarama birkaç ms.
+
+**Palet katmanı (K-58 madde 9, U-v3c-4).** `isPalletLayer(s, id)` (`core/movement.ts`): `stackId ≥ 0` ve sahada. Sürükleme
+oturumu `palletLayer` bayrağı taşır; K-07 satır 2–4'e düşen her bırakma (saha, saha üstü hava, vinç alanı, duvar üstü)
+`{ kind: 'cancel', reason: 'palletSiteOnly', row: 2 }` olur, olay `moveCancelled{reason:'palletSiteOnly'}`, maliyet 0.
+Hatalı şantiye bırakması: `returnTarget` palet katmanı için her zaman başlangıç (K-17 adım 1–3 atlanır), maliyet 1, seri 0;
+katman eski `z`'siyle üst katman olur. Vinç: saha hedefi `palletSiteOnly` (`BoosterReject`), `hasCraneTarget` palet katmanı
+için saha aramaz. Çözücü erişim önbelleği palet katmanını hiç paylaşmaz (dallanma yalnız şantiye hamleleri).
+
+**Bonus (K-60 madde 7, K-62).** Adım 4: `movesChanged{ reason: 'bonus', delta: bonusMoves, movesLeft, pieceId }`; vinç ve
+Altın Mala yerleşimleri de öder. Bütçe formülü değişmedi (`k` = 0; doğrulayıcı bonusu hiç düşmüyordu).
+
+**Yerleşim (K-49 madde 5, U-v3c-7).** `adaptiveCellPx`: sütun sayısı ≥ 9 iken taban `WIDE_BOARD_CELL_PX` = 108 (k 0,9; duvar
+54; tahta 1026; yan pay 27). 8 ve altı sütunda 120 tabanı aynı.
+
+**Üretici (U-v3c-8).** `sample-plan.ts` genişliği `spec.site.cols` (varsayılan 2); `palletShapes` ile palet grupları aynı
+yönelim + tek renkle boyanır (en geç inşa edilen parçalardan); Ws = 3'te renkler `plan_trap` = 0 olana dek tohumlu tepe
+tırmanışıyla yeniden boyanır (`trapRepair`, varsayılan 800 adım; rastgele boyamada 3 875 planın hiçbiri tuzaksız değildi,
+onarımla tohum başına birkaç saniye). Plan, boyanan döşemeyi `GenPlan.tiling` olarak taşır; `planTilings(plan)` onu kullanır
+(yoksa satırların bütün döşemeleri). Hikaye 1'de palet yere düşer (`dropOrder` paleti kargodan hemen sonra bırakır; `groundOk`
+yerde olmayan düzeni reddeder). Taslak girdiler: `tools/gen/specs/v3c/level_006.spec.json`, `level_010.spec.json`.
+
+**Ölçümler (bu makine, tek iş parçacığı).** 3 sütunlu 17 bloklu örnek (6 × 8 | 3 × 5, duvar 7): ışın `best` 18 (alt sınır 17)
+2,3 s / 180 693 durum; D3a en çok 19 açılım; `levels:solve` toplamı 69 s, bunun ≈ 65 s'si 10 000 yürüyüşlük ölü masa kapısı
+(`--walks 2000` → 26 s, `--walks 1` → 3,2 s). 20 bloklu 3 sütunlu paletli taslaklarda (E 4) üreticinin rastgele başlangıç
+düzenleri çözülemedi (çoğu başlangıçta hamlesiz); bölüm turunda seçicinin (`pick-v3`) arama ve E bütçesi gerekir (P3).
+
 ## 3. Şekiller
 
 ### 3.1 Kaynak ve üretim

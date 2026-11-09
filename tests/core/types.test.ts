@@ -6,8 +6,9 @@ describe('core types', () => {
     expect(COLOR_CODES.join('')).toBe('WYGROCBP');
   });
 
-  it('K-44 thirteen shape kinds', () => {
-    expect(SHAPE_KINDS).toHaveLength(13);
+  it('K-44 K-56 fourteen shape kinds (P5 appended last, D-103)', () => {
+    expect(SHAPE_KINDS).toHaveLength(14);
+    expect(SHAPE_KINDS[13]).toBe('P5');
   });
 
   it('K-34 verdict reasons have the fixed GDD order', () => {

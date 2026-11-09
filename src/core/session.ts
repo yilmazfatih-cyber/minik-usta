@@ -43,9 +43,11 @@ import type { TurnSummary } from './summary.ts';
  * (K-55 item 8, K-30: a D1 the rules cannot lift is a Söküm with cause `access`, never a reshuffle; after an accepted
  * +5 offer the D1 Söküm goes back to the start of the last action). 4 = levels v3 (GDD §16, `schemaVersion` 3: two-tone,
  * pallet, wrap + scissors, bonus and slippery blocks; v3 flags in the Zobrist class; D1 widening — blocks that can be
- * held but have no release other than a cancel are D1 too). An attempt saved with an older version is voided (E-67).
+ * held but have no release other than a cancel are D1 too). 5 = levels v3c (D-103…D-105: the 9 × 10 frame with
+ * 3-column sites and Zobrist positions `y·9 + x`, the P5 shape, 3-wide material crossing the wall, pallet layers released
+ * on the site only with a bounce back onto their pallet, the bonus "+n" event with `pieceId`). An attempt saved with an older version is voided (E-67).
  */
-export const RULES_VERSION = 4;
+export const RULES_VERSION = 5;
 /** K-29: moves of an accepted offer. */
 export const OFFER_MOVES = 5;
 /** K-29: offers per attempt (ad or coins). */

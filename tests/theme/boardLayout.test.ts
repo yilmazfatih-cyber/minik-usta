@@ -12,6 +12,7 @@ import { pieceAtPoint } from '../../src/scenes/level/hitTest.ts';
 import { VIEW } from '../../src/scenes/level/viewConstants.ts';
 import {
   ADAPTIVE_CELL_STEP_PX,
+  WIDE_BOARD_CELL_PX,
   adaptiveCellPx,
   boardLayout,
   createLayout,
@@ -287,6 +288,23 @@ describe('UX 5.8 adaptive cell size (DL-2R-14, TECH 2R.1)', () => {
     expect(L.grid.wallW).toBeCloseTo(72, 9);
     expect(L.touch.hitSlopPx).toBeCloseTo(TOKENS.touch.hitSlopPx * 1.2, 9);
     for (const g of G) expect(adaptiveCellPx(TOKENS, g) % ADAPTIVE_CELL_STEP_PX, label(g)).toBe(0);
+  });
+
+  it('K-49 item 5 D-103 a 9-column board (6 × 8 | 3 × 5): cell 108, wall 54, board 1026 px, 27 px on both sides; never below 100', () => {
+    const wide = geo(6, 8, 3, 5);
+    expect(wide.cols).toBe(9);
+    for (const t of [TOKENS, T120]) {
+      expect(adaptiveCellPx(t, wide)).toBe(WIDE_BOARD_CELL_PX);
+      const L = createLayout(t, 1920, wide);
+      expect([L.grid.cellPx, L.grid.wallW, L.board.board.w]).toEqual([108, 54, 1026]);
+      expect([L.grid.yardX, 1080 - rectRight(L.board.board)]).toEqual([27, 27]);
+      expect(L.grid.k).toBeCloseTo(0.9, 9);
+    }
+    // 390 CSS px wide: 108 design px ≈ 39 CSS px (120 → 43)
+    expect(Math.round((108 * 390) / 1080)).toBe(39);
+    for (const g of G) expect(adaptiveCellPx(TOKENS, g), label(g)).toBeGreaterThanOrEqual(100);
+    // 8 columns keep the 120 floor
+    expect(adaptiveCellPx(TOKENS, geo(6, 8, 2, 8))).toBe(120);
   });
 
   it('UX 5.8 360 × 800: a B1 block cell is ≥ 48 CSS px with cellMaxPx 144 (40 CSS px at 120)', () => {

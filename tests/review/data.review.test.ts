@@ -203,7 +203,7 @@ describe('review K-01 board and K-44 shapes', () => {
     expect(view).toEqual(['XX', 'X.']);
   });
 
-  it('K-44 every orientation is the clockwise 90° turn of BRIEF §5 0° cells, normalised to the bottom-left; heavy = w ≥ 3 or I5/Q9', () => {
+  it('K-44 every orientation is the clockwise 90° turn of BRIEF §5 0° cells, normalised to the bottom-left; heavy = I5/Q9 only (K-44 K-49 D-103: width makes no weight), P5 appended', () => {
     // BRIEF §5 table, typed here independently of src/core/shapes.ts.
     const BRIEF: Record<ShapeKind, [number, number][]> = {
       B1: [[0, 0]],
@@ -271,6 +271,13 @@ describe('review K-01 board and K-44 shapes', () => {
         [4, 0],
       ],
       Q9: [0, 1, 2].flatMap((y) => [0, 1, 2].map((x) => [x, y] as [number, number])),
+      P5: [
+        [1, 0],
+        [0, 1],
+        [1, 1],
+        [2, 1],
+        [1, 2],
+      ],
     };
     const norm = (cells: [number, number][]): string[] => {
       const mx = Math.min(...cells.map((c) => c[0]));
@@ -288,7 +295,7 @@ describe('review K-01 board and K-44 shapes', () => {
         const mine = norm(cells);
         expect(s.cells.map((c) => cellKey(c.x, c.y)).sort(), id).toEqual(mine);
         const w = Math.max(...mine.map((k) => Number(k.split(',')[0]))) + 1;
-        expect([s.w, s.heavy], `${id} width / heavy`).toEqual([w, w >= 3 || kind === 'I5' || kind === 'Q9']);
+        expect([s.w, s.heavy], `${id} width / heavy`).toEqual([w, kind === 'I5' || kind === 'Q9']);
         // canonical = first orientation (0, 90, 180, 270) with the same cell set
         const firstSame = seen.indexOf(mine.join(';'));
         expect(s.canonical, `${id} canonical`).toBe(
@@ -297,7 +304,7 @@ describe('review K-01 board and K-44 shapes', () => {
         seen.push(mine.join(';'));
       }
     }
-    expect(SHAPES.length).toBe(52);
+    expect(SHAPES.length).toBe(56);
   });
 
   // Faz 2R (WP-M): I3_270 is a 3-wide material orientation (K-44 `piece_too_wide` on Ws = 2), so the alias board is

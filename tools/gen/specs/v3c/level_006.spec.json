@@ -1,0 +1,22 @@
+{
+  "id": 6,
+  "name": { "tr": "Geniş Temel", "en": "Wide Base" },
+  "difficulty": "normal",
+  "teaches": "S9",
+  "yard": { "cols": 6, "rows": 8 },
+  "site": { "cols": 3 },
+  "wall": { "height": 7, "gaps": [] },
+  "segments": [
+    { "name": { "tr": "Kat 1", "en": "Floor 1" }, "rows": 5 },
+    { "name": { "tr": "Kat 2", "en": "Floor 2" }, "rows": 5 },
+    { "name": { "tr": "Kat 3", "en": "Floor 3" }, "rows": 5 }
+  ],
+  "colors": "WYG",
+  "orientations": ["D2_0", "D2_90", "C3_0", "C3_90", "C3_180", "C3_270", "L4_270", "J4_90"],
+  "maxDominoShare": 0.5,
+  "blocks": [17, 17],
+  "mutations": 10,
+  "want": { "dig": [2, 3], "greedy": [0.3, 0.8], "careless": [0.2, 0.7], "keep": 4 },
+  "twoTone": { "pairs": ["WY"], "count": 2, "shapes": ["D2"] },
+  "rareFirst": 4
+}

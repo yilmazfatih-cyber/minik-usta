@@ -30,14 +30,14 @@ import type { GameState } from '../../src/core/state.ts';
 import type { CompiledLevel } from '../../src/core/level/compile.ts';
 import { NULL_SINK, applyMove } from '../../src/core/moves.ts';
 import type { MoveHooks } from '../../src/core/moves.ts';
-import { FREE, isSiteClosed, railMode, tryBeginDrag } from '../../src/core/movement.ts';
+import { FREE, isPalletLayer, isSiteClosed, railMode, tryBeginDrag } from '../../src/core/movement.ts';
 import type { DragSession } from '../../src/core/movement.ts';
 import { computeFall } from '../../src/core/gravity.ts';
 import { movePiece, yardPlace } from '../../src/core/placement.ts';
 import { hashState, pieceClassBits, pieceClassExtra, piecePosition } from '../../src/core/hash.ts';
 import { fmix32 } from '../../src/core/rng.ts';
 import { shapeByIndex } from '../../src/core/shapes.ts';
-import { collisionMasks, layerBelow, visibleSegment } from '../../src/core/grid.ts';
+import { collisionMasks, visibleSegment } from '../../src/core/grid.ts';
 import { MAX_COLS, MAX_ROWS } from '../../src/core/geometry.ts';
 import { GAP_STRIDE, GF } from '../../src/core/state.ts';
 
@@ -68,7 +68,7 @@ const DROP_CANCEL = 0;
 const DROP_YARD = 1;
 const DROP_FREE = 2;
 const DROP_RAIL = 3;
-/** Node codes per mode (the 8 × 10 frame, = movement.ts `NODES_PER_MODE`). */
+/** Node codes per mode (the 9 × 10 frame, = movement.ts `NODES_PER_MODE`). */
 const NODES = MAX_COLS * MAX_ROWS;
 /** Reach-cache entries kept at most (memory bound; the cache is cleared beyond it). */
 const REACH_CACHE_LIMIT = 1_500_000;
@@ -82,7 +82,7 @@ interface Reach {
   readonly codes: Int16Array;
   readonly drops: Uint8Array;
   /** Exact environment bytes of a cached entry (null when not cached). */
-  readonly env: Uint8Array | null;
+  readonly env: Uint16Array | null;
 }
 const DY = [0, 0, -1, 1];
 
@@ -181,9 +181,9 @@ export class Expander {
    */
   private readonly reachCache: Map<number, Reach[]> | null;
   private reachEntries = 0;
-  private readonly masks = new Uint8Array(MAX_ROWS);
+  private readonly masks = new Uint16Array(MAX_ROWS);
   /** Environment bytes of the reach-cache key (exact copy kept in the entry; the number key is only a hash). */
-  private readonly env: Uint8Array;
+  private readonly env: Uint16Array;
 
   constructor(lvl: CompiledLevel, hooks: MoveHooks, opts: { readonly reachCache?: boolean } = {}) {
     this.lvl = lvl;
@@ -203,7 +203,7 @@ export class Expander {
       d?.siteClosed === undefined &&
       this.paintGates.length === 0;
     this.reachCache = cacheable ? new Map() : null;
-    this.env = new Uint8Array(2 + lvl.geo.rows + lvl.gaps.length);
+    this.env = new Uint16Array(2 + lvl.geo.rows + lvl.gaps.length);
   }
 
   /**
@@ -347,9 +347,10 @@ export class Expander {
   ): { readonly reach: Reach; readonly session: DragSession | null } | null {
     const cache = this.reachCache;
     let key = 0;
-    let env: Uint8Array | null = null;
-    // v3 Y10: a pallet layer with a layer below has its own start cells blocked; its R is not shared (no cache)
-    if (cache && zone === Zone.yard && !(this.lvl.hasStacks && layerBelow(s, id) >= 0)) {
+    let env: Uint16Array | null = null;
+    // v3 Y10: a pallet layer has its own start cells blocked (a layer below) and site-only releases (v3c K-58 item 9,
+    // D-104): its R and drop classes are not shared with ordinary blocks (no cache)
+    if (cache && zone === Zone.yard && !(this.lvl.hasStacks && isPalletLayer(s, id))) {
       const buf = s.buf;
       const base = this.lvl.layout.pieces + id * PIECE_STRIDE;
       const startCode = (buf[base + PF.y] ?? 0) * MAX_COLS + (buf[base + PF.x] ?? 0);
@@ -560,7 +561,7 @@ function reachFromSession(
   cols: number,
   rows: number,
   modes: number,
-  env: Uint8Array | null,
+  env: Uint16Array | null,
 ): Reach {
   const codes: number[] = [];
   const drops: number[] = [];
@@ -602,13 +603,13 @@ function reachFromSession(
  * 30-bit FNV-1a key of the environment bytes (a small integer, the fast Map key); entries keep the bytes, so a key
  * collision only lengthens the entry list, never mixes environments.
  */
-function envKey(env: Uint8Array): number {
+function envKey(env: Uint16Array): number {
   let a = 0x811c9dc5;
   for (let i = 0; i < env.length; i++) a = Math.imul(a ^ (env[i] ?? 0), 0x01000193);
   return (a ^ (a >>> 15)) & 0x3fffffff;
 }
 
-function sameBytes(a: Uint8Array | null, b: Uint8Array): boolean {
+function sameBytes(a: Uint16Array | null, b: Uint16Array): boolean {
   if (!a || a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
   return true;

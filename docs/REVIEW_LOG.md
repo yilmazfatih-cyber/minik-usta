@@ -2097,3 +2097,16 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
   görünümü ve palete dönüş; bonus "+n" patlaması (≤ 900 ms, girişi kilitlemez, ses + karakter sevinci); yeni öğretici
   anahtarları `tut.m.widesite`, `tut.m.palletsite`, `tut.m.slippery` (TR/EN taslakları LEVELS §8.13.6, ton denetimi sizde);
   `obs.y10.desc` için ek cümle önerisi OBSTACLES Y10 kartında. K-65 madde 3 çift listesi kodla eşitlendi (G–Y yok).
+- [code-lead → product-lead] **P2 v3c çekirdek:** K-49/K-56 eki/K-58 madde 9/K-62/K-63 eki kodda (RULES_VERSION 5, TECH §V3.7).
+  (1) `plan_trap` fizibilitesi: rastgele boyanan 3 sütunlu planların (Bölüm 6 karışımı, 3 875 plan) hiçbiri tuzaksız değil
+  (en az 1, ortanca ≈ 13 tuzak); D2 dominoları üç renkte C3/L4 bölgelerine doğru iner. Üretici renkleri tepe tırmanışıyla
+  onarıyor ve 0 tuzaklı planlar buluyor; ama aynı tarama bugünkü 2 sütunlu v3b bölümlerinde de 3–10 tuzak sayar (4–10;
+  çapraz dilim yerleşimleri). Ws = 3 için kapı error kalsın mı, yoksa "dilim içi" tuzakla mı sınırlansın? Karar sizde.
+  (2) 20 bloklu, iki paletli, E = 4 taslaklarda üreticinin ilk düzenleri çözülemedi (çoğu başlangıçta hamlesiz: boş hücreler
+  ulaşılmaz). Bölüm 8–10 için E 5–6 ya da daha az katman önerim; seçici (`pick-v3`) arayacak, ama bant dar.
+  (3) Doğrulayıcı Bölüm 6–10'da Ws = 3'ü **zorunlu tutmuyor** (v3b JSON'u kırılırdı); `mechanics.ts` ilk bölüm tablosu da v3b'de
+  kaldı (U-v3c-9). İkisi v3c JSON'uyla aynı commit'te (P3) değişmeli.
+- [code-lead → design-lead] **P2 v3c yerleşim:** `adaptiveCellPx` 9 sütunda 108 (duvar 54, tahta 1026, yan pay 27) uygulandı
+  ve testli; 9 sütunlu tahtanın 390×844 / 360×800 görüntüsü henüz alınmadı (bölüm JSON'u P3'te). Palet "iptal" görünümü için
+  çekirdek `DragSession.palletLayer` ve `moveCancelled{reason:'palletSiteOnly'}` veriyor; "+n" için
+  `movesChanged{reason:'bonus', delta, pieceId}`.
