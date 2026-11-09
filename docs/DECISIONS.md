@@ -623,6 +623,15 @@ rehberi), ücretsiz ve üretken yapay zekâsız görsel üretim. Program: Faz 4 
 kasaba, ekonomi, 2 etkinlik, sahte mağaza); Faz 6 yayın hazırlığı (performans, Android/WebGL derlemeleri, mağaza metinleri, gizlilik).
 
 
+### D-102 — Bölümler v3: daha çok blok, yeni şekiller ve blok özellikleri; zorluk bandı sahibinin sınırıyla
+Durum: KABUL     Sahip: proje sahibi + orkestratör (code-lead uygulaması)     Tarih: 2026-11-09
+Karar: (1) Proje sahibinin 2026-11-08 isteği kabul edildi: "daha çok blok, daha farklı şekil ve özellik, uğraşılabilir ama abartısız". Bölümler v3 yayın kaynağı web `levels/` (701b8f3): 10 bölüm, blok sayısı 8, 8, 9, 10, 12, 14, 13, 14, 14, 16 (toplam 118; bugün 70). Yeni şekiller: L4/J4 (Bölüm 2), C3 kendi açılışıyla, T4 (6), I3 (8); şekil kuralı GDD §16 K-56 (ÖNERİ → KABUL). Yeni blok özellikleri: iki renkli Y9 (5), sargı ve makas Y11 (7), bonus Y12 (9), kaygan Y13 (8). Palet Y10 yayınlanan hiçbir bölümde yok; K-58 madde 9 açık.
+(2) GDD §16 K-56…K-66 etiketleri ÖNERİ'den KABUL'a alındı. Bu tek etiket değişikliği code-lead tarafından yapıldı (GDD product-lead dosyasıdır; product-lead'in sonradan bakması beklenir). K-30 D1 genişlemesi ve §16 "v3 kenar durumları" ÖNERİ olarak kalır. `### K-xx` başlığına terfi ve TECH §12.4 satırları açık iş olarak kalır.
+(3) Zorluk bandı proje sahibinin sınırında tutulur: yalnız Bölüm 10 Zor; Bölüm 1 için 6–8 blok hedefi 8 ile karşılandı; Bölüm 10 için 16–22 hedefi 16 ile alt sınırda karşılandı (`min` 20). Toplam 124 hedefi 118 ile tutturulamadı (kalan fark ve gerekçe: docs/LEVELS_V3_REPORT.md, Unity deposu).
+(4) Kabul edilmeyenler ve açık sorular: P-G1-1 ve P-E2-1 ÖNERİ olarak kalır. `min` değerleri Bölüm 3–10 için çözücünün en iyi bulduğu değerdir (kanıtlanmamış; yalnız Bölüm 1, 2, 7 kanıtlı); Bölüm 5'te 182 örnekten 1 tane D1/D2/D3a'nın yakalamadığı çıkmaz durumu bulundu (tahmini %0,01, kanıt değil). Bot ölçümü (`tools/playtest-bot.ts`) yok: `levels:check` bu adımı atlar.
+Gerekçe: Proje sahibi isteği; kapılar yeşil (web `npm run check` 2180 test geçti, `levels:check` 10/10 çözüldü, 0 hata; Unity `dotnet build -warnaserror` 0 uyarı, `dotnet test` 586 + 2023 geçti). Ölçü ve çekirdek sapması kanıtları: web docs/LEVEL_REPORT.md ve Unity docs/REVIEW_LEVELS_V3.md.
+Etkilenen: docs/GDD.md §16 (K-56…K-66 etiketleri), docs/LEVELS.md §8 (v3 tasarımı), docs/OBSTACLES.md (Y9…Y13), levels/level_001…010.json (Bölüm 1 schemaVersion 2; 2–10 schemaVersion 3), config/economy.json (Çekiç unlockLevel 10), minik-usta-unity Resources/levels (aynı veri)
+
 ### ÖNERİ P-A2-1 — Bölüm 10 iki katlı; üç kat, Ağır Yük ve takas tuzağı U-4 sonrasına (product-lead, 2026-11-02)
 Durum: ÖNERİ. D0 eğrisi (LEVELS §6.6) Bölüm 10'u 6×8 saha, üç kat ve `Q9` ile tanımlıyordu; bugünkü tam tarama bu
 uzayı bitiremez (`scan_incomplete`, error; 5×6 üç kat yedeği de > 2,5 M durum). A2'de Bölüm 10, 4×5 sahada iki katlı

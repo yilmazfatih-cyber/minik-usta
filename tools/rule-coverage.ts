@@ -42,7 +42,7 @@ export class CoverageError extends Error {}
 export const PHASE_2R = 2.5;
 const FAZ_2R_TAG = /\(Faz 2R\b/;
 
-/** Levels v3 phase (CL-V3-11): after 2R, before 3. The binding K-56…K-66 ÖNERİ headings are required by `--phase v3`. */
+/** Levels v3 phase (CL-V3-11): after 2R, before 3. The K-56…K-66 headings (ÖNERİ until D-102, then KABUL) are required by `--phase v3`. */
 export const PHASE_V3 = 2.7;
 
 /** A phase token: `2` → 2, `2R` → 2.5 (TECH §12.4 F column, `--phase` argument). Null when the text has none. */
@@ -82,11 +82,12 @@ export function gddRuleIds(gdd: string): string[] {
   return [...ids].sort();
 }
 
-/** K-xx ids of `#### ÖNERİ K-xx …` headings (levels v3); an id a plain heading already defines is not repeated. */
+/** K-xx ids of `#### ÖNERİ K-xx …` or `#### KABUL K-xx …` headings (levels v3, D-102); an id a plain heading already defines is not repeated. */
 export function gddProposalIds(gdd: string): string[] {
   const known = new Set(gddRuleIds(gdd));
   const ids = new Set<string>();
-  for (const m of gdd.matchAll(/^#{2,4} ÖNERİ (K-\d\d)\b/gm)) if (!known.has(m[1] ?? '')) ids.add(m[1] ?? '');
+  for (const m of gdd.matchAll(/^#{2,4} (?:ÖNERİ|KABUL) (K-\d\d)\b/gm))
+    if (!known.has(m[1] ?? '')) ids.add(m[1] ?? '');
   return [...ids].sort();
 }
 

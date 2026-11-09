@@ -1689,21 +1689,20 @@ adımları bu kurala uyar.
 
 ---
 
-## 16. Bölümler v3 — kural önerileri (ÖNERİ, paket G1, 2026-11-08; G1b revizyonu aynı gün)
+## 16. Bölümler v3 — kurallar (KABUL, D-102, 2026-11-09; öneri paketi G1 2026-11-08, G1b revizyonu aynı gün)
 
-Sahip: product-lead · Durum: **ÖNERİ** — onaylanana kadar bağlayıcı değildir ve bugünkü çekirdeği/veriyi değiştirmez.
+Sahip: product-lead · Durum: **KABUL** (D-102, 2026-11-09) — K-56…K-66 bağlayıcıdır. K-30 D1 genişlemesi ve §16 sonundaki v3 kenar durumları hâlâ **ÖNERİ**dir.
 Kaynak: proje sahibinin 2026-11-08 isteği ("daha çok blok, daha farklı şekil ve özellik, uğraşılabilir ama abartısız"),
 oyun testi raporu `docs/review_inbox/levels-v3-playtest.md`, design-lead incelemesi
 `docs/review_inbox/levels-v3-design-review.md` (DL-V3-01…22, G1b'de işlendi), LEVELS §8 (v3 tasarımı), OBSTACLES
 "Bölümler v3 blok özellikleri". Kimlikler K-56…K-66 yeni ve tek kullanımlıktır. **Biçim notu:** başlıklar bilerek
-"ÖNERİ K-xx" diye yazıldı; `test:rules` yalnız `### K-xx` başlıklarını kural sayar ve her kural için test ister.
-Onaydan sonra code-lead paketinde başlıklar `### K-xx …` olur, TECH §12.4 satırı ve testler aynı commit'te gelir.
+"KABUL K-xx" diye yazıldı (D-102). `test:rules` yalnız `### K-xx` başlıklarını kural sayar; K-56…K-66 için testler zaten vardır (`tests/core/levelsV3.test.ts` ve ilgili dosyalar). `### K-xx` başlığına terfi ve TECH §12.4 satırları ayrı, açık bir iş olarak kalır.
 
 Korunanlar (değişmez): sabit saha K-55, tam örtü K-47/K-48, YAO ≥ 0,60 (K-46), ölü masa kapısı (D-090, K-51 madde 7),
 hafif öğretici K-53, hamle bütçesi `min + P + a` (K-52; Hikaye 1'de bonus bütçeyi değiştirmez, ÖNERİ K-62), bilgi
 gizlenmez (K-18), bölüm başına en çok bir yeni mekanik (K-45 madde 10).
 
-#### ÖNERİ K-56 Şekil kümesi v3 (K-44 açılış tablosunun değişikliği)
+#### KABUL K-56 Şekil kümesi v3 (K-44 açılış tablosunun değişikliği)
 **Kural:** Hikaye bölümüne göre izinli türler: 1 → B1, D2, O4, C3, **L4, J4 (2. bölümden), T4 (6. bölümden), I3
 (8. bölümden)**; 2 → + S4, Z4; 3 → + I4; Ağır Yük (I5, Q9) K-44 ve Y5 kuralıyla ayrı kalır (malzeme değildir). K-44'ün
 diğer maddeleri aynen geçerlidir: dönüş yoktur, veri yönelimi Ws'den geniş olamaz (`piece_too_wide`). Ws = 2 iken
@@ -1717,7 +1716,7 @@ W2 ile birlikte kullanılamaz). Doğrulayıcı: şekil bölümün hiçbir giriş
 **Örnek:** Bölüm 2 (H = 6, `height` 5): `L4_180` G (2×3) duvarı y5–y7 hücreleriyle aşar → geçerli. Aynı bölüm `height`
 6 (W2) olsaydı `L4_180` hiçbir yerden giremez → `piece_unreachable`. Bölüm 5'te `S4_0` → `shape_locked` (Hikaye 2).
 
-#### ÖNERİ K-57 İki Renkli Blok (Y9)
+#### KABUL K-57 İki Renkli Blok (Y9)
 **Kural:** `colors` alanı olan malzeme bloğunun her hücresinin rengi `colors[i]`'dir (`i` = şeklin (y, x) sıralı hücre
 dizini). (1) K-16 koşul 2 hücre bazında uygulanır: her hücre, oturduğu plan hücresinin rengiyle aynı olmalıdır. (2)
 K-47 arz/talep hücre rengiyle sayılır. (3) K-31 renk sayısına her iki renk girer. (4) K-18 gölgesi hücre başına ✓ ya da
@@ -1729,7 +1728,7 @@ iki renkli bloğu hedefleyemez. (7) (G1b) Renk çifti K-65 madde 3'teki izinli �
 Veri: `{ "shape": "D2_90", "color": "W", "colors": "WY", "x": 2, "y": 0 }`; `colors` uzunluğu 2 değilse ya da tek renkse
 `colors_invalid` (error); `colors: "WR"` Hikaye 1'de `colors_low_contrast` (error).
 
-#### ÖNERİ K-58 Palet (Y10) ve doluluk ayak izi
+#### KABUL K-58 Palet (Y10) ve doluluk ayak izi
 **Kural:** (1) Aynı `stack.id`'yi taşıyan 2–4 malzeme bloğu bir palettir: şekilleri ve çapaları aynıdır, `z` değerleri
 0'dan ardışıktır. (2) Paletin hücreleri, paletinde en az bir katman kaldıkça doludur (K-08 yol kuralı için engeldir).
 (3) Yalnız en büyük `z`'li kalan katman (üst) tutulabilir (K-09'a koşul (f)); alt katmanın tutulma denemesi tepkisizdir
@@ -1747,7 +1746,7 @@ ayak izi) + 6 tekil blok (16 hücre) → F = 20, E = 10; `pallet_capacity` alt s
 (4,0): üst W tutulur, şantiyeye konur (1 hamle) → alt W üst olur; (4,0)–(5,0) hâlâ dolu. G1 taslağındaki Bölüm 4 (saha
 5×4, E 4, iki 3 katmanlı palet) alt sınır 6'yı tutmaz → error; v3.1'de saha 6×5, E 10.
 
-#### ÖNERİ K-59 Sargılı Blok ve Makas (Y11)
+#### KABUL K-59 Sargılı Blok ve Makas (Y11)
 **Kural:** (1) `wrapped` bayraklı blok tutulamaz ve Vinç (K-37) ile seçilemez (K-09 (c)'ye eklenir). (2) Sargı varsa
 bölümde tam bir `scissors` bayraklı blok bulunur; yoksa `scissors_missing` (error); birden çoksa `scissors_many` (error).
 (3) Makaslı blok K-16'ya göre doğru yerleştiği hamlenin 5. adımında (K-35) sahadaki bütün `wrapped` bayrakları kalkar
@@ -1761,7 +1760,7 @@ başlangıçta en az 1 kazı altında değilse `scissors_trivial` (warn; karar y
 titrer, hamle harcanmaz. Makaslı R şantiyede doğru yere konur → aynı hamlenin 5. adımında iki sargı kalkar; sonraki
 hamlede G tutulabilir. Makaslı R'nin şantiyedeki yeri sargılı G'nin üstündeyse (G önce konmalı) → `scissors_blocked`.
 
-#### ÖNERİ K-60 Bonus Blok (Y12)
+#### KABUL K-60 Bonus Blok (Y12)
 **Kural:** (1) `bonus` bayraklı blok doğru yerleştiği hamlenin 4. adımında, maliyet düşüldükten sonra, sayaca
 `bonusMoves` (1–3, varsayılan 2) ekler. (2) Bölüm başına en çok 2 bonus blok (`bonus_many`, error). (3) Bonus, adım
 11–12'den önce uygulanır; bu yüzden son hamlede sayaç 0'a inip aynı hamlede bonus gelirse bölüm sürer. (4) Geri Al ve
@@ -1771,13 +1770,13 @@ girmez; tanıtımı dışında (Bölüm 9) Hikaye 1 bölümlerinde kullanılmaz.
 **Örnek:** Sayaç 1; bonus blok doğru konur → adım 4: 1 − 1 = 0, + 2 = 2 → adım 11 kaybetme yok. Bonus blok hatalı yere
 bırakılır → geri seker, sayaç 1 − 1 = 0 → kaybetme penceresi (K-29).
 
-#### ÖNERİ K-61 Kaygan Blok (Y13; Hikaye 2)
+#### KABUL K-61 Kaygan Blok (Y13; Hikaye 2)
 **Kural:** `slippery` bayraklı malzeme bloğu `gravity.yard` değerinden bağımsız olarak hamle sonu 6. adımda saha
 yerçekimiyle (K-20) düşer; diğer bloklar yalnız Y6 açıksa düşer. Şantiyede ve rayda sıradan bloktur.
 **Örnek:** `gravity.yard` false; kaygan `D2_90` (3,4)'e park edilir, altı (3,3)–(4,3) boş, (3,2)–(4,2) dolu → adım 6'da
 (3,3)'e iner. Aynı yere sıradan blok park edilseydi (3,4)'te kalırdı (K-10).
 
-#### ÖNERİ K-62 Hamle bütçesi v3 (K-52'ye bonus eki; G1b)
+#### KABUL K-62 Hamle bütçesi v3 (K-52'ye bonus eki; G1b)
 **Kural:** `moves = min + P + a − B·k`. `B` = bölümdeki bonus hamle toplamı (Σ `bonusMoves`). **Hikaye 1'de `k` = 0**
 (bonus saf paydır, ödül anı; K-60 madde 6). `k` = 1 yalnız Hikaye 2'den itibaren ve yalnız şu iki koşulla kullanılır:
 (a) bonus bağlayıcıdır: bonusu almadan biten en kısa çözümün sayaç sonu < 0'dır (bonus en az 2 kazı altında); (b) HUD
@@ -1790,7 +1789,7 @@ bugünkü `moves − min − P ∈ [0, a_max]` denetimiyle aynıdır; doğrulay�
 v3.1'de bonus yoktur: `min` 20, Zor P 1 → `moves` 21 + `a`. (G1 taslağındaki "Bölüm 10: 20 + 1 − 2 = 19" geri çekildi:
 bonus kanonik çözümde 7. hamlede alınıyordu, son tarih 17 bağlayıcı değildi ve sayaç `min`'in altında görünüyordu.)
 
-#### ÖNERİ K-63 Döşeme aileleri (tuzaksız Kolay/Normal için doğrulayıcı uyarısı)
+#### KABUL K-63 Döşeme aileleri (tuzaksız Kolay/Normal için doğrulayıcı uyarısı)
 **Kural:** 2 sütunlu şantiyede bir rengin "alt satırı dolu" şekilleri (`D2_90`, `O4_0`, `C3_0`, `C3_270`, `L4_0`,
 `J4_0`) ile "sütun" şekilleri (`D2_0`, `I3_0` ve L/J/T'nin 3 hücreli sütunu) birbirinin bölgesine girebilir ve ✓-tuzağı
 üretir. Kolay ve Normal bölümde her renk için şu ikisinden biri doğru olmalıdır: (a) o rengin tek renkli blokları tek
@@ -1801,7 +1800,7 @@ ancak öbürünün bloğu yerleşince oraya inebilir); (b) solver o bölümde `t
 satırına inebilir ve tek `G` hücresi döşenemez kalır (✓-tuzağı) → `tile_family_mix`. Bölüm 6 v3: `C3_270` W tek W
 alt-dolu bloğu, `D2_90` W yok → uyarı yok.
 
-#### ÖNERİ K-64 Bulmaca ölçütleri v3 (K-50'ye ek; G1b)
+#### KABUL K-64 Bulmaca ölçütleri v3 (K-50'ye ek; G1b)
 **Kural:** `levels:check` raporu her bölüm için şu ölçütleri yazar; kapı olanlar LEVELS §8.6 bantlarıyla denetlenir.
 (1) **`liftRatio`** (kapı, her bölüm ≥ 0,60): kanonik çözümde şantiyeye yapılan doğru yerleşimlerden, bloğun o
 hamlenin başındaki en alt hücresi `y < height` olanların oranı (blok duvarı aşmak için en az 1 satır **kaldırılmak**
@@ -1818,7 +1817,7 @@ Y10 paletin ayak izini ilk katman kalkınca boşalmış sanar; Y11 makaslı blo�
 19/19 = 1,00 ama `liftRatio` 15/19 = 0,79 ≥ 0,60 → geçer; 8'i öyleyse 11/19 = 0,58 → kapı kırmızı, bölüm 6×5 sahaya
 iner (LEVELS §8.1 Karar 9 A). Bölüm 5: orta bot %84, yok sayan kip %70 → `traitDelta` 14 ≥ 10 → geçer.
 
-#### ÖNERİ K-65 Hikaye 1 okunurluk kısıtları (G1b; DL-V3-01, -03, -05, -06)
+#### KABUL K-65 Hikaye 1 okunurluk kısıtları (G1b; DL-V3-01, -03, -05, -06)
 **Kural:** Hikaye 1 (Bölüm 1–10) bölümlerinde: (1) **Palet tek tiplidir:** bir paletin bütün katmanları aynı `shape`,
 aynı `color` ve `colors`, aynı (boş) `flags` taşır; değilse `stack_mixed` (error). Karışık palet Hikaye 2'de, en çok 2
 katman, kendi tanıtım bölümüyle ve yalnız "sonraki katman" kenarı ile basılı tutunca gözetleme (hamle harcamaz,
@@ -1832,7 +1831,7 @@ Hikaye 2+ için izinli çift listesi aynı ölçütle ART_DIRECTION'daki renk ta
 **Örnek:** Bölüm 3 G1 taslağı palet `[W, Y, W]` → `stack_mixed`; v3.1 palet A W×2, palet B G×2 → geçerli. Bölüm 10 G1
 taslağı `D2_90` "WR" → `colors_low_contrast`; v3.1'de "WY". Hem sargılı hem bonus bir blok → `trait_overlay_many`.
 
-#### ÖNERİ K-66 Güçlendiriciler ve v3 özellikleri (G1b; DL-V3-12)
+#### KABUL K-66 Güçlendiriciler ve v3 özellikleri (G1b; DL-V3-12)
 **Kural:** (1) **Vinç (K-37) ve Altın Mala (K-33)** yalnız **tutulabilir** blokları hedefler: palette yalnız üst
 katman; sargılı blok hedeflenemez. Hedeflenemeyen bloğa dokunmak işlem yapmaz, güçlendirici/mala harcanmaz. (2) **Boya
 Fırçası (K-38)** palet katmanlarından yalnız üst katmanı seçebilir ve yalnız gözetleme/sonraki katman kenarının çizildiği
