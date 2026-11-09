@@ -81,6 +81,7 @@ const TILING: LevelSpec = {
   ],
 };
 
+/** The Ağır Yük of an archive level (these booster-accounting tests use the Faz 2R archive, tests/fixtures/levels-2r/). */
 function cargoOf(lvl: CompiledLevel): number {
   const id = [...Array(lvl.layout.counts.pieces).keys()].find((i) => lvl.pieces[i]?.cls === 'cargo');
   if (id === undefined) throw new Error(`level ${lvl.id} has no Ağır Yük`);
@@ -90,32 +91,37 @@ function cargoOf(lvl: CompiledLevel): number {
 describe('META 4 booster inventory and free trials (WP-K)', () => {
   it('META 4 the opening level grants its free trials at the attempt start, once per account', () => {
     const h = harness();
-    LevelAttempt.begin(h.deps, levelFile(8), { preBoosters: [], streakTier: 0 });
-    expect(h.save.data.boosters).toEqual({ inventory: { hammer: 3 }, freeTrialsGranted: ['hammer'] });
+    LevelAttempt.begin(h.deps, levelFile(10), { preBoosters: [], streakTier: 0 });
+    // levels v3b: the Hammer and the Crane open together at level 10 (CL-V3-07)
+    expect(h.save.data.boosters).toEqual({
+      inventory: { hammer: 3, crane: 2 },
+      freeTrialsGranted: ['hammer', 'crane'],
+    });
     // a free exit, then the same level again: no second grant
-    const g = start(levelFile(8));
+    const g = start(levelFile(10));
     const again = LevelAttempt.resumed(h.deps, h.save.data.inLevel ?? fail());
     again.exitFree(g, []);
-    LevelAttempt.begin(h.deps, levelFile(8), { preBoosters: [], streakTier: 0 });
+    LevelAttempt.begin(h.deps, levelFile(10), { preBoosters: [], streakTier: 0 });
     expect(h.save.data.boosters.inventory.hammer).toBe(3);
     // levels below every unlock grant nothing
     const low = harness();
-    LevelAttempt.begin(low.deps, levelFile(7), { preBoosters: [], streakTier: 0 });
+    LevelAttempt.begin(low.deps, levelFile(9), { preBoosters: [], streakTier: 0 });
     expect(low.save.data.boosters).toEqual({ inventory: {}, freeTrialsGranted: [] });
   });
 
   it('META 4 locked booster grant is kept and free trials add', () => {
-    // a hammer from a pack before level 8 stays in the inventory (slot locked); the 3 trials add on top at level 8
+    // a hammer from a pack before level 10 stays in the inventory (slot locked); the 3 trials add on top at level 10
     const h = harness((s) => s.commit((d) => void (d.boosters.inventory.hammer = 1)));
-    LevelAttempt.begin(h.deps, levelFile(7), { preBoosters: [], streakTier: 0 });
+    LevelAttempt.begin(h.deps, levelFile(9), { preBoosters: [], streakTier: 0 });
     expect(h.save.data.boosters.inventory.hammer).toBe(1);
-    LevelAttempt.resumed(h.deps, h.save.data.inLevel ?? fail()).exitFree(start(levelFile(7)), []);
-    LevelAttempt.begin(h.deps, levelFile(8), { preBoosters: [], streakTier: 0 });
+    LevelAttempt.resumed(h.deps, h.save.data.inLevel ?? fail()).exitFree(start(levelFile(9)), []);
+    LevelAttempt.begin(h.deps, levelFile(10), { preBoosters: [], streakTier: 0 });
     expect(h.save.data.boosters.inventory.hammer).toBe(4);
   });
 
   it('UX 5.2 step 3 an applied booster leaves the inventory in the same write as its log entry; a void gives it back', () => {
-    const h = harness();
+    // the free trials open at level 10 (CL-V3-07); this test only needs a hammer in the inventory
+    const h = harness((s) => s.commit((d) => void (d.boosters.inventory.hammer = 3)));
     const lvl = levelFile(8);
     const a = LevelAttempt.begin(h.deps, lvl, { preBoosters: [], streakTier: 0 });
     const g = start(lvl);
@@ -195,7 +201,7 @@ describe('META 10 slice wins (first win star, 1–10 loop replay; WP-K)', () => 
 
 describe('ANALYTICS v6 send points (TECH 2R.16; WP-K)', () => {
   it('ANALYTICS booster_used target: hammer = its K-36 kind, crane and brush = block, undo = null, trowel = no event', () => {
-    const h = harness();
+    const h = harness((s) => s.commit((d) => void (d.boosters.inventory.hammer = 3)));
     const lvl = levelFile(8);
     const a = LevelAttempt.begin(h.deps, lvl, { preBoosters: [], streakTier: 0 });
     const g = start(lvl);

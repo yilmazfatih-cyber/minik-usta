@@ -88,7 +88,7 @@ describe('K-50 solver move generation', () => {
     const levels: CompiledLevel[] = [
       draft(3),
       draft(4),
-      draft(7),
+      draft(6),
       draft(9),
       draft(10),
       compiledLevel(MICRO.gap),
@@ -119,7 +119,10 @@ describe('K-50 solver move generation', () => {
           cur = { lvl, buf: next[Math.floor(rnd() * next.length)] as Int32Array };
         }
       }
-      expect(cached.stats.reachHits, `level ${li}: the cache is used`).toBeGreaterThan(0);
+      // a level with block flags (wrap, slippery, bonus …) changes holdability: the reach cache is off there (v3), the
+      // equality above still holds
+      if (lvl.pieces.every((p) => p.flags === 0))
+        expect(cached.stats.reachHits, `level ${li}: the cache is used`).toBeGreaterThan(0);
     });
     expect(states).toBeGreaterThan(500);
   }, 60_000);

@@ -44,7 +44,18 @@ function main(): number {
   }
   const skipI18n = process.argv.includes('--no-i18n');
   const i18nKeys = skipI18n ? null : loadI18nKeys();
-  const boosterUnlock = loadBoosterUnlock();
+  // `--booster-unlock hammer=8,crane=10`: override the unlock levels of config/economy.json (the Faz 2R archive was written
+  // for the Faz 2R table)
+  const unlockArg = arg('--booster-unlock');
+  const boosterUnlock = {
+    ...(loadBoosterUnlock() ?? {}),
+    ...Object.fromEntries(
+      (unlockArg ?? '')
+        .split(',')
+        .filter((x) => x.includes('='))
+        .map((x) => [x.split('=')[0] as string, Number(x.split('=')[1])]),
+    ),
+  };
   const notes: string[] = [];
   if (skipI18n) notes.push('--no-i18n: tut_key_missing (L-17) key lookup skipped');
   else if (!i18nKeys) notes.push('src/i18n/tr.json or en.json not found: tut_key_missing (L-17) skipped');

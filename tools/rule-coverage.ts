@@ -42,8 +42,12 @@ export class CoverageError extends Error {}
 export const PHASE_2R = 2.5;
 const FAZ_2R_TAG = /\(Faz 2R\b/;
 
+/** Levels v3 phase (CL-V3-11): after 2R, before 3. The binding K-56…K-66 ÖNERİ headings are required by `--phase v3`. */
+export const PHASE_V3 = 2.7;
+
 /** A phase token: `2` → 2, `2R` → 2.5 (TECH §12.4 F column, `--phase` argument). Null when the text has none. */
 export function parsePhase(text: string): number | null {
+  if (text === 'v3') return PHASE_V3;
   const m = /(\d)(R?)/.exec(text);
   if (!m) return null;
   return Number(m[1]) + (m[2] === 'R' ? PHASE_2R - 2 : 0);
@@ -51,6 +55,7 @@ export function parsePhase(text: string): number | null {
 
 /** Printable phase: 2.5 → "2R". */
 export function phaseLabel(phase: number): string {
+  if (phase === PHASE_V3) return 'v3';
   return Number.isInteger(phase) ? String(phase) : `${Math.floor(phase)}R`;
 }
 
@@ -74,6 +79,14 @@ export function kPhases(tech: string): Map<string, number> {
 export function gddRuleIds(gdd: string): string[] {
   const ids = new Set<string>();
   for (const m of gdd.matchAll(/^#{2,4} (?:\d+\. )?(K-\d\d)\b/gm)) ids.add(m[1] ?? '');
+  return [...ids].sort();
+}
+
+/** K-xx ids of `#### ÖNERİ K-xx …` headings (levels v3); an id a plain heading already defines is not repeated. */
+export function gddProposalIds(gdd: string): string[] {
+  const known = new Set(gddRuleIds(gdd));
+  const ids = new Set<string>();
+  for (const m of gdd.matchAll(/^#{2,4} ÖNERİ (K-\d\d)\b/gm)) if (!known.has(m[1] ?? '')) ids.add(m[1] ?? '');
   return [...ids].sort();
 }
 
@@ -156,6 +169,7 @@ export function ruleIds(docs: { gdd: string; tech: string; obstacles: string }):
     if (phase === undefined) throw new CoverageError(`${id} has no row in TECH §12.4`);
     out.push({ id, kind: 'K', phase });
   }
+  for (const id of gddProposalIds(docs.gdd)) out.push({ id, kind: 'K', phase: PHASE_V3 });
   const firsts = obstacleFirstLevels(docs.obstacles);
   if (firsts.size === 0) throw new CoverageError('OBSTACLES: signature table not found');
   const op = new Map([...firsts].map(([id, lvl]) => [id, obstaclePhase(lvl)] as const));
@@ -225,9 +239,11 @@ function arg(argv: readonly string[], name: string): string | null {
 
 function main(argv: readonly string[]): number {
   const p = arg(argv, '--phase');
-  const phase = p === null ? null : /^[1-9]R?$/.test(p) ? parsePhase(p) : NaN;
+  const phase = p === null ? null : /^([1-9]R?|v3)$/.test(p) ? parsePhase(p) : NaN;
   if (phase !== null && !Number.isFinite(phase)) {
-    process.stderr.write('rule-coverage: --phase needs a positive integer, optionally followed by R (2R)\n');
+    process.stderr.write(
+      'rule-coverage: --phase needs a positive integer, optionally followed by R (2R), or v3\n',
+    );
     return 2;
   }
   try {

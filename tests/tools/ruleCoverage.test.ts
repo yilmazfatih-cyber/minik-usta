@@ -40,8 +40,8 @@ describe('test:rules (TECH 12.2)', () => {
     expect(k).toEqual(expect.arrayContaining(['K-01', 'K-19', 'K-29', 'K-34', 'K-35', 'K-43', 'K-46']));
     expect(k).not.toContain('K-20');
     expect(k).not.toContain('K-30');
-    // Faz 2R closure: K-54 (booster slot state) is the newest rule.
-    expect(ids.filter((r) => r.kind === 'K')).toHaveLength(55);
+    // K-55 is the newest binding rule; K-56…K-66 are the levels v3 ÖNERİ headings (CL-V3-11, phase v3)
+    expect(ids.filter((r) => r.kind === 'K')).toHaveLength(66);
   });
 
   it('test:rules phase 2R (TECH 2R.11): K-47…K-54, the Faz 2R slice rules and the "(Faz 2R" E rows sit between phase 2 and phase 3', () => {

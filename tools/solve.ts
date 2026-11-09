@@ -14,7 +14,7 @@
  *
  * Usage: `npm run levels:solve [-- --level N[,M|N-M]] [--dir <path>] [--variant no-gaps|hammer-start]
  *   [--max-states N] [--max-ms N] [--jobs N] [--no-cache] [--no-variants] [--no-d3a] [--json] [--allow <file>]
- *   [--out <dir>] [--report] [--update-golden] [--emit-tables] [--large | --no-large] [--large-ms N]`
+ *   [--out <dir>] [--report] [--update-golden] [--emit-tables] [--large | --no-large] [--large-ms N] [--walks N]`
  * `--large` / `--no-large`: run / skip the large-level search (best found solution, TECH §V3.3) when the exploration
  *   is incomplete (default: on for `schemaVersion` 3 levels); `--large-ms` its time limit (default 60 000).
  * `npm run levels:check [-- …]` = this tool with `--check`: `levels:validate` (same `--dir`, `--level`, `--allow`,
@@ -187,6 +187,8 @@ function runValidate(dir: string): number {
   const allowFile = arg('--allow');
   if (allowFile !== undefined) forward.push('--allow', allowFile);
   if (has('--no-i18n')) forward.push('--no-i18n');
+  const unlock = arg('--booster-unlock');
+  if (unlock !== undefined) forward.push('--booster-unlock', unlock);
   const res = spawnSync(process.execPath, [join(ROOT, 'tools', 'validate-levels.ts'), ...forward], {
     stdio: 'inherit',
   });
@@ -220,6 +222,7 @@ async function main(): Promise<number> {
     ...(has('--no-variants') ? { variants: false } : {}),
     ...(variant !== undefined && isVariantName(variant) ? { variant } : {}),
     ...(has('--large') ? { large: true } : has('--no-large') ? { large: false } : {}),
+    ...(arg('--walks') !== undefined ? { walks: intArg('--walks', 10_000) } : {}),
     ...(arg('--large-ms') !== undefined ? { largeMs: intArg('--large-ms', 60_000) } : {}),
   };
   const allow: AllowList = arg('--allow') !== undefined ? loadAllowList(arg('--allow')) : loadAllowList();

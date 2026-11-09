@@ -1,0 +1,60 @@
+{
+  "id": 8,
+  "name": {
+    "tr": "İp Merdiven",
+    "en": "Rope Ladder"
+  },
+  "difficulty": "normal",
+  "yard": {
+    "cols": 6,
+    "rows": 7
+  },
+  "wall": {
+    "height": 5,
+    "gaps": []
+  },
+  "segments": [
+    {
+      "name": {
+        "tr": "Kat 1",
+        "en": "Floor 1"
+      },
+      "rows": 6
+    },
+    {
+      "name": {
+        "tr": "Kat 2",
+        "en": "Floor 2"
+      },
+      "rows": 6
+    },
+    {
+      "name": {
+        "tr": "Kat 3",
+        "en": "Floor 3"
+      },
+      "rows": 6
+    }
+  ],
+  "colors": "WYG",
+  "orientations": ["D2_0", "D2_90", "I3_0", "C3_0", "C3_90", "C3_180", "C3_270", "L4_180", "J4_0", "T4_180"],
+  "maxDominoShare": 0.5,
+  "blocks": [13, 14],
+  "mutations": 14,
+  "want": {
+    "dig": [2, 4],
+    "greedy": [0.08, 0.6],
+    "careless": [0.04, 0.5],
+    "keep": 6
+  },
+  "teaches": "Y13",
+  "twoTone": {
+    "pairs": ["WY", "GW"],
+    "count": 2,
+    "shapes": ["D2"]
+  },
+  "traits": {
+    "slippery": 2
+  },
+  "rareFirst": 3
+}

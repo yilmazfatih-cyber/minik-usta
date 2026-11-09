@@ -39,7 +39,7 @@ const FORBIDDEN: ReadonlySet<GameEvent['t']> = new Set<GameEvent['t']>([
 export function replayCanonical(
   lvl: CompiledLevel,
   log: readonly SessionAction[],
-  expected: readonly (readonly [number, number])[],
+  expected: readonly (readonly [number, number])[] | null,
 ): ReplayCheck {
   const sink = new ArraySink();
   const r: { failure: string | null } = { failure: null };
@@ -47,6 +47,7 @@ export function replayCanonical(
     const session = GameSession.replay(lvl, log, { strict: true }, sink, (i, _action, sess) => {
       if (i === 0 || r.failure) return;
       const h = hashState(sess.state);
+      if (expected === null) return;
       const want = expected[i - 1];
       if (!want || h[0] !== want[0] || h[1] !== want[1])
         r.failure = `move ${i}: the replayed state differs from the solver's state (Zobrist)`;

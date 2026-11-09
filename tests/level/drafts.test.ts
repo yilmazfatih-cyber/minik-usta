@@ -38,7 +38,9 @@ function validateDraft(n: number, json: unknown = draft(n)): Issue[] {
   return validateLevelJson(json, {
     fileId: n,
     previousMechanics: previous,
-    boosterUnlock: loadBoosterUnlock() ?? undefined,
+    // the archive is the Faz 2R set: its tutorials were written for the Faz 2R unlock table (Hammer at 8); the shipped
+    // table moved the Hammer to 10 (CL-V3-07)
+    boosterUnlock: { ...(loadBoosterUnlock() ?? {}), hammer: 8 },
   }).issues;
 }
 

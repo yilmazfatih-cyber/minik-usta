@@ -1,0 +1,51 @@
+{
+  "id": 4,
+  "name": {
+    "tr": "Ön Duvar",
+    "en": "Front Wall"
+  },
+  "difficulty": "easy",
+  "yard": {
+    "cols": 6,
+    "rows": 5
+  },
+  "wall": {
+    "height": 5,
+    "gaps": []
+  },
+  "segments": [
+    {
+      "name": {
+        "tr": "Kat 1",
+        "en": "Floor 1"
+      },
+      "rows": 4
+    },
+    {
+      "name": {
+        "tr": "Kat 2",
+        "en": "Floor 2"
+      },
+      "rows": 4
+    },
+    {
+      "name": {
+        "tr": "Kat 3",
+        "en": "Floor 3"
+      },
+      "rows": 4
+    }
+  ],
+  "colors": "WYR",
+  "orientations": ["D2_0", "D2_90", "C3_0", "C3_90", "C3_180", "C3_270", "L4_0", "J4_0"],
+  "maxDominoShare": 0.6,
+  "blocks": [9, 10],
+  "mutations": 14,
+  "want": {
+    "dig": [1, 3],
+    "greedy": [0.3, 0.9],
+    "careless": [0.2, 0.8],
+    "keep": 6
+  },
+  "minKinds": 2
+}

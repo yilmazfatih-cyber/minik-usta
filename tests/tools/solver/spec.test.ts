@@ -142,7 +142,7 @@ describe('K-50 puzzle-intelligence specification (LEVELS §6.6 Tablo B as data)'
 
   it('K-50 LevelSchema accepts the shipped `targets` shape that specGaps reads', () => {
     const lvl = LevelSchema.parse(JSON.parse(readFileSync(join(ROOT, 'levels', 'level_005.json'), 'utf8')));
-    expect(lvl.targets?.greedyWin).toBeDefined();
+    expect(lvl.targets?.min).toBeDefined(); // a large level (N ≥ 9) carries min and deadRate only (CL-V3-01)
     expect(Object.keys(SPEC_BANDS[5] ?? {})).toContain('greedyWin');
   });
 });

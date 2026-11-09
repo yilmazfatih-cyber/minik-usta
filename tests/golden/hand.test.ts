@@ -223,7 +223,9 @@ describe.each(GOLDEN_LEVELS)('golden level %i: canonical solution (LEVELS §2, s
       wall: lvl.wallHeight,
     });
     expect(lvl.moves, 'LEVELS "Hamle"').toBe(golden.budget);
-    expect(golden.movesLeft).toBe(golden.budget - golden.minMoves);
+    // a bonus block (Y12, K-60) pays its moves when it is placed correctly: the solution places every block once
+    const bonus = lvl.pieces.reduce((sum, p) => sum + (p.bonusMoves ?? 0), 0);
+    expect(golden.movesLeft).toBe(golden.budget - golden.minMoves + bonus);
     expect(log[0]).toEqual({ kind: 'start', preBoosters: [], streakTier: 0 });
     expect(log.slice(1).every((a) => a.kind === 'drag')).toBe(true);
     expect(golden.steps.length).toBe(golden.minMoves);

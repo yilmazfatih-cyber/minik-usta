@@ -3,7 +3,7 @@
   "file": "level_001.json",
   "levelHash": "375c7d922a1e9db5",
   "rulesVersion": 4,
-  "solverVersion": 4,
+  "solverVersion": 6,
   "variant": null,
   "schemaVersion": 2,
   "status": "solved",
@@ -481,7 +481,7 @@
     "states": 767033,
     "expanded": 767033,
     "edges": 9885120,
-    "ms": 28688,
+    "ms": 34145,
     "bytes": 144409285,
     "dragSessions": 90181,
     "applyMoves": 1157452,
@@ -491,9 +491,9 @@
     "d3aUnknown": 0,
     "complete": true,
     "limit": null,
-    "totalMs": 30236
+    "totalMs": 36259
   },
   "v3": null,
   "large": null,
-  "cacheKey": "1904d74b:rules4:solver4:level:var:d3a"
+  "cacheKey": "1904d74b:rules4:solver6:level:var:d3a"
 }

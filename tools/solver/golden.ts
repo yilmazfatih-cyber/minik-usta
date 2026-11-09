@@ -84,12 +84,14 @@ function atOf(a: At | string): [number, number] {
 
 /** The hand golden of a solved level (`r.canonical` replayed on `lvl`, the level of `r`). */
 export function handGolden(r: SolveReport, lvl: CompiledLevel): HandGolden {
-  if (r.status !== 'solved' || !r.metrics || !r.replay?.ok)
+  const minMoves = r.metrics?.min ?? r.large?.best ?? null;
+  const actions = r.metrics ? r.canonical : (r.large?.actions ?? []);
+  if (r.status !== 'solved' || minMoves === null || !r.replay?.ok)
     throw new Error(`level ${r.level}: no replayed canonical solution (status ${r.status})`);
   const sink = new ArraySink();
   const session = GameSession.start(lvl, {}, { strict: true }, sink);
   const steps: HandStep[] = [];
-  const moves = r.canonical.slice(1) as Move[];
+  const moves = actions.slice(1) as Move[];
   const ref = (id: PieceId): string => pieceRef(lvl, id);
   moves.forEach((move, i) => {
     if (move.kind !== 'drag') throw new Error(`level ${r.level}: canonical move ${i + 1} is not a drag`);
@@ -129,7 +131,7 @@ export function handGolden(r: SolveReport, lvl: CompiledLevel): HandGolden {
     throw new Error(`level ${r.level}: the canonical replay ends ${session.outcome}`);
   const yao = session.yao();
   const hash = eventLogHash(sink.events);
-  if (hash !== r.replay.eventLogHash)
+  if (r.replay.eventLogHash !== null && hash !== r.replay.eventLogHash)
     throw new Error(
       `level ${r.level}: eventLogHash ${hash} differs from the solver replay ${r.replay.eventLogHash}`,
     );
@@ -141,7 +143,7 @@ export function handGolden(r: SolveReport, lvl: CompiledLevel): HandGolden {
     rulesVersion: r.rulesVersion,
     geo: { yard: [g.wy, g.hy], site: [g.ws, g.hs], H: g.h, wall: lvl.wallHeight },
     budget: lvl.moves,
-    minMoves: r.metrics.min,
+    minMoves,
     movesLeft: session.movesLeft,
     yao: { overWall: yao.overWall, rail: yao.rail },
     steps,

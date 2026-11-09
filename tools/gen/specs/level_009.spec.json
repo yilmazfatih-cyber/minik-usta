@@ -1,0 +1,73 @@
+{
+  "id": 9,
+  "name": {
+    "tr": "Çatı Altı",
+    "en": "Under the Roof"
+  },
+  "difficulty": "normal",
+  "yard": {
+    "cols": 6,
+    "rows": 7
+  },
+  "wall": {
+    "height": 4,
+    "gaps": []
+  },
+  "segments": [
+    {
+      "name": {
+        "tr": "Kat 1",
+        "en": "Floor 1"
+      },
+      "rows": 6
+    },
+    {
+      "name": {
+        "tr": "Kat 2",
+        "en": "Floor 2"
+      },
+      "rows": 6
+    },
+    {
+      "name": {
+        "tr": "Kat 3",
+        "en": "Floor 3"
+      },
+      "rows": 6
+    }
+  ],
+  "colors": "WYG",
+  "orientations": [
+    "D2_0",
+    "D2_90",
+    "O4_0",
+    "I3_0",
+    "C3_0",
+    "C3_90",
+    "C3_180",
+    "C3_270",
+    "L4_0",
+    "J4_0",
+    "T4_0"
+  ],
+  "maxDominoShare": 0.5,
+  "blocks": [14, 14],
+  "mutations": 14,
+  "want": {
+    "dig": [2, 4],
+    "greedy": [0.08, 0.6],
+    "careless": [0.04, 0.5],
+    "keep": 6
+  },
+  "teaches": "Y12",
+  "twoTone": {
+    "pairs": ["WY", "GW"],
+    "count": 2,
+    "shapes": ["D2", "C3"]
+  },
+  "traits": {
+    "bonus": 1,
+    "bonusMoves": 2
+  },
+  "rareFirst": 3
+}

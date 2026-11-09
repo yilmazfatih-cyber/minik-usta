@@ -1,0 +1,57 @@
+{
+  "id": 5,
+  "name": {
+    "tr": "Renkli Pencere",
+    "en": "Two-Tone Window"
+  },
+  "difficulty": "normal",
+  "yard": {
+    "cols": 6,
+    "rows": 6
+  },
+  "wall": {
+    "height": 4,
+    "gaps": []
+  },
+  "segments": [
+    {
+      "name": {
+        "tr": "Kat 1",
+        "en": "Floor 1"
+      },
+      "rows": 5
+    },
+    {
+      "name": {
+        "tr": "Kat 2",
+        "en": "Floor 2"
+      },
+      "rows": 5
+    },
+    {
+      "name": {
+        "tr": "Kat 3",
+        "en": "Floor 3"
+      },
+      "rows": 5
+    }
+  ],
+  "colors": "WYR",
+  "orientations": ["D2_0", "D2_90", "O4_0", "C3_0", "C3_180", "L4_0"],
+  "maxDominoShare": 0.6,
+  "blocks": [11, 12],
+  "mutations": 14,
+  "want": {
+    "dig": [2, 4],
+    "greedy": [0.15, 0.7],
+    "careless": [0.1, 0.5],
+    "keep": 6
+  },
+  "teaches": "Y9",
+  "twoTone": {
+    "pairs": ["WY", "RY"],
+    "count": 3,
+    "shapes": ["D2"]
+  },
+  "minKinds": 2
+}

@@ -40,7 +40,7 @@ Değişiklik: entrepreneur (ad, amaç) + code-lead (tip). Tipler: `int`, `str`, 
 | `level_resume` | `level` int, `movesMade` int | MVP | OR-13 bölüm içi devam |
 | `level_resume_invalid` | `level` int, `movesMade` int, `cause` enum(level_hash, rules_version, both) | MVP | GDD K-43/4, E-45 geçersiz deneme; güncelleme kaynaklı iptal sıklığı |
 | `level_load_failed` | `level` int, `stage` enum(schema, logic), `code` str \| null | MVP | UX §4 hata durumu ("Bu bölüm hazırlanamadı" → Ana ekran); TECH §8.3 yükleme anı denetimi; sahada bozuk bölüm verisi (BUSINESS §8 Kapı 0 "kritik hata 0") |
-| `booster_used` | `booster` enum(economy.json güçlendirici kimlikleri), `level` int, `target` enum(cargo, crate, cementBag, chain, siteDebris, stuckMortar, block) \| null | MVP | Ekonomi; Faz 2R Çekiç hedef dağılımı (BUSINESS §5.4 fiyat bandı, Çekiç hedefli bölüm oranı) |
+| `booster_used` | `booster` enum(economy.json güçlendirici kimlikleri), `level` int, `target` enum(cargo, crate, cementBag, chain, siteDebris, stuckMortar, wrap, block) \| null | MVP | Ekonomi; Faz 2R Çekiç hedef dağılımı (BUSINESS §5.4 fiyat bandı, Çekiç hedefli bölüm oranı) |
 | `offer_shown` | `offer` enum(continue, life, booster_plus, starter, piggy, pack, daily_double), `placement` enum(out_of_moves, bridge_loss, lives_zero, daily_double, in_level_plus, pre_level_plus, shop), `offerIndex` int (1–3) \| null, `priceCoins` int \| null | MVP | Teklif hunisi |
 | `offer_result` | `offer_shown` alanları + `result` enum(coins, ad, free, declined, unavailable) | MVP | Kurtarma karışımı (BUSINESS §5.4 b) |
 | `purchase` | `sku` enum(coins_1000, coins_2750, coins_6000, coins_13000, coins_35000, coins_75000, starter, piggy_break), `fake` bool | MVP | Monetizasyon |
@@ -103,7 +103,7 @@ Değişiklik: entrepreneur (ad, amaç) + code-lead (tip). Tipler: `int`, `str`, 
     E13). `movesLeft` Söküm sonrası sayaç (iade yok); `piecesReturned` = sahaya dönen blok sayısı. Geri Al bu Söküm'ü geri
     alırsa yeni olay gönderilmez; `level_end` sayaçları düşülür.
   - `booster_used.target`: Çekiç'te K-36 hedef türü (`cargo` = Y5 Ağır Yük, `crate`, `cementBag`, `chain`, `siteDebris`,
-    `stuckMortar`); Vinç, Boya Fırçası ve Altın Mala'da `block`; Geri Al ve oyun öncesi güçlendiricilerde `null`. Hedefsiz
+    `stuckMortar`, `wrap` = Y11 sargı kesildi; levels v3); Vinç, Boya Fırçası ve Altın Mala'da `block`; Geri Al ve oyun öncesi güçlendiricilerde `null`. Hedefsiz
     güçlendiricide (E12) "+" gösterilmediği için `offer_shown { offer: booster_plus }` de gönderilmez.
   - `tutorial_step`: adımın `done` olayıyla bitince bir kez (K-53; gizlenme ve yeniden görünme olay üretmez). `shows` =
     adımın kaç kez göründüğü (ilk görünme dahil, UX §13.1 yeniden belirme sayılır), `msToDone` = ilk görünmeden `done`'a

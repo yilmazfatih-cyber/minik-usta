@@ -116,43 +116,47 @@ describe('UX 5.8 web back guard (TECH 2R.1, DL-2R-16)', () => {
 const NO_INV = { inventory: {}, freeTrialsGranted: [] } as const;
 
 describe('UX 5.10 booster bar (K-54, META 4)', () => {
-  it('K-54 slot models: locked below the unlock level (levels 1–7 all four), free trials at unlock (META 4), stored count after use', () => {
+  it('K-54 slot models: locked below the unlock level (levels 1–9 all four; Hammer and Crane open at 10, CL-V3-07), free trials at unlock (META 4), stored count after use', () => {
     const lvl = draft(1);
     const g = GameSession.start(lvl);
     const m1 = boosterSlotModels({ levelId: 1, inv: NO_INV, targets: g.summary().boosterTargets });
     expect(m1.map((m) => m.id)).toEqual([...BOOSTER_SLOT_IDS]);
     expect(m1.map((m) => m.state)).toEqual(['locked', 'locked', 'locked', 'locked']);
-    expect(m1.map((m) => m.unlockLevel)).toEqual([8, 10, 22, 13]);
-    expect(pendingFreeTrials(7, [])).toEqual({});
-    // level 8: the hammer is open; before the attempt grants them, its 3 free trials show as pending
-    expect(pendingFreeTrials(8, [])).toEqual({ hammer: 3 });
+    expect(m1.map((m) => m.unlockLevel)).toEqual([10, 10, 22, 13]);
+    expect(pendingFreeTrials(9, [])).toEqual({});
+    // level 10: the hammer and the crane are open; before the attempt grants them, their free trials show as pending
+    expect(pendingFreeTrials(10, [])).toEqual({ hammer: 3, crane: 2 });
     expect(pendingFreeTrials(10, ['hammer'])).toEqual({ crane: 2 });
-    const b8 = draft(8);
-    const s8 = GameSession.start(b8);
-    const cargo =
-      [...Array(b8.layout.counts.pieces).keys()].find((id) => b8.pieces[id]?.cls === 'cargo') ?? -1;
-    const before = boosterSlotModels({ levelId: 8, inv: NO_INV, targets: s8.summary().boosterTargets });
+    // level 7 holds two wrapped blocks (K-66: the hammer cuts a wrap); the slot model only needs the level id
+    const b7 = draft(7);
+    const s7 = GameSession.start(b7);
+    const before = boosterSlotModels({ levelId: 10, inv: NO_INV, targets: s7.summary().boosterTargets });
     expect(before[0]).toMatchObject({ id: 'hammer', state: 'ready', count: 3 });
-    // granted at the attempt start (inventory 3, marked), one applied hammer leaves the inventory at 2 in its write
+    // granted at the attempt start (inventory 3, marked), the applied hammers leave the inventory at 1 in its write
     const granted = { inventory: { hammer: 3 }, freeTrialsGranted: ['hammer'] };
     expect(
-      boosterSlotModels({ levelId: 8, inv: granted, targets: s8.summary().boosterTargets })[0],
+      boosterSlotModels({ levelId: 10, inv: granted, targets: s7.summary().boosterTargets })[0],
     ).toMatchObject({ state: 'ready', count: 3 });
-    const res = s8.apply({ kind: 'hammer', target: { pieceId: cargo } });
-    expect(res.status).toBe('applied');
-    expect(usedInAttempt('hammer', s8.log)).toBe(1);
+    let res = null;
+    for (;;) {
+      const next = pickEligible('hammer', s7.state, s7.hooks)[0];
+      if (next === undefined) break;
+      res = s7.apply({ kind: 'hammer', target: { pieceId: next } });
+      expect(res.status).toBe('applied');
+    }
+    expect(usedInAttempt('hammer', s7.log)).toBe(2);
     const after = boosterSlotModels({
-      levelId: 8,
-      inv: { inventory: { hammer: 2 }, freeTrialsGranted: ['hammer'] },
-      targets: res.summary.boosterTargets,
+      levelId: 10,
+      inv: { inventory: { hammer: 1 }, freeTrialsGranted: ['hammer'] },
+      targets: (res ?? s7.apply({ kind: 'undo' })).summary.boosterTargets,
     });
-    // K-54: the only hammer target is gone → noTarget wins over the count (no "+", no purchase window)
-    expect(after[0]).toMatchObject({ id: 'hammer', state: 'noTarget', count: 2 });
+    // K-54: the last hammer target is gone → noTarget wins over the count (no "+", no purchase window)
+    expect(after[0]).toMatchObject({ id: 'hammer', state: 'noTarget', count: 1 });
     // a granted trial is not given twice; 0 left with a target = empty
     const empty = boosterSlotModels({
-      levelId: 8,
+      levelId: 10,
       inv: { inventory: {}, freeTrialsGranted: ['hammer'] },
-      targets: { ...res.summary.boosterTargets, hammer: true },
+      targets: { ...(res ?? s7.apply({ kind: 'undo' })).summary.boosterTargets, hammer: true },
     });
     expect(empty[0]?.state).toBe('empty');
     expect(slotLook('ready').color).toBe('green');
@@ -160,15 +164,15 @@ describe('UX 5.10 booster bar (K-54, META 4)', () => {
     expect(slotLook('noTarget').color).toBe('grey');
   });
 
-  it('E-61 hammer slot without target in level 9 (K-54: unlocked at 8, nothing to break in 9)', () => {
-    const g = GameSession.start(draft(9));
+  it('E-61 hammer slot without target in level 8 (K-54: slippery and two-tone blocks are no hammer target; nothing is wrapped)', () => {
+    const g = GameSession.start(draft(8));
     const [hammer, crane] = boosterSlotModels({
-      levelId: 9,
+      levelId: 10,
       inv: NO_INV,
       targets: g.summary().boosterTargets,
     });
     expect(hammer).toMatchObject({ id: 'hammer', state: 'noTarget' });
-    expect(crane).toMatchObject({ id: 'crane', state: 'locked' });
+    expect(crane?.state).not.toBe('locked');
   });
 
   it('UX 5.2 the scene answers K-54: locked → common.unlockAt, noTarget → #108 shake + booster.<id>.noTarget, ready → the pick', () => {
@@ -371,18 +375,22 @@ describe('UX 5.2 booster picks read the core (K-33, K-36, K-37)', () => {
     }
   });
 
-  it('K-36 / K-37 hammer targets the Ağır Yük of level 8; the crane spots of a level 10 block are correct site spots', () => {
-    const b8 = draft(8);
-    const g8 = GameSession.start(b8);
-    expect(pickEligible('hammer', g8.state, g8.hooks).map((id) => b8.pieces[id]?.cls)).toEqual(['cargo']);
-    const g10 = GameSession.start(draft(10));
-    const id = g10.summary().neededNow[0] ?? -1;
-    const spots = pickSpots('crane', g10.state, id);
-    expect(spots.length).toBeGreaterThan(0);
-    const first = spots[0];
-    if (!first) throw new Error('no spot');
-    const res = g10.apply(first.move);
-    expect(res.status).toBe('applied');
-    expect(res.events.some((e) => e.t === 'pieceLifted' && e.by === 'crane')).toBe(true);
+  it('K-36 / K-37 hammer targets the wrapped blocks of level 7; the crane spots of a level 1 block are correct site spots', () => {
+    const b7 = draft(7);
+    const g7 = GameSession.start(b7);
+    expect(pickEligible('hammer', g7.state, g7.hooks)).toHaveLength(2);
+    const g10 = GameSession.start(draft(1));
+    // the first crane-selectable block that has a correct site spot: the crane lifts it there
+    let lifted = false;
+    for (const id of pickEligible('crane', g10.state, g10.hooks)) {
+      const first = pickSpots('crane', g10.state, id)[0];
+      if (!first) continue;
+      const res = g10.apply(first.move);
+      if (res.status !== 'applied') continue;
+      expect(res.events.some((e) => e.t === 'pieceLifted' && e.by === 'crane')).toBe(true);
+      lifted = true;
+      break;
+    }
+    expect(lifted).toBe(true);
   });
 });

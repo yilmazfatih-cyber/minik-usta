@@ -1,0 +1,82 @@
+{
+  "id": 10,
+  "name": {
+    "tr": "Ağaç Ev Tamam!",
+    "en": "Treehouse Done!"
+  },
+  "difficulty": "hard",
+  "yard": {
+    "cols": 6,
+    "rows": 8
+  },
+  "wall": {
+    "height": 5,
+    "gaps": []
+  },
+  "segments": [
+    {
+      "name": {
+        "tr": "Kat 1",
+        "en": "Floor 1"
+      },
+      "rows": 5
+    },
+    {
+      "name": {
+        "tr": "Kat 2",
+        "en": "Floor 2"
+      },
+      "rows": 5
+    },
+    {
+      "name": {
+        "tr": "Kat 3",
+        "en": "Floor 3"
+      },
+      "rows": 5
+    },
+    {
+      "name": {
+        "tr": "Kat 4",
+        "en": "Floor 4"
+      },
+      "rows": 5
+    }
+  ],
+  "colors": "WYG",
+  "orientations": [
+    "D2_0",
+    "D2_90",
+    "O4_0",
+    "I3_0",
+    "C3_0",
+    "C3_90",
+    "C3_180",
+    "C3_270",
+    "L4_0",
+    "L4_180",
+    "J4_0",
+    "J4_180",
+    "T4_0",
+    "T4_180"
+  ],
+  "maxDominoShare": 0.5,
+  "blocks": [16, 16],
+  "mutations": 14,
+  "want": {
+    "dig": [3, 5],
+    "greedy": [0.03, 0.3],
+    "careless": [0.02, 0.25],
+    "keep": 6
+  },
+  "twoTone": {
+    "pairs": ["WY", "GW"],
+    "count": 3,
+    "shapes": ["D2", "C3", "L4"]
+  },
+  "traits": {
+    "wrapped": 2,
+    "slippery": 1
+  },
+  "rareFirst": 4
+}

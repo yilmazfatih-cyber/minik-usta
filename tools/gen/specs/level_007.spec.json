@@ -1,0 +1,67 @@
+{
+  "id": 7,
+  "name": {
+    "tr": "Paketli Malzeme",
+    "en": "Wrapped Supplies"
+  },
+  "difficulty": "normal",
+  "yard": {
+    "cols": 6,
+    "rows": 6
+  },
+  "wall": {
+    "height": 3,
+    "gaps": []
+  },
+  "segments": [
+    {
+      "name": {
+        "tr": "Kat 1",
+        "en": "Floor 1"
+      },
+      "rows": 4
+    },
+    {
+      "name": {
+        "tr": "Kat 2",
+        "en": "Floor 2"
+      },
+      "rows": 4
+    },
+    {
+      "name": {
+        "tr": "Kat 3",
+        "en": "Floor 3"
+      },
+      "rows": 4
+    },
+    {
+      "name": {
+        "tr": "Kat 4",
+        "en": "Floor 4"
+      },
+      "rows": 4
+    }
+  ],
+  "colors": "GRY",
+  "orientations": ["D2_0", "D2_90", "C3_0", "C3_90", "C3_180", "C3_270", "L4_0", "J4_180", "O4_0", "T4_0"],
+  "maxDominoShare": 0.5,
+  "blocks": [12, 13],
+  "mutations": 14,
+  "want": {
+    "dig": [2, 4],
+    "greedy": [0.08, 0.6],
+    "careless": [0.04, 0.5],
+    "keep": 6
+  },
+  "teaches": "Y11",
+  "twoTone": {
+    "pairs": ["RY"],
+    "count": 2,
+    "shapes": ["D2"]
+  },
+  "traits": {
+    "wrapped": 2
+  },
+  "rareFirst": 3
+}

@@ -2059,3 +2059,28 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
   bonus block gives two moves." (Bölüm 9). Diğer bölümler mevcut anahtarları kullanır (5 `tut.m.match`, 6 `tut.m.pattern`, 3 ve 8
   `tut.m.dig`). STORY §6A listesine eklenmeleri gerekir (D-017 testi). Yeni kaplama kareleri bu turda: sargı (film + kurdele),
   makas rozeti, krem "+2" rozeti, iki renkli dikiş; palet kareleri Y10 ertelendiği için beklemede.
+- [code-lead → orchestrator] **Paket F (REVIEW_LEVELS_V3 CL-V3-01 … 12) kapanışları (2026-11-09):** web `levels/` yeniden
+  kuruldu (dal `wip/e2` üzerinden `wip/phase-2r`'e itilir, böylece D-091 tek kaynağı yine web). Blok sayısı 8,8,9,10,12,14,13,14,14,16
+  (toplam **118**, eski 81; hedef 124); saha 5×4 … 6×8; her bölümün (saha, şantiye, duvar) üçlüsü farklı (en çok iki bölüm paylaşır);
+  şekil türleri D2 O4 C3 L4 J4 T4 I3; iki renkli bloklar O4, C3, I3, D2; bölüm 5/7/8/9 yeni özellikler Y9, Y11 (sargı + makas),
+  **Y13 kaygan (8'e çekildi)**, Y12; bölüm 10 üçünü birleştirir (sargı + makas, kaygan, iki renkli). Kapılar: `levels:check`
+  10/10 çözüldü, 0 hata, 0 uyarı (10 000 yürüyüşlü ölü masa kapısı, her bölümde tahmin ≤ %0,01); `npm run check` yeşil.
+  **CL-V3-01 (B, ışın + yürüyüş):** `tools/solver/walks.ts`; tam tarama 9+ blokta koşmaz; kapı bir tahmindir, kanıt değil
+  (TECH V3.6). **Kapanmayan:** blok toplamı 124 değil 118; bölüm 10 yalnız 16 blok (D2 payı ≤ %50 ve 6×8 saha 16'yı verir,
+  17–22 için D2 sınırı gevşemeli ya da Hikaye 2'nin 6×8 + 4 kat dışı şantiyesi gerekir: **product-lead kararı**).
+  **CL-V3-02:** `shape_decisions_low` Hikaye 1'de uyarıya indirildi (`level.chapter ≤ 1`), product-lead B3 kararını onaylasın;
+  içerik testleri yeni bölümlere göre yazıldı; Pages başlığına "levels v3b preview" eklendi (Unity iş akışı).
+  **CL-V3-03:** `ahaMin` büyük bölümde ölçülemez (tüm çizge ister); yerine "gördüğü doğru yerleşimi alan oyuncu" vekili
+  (`policy.loose` ≤ 0,70 uyarı kapısı, 7–10'dan en az biri ≤ 0,5 testi) ve "dikkatli oyuncu" kazanma oranı (seçici) geldi;
+  bölüm JSON `targets` yalnız `min` ve `deadRate` taşır (ölçülen değere uydurulmuş sahte bant yok). **CL-V3-05:** Y13 kaygan
+  bölüm 8'de (`mechanics.ts` `firstLevel` 8; C# eşi aynı); palet (Y10) bekliyor (K-58 madde 9). **CL-V3-06:** bonus
+  Hikaye 1'de `k` = 0 kalır: bütçe `best` + P, bonus bir his anıdır (sayaç +2 zıplar); sahibe söylenmeli, HUD'da "(+2)" yok.
+  **CL-V3-07:** Çekiç açılışı `config/economy.json` 8 → 10 (product-lead'in dosyası; P-E2-1'deki öneriyi uyguladım, onaylasın),
+  `levelScene2r` testleri 10'a göre. **CL-V3-08:** `TWO_TONE_PAIRS_CH1` G–Y çıkarıldı (TS + C#); renk körü sembol çizimi
+  (Unity `BlockSkin`) **yapılmadı**. **CL-V3-09:** C# testleri K-62, K-63, K-65 (G–Y dahil) eklendi; K-64 "TS aracı, C# yok"
+  (`rule_ids.json` `notApplicableInCSharp`, `Rule_coverage_phase_v3`). **CL-V3-10:** `ts-oracle.mjs` kapalı palet katmanı gibi
+  seçilemeyen blok denemeleri, çözümün tamamını ve yarısını oynayan diziler, aile bazlı kazanma/olay eşikleri (palet: gönderilen
+  bölüm yok, yalnız rastgele). **CL-V3-11:** `test:rules --phase v3` (K-56…K-66, 66 K kimliği). **CL-V3-12:** `tut.m.twotone`
+  ("İki renk de plana otursun." / "Both colours must match the plan.", ton denetimi design-lead'de) ve `obs.y9…y13.desc`
+  (OBSTACLES ÖNERİ kartlarından birebir). **Product-lead'e:** LEVELS §2 bölüm kartlarını yeni JSON'a göre yeniden yazıp
+  `<!-- levels:section2-current -->` satırını ekleyin; o zaman `data.review` doküman↔JSON testleri (51+) yeniden çalışır (şimdi atlanır).

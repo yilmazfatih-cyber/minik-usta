@@ -1542,8 +1542,8 @@ function checkFlagCombos(level: LevelData, push: Push): void {
 // L-40 / L-41 v3 block traits (GDD §16 ÖNERİ K-56…K-65; LEVELS §8.10 U-v3-1 code table; OBSTACLES v3 combinations)
 // ---------------------------------------------------------------------------------------------------------------
 
-/** Colour pairs a two-tone block may use in story chapter 1 (K-65 item 3: deutan and protan ΔE ≥ 30). */
-export const TWO_TONE_PAIRS_CH1: readonly string[] = ['WY', 'RY', 'GW', 'GY'];
+/** Colour pairs a two-tone block may use in story chapter 1 (K-65 item 3: deutan and protan ΔE ≥ 30; CL-V3-08: G–Y dropped, brightness contrast 1.52:1). */
+export const TWO_TONE_PAIRS_CH1: readonly string[] = ['WY', 'RY', 'GW'];
 /** At most this many bonus blocks per level (K-60 item 2). */
 export const MAX_BONUS_BLOCKS = 2;
 /** K-63 tiling families on a 2-column site: "bottom row full" and "column" orientations. */

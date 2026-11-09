@@ -26,6 +26,8 @@ import { replayCanonical } from './verify.ts';
 import type { ReplayCheck } from './verify.ts';
 import { VARIANTS, applyVariant, variantApplies, variantBandOk } from './variants.ts';
 import { largeActions, solveLarge } from './large.ts';
+import { policyWinRate, randomWalks, WALKS_DEFAULT } from './walks.ts';
+import type { WalkResult } from './walks.ts';
 import { v3Metrics } from './v3metrics.ts';
 import type { V3Metrics } from './v3metrics.ts';
 import { schemaVersionOf } from '../../src/core/level/schema.ts';
@@ -35,7 +37,7 @@ import type { VariantName } from './variants.ts';
  * Bump when the solver's results can change for the same level and rules (cache key with `levelHash` and
  * `RULES_VERSION`, TECH §2R.5). 4 = levels v3 (K-64 measures, v3 gates, large-level search, TECH §V3).
  */
-export const SOLVER_VERSION = 4;
+export const SOLVER_VERSION = 6;
 
 export interface SolveOptions {
   readonly maxStates?: number;
@@ -53,6 +55,10 @@ export interface SolveOptions {
   readonly large?: boolean;
   /** Time limit of the large-level search (default `LARGE_MAX_MS` = 60 000). */
   readonly largeMs?: number;
+  /** Random walks of the large-level dead-state gate (default `WALKS_DEFAULT` = 10 000; CL-V3-01). */
+  readonly walks?: number;
+  /** Walk ends the beam probes (default 200; the tests use fewer). */
+  readonly walkSample?: number;
 }
 
 /** What the report keeps of a large-level search (tools/solver/large.ts). */
@@ -71,7 +77,17 @@ export interface LargeSummary {
   readonly runs: readonly { readonly width: number; readonly cost: number | null; readonly ms: number }[];
   /** `start` + the found drags. */
   readonly actions: readonly SessionAction[];
+  /** CL-V3-01 option B: the random-walk dead-state gate that replaces the whole-space scan (null when not run). */
+  readonly walks?: WalkResult | null;
+  /**
+   * CL-V3-03 proxy for `greedyWin` / `ahaMin` (they need the whole graph): win rate of a "take a correct placement you
+   * see" player within `moves` (tight) and within `moves` + N / 2 (loose); null when not run.
+   */
+  readonly policy?: { readonly tight: number; readonly loose: number } | null;
 }
+
+/** A level with at least this many material blocks skips the whole-space scan (it stops working at 8–10, B2). */
+export const LARGE_MIN_BLOCKS = 9;
 
 export type SolveStatus = 'solved' | 'unsolvable' | 'unknown' | 'invalid';
 
@@ -212,8 +228,9 @@ export function solveLevelData(
   const hash = levelHash(data);
   const level = opts.variant ? applyVariant(data, opts.variant) : data;
   const lvl = compile(level);
+  const bigLevel = lvl.materialCount >= LARGE_MIN_BLOCKS && (opts.large ?? schemaVersionOf(level) === 3);
   const g = explore(lvl, {
-    ...(opts.maxStates !== undefined ? { maxStates: opts.maxStates } : {}),
+    ...(bigLevel ? { maxStates: 2_000 } : opts.maxStates !== undefined ? { maxStates: opts.maxStates } : {}),
     ...(opts.maxMs !== undefined ? { maxMs: opts.maxMs } : {}),
     ...(opts.d3a !== undefined ? { d3a: opts.d3a } : {}),
   });
@@ -236,7 +253,13 @@ export function solveLevelData(
   if (!g.complete) {
     status = 'unknown';
     if (opts.large ?? v3Level) {
-      const r = solveLarge(lvl, { ...(opts.largeMs !== undefined ? { maxMs: opts.largeMs } : {}) });
+      // deterministic budget (CL-V3-01): widths up to 512 and an expansion cap decide the result, never the machine speed;
+      // the time limit is only a safety net far above what a level needs
+      const r = solveLarge(lvl, {
+        widths: [8, 32, 128, 512],
+        maxExpanded: 150_000,
+        maxMs: opts.largeMs ?? 300_000,
+      });
       large = {
         status: r.status,
         best: r.best,
@@ -253,40 +276,129 @@ export function solveLevelData(
       if (r.status === 'solved') {
         v3 = v3Metrics(lvl, r.steps);
         notes.push(
-          `large-level search (U-v3-2): best found ${r.best} (lower bound ${r.lowerBound})${r.optimal ? ' = min (proven at the lower bound)' : ' — not proven optimal, en iyi bulunan'}; width ${r.width}, ${r.states} states, ${r.ms} ms, replay ok; whole-space gates stay open (D-090)`,
+          `large-level search (U-v3-2): best found ${r.best} (lower bound ${r.lowerBound})${r.optimal ? ' = min (proven at the lower bound)' : ' — not proven optimal, en iyi bulunan'}; width ${r.width}, ${r.states} states, ${r.ms} ms, replay ok`,
         );
+        // CL-V3-01 option B: solvable (the found solution replays on the core) + the random-walk dead-state gate
+        const w = randomWalks(lvl, {
+          walks: opts.walks ?? WALKS_DEFAULT,
+          seed: level.id,
+          ...(opts.walkSample !== undefined ? { sample: opts.walkSample } : {}),
+        });
+        const loose = level.moves + Math.round(lvl.materialCount / 2);
+        const policy = {
+          tight: policyWinRate(lvl, level.moves, { plays: 200, seed: level.id }),
+          loose: policyWinRate(lvl, loose, { plays: 200, seed: level.id }),
+        };
+        large = { ...large, walks: w, policy };
+        if (level.difficulty !== 'easy' && policy.loose > 0.7)
+          out.push(
+            issue(
+              'puzzle_greedy_easy',
+              'K-51/9',
+              'L-39',
+              'warn',
+              'yard',
+              `policy win ${policy.loose} > 0.70 within moves + N/2: a player who always takes a visible correct placement finishes inside the budget (proxy for greedyWin, CL-V3-03)`,
+            ),
+          );
+        notes.push(
+          `play proxy (CL-V3-03; not ahaMin): placement-first player wins ${policy.tight} within ${level.moves} moves, ${policy.loose} within ${loose}`,
+        );
+        const best = r.best ?? 0;
+        const ctl = (code: string, rule: string, check: string, path: string, message: string): void => {
+          out.push(issue(code, rule, check, 'error', path, message));
+        };
+        const sess = replayCanonical(lvl, large.actions, null);
+        if (!sess.ok)
+          ctl(
+            'solver_replay_mismatch',
+            'K-43',
+            'tool',
+            '(level)',
+            `the found solution does not replay: ${sess.message}`,
+          );
+        else replay = sess;
+        band = movesBand(best, level.difficulty, level.teaches !== undefined, fixedYard);
+        if (level.moves < Math.max(best, band.lo) || level.moves > band.hi)
+          ctl(
+            'moves_budget',
+            'K-52',
+            'L-19',
+            'moves',
+            `moves ${level.moves} is outside [${Math.max(best, band.lo)}, ${band.hi}] (best found ${best} + P ${band.T} + a, 0 ≤ a ≤ ${band.A}; ${band.row} row)`,
+          );
+        if (r.yao.value !== null && r.yao.value < 0.6)
+          ctl(
+            'yao_low',
+            'K-46',
+            'L-19',
+            'build',
+            `YAO ${r.yao.overWall}/${r.yao.overWall + r.yao.rail} < 0.60`,
+          );
+        const n = lvl.materialCount;
+        if (level.id >= 3 && r.lowerBound <= n)
+          ctl(
+            'puzzle_first_reachable',
+            'K-51/1',
+            'L-32',
+            'yard',
+            'a correct placement is possible at the start (id ≥ 3 needs a dig first)',
+          );
+        if (level.id >= 3 && best <= n)
+          ctl(
+            'puzzle_no_shift',
+            'K-51/1',
+            'L-32',
+            'yard',
+            `best found ${best} = N ${n}: id ≥ 3 needs ≥ 1 shift`,
+          );
+        if (!w.ok)
+          ctl(
+            'undetected_dead',
+            'K-51/2',
+            'L-27',
+            'yard',
+            `an estimated ${(w.rate * 100).toFixed(2)} % of ${w.walks} random walks end in an undetected dead end (${w.undetected} of ${w.probed} probed ends, ${w.unresolved} unresolved) > 1 %`,
+          );
+        notes.push(
+          `dead-state gate (CL-V3-01 B, estimate not proof; D-090 whole-space scan not run): ${w.walks} random walks: won ${w.won}, rescued by D1/D2/D3a ${w.rescued}, unresolved ${w.unresolved} (probed ${w.probed}: solvable ${w.stillSolvable}, undetected dead ${w.undetected}) → estimated ${(w.rate * 100).toFixed(2)} %`,
+        );
+        out.push(...v3Checks(level, v3));
+        status = 'solved';
       } else notes.push(`large-level search (U-v3-2): no solution within ${r.ms} ms (${r.states} states)`);
     }
-    // K-51 item 7 (a), D-099: the dead-table gate needs a complete scan; a v2 level without one is not shipped
-    if (fixedYard)
+    if (status !== 'solved') {
+      // K-51 item 7 (a), D-099: the dead-table gate needs a complete scan; a v2 level without one is not shipped
+      if (fixedYard)
+        out.push(
+          issue(
+            'scan_incomplete',
+            'K-51/7',
+            'L-37',
+            'error',
+            '(level)',
+            `schemaVersion 2: the state space was not scanned to the end (${g.count} states, ${g.limit}); shrink the yard or N (LEVELS §6.3)`,
+          ),
+        );
       out.push(
         issue(
-          'scan_incomplete',
-          'K-51/7',
-          'L-37',
+          'solve_unknown',
+          'K-45/9',
+          'tool',
           'error',
           '(level)',
-          `schemaVersion 2: the state space was not scanned to the end (${g.count} states, ${g.limit}); shrink the yard or N (LEVELS §6.3)`,
+          `exploration stopped at ${g.count} states (${g.limit}): min, the canonical solution and every K-50 metric are unknown`,
+        ),
+        issue(
+          'trap_scan_incomplete',
+          'K-51/2',
+          'L-27',
+          'warn',
+          'yard',
+          'the scope K was not scanned to the end',
         ),
       );
-    out.push(
-      issue(
-        'solve_unknown',
-        'K-45/9',
-        'tool',
-        'error',
-        '(level)',
-        `exploration stopped at ${g.count} states (${g.limit}): min, the canonical solution and every K-50 metric are unknown`,
-      ),
-      issue(
-        'trap_scan_incomplete',
-        'K-51/2',
-        'L-27',
-        'warn',
-        'yard',
-        'the scope K was not scanned to the end',
-      ),
-    );
+    }
   } else {
     const res = computeMetrics(g, level.moves);
     if (!res.metrics) {
@@ -402,7 +514,7 @@ export function solveLevelData(
 
 /**
  * v3 solve-stage gates (GDD §16 ÖNERİ K-64; LEVELS §8.6): `lift_low` (error: `liftRatio` < 0.60 on every v3 level),
- * `shape_decisions_low` (error: `shapeDecisions` < 2 on Normal / Hard / Çok Zor). `traitDelta` needs the bot's
+ * `shape_decisions_low` (error from story 2, warn in story 1 — CL-V3-02, pending the product-lead's B3 decision: `shapeDecisions` < 2 on Normal / Hard / Çok Zor). `traitDelta` needs the bot's
  * "ignore the trait" mode (U-v3-3) and is not measured yet: a note, never a pass.
  */
 export function v3Checks(level: LevelData, m: V3Metrics): SolveIssue[] {
@@ -424,7 +536,7 @@ export function v3Checks(level: LevelData, m: V3Metrics): SolveIssue[] {
         'shape_decisions_low',
         'K-64/2',
         'L-42',
-        'error',
+        level.chapter <= 1 ? 'warn' : 'error',
         'yard',
         `shapeDecisions ${m.shapeDecisions} < 2 on a ${level.difficulty} level: add a two-tone twin or an overhang shape (LEVELS §8.6)`,
       ),

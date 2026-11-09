@@ -1,687 +1,239 @@
 {
   "level": 7,
   "file": "level_007.json",
-  "levelHash": "d1ac856c8077651a",
+  "levelHash": "e7bc8b9d26781325",
   "rulesVersion": 4,
-  "solverVersion": 4,
+  "solverVersion": 6,
   "variant": null,
   "schemaVersion": 2,
   "status": "solved",
-  "geometry": "6x4|2x5 H5",
+  "geometry": "6x6|2x4 H6",
   "difficulty": "normal",
   "teaches": "Y11",
-  "moves": 14,
-  "metrics": {
-    "N": 9,
-    "min": 10,
-    "minShifts": 1,
-    "minIsNPlusShifts": true,
-    "shiftsBySegment": [
-      1,
-      0
-    ],
-    "firstNeedDepth": 1,
-    "F0": [
-      "piece:2"
-    ],
-    "cover": {
-      "piece:0": 0,
-      "piece:1": 0,
-      "piece:2": 1,
-      "piece:3": 1,
-      "piece:4": 2,
-      "piece:5": 2,
-      "piece:6": 0,
-      "piece:7": 3,
-      "piece:8": 1
-    },
-    "firstNeedCover": 1,
-    "scope": {
-      "maxShifts": 2,
-      "states": 268,
-      "placementEdges": 310
-    },
-    "trapCount": 0,
-    "deadRate": 0,
-    "deadStates": 0,
-    "deadEntries": {
-      "edges": 0,
-      "shiftEdges": 0,
-      "states": 0,
-      "caught": 0
-    },
-    "delivery": [],
-    "liveStates": 634701,
-    "wonStates": 1,
-    "budget": 14,
-    "choices": [
-      7,
-      9,
-      12
-    ],
-    "bestChoices": [
-      2,
-      1,
-      1
-    ],
-    "yao": {
-      "overWall": 9,
-      "rail": 0,
-      "value": 1
-    },
-    "d099": {
-      "maxCover": 3,
-      "canonShifts": 1,
-      "parkedBlocks": 1,
-      "reparks": 0,
-      "maxDigRun": 1,
-      "seg": {
-        "piece:0": 0,
-        "piece:1": 0,
-        "piece:2": 0,
-        "piece:3": 1,
-        "piece:4": 0,
-        "piece:5": 1,
-        "piece:6": 1,
-        "piece:7": 0,
-        "piece:8": 1
-      },
-      "depLater": 0,
-      "depEarlier": 2,
-      "crossDeps": 2,
-      "carryShifts": 0,
-      "E0": 4,
-      "parkPeak": 2,
-      "parkSlack": 2,
-      "choicesAll": [
-        7,
-        9,
-        12,
-        15,
-        19,
-        19,
-        23,
-        27,
-        20,
-        15
-      ],
-      "bestChoicesAll": [
-        2,
-        1,
-        1,
-        1,
-        2,
-        1,
-        1,
-        1,
-        1,
-        1
-      ],
-      "decisionPoints": 10,
-      "forced": 8,
-      "digStart": 1,
-      "greedyMin": 10,
-      "greedyExcess": 0,
-      "greedyTrap": null,
-      "greedyWin": 1,
-      "greedyStates": 19,
-      "skillWin": {
-        "novice": 0.6841682918950944,
-        "mid": 0.953146627388556,
-        "expert": 0.9940596702315925
-      },
-      "ahaMin": 0,
-      "ahaMoves": [],
-      "pieces3": [
-        3,
-        3,
-        3
-      ],
-      "goodPieces3": [
-        1,
-        1,
-        1
-      ],
-      "branch3": 0.33,
-      "complete": true,
-      "undetectedDead": 0,
-      "d1States": 0
-    }
-  },
+  "moves": 18,
+  "metrics": null,
   "band": {
     "row": "easy",
     "version": 2,
     "T": 4,
     "floor": 4,
-    "A": 2,
-    "nominal": 14,
-    "lo": 14,
-    "hi": 16
+    "A": 3,
+    "nominal": 18,
+    "lo": 18,
+    "hi": 21
   },
-  "canonical": [
-    {
-      "kind": "start",
-      "preBoosters": [],
-      "streakTier": 0
-    },
-    {
-      "kind": "drag",
-      "pieceId": 0,
-      "to": {
-        "ix": 4,
-        "iy": 2,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 2,
-      "to": {
-        "ix": 6,
-        "iy": 0,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 4,
-      "to": {
-        "ix": 6,
-        "iy": 1,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 7,
-      "to": {
-        "ix": 6,
-        "iy": 2,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 1,
-      "to": {
-        "ix": 6,
-        "iy": 3,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 0,
-      "to": {
-        "ix": 6,
-        "iy": 4,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 6,
-      "to": {
-        "ix": 6,
-        "iy": 0,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 8,
-      "to": {
-        "ix": 6,
-        "iy": 1,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 5,
-      "to": {
-        "ix": 6,
-        "iy": 2,
-        "mode": 0
-      }
-    },
-    {
-      "kind": "drag",
-      "pieceId": 3,
-      "to": {
-        "ix": 6,
-        "iy": 3,
-        "mode": 0
-      }
-    }
-  ],
-  "steps": [
-    {
-      "n": 1,
-      "kind": "shift",
-      "pieceId": 0,
-      "ref": "piece:0",
-      "shape": "D2_90",
-      "color": "Y",
-      "from": [
-        0,
-        3
-      ],
-      "to": [
-        4,
-        2
-      ],
-      "node": {
-        "ix": 4,
-        "iy": 2,
-        "mode": 0
-      },
-      "cost": 1,
-      "segment": 0,
-      "queueAfter": 0
-    },
-    {
-      "n": 2,
-      "kind": "overWall",
-      "pieceId": 2,
-      "ref": "piece:2",
-      "shape": "D2_90",
-      "color": "R",
-      "from": [
-        0,
-        2
-      ],
-      "to": [
-        6,
-        0
-      ],
-      "node": {
-        "ix": 6,
-        "iy": 0,
-        "mode": 0
-      },
-      "cost": 1,
-      "segment": 0,
-      "queueAfter": 0
-    },
-    {
-      "n": 3,
-      "kind": "overWall",
-      "pieceId": 4,
-      "ref": "piece:4",
-      "shape": "D2_90",
-      "color": "Y",
-      "from": [
-        0,
-        1
-      ],
-      "to": [
-        6,
-        1
-      ],
-      "node": {
-        "ix": 6,
-        "iy": 1,
-        "mode": 0
-      },
-      "cost": 1,
-      "segment": 0,
-      "queueAfter": 0
-    },
-    {
-      "n": 4,
-      "kind": "overWall",
-      "pieceId": 7,
-      "ref": "piece:7",
-      "shape": "D2_90",
-      "color": "R",
-      "from": [
-        0,
-        0
-      ],
-      "to": [
-        6,
-        2
-      ],
-      "node": {
-        "ix": 6,
-        "iy": 2,
-        "mode": 0
-      },
-      "cost": 1,
-      "segment": 0,
-      "queueAfter": 0
-    },
-    {
-      "n": 5,
-      "kind": "overWall",
-      "pieceId": 1,
-      "ref": "piece:1",
-      "shape": "D2_90",
-      "color": "Y",
-      "from": [
-        2,
-        3
-      ],
-      "to": [
-        6,
-        3
-      ],
-      "node": {
-        "ix": 6,
-        "iy": 3,
-        "mode": 0
-      },
-      "cost": 1,
-      "segment": 0,
-      "queueAfter": 0
-    },
-    {
-      "n": 6,
-      "kind": "overWall",
-      "pieceId": 0,
-      "ref": "piece:0",
-      "shape": "D2_90",
-      "color": "Y",
-      "from": [
-        4,
-        2
-      ],
-      "to": [
-        6,
-        4
-      ],
-      "node": {
-        "ix": 6,
-        "iy": 4,
-        "mode": 0
-      },
-      "cost": 1,
-      "segment": 0,
-      "queueAfter": 0
-    },
-    {
-      "n": 7,
-      "kind": "overWall",
-      "pieceId": 6,
-      "ref": "piece:6",
-      "shape": "D2_90",
-      "color": "Y",
-      "from": [
-        4,
-        1
-      ],
-      "to": [
-        6,
-        0
-      ],
-      "node": {
-        "ix": 6,
-        "iy": 0,
-        "mode": 0
-      },
-      "cost": 1,
-      "segment": 1,
-      "queueAfter": 0
-    },
-    {
-      "n": 8,
-      "kind": "overWall",
-      "pieceId": 8,
-      "ref": "piece:8",
-      "shape": "D2_90",
-      "color": "Y",
-      "from": [
-        4,
-        0
-      ],
-      "to": [
-        6,
-        1
-      ],
-      "node": {
-        "ix": 6,
-        "iy": 1,
-        "mode": 0
-      },
-      "cost": 1,
-      "segment": 1,
-      "queueAfter": 0
-    },
-    {
-      "n": 9,
-      "kind": "overWall",
-      "pieceId": 5,
-      "ref": "piece:5",
-      "shape": "C3_0",
-      "color": "G",
-      "from": [
-        2,
-        0
-      ],
-      "to": [
-        6,
-        2
-      ],
-      "node": {
-        "ix": 6,
-        "iy": 2,
-        "mode": 0
-      },
-      "cost": 1,
-      "segment": 1,
-      "queueAfter": 0
-    },
-    {
-      "n": 10,
-      "kind": "overWall",
-      "pieceId": 3,
-      "ref": "piece:3",
-      "shape": "C3_180",
-      "color": "Y",
-      "from": [
-        2,
-        1
-      ],
-      "to": [
-        6,
-        3
-      ],
-      "node": {
-        "ix": 6,
-        "iy": 3,
-        "mode": 0
-      },
-      "cost": 1,
-      "segment": 1,
-      "queueAfter": 0
-    }
-  ],
+  "canonical": [],
+  "steps": [],
   "replay": {
     "ok": true,
     "message": null,
-    "eventLogHash": "1a4dfd4577023966",
-    "events": 58
+    "eventLogHash": "1ff90b6e60665c7f",
+    "events": 86
   },
   "variants": [],
-  "issues": [
-    {
-      "code": "shape_decisions_low",
-      "rule": "K-64/2",
-      "check": "L-42",
-      "severity": "error",
-      "path": "yard",
-      "message": "shapeDecisions 0 < 2 on a normal level: add a two-tone twin or an overhang shape (LEVELS §8.6)"
-    }
-  ],
+  "issues": [],
   "notes": [
-    "targets_diverge_from_spec (11): min 10 vs spec [14, 16], targets [10, 10] · minShifts 1 vs spec [4, 5], targets [1, 1] · firstNeedDepth 1 vs spec [2, 2], targets [1, 1] · depLater 0 vs spec [2, 3] · crossDeps 2 vs spec [3, ∞] · parkSlack 2 vs spec [0.8, 1.5] · forced 8 vs spec [3, 5] · greedyExcess 0 vs spec [1, 3] · greedyWin 1 vs spec [0.3, 0.6], targets [0.9, 1] · ahaMin 0 vs spec [1, 2], targets [0, 0] · branch3 0.33 vs spec [0.15, 0.3]"
+    "large-level search (U-v3-2): best found 14 (lower bound 14) = min (proven at the lower bound); width 8, 2780 states, 115 ms, replay ok",
+    "play proxy (CL-V3-03; not ahaMin): placement-first player wins 0.47 within 18 moves, 0.38 within 25",
+    "dead-state gate (CL-V3-01 B, estimate not proof; D-090 whole-space scan not run): 10000 random walks: won 823, rescued by D1/D2/D3a 9177, unresolved 0 (probed 0: solvable 0, undetected dead 0) → estimated 0.00 %"
   ],
-  "specGaps": [
-    {
-      "metric": "min",
-      "actual": 10,
-      "spec": [
-        14,
-        16
-      ],
-      "targets": [
-        10,
-        10
-      ],
-      "actualOut": true,
-      "targetsOut": true
-    },
-    {
-      "metric": "minShifts",
-      "actual": 1,
-      "spec": [
-        4,
-        5
-      ],
-      "targets": [
-        1,
-        1
-      ],
-      "actualOut": true,
-      "targetsOut": true
-    },
-    {
-      "metric": "firstNeedDepth",
-      "actual": 1,
-      "spec": [
-        2,
-        2
-      ],
-      "targets": [
-        1,
-        1
-      ],
-      "actualOut": true,
-      "targetsOut": true
-    },
-    {
-      "metric": "depLater",
-      "actual": 0,
-      "spec": [
-        2,
-        3
-      ],
-      "targets": null,
-      "actualOut": true,
-      "targetsOut": false
-    },
-    {
-      "metric": "crossDeps",
-      "actual": 2,
-      "spec": [
-        3,
-        99
-      ],
-      "targets": null,
-      "actualOut": true,
-      "targetsOut": false
-    },
-    {
-      "metric": "parkSlack",
-      "actual": 2,
-      "spec": [
-        0.8,
-        1.5
-      ],
-      "targets": null,
-      "actualOut": true,
-      "targetsOut": false
-    },
-    {
-      "metric": "forced",
-      "actual": 8,
-      "spec": [
-        3,
-        5
-      ],
-      "targets": null,
-      "actualOut": true,
-      "targetsOut": false
-    },
-    {
-      "metric": "greedyExcess",
-      "actual": 0,
-      "spec": [
-        1,
-        3
-      ],
-      "targets": null,
-      "actualOut": true,
-      "targetsOut": false
-    },
-    {
-      "metric": "greedyWin",
-      "actual": 1,
-      "spec": [
-        0.3,
-        0.6
-      ],
-      "targets": [
-        0.9,
-        1
-      ],
-      "actualOut": true,
-      "targetsOut": true
-    },
-    {
-      "metric": "ahaMin",
-      "actual": 0,
-      "spec": [
-        1,
-        2
-      ],
-      "targets": [
-        0,
-        0
-      ],
-      "actualOut": true,
-      "targetsOut": true
-    },
-    {
-      "metric": "branch3",
-      "actual": 0.33,
-      "spec": [
-        0.15,
-        0.3
-      ],
-      "targets": null,
-      "actualOut": true,
-      "targetsOut": false
-    }
-  ],
+  "specGaps": [],
   "stats": {
-    "states": 634701,
-    "expanded": 634701,
-    "edges": 6565606,
-    "ms": 37024,
-    "bytes": 126620727,
-    "dragSessions": 3412216,
-    "applyMoves": 305256,
-    "fastYardMoves": 6260350,
-    "d3aRuns": 1347,
-    "d3aMaxExpansions": 10,
+    "states": 2001,
+    "expanded": 379,
+    "edges": 4992,
+    "ms": 161,
+    "bytes": 255965,
+    "dragSessions": 2057,
+    "applyMoves": 316,
+    "fastYardMoves": 4676,
+    "d3aRuns": 68,
+    "d3aMaxExpansions": 27,
     "d3aUnknown": 0,
-    "complete": true,
-    "limit": null,
-    "totalMs": 38171
+    "complete": false,
+    "limit": "maxStates",
+    "totalMs": 87980
   },
   "v3": {
-    "liftRatio": 1,
-    "lifted": 9,
-    "placements": 9,
-    "visibleAtStart": 9,
-    "shapeDecisions": 0,
+    "liftRatio": 0.62,
+    "lifted": 8,
+    "placements": 13,
+    "visibleAtStart": 13,
+    "shapeDecisions": null,
     "stackParks": 0,
-    "unwrapAt": 0.2,
+    "unwrapAt": 0.71,
     "bonusAt": null,
     "traitDelta": null
   },
-  "large": null,
-  "cacheKey": "7166ab1d:rules4:solver4:level:var:d3a"
+  "large": {
+    "status": "solved",
+    "best": 14,
+    "lowerBound": 14,
+    "optimal": true,
+    "width": 8,
+    "yao": {
+      "overWall": 13,
+      "rail": 0,
+      "value": 1
+    },
+    "states": 2780,
+    "ms": 115,
+    "replayOk": true,
+    "runs": [
+      {
+        "width": 8,
+        "cost": 14,
+        "ms": 114
+      }
+    ],
+    "actions": [
+      {
+        "kind": "start",
+        "preBoosters": [],
+        "streakTier": 0
+      },
+      {
+        "kind": "drag",
+        "pieceId": 0,
+        "to": {
+          "ix": 0,
+          "iy": 4,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 1,
+        "to": {
+          "ix": 6,
+          "iy": 0,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 0,
+        "to": {
+          "ix": 6,
+          "iy": 1,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 4,
+        "to": {
+          "ix": 6,
+          "iy": 3,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 3,
+        "to": {
+          "ix": 6,
+          "iy": 0,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 6,
+        "to": {
+          "ix": 6,
+          "iy": 1,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 5,
+        "to": {
+          "ix": 6,
+          "iy": 2,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 8,
+        "to": {
+          "ix": 6,
+          "iy": 0,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 9,
+        "to": {
+          "ix": 7,
+          "iy": 0,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 7,
+        "to": {
+          "ix": 6,
+          "iy": 2,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 2,
+        "to": {
+          "ix": 6,
+          "iy": 3,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 10,
+        "to": {
+          "ix": 6,
+          "iy": 0,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 11,
+        "to": {
+          "ix": 6,
+          "iy": 2,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 12,
+        "to": {
+          "ix": 6,
+          "iy": 3,
+          "mode": 0
+        }
+      }
+    ],
+    "walks": {
+      "walks": 10000,
+      "won": 823,
+      "rescued": 9177,
+      "unresolved": 0,
+      "probed": 0,
+      "stillSolvable": 0,
+      "undetected": 0,
+      "rate": 0,
+      "ok": true
+    },
+    "policy": {
+      "tight": 0.47,
+      "loose": 0.38
+    }
+  },
+  "cacheKey": "49a03cc9:rules4:solver6:level:var:d3a"
 }

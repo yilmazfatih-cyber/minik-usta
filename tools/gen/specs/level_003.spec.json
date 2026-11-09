@@ -1,0 +1,44 @@
+{
+  "id": 3,
+  "name": {
+    "tr": "Köşe Taşları",
+    "en": "Corner Stones"
+  },
+  "difficulty": "easy",
+  "yard": {
+    "cols": 5,
+    "rows": 5
+  },
+  "wall": {
+    "height": 4,
+    "gaps": []
+  },
+  "segments": [
+    {
+      "name": {
+        "tr": "Kat 1",
+        "en": "Floor 1"
+      },
+      "rows": 5
+    },
+    {
+      "name": {
+        "tr": "Kat 2",
+        "en": "Floor 2"
+      },
+      "rows": 5
+    }
+  ],
+  "colors": "WY",
+  "orientations": ["D2_0", "D2_90", "O4_0", "C3_0", "C3_180"],
+  "maxDominoShare": 0.9,
+  "blocks": [9, 9],
+  "mutations": 14,
+  "want": {
+    "dig": [1, 2],
+    "greedy": [0.3, 0.9],
+    "careless": [0.2, 0.8],
+    "keep": 6
+  },
+  "minKinds": 2
+}

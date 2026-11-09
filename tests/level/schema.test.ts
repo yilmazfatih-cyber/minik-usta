@@ -80,11 +80,11 @@ describe('K-45/1 level schema (TECH §8.2, §2R.2)', () => {
         ),
       ) as Record<string, unknown>;
       expect(schemaVersionOf(LevelSchema.parse(old)), `archive level ${n}`).toBe(1);
-      // … and the shipped levels 1–10 (D-099 level round) are schemaVersion 2 (K-55 fixed yard)
+      // … and the shipped levels 1–10 (D-099 level round) are schemaVersion 2 or 3 (K-55 fixed yard; 3 = levels v3)
       const file = JSON.parse(
         readFileSync(join(DOCS, '..', 'levels', `level_${String(n).padStart(3, '0')}.json`), 'utf8'),
       ) as Record<string, unknown>;
-      expect(schemaVersionOf(LevelSchema.parse(file)), `level ${n}`).toBe(2);
+      expect(schemaVersionOf(LevelSchema.parse(file)), `level ${n}`).toBeGreaterThanOrEqual(2);
     }
     const targets = {
       min: [8, 9],

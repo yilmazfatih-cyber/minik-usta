@@ -87,6 +87,8 @@ export interface GenPlan {
   };
   /** Material block count band `[min, max]` (pallet layers included); tilings outside it are skipped. */
   readonly blocks?: readonly [number, number];
+  /** Highest share of 2-cell dominoes among the blocks (CL-V3-04: 0.5 after level 3); tilings above it are skipped. */
+  readonly maxDominoShare?: number;
 }
 
 /** The plan uses a levels v3 field: the output is `schemaVersion` 3. */
@@ -266,6 +268,23 @@ function itemsOf(plan: GenPlan, tiles: readonly (readonly Placed[])[]): Item[] {
 /** N of a tiling choice (pallet grouping does not change it). */
 function tilingBlocks(tiles: readonly (readonly Placed[])[]): number {
   return tiles.reduce((n, t) => n + t.length, 0);
+}
+
+/** Index of a random tiling among those with the fewest 2-cell blocks (+ 1) of the list. */
+function fewDominoPick(list: readonly (readonly Placed[])[], rng: Rng): number {
+  if (list.length === 0) return 0;
+  const counts = list.map((t) => t.filter((p) => p.shape.cells.length === 2).length);
+  const lo = Math.min(...counts);
+  const ok = counts.flatMap((c, i) => (c <= lo + 1 ? [i] : []));
+  return ok[rng.nextInt(ok.length)] ?? 0;
+}
+
+/** The tiling meets the plan's domino cap (`maxDominoShare`); always true without the field. */
+function dominoOk(plan: GenPlan, tiles: readonly (readonly Placed[])[]): boolean {
+  if (plan.maxDominoShare === undefined) return true;
+  const all = tiles.flat();
+  const d = all.filter((p) => p.shape.cells.length === 2).length;
+  return all.length === 0 || d / all.length <= plan.maxDominoShare;
 }
 
 /**
@@ -774,14 +793,20 @@ function landing(shape: ShapeDef, x0: number, occ: Uint8Array, cols: number, row
 }
 
 /** Start layout `k`: the reverse stack (later build order falls first) with seeded columns. */
-function startLayout(plan: GenPlan, all: readonly Placed[][][], rng: Rng): Layout | null {
+export function startLayout(plan: GenPlan, all: readonly Placed[][][], rng: Rng): Layout | null {
   let tiling = all.map((list) => rng.nextInt(Math.max(1, list.length)));
   // v3 `blocks` band: a few more seeded picks until N fits (the PRNG is not touched without the field)
   const band = plan.blocks;
-  for (let k = 0; band && k < 24; k++) {
-    const n = tilingBlocks(tiling.map((t, j) => all[j]?.[t] ?? []));
-    if (n >= band[0] && n <= band[1]) break;
-    tiling = all.map((list) => rng.nextInt(Math.max(1, list.length)));
+  for (let k = 0; (band || plan.maxDominoShare !== undefined) && k < 400; k++) {
+    const tiles = tiling.map((t, j) => all[j]?.[t] ?? []);
+    const n = tilingBlocks(tiles);
+    if ((!band || (n >= band[0] && n <= band[1])) && dominoOk(plan, tiles)) break;
+    // with a domino cap the draw favours the tilings with the fewest dominoes (the others cannot meet the cap)
+    tiling = all.map((list) =>
+      plan.maxDominoShare !== undefined && k >= 8
+        ? fewDominoPick(list, rng)
+        : rng.nextInt(Math.max(1, list.length)),
+    );
   }
   return startLayoutWith(plan, all, tiling, rng);
 }
@@ -792,7 +817,7 @@ function dropOrder(items: readonly Item[]): Item[] {
   return [...sorted.filter((i) => i.order < 0), ...sorted.filter((i) => i.order >= 0)];
 }
 
-function neighbour(plan: GenPlan, all: readonly Placed[][][], base: Layout, rng: Rng): Layout | null {
+export function neighbour(plan: GenPlan, all: readonly Placed[][][], base: Layout, rng: Rng): Layout | null {
   const n = base.items.length;
   // v3 plans with pallets / traits get a fifth move: re-roll the pallet and trait assignment (same tiling)
   const reroll = plan.pallets !== undefined || plan.traits !== undefined;
@@ -823,6 +848,13 @@ function neighbour(plan: GenPlan, all: readonly Placed[][][], base: Layout, rng:
     if (options <= 1) return null;
     tiling = [...tiling];
     tiling[k] = ((tiling[k] ?? 0) + 1 + rng.nextInt(options - 1)) % options;
+    if (
+      !dominoOk(
+        plan,
+        tiling.map((t, j) => all[j]?.[t] ?? []),
+      )
+    )
+      return null;
     return startLayoutWith(plan, all, tiling, rng);
   }
   if (dropLayout(plan, items, columns)) return { tiling, items, columns };

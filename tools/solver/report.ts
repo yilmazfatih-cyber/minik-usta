@@ -91,6 +91,11 @@ export function levelText(r: SolveReport, name: string, allowed: (i: SolveIssue)
     lines.push(
       `  large-level search: ${lg.status}${lg.best !== null ? ` · best found ${lg.best} (lower bound ${lg.lowerBound}, ${lg.optimal ? 'optimal' : 'optimal değil, en iyi bulunan'})` : ''} · widths ${lg.runs.map((x) => `${x.width}:${x.cost ?? '–'}`).join(' ')} · ${fmtNum(lg.states)} states · ${fmtNum(lg.ms)} ms${lg.replayOk ? ' · replay ok' : ''}`,
     );
+  const wk = lg?.walks;
+  if (wk)
+    lines.push(
+      `  dead-state gate (estimate, CL-V3-01): ${fmtNum(wk.walks)} walks · won ${wk.won} · rescued ${wk.rescued} · unresolved ${wk.unresolved} (probed ${wk.probed}: solvable ${wk.stillSolvable}, undetected ${wk.undetected}) · estimated rate ${(wk.rate * 100).toFixed(2)} %`,
+    );
   for (const v of r.variants) {
     const delta =
       v.min === null || !m ? '' : v.name === 'no-gaps' ? ` (+${v.min - m.min})` : ` (−${m.min - v.min})`;
@@ -142,14 +147,18 @@ export function summaryTable(reports: readonly SolveReport[]): string {
       `${DIFFICULTY_TR[r.difficulty ?? ''] ?? '–'}${r.teaches ? ' (tanıtım)' : ''}`,
       r.status,
       m?.N ?? '–',
-      m?.min ?? '–',
+      m?.min ?? (r.large?.best != null ? `≤${r.large.best}` : '–'),
       m ? `${m.minShifts}${m.shiftsBySegment.length > 1 ? ` (${m.shiftsBySegment.join('+')})` : ''}` : '–',
       m?.firstNeedDepth ?? '–',
       m?.firstNeedCover ?? '–',
       m?.trapCount ?? '–',
       m ? m.deadRate.toFixed(3) : '–',
       m ? `${dot(m.choices)} / ${dot(m.bestChoices)}` : '–',
-      m ? `${m.yao.overWall}/${m.yao.overWall + m.yao.rail}` : '–',
+      m
+        ? `${m.yao.overWall}/${m.yao.overWall + m.yao.rail}`
+        : r.large
+          ? `${r.large.yao.overWall}/${r.large.yao.overWall + r.large.yao.rail}`
+          : '–',
       r.moves ?? '–',
       band,
       v || '–',
@@ -281,9 +290,13 @@ export function solverGolden(r: SolveReport): unknown {
     levelHash: r.levelHash,
     rulesVersion: r.rulesVersion,
     solverVersion: r.solverVersion,
-    min: r.metrics?.min ?? null,
-    yao: r.metrics ? { overWall: r.metrics.yao.overWall, rail: r.metrics.yao.rail } : null,
-    log: r.canonical,
+    min: r.metrics?.min ?? r.large?.best ?? null,
+    yao: r.metrics
+      ? { overWall: r.metrics.yao.overWall, rail: r.metrics.yao.rail }
+      : r.large
+        ? { overWall: r.large.yao.overWall, rail: r.large.yao.rail }
+        : null,
+    log: r.metrics ? r.canonical : (r.large?.actions ?? []),
     eventLogHash: r.replay?.eventLogHash ?? null,
   };
 }

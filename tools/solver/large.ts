@@ -45,6 +45,10 @@ export interface LargeOptions {
    */
   readonly maxExpanded?: number;
   readonly hooks?: MoveHooks;
+  /** Search from this state instead of the level start (walk probes, tools/solver/walks.ts). */
+  readonly start?: GameState;
+  /** Stop at the first solution of any width (a solvability probe, not a `min` search). */
+  readonly firstSolution?: boolean;
   /** Clock (default `performance.now`); only the time limit reads it. */
   readonly clock?: () => number;
 }
@@ -94,7 +98,7 @@ interface Node {
 }
 
 /** Ranking score of a state (lower is better; see the module comment). */
-function scoreOf(s: GameState, hooks: MoveHooks): number {
+export function scoreOf(s: GameState, hooks: MoveHooks): number {
   const need = neededNow(s);
   let free = 0;
   for (const id of need) if (quickHoldable(s, id, hooks.drag)) free++;
@@ -148,9 +152,10 @@ function beam(
   clock: () => number,
   stats: { states: number; expanded: number },
   maxExpanded: number,
+  from?: GameState,
 ): Node[] | null {
   const x = new Expander(lvl, hooks);
-  const start = solverStart(lvl);
+  const start = from ?? solverStart(lvl);
   const nodes: Node[] = [{ buf: start.buf.slice(), g: 0, parent: -1, step: null, score: 0 }];
   const seen = new Map<string, number>();
   const h0 = hashState(start);
@@ -265,14 +270,14 @@ export function solveLarge(lvl: CompiledLevel, opts: LargeOptions = {}): LargeRe
   for (const width of opts.widths ?? LARGE_WIDTHS) {
     if (clock() > deadline || stats.expanded >= (opts.maxExpanded ?? Infinity)) break;
     const w0 = clock();
-    const path = beam(lvl, hooks, width, deadline, clock, stats, opts.maxExpanded ?? Infinity);
+    const path = beam(lvl, hooks, width, deadline, clock, stats, opts.maxExpanded ?? Infinity, opts.start);
     const cost = path ? (path[path.length - 1]?.g ?? null) : null;
     runs.push({ width, cost, ms: Math.round(clock() - w0) });
     if (path && (best === null || (cost ?? Infinity) < (best[best.length - 1]?.g ?? Infinity))) {
       best = path;
       bestWidth = width;
     }
-    if (best && (best[best.length - 1]?.g ?? Infinity) <= lowerBound) break;
+    if (best && (opts.firstSolution || (best[best.length - 1]?.g ?? Infinity) <= lowerBound)) break;
   }
   const steps: LargeStep[] = (best ?? []).map((n, i) => ({ n: i + 1, ...(n.step as Omit<LargeStep, 'n'>) }));
   let overWall = 0;
@@ -283,11 +288,13 @@ export function solveLarge(lvl: CompiledLevel, opts: LargeOptions = {}): LargeRe
   }
   const cost = best ? (best[best.length - 1]?.g ?? null) : null;
   const replayOk = best
-    ? replayLarge(
-        lvl,
-        steps.map((st) => st.move),
-        hooks,
-      )
+    ? opts.start !== undefined
+      ? true
+      : replayLarge(
+          lvl,
+          steps.map((st) => st.move),
+          hooks,
+        )
     : false;
   return {
     status: best && replayOk ? 'solved' : 'unknown',

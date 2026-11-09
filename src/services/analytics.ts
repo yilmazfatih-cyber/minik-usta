@@ -91,7 +91,9 @@ export const ANALYTICS_EVENTS = {
   booster_used: {
     booster: en(...BOOSTER_IDS),
     level: int(),
-    target: nullable(en('cargo', 'crate', 'cementBag', 'chain', 'siteDebris', 'stuckMortar', 'block')),
+    target: nullable(
+      en('cargo', 'crate', 'cementBag', 'chain', 'siteDebris', 'stuckMortar', 'wrap', 'block'),
+    ),
   },
   offer_shown: { ...OFFER_FIELDS },
   offer_result: { ...OFFER_FIELDS, result: en('coins', 'ad', 'free', 'declined', 'unavailable') },

@@ -84,21 +84,29 @@ describe('U-v3-2 large-level search (6 × 8 yard, 22 blocks)', () => {
     expect(lowerBoundOf(lvl)).toBe(2);
   });
 
-  it('K-64 U-v3-2 levels:solve: an incomplete v3 exploration runs the large search, keeps the D-090 gate and marks "en iyi bulunan"', () => {
+  it('K-64 U-v3-2 CL-V3-01 levels:solve: a level of 22 blocks skips the whole-space scan, runs the large search and the random-walk gate and reports "en iyi bulunan"', () => {
     const { level } = compiled(LARGE);
-    const r = solveLevelData(level, {}, { maxStates: 3_000, variants: false, largeMs: 8_000 });
-    expect(r.status).toBe('unknown');
-    expect(r.issues.map((i) => i.code)).toContain('scan_incomplete');
+    const r = solveLevelData(level, {}, { variants: false, largeMs: 20_000, walks: 40 });
     expect(r.large).not.toBeNull();
     expect(r.notes.some((n) => n.includes('large-level search'))).toBe(true);
     if (r.large?.status === 'solved') {
+      // solvable by a replayed solution: the status is solved, the whole-space scan is not claimed (no metrics)
+      expect(r.status).toBe('solved');
+      expect(r.metrics).toBeNull();
       expect(r.large.replayOk).toBe(true);
+      expect(r.large.walks?.walks).toBe(40);
       expect(r.notes.some((n) => n.includes(r.large?.optimal ? 'proven' : 'en iyi bulunan'))).toBe(true);
+      expect(r.notes.some((n) => n.includes('dead-state gate'))).toBe(true);
       expect(r.v3?.placements).toBe(22);
+    } else {
+      // no solution inside the time limit: unknown, and the D-090 scan gate stays red
+      expect(r.status).toBe('unknown');
+      expect(r.issues.map((i) => i.code)).toContain('scan_incomplete');
     }
     const off = solveLevelJson(LARGE, {}, { maxStates: 3_000, variants: false, large: false });
     expect(off.large).toBeNull();
-  }, 90_000);
+    expect(off.status).toBe('unknown');
+  }, 120_000);
 });
 
 describe('K-64 v3 measures on a complete solve', () => {

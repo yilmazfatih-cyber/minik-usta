@@ -63,7 +63,18 @@ describe('levels:solve CLI', () => {
   });
 
   it('K-45 levels:check = validate + solve (+ bot when present) on the Faz 2R drafts 2 and 3', () => {
-    const r = run('--check', '--dir', LEVELS_DIR, '--level', '2,3', '--no-i18n', '--out', OUT);
+    const r = run(
+      '--check',
+      '--dir',
+      LEVELS_DIR,
+      '--level',
+      '2,3',
+      '--no-i18n',
+      '--booster-unlock',
+      'hammer=8',
+      '--out',
+      OUT,
+    );
     expect(r.code, r.out).toBe(0);
     expect(r.out).toContain('levels:check 2/3 solve');
     expect(r.out).toMatch(/levels:check 3\/3 bot/);

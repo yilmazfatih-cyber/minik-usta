@@ -53,12 +53,15 @@ describe('levels:validate tool (TECH §8.3, §12.2)', () => {
     expect(run('--dir', fixturePath('cli-valid'), '--no-i18n').out).toContain('note: --no-i18n');
   });
 
-  it('K-45 GDD 14.1 the Faz 2R drafts of LEVELS levels 1–10 validate with the i18n key lookup (WP-M input; tut.m.* keys from WP-L)', () => {
+  it('K-45 GDD 14.1 the shipped levels 1–10 validate with the i18n key lookup (levels v3: warnings are the K-63 tile_family_mix ones only)', () => {
     const r = run('--dir', LEVELS_DIR);
     expect(r.code, r.out).toBe(0);
-    for (let n = 1; n <= 10; n++) expect(r.out).toContain(`level_${String(n).padStart(3, '0')}.json  OK`);
-    expect(r.out).toContain('level_004.json  OK  mechanics: W1');
-    expect(r.out).toContain('10 file(s), 0 error(s), 0 warning(s)');
+    for (let n = 1; n <= 10; n++)
+      expect(r.out).toMatch(new RegExp(`level_${String(n).padStart(3, '0')}\\.json  (OK|WARN)`));
+    expect(r.out).toContain('level_005.json  WARN  mechanics: S1 Y9');
+    expect(r.out).toContain('10 file(s), 0 error(s)');
+    const warnLines = r.out.split('\n').filter((l) => /^\s+warn /.test(l));
+    for (const l of warnLines) expect(l, l).toContain('tile_family_mix');
   });
 });
 

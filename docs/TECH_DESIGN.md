@@ -2125,6 +2125,43 @@ D1 genişlemesidir (V3.2 madde 7); sevk edilen 10 bölümde `D1 states` 0 kaldı
    metni oradan okur).
 4. Analitik `booster_used.target` için `wrap` (ANALYTICS.md).
 
+### V3.6 Paket F: büyük bölüm kapısı, bölüm seçici ve ölçümler (CL-V3-01 … 12)
+
+**Karar (CL-V3-01, seçenek B, ışın + yürüyüş kapısı).** 9 ve daha çok malzeme bloklu bölümde (`LARGE_MIN_BLOCKS` = 9,
+`tools/solver/solveLevel.ts`) tam durum taraması **koşmaz** (2 000 durumda kesilir; 8–10 blokta zaten bitmiyordu, B2).
+Onun yerine:
+
+1. **Çözülebilirlik:** `solveLarge` (ışın, genişlik 8 → 2048) çekirdekte tekrar oynanan bir çözüm bulur (`replayOk`). `status`
+   `solved`, `metrics` null, `large` dolu. `min` bir üst sınırdır ("en iyi bulunan"; `best = alt sınır` ise kanıtlı). Hamle
+   bütçesi `best` üzerinden D-099 bandına bakar (`moves ≥ max(best, lo)`, `moves_budget`); `puzzle_first_reachable` (alt sınır
+   > N) ve `puzzle_no_shift` (`best` > N) kimliği ≥ 3 bölümlerde hata.
+2. **Ölü masa kapısı (D-090'ın yerine, yalnız bu bölümler için; tahmin, kanıt değil):** `tools/solver/walks.ts` `randomWalks`.
+   Tohumlu 10 000 yürüyüş (`WALKS_DEFAULT`; hamlelerin %80'i arama sezgisinin en iyi bulduğu ardıl, kalanı yerleşimi 12 kat
+   tercih eden rastgele). Bir yürüyüş şunlardan biriyle biter: kazanılmış; **çalışma zamanı kurtarır** (D1 hamle yok, D2 renk
+   dengesi, D3a döşeme: Söküm); ya da **çözümsüz**. Çözümsüz uçların en çok 200'ünden (tekdüze örnek) ışın araması üç kademeyle
+   (16/64 · 3 000 açılım, 256 · 30 000, 512 · 100 000) kazanç arar; bulamazsa uç **yakalanmayan ölü** sayılır (kötümser okuma:
+   ışının zayıflığı da buraya düşer). Tahmin = `ölü/örnek × çözümsüz/yürüyüş`; kapı ≤ %1 (`undetected_dead`, error).
+   10 000 yürüyüş ≈ 1–3 dk/bölüm (önbellekli). Kapı bir kanıt değildir; rapor "estimated" yazar.
+3. **Oyun-yanlış-yön vekili (CL-V3-03):** `policyWinRate` = "gördüğü doğru yerleşimi al" oyuncusunun `moves` ve `moves + N/2`
+   içindeki kazanma oranı (`greedyWin`/`ahaMin` tüm çizge ister, büyük bölümde yok). Normal/Zor'da > 0,70 ise `puzzle_greedy_easy`
+   uyarısı. `ahaMin` ≥ 1 kapısı büyük bölümde ölçülemez: yerine 7–10'dan en az birinde vekil ≤ 0,5 testi (`shipped.test.ts`).
+
+`SOLVER_VERSION` 5. Yeni seçenek `--walks N` (`levels:solve`); `levels:validate --booster-unlock hammer=8` (Faz 2R arşivi için).
+`shape_decisions_low` Hikaye 1'de uyarı (`level.chapter ≤ 1`), 2'den itibaren hata; product-lead B3 kararı bekleniyor.
+
+**Bölüm seçici (CL-V3-04, yeniden üretilebilir).** `tools/gen/specs/level_NNN.spec.json` (boyut, kat sayısı, renkler, yön havuzu,
+iki renkli çiftler, özellikler, N bandı, `rareFirst`, `maxDominoShare`) → `tools/gen/sample-plan.ts` (rastgele döşenebilir
+renk planı; ilk inşa edilen bloğun rengi seyrek; iki satırlık renk bantları) → `tools/gen/pick-v3.ts` (tepe tırmanışı: önce
+başlangıçta yerleştirilebilir blok sayısı, sonra ışın + oyun vekilleri + "dikkatli oyuncu" kazanma oranı) →
+`tools/gen/finalize-v3.ts` (öğretici, `targets`, Prettier). `generate.ts` `maxDominoShare` (kare oranı sınırı) ve
+`startLayout`/`neighbour` dışa açık. Belirlenimcidir (tohum). Aday dosyaları `artifacts/` altında tutulmaz; seçilen tohumlar:
+`docs/LEVEL_REPORT.md` "Paket F" tablosu.
+
+**Testler:** `tests/tools/solver/shipped.expected.ts` artık `tools/gen/write-shipped-expected.ts` ile üretilir (tam taramalı
+bölümler 1–2 için K-50 ölçütleri, büyük bölümler için `best`/`lowerBound`/`policy`/yürüyüş kapısı). `data.review` LEVELS §2
+kartı karşılaştırmaları, LEVELS.md'ye `<!-- levels:section2-current -->` satırı eklenene dek atlanır (kartlar product-lead'in
+dosyası, v3 turunda yeniden yazılmadı); JSON'u `shipped.test.ts`, çözücü ve golden testleri korur.
+
 ## 3. Şekiller
 
 ### 3.1 Kaynak ve üretim
