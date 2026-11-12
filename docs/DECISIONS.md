@@ -623,6 +623,24 @@ rehberi), ücretsiz ve üretken yapay zekâsız görsel üretim. Program: Faz 4 
 kasaba, ekonomi, 2 etkinlik, sahte mağaza); Faz 6 yayın hazırlığı (performans, Android/WebGL derlemeleri, mağaza metinleri, gizlilik).
 
 
+### D-099 — Sabit saha ve bulmaca zekâsı (K-55) (2026-11-02)
+Durum: KABUL     Sahip: code-lead (Unity A3 ile eşleştirildi)     Tarih: 2026-11-02 (kayıt: 2026-11-09)
+Karar: `schemaVersion` 2 bölümünde bütün bloklar baştan sahadadır; dilim geçişinde sahaya yeni parti ya da kamyon dolumu gelmez. D1 yeniden dizme kalktı (D1 → zincir/ıslaklık; hâlâ D1 ise Söküm `access`). `RULES_VERSION` 3. `schemaVersion` 1 (Faz 2R arşivi) verisi K-25…K-27 ile oynanmaya devam eder.
+Gerekçe: Unity taşıması (D-091) ile web kuralının aynı kaynaktan ilerlemesi; kural metni GDD K-55'tedir.
+Etkilenen: docs/GDD.md §16 (K-55), docs/TECH_DESIGN.md, minik-usta-unity README (Bağlayıcı kararlar tablosu)
+
+### D-100 — 3B görsel dil: prosedürel model, ön-render sprite, 2.5B tween (2026-11-01)
+Durum: KABUL     Sahip: design-lead (sözleşme), code-lead (teknik sanat)     Tarih: 2026-11-01 (kayıt: 2026-11-09)
+Karar: Unity sürümünün görsel dili 3B'dir ama oyun 2.5B'de kalır: modeller Blender 4.0.2 bpy ile prosedürel üretilir, Cycles (CPU) ile ön-görüntülenip sprite ve kare dizisine çevrilir; Unity'de sprite + 2.5B tween kullanılır. Üretim ücretsiz ve açık kaynak araçlarla yapılır; üretken yapay zekâ kullanılmaz (ART_REFERENCE §11, R2-13). Kare adları, pivotlar ve atlas.json biçimi değişmez (ART_UNITY §3).
+Gerekçe: Kalite çıtası (ART_REFERENCE §10) ile sınırlı bütçe arasında en ucuz yol; çalışma zamanında 3B motor yükü yok (60 FPS hedefi, brif ilke 6).
+Etkilenen: docs/ART_REFERENCE.md, docs/ART_UNITY.md (3B sürüm notu), minik-usta-unity docs/ART_3D.md, art/3d/**
+
+### D-101 — Usta Kral (maskot) (2026-11-01)
+Durum: KABUL     Sahip: design-lead     Tarih: 2026-11-01 (kayıt: 2026-11-09)
+Karar: Usta Dede'nin yerini özgün, baretli bir Usta Kral alır; ana sayfanın ana sembolü, bölüm ekranının köşesinde Tuna'nın yerindedir ve pencerelerde (başlangıç, kazanma, teklif, çıkış onayı) tepki verir. Öğretici balonunun portresi kralın konuşan büstüdür. Royal Match kralı kopyalanmaz; yalnız arketip ve kalite alınır.
+Gerekçe: Kahraman Tuna kalır (D-092); maskot ayrı bir karakterdir ve metinler i18n'dedir (`lose.offer.gift` ve prolog konuşmacısı Usta Kral). STORY'deki yaklaşık 8 Usta Dede kalıntısı design-lead'de açıktır (REVIEW_PHASE4B P4B-07).
+Etkilenen: docs/STORY.md, docs/JUICE.md (#21c), src/i18n/*.json, minik-usta-unity art/3d/spec/king.md
+
 ### D-102 — Bölümler v3: daha çok blok, yeni şekiller ve blok özellikleri; zorluk bandı sahibinin sınırıyla
 Durum: KABUL     Sahip: proje sahibi + orkestratör (code-lead uygulaması)     Tarih: 2026-11-09
 Karar: (1) Proje sahibinin 2026-11-08 isteği kabul edildi: "daha çok blok, daha farklı şekil ve özellik, uğraşılabilir ama abartısız". Bölümler v3 yayın kaynağı web `levels/` (701b8f3): 10 bölüm, blok sayısı 8, 8, 9, 10, 12, 14, 13, 14, 14, 16 (toplam 118; bugün 70). Yeni şekiller: L4/J4 (Bölüm 2), C3 kendi açılışıyla, T4 (6), I3 (8); şekil kuralı GDD §16 K-56 (ÖNERİ → KABUL). Yeni blok özellikleri: iki renkli Y9 (5), sargı ve makas Y11 (7), bonus Y12 (9), kaygan Y13 (8). Palet Y10 yayınlanan hiçbir bölümde yok; K-58 madde 9 açık.
@@ -631,6 +649,25 @@ Karar: (1) Proje sahibinin 2026-11-08 isteği kabul edildi: "daha çok blok, dah
 (4) Kabul edilmeyenler ve açık sorular: P-G1-1 ve P-E2-1 ÖNERİ olarak kalır. `min` değerleri Bölüm 3–10 için çözücünün en iyi bulduğu değerdir (kanıtlanmamış; yalnız Bölüm 1, 2, 7 kanıtlı); Bölüm 5'te 182 örnekten 1 tane D1/D2/D3a'nın yakalamadığı çıkmaz durumu bulundu (tahmini %0,01, kanıt değil). Bot ölçümü (`tools/playtest-bot.ts`) yok: `levels:check` bu adımı atlar.
 Gerekçe: Proje sahibi isteği; kapılar yeşil (web `npm run check` 2180 test geçti, `levels:check` 10/10 çözüldü, 0 hata; Unity `dotnet build -warnaserror` 0 uyarı, `dotnet test` 586 + 2023 geçti). Ölçü ve çekirdek sapması kanıtları: web docs/LEVEL_REPORT.md ve Unity docs/REVIEW_LEVELS_V3.md.
 Etkilenen: docs/GDD.md §16 (K-56…K-66 etiketleri), docs/LEVELS.md §8 (v3 tasarımı), docs/OBSTACLES.md (Y9…Y13), levels/level_001…010.json (Bölüm 1 schemaVersion 2; 2–10 schemaVersion 3), config/economy.json (Çekiç unlockLevel 10), minik-usta-unity Resources/levels (aynı veri)
+
+### D-103 — Geniş şantiye: Bölüm 6–10'da üç sütun (2026-11-09)
+Durum: KABUL     Sahip: proje sahibi + orkestratör (code-lead uygulaması)     Tarih: 2026-11-09
+Karar: Bölüm 6–10'da (ve ileride zor bölümlerde) şantiye 3 sütun olur; amaç 18–22 blok. Bu K-49'un Wy + Ws ≤ 8 sınırını değiştirir: `Wy + Ws ≤ 9` (6×N saha + 3 sütun = 9 sütun). Bölüm 1–5 2 sütunlu kalır (öğrenme eğrisi). Yerleşim: 1080 px genişlikte 9 sütun, duvar 54 px, hücre 108 px, kenar boşluğu 27 px; hücre hiçbir zaman 100 px'in altına inmez (dokunma hedefi korunur). Artı/çapraz ve S4/Z4 şekilleri 3 sütunlu şantiyede serbesttir (K-56 D-103 eki).
+Gerekçe: Proje sahibinin 2026-11-09 kararı; "daha çok blok" isteğinin geometrik karşılığı. Geometri sınırı için K-49 ve K-56 güncellendi.
+Etkilenen: docs/GDD.md §16 (K-49, K-50, K-56), docs/LEVELS.md §8.14, src/core (MAX_COLS 9), levels/level_006…010.json, minik-usta-unity BoardLayout (WideBoardCellPx 108)
+Not: Bölüm 6–10 blok sayıları (17/18/18/17/19) D-103'ün 18–22 amacının altında kaldı; nedeni 6×8 sahanın D2_90 paletiyle sınırlı alanı. Proje sahibinin kararı bekleniyor (P-P3-1).
+
+### D-104 — Palet: katman yalnız şantiyeye bırakılır (2026-11-09)
+Durum: KABUL     Sahip: proje sahibi + orkestratör (code-lead uygulaması)     Tarih: 2026-11-09
+Karar: Y10 palet özelliği yayına girer; K-58 madde 9 geçerlidir. Paletten kaldırılan katman YALNIZ şantiyeye bırakılabilir; sahaya park edilemez. Doğru bırakma şantiyede normal yerleşir; yanlış bırakma 1 hamlelik maliyetle katmanı kendi paletine üst katman olarak geri döndürür (kombo serisi sıfırlanır). Sahada, avluda, avluyu üstten geçen havada, duvar üstünde ya da vinç alanında bırakma 0 maliyetle iptal olur (`cancelled{reason:'palletSiteOnly'}`). En az 2 bölümde palet kullanılır (Bölüm 7–10'da var); tanıtım Bölüm 7'de Normal zorlukta verilir.
+Gerekçe: Saha daralması ve çıkmaz riski (B1 bulgusu) ortadan kalkar. Hikaye 1'de palet yalnız yere basar (`pallet_not_grounded`); palet şekli D2_90 (ÖNERİ P-P3-1, proje sahibinin onayını bekler).
+Etkilenen: docs/GDD.md §16 (K-58 madde 9–10), docs/OBSTACLES.md (Y10), src/core/movement.ts, levels/level_007…008.json
+
+### D-105 — Bonus: yalnız ödül anı (k = 0) (2026-11-09)
+Durum: KABUL     Sahip: proje sahibi + orkestratör (code-lead uygulaması)     Tarih: 2026-11-09
+Karar: Y12 bonus blok yalnız ödül anıdır; hamle bütçesi bonusa göre düşürülmez (k = 0 her zaman). Doğru yerleşince +2 hamle eklenir ve HUD'da "+2" patlaması gösterilir (ses + kral kısa sevinç; ≤ 900 ms, girdi asla engellenmez). Vinç ve Altın Mala yerleşimleri de bonus kazanır. Olay: `movesChanged{reason:'bonus', delta, pieceId}`.
+Gerekçe: Bonusun bütçe baskısı yaratmaması (brif ilke 5: süre baskısı yok); K-62 bu hâliyle kesinleşir. Bonus ilk kez Bölüm 10'da, `teaches` olmadan görünür (K-60 madde 6).
+Etkilenen: docs/GDD.md §16 (K-60 madde 6–7, K-62), docs/OBSTACLES.md (Y12), src/core (bonus olayı), tools/levels-gen (bot oranları bonusla ölçülür)
 
 ### ÖNERİ P-A2-1 — Bölüm 10 iki katlı; üç kat, Ağır Yük ve takas tuzağı U-4 sonrasına (product-lead, 2026-11-02)
 Durum: ÖNERİ. D0 eğrisi (LEVELS §6.6) Bölüm 10'u 6×8 saha, üç kat ve `Q9` ile tanımlıyordu; bugünkü tam tarama bu
