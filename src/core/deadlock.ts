@@ -52,11 +52,11 @@ import { shapeByIndex } from './shapes.ts';
 import type { ShapeDef } from './shapes.ts';
 import { PLAN_DOT } from './level/compile.ts';
 import type { CompiledLevel } from './level/compile.ts';
-import { tryBeginDrag } from './movement.ts';
+import { isPalletLayer, tryBeginDrag } from './movement.ts';
 import type { DragRules } from './movement.ts';
 import { computeFall } from './gravity.ts';
 import type { FallRules } from './gravity.ts';
-import { isCovered, layerBelow, visibleSegment } from './grid.ts';
+import { visibleSegment } from './grid.ts';
 import { isRemainingSupply, remainingDemandByColor, remainingSupplyByColor } from './goals.ts';
 import { hashState } from './hash.ts';
 import type { MoveHooks, RuleContext } from './moves.ts';
@@ -101,14 +101,15 @@ export function isFullCover(lvl: CompiledLevel): boolean {
 
 /**
  * Cheap sufficient test of K-09 (a)–(d) plus a non-cancel release (v3 D1 widening) for a yard block (µs, no BFS):
- * unlocked, allowed by the rules, not a pallet layer with a layer below (its own cells stay full, K-58) and free to
- * move one cell up inside the yard (every column's top cell has an empty yard cell above it). A vertical step inside
- * the yard columns never crosses the wall boundary or the site's open sky, so that node is valid, and a node fully in
- * the yard is a yard release (K-07 row 2), never a cancel.
+ * unlocked, allowed by the rules, not a pallet layer and free to move one cell up inside the yard (every column's top
+ * cell has an empty yard cell above it). A vertical step inside the yard columns never crosses the wall boundary or the
+ * site's open sky, so that node is valid, and for an ordinary block a node fully in the yard is a yard release (K-07
+ * row 2), never a cancel. A pallet layer — the last one too — releases on the site only (K-58 item 9 c: its yard nodes
+ * cancel with `palletSiteOnly`), so it always takes the BFS of `hasRelease` (D-106, `RULES_VERSION` 6).
  */
 export function quickHoldable(s: GameState, id: PieceId, rules?: DragRules): boolean {
   if (pieceZone(s, id) !== Zone.yard || (pieceFlags(s, id) & FLAG_BIT.locked) !== 0) return false;
-  if (s.lvl.hasStacks && (isCovered(s, id) || layerBelow(s, id) >= 0)) return false;
+  if (s.lvl.hasStacks && isPalletLayer(s, id)) return false;
   if (rules?.canPick && !rules.canPick(s, id)) return false;
   const shape = shapeByIndex(pieceShape(s, id));
   const x0 = pieceX(s, id);

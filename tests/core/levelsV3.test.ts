@@ -233,7 +233,8 @@ describe('K-58 pallet (Y10)', () => {
     expect(yardOcc(s, 0, 0)).toBe(2); // the top layer (id 1) owns the cells
     const attempt = tryBeginDrag(s, 0);
     expect(attempt.ok ? 'ok' : attempt.reason).toBe('covered');
-    // the held top layer: its own cells stay full (the layer below), so it cannot slide onto them
+    // the held top layer: D-106 (K-58 item 10) frees its own pallet's cells for it, but the G block at (2,0) still
+    // blocks the slide right (every other block collides; tests/core/palletD106.test.ts)
     const session = beginDrag(s, 1);
     expect(session?.isReachable({ ix: 0, iy: 1, mode: 0 })).toBe(true);
     expect(session?.isReachable({ ix: 1, iy: 0, mode: 0 })).toBe(false);
@@ -678,7 +679,7 @@ describe('K-63 tiling families, K-65 story-1 readability, K-66 boosters, K-30 D1
     expect(top).not.toBeNull(); // K-09 (a): it can be held …
     expect(top?.reachableNodes().every((n) => top.classify(n).kind === 'cancel')).toBe(true); // … but never released
     expect(noMoves(s, hooks.drag)).toBe(true);
-    expect(RULES_VERSION).toBe(5);
+    expect(RULES_VERSION).toBeGreaterThanOrEqual(5);
     // one empty yard cell: the B1 can step into it → a real release, no D1
     const room = v3({ ...spec, pieces: spec.pieces?.slice(0, 4) });
     expect(noMoves(room, levelHooks(room.lvl).drag)).toBe(false);

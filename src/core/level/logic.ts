@@ -1777,20 +1777,16 @@ function usesV3(p: PieceData): boolean {
   );
 }
 
-/** Pallets of the start batch: id → layers (path, piece) in data order. */
-/** K-58 item 10: all four one-unit translations of the shape intersect the shape itself. */
-export function palletStuck(shapeId: PieceData['shape']): boolean {
-  const own = new Set(shapeById(shapeId).cells.map((c) => `${c.x},${c.y}`));
-  return [
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1],
-  ].every(([dx, dy]) =>
-    shapeById(shapeId).cells.some((c) => own.has(`${c.x + (dx ?? 0)},${c.y + (dy ?? 0)}`)),
-  );
-}
+/**
+ * `pallet_stuck` (K-58 item 10 proposal, L-41) is retired by D-106 (`RULES_VERSION` 6), its name kept like `pallet_capacity`:
+ * a held layer no longer collides with its own pallet, so every pallet shape rises out of its stack (C3, O4, L4, J4, T4
+ * included) and a layer is exactly as free as an ordinary block of its shape at its anchor. What is left of "a layer can
+ * never leave" is not pallet-specific and has its own code: a cargo layer (`flag_combo_forbidden`, L-40), a shape that
+ * cannot cross the wall (`piece_unreachable`, K-56) or fit the site (`piece_too_wide`), a layer buried for good
+ * (solver `unsolvable`, D-090 walks). Test "K-58 item 10 pallet_stuck is retired".
+ */
 
+/** Pallets of the start batch: id → layers (path, piece) in data order. */
 function palletsOf(level: LevelData): Map<number, { path: string; piece: PieceData }[]> {
   const out = new Map<number, { path: string; piece: PieceData }[]>();
   level.yard.batches[0]?.pieces.forEach((p, i) => {
@@ -1906,15 +1902,6 @@ function checkTraits(level: LevelData, push: Push): void {
         'stack_invalid',
         path,
         'a pallet in a yard-gravity level (Y6) is not defined (OBSTACLES v3 table)',
-      );
-    // K-58 item 10 (CL-V3C-05 b): a lower layer must be able to leave its pallet's footprint; a one-unit shift in each of
-    // the four directions that still overlaps the own footprint means the block can never clear it (C3 / O4 / L4 / J4 / T4)
-    if (layers.length >= 2 && palletStuck(first.shape))
-      push(
-        'L-41',
-        'pallet_stuck',
-        path,
-        `pallet ${id} (${first.shape}): every one-unit shift overlaps the own footprint; the lower layers can never leave (K-58 item 10)`,
       );
   }
   if (level.chapter >= 2) {

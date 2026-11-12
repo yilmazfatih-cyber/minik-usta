@@ -3,10 +3,12 @@
  * only, K-17 pallet exception, K-60 items 6–7 / K-62 D-105 bonus reward, K-63 D-103 annex `plan_trap`; LEVELS §8.13.8
  * U-v3c-1…6). Every test name carries its rule id.
  */
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { compile } from '../../src/core/level/compile.ts';
 import { planTrapScan, validateLevelJson } from '../../src/core/level/logic.ts';
 import { buildPlans } from '../../src/core/level/plan.ts';
+import { HIGHLIGHT_REGEX } from '../../src/core/level/schema.ts';
 import type { LevelInput } from '../../src/core/level/schema.ts';
 import { GameSession, RULES_VERSION } from '../../src/core/session.ts';
 import { H, createInitialState, hdr, pieceX, pieceY, pieceZone, yardOcc } from '../../src/core/state.ts';
@@ -152,8 +154,8 @@ describe('K-49 D-103 wide site (3 columns, 9-column board)', () => {
     expect(one(6, 3, 'L4_90')).not.toContain('piece_too_wide');
   });
 
-  it('K-49 RULES_VERSION 5 (D-103…D-105 change the replay of saved logs)', () => {
-    expect(RULES_VERSION).toBe(5);
+  it('K-49 RULES_VERSION 5 (D-103…D-105 change the replay of saved logs; D-106 made it 6)', () => {
+    expect(RULES_VERSION).toBeGreaterThanOrEqual(5);
   });
 });
 
@@ -348,5 +350,42 @@ describe('K-63 D-103 annex plan-level trap scan (plan_trap)', () => {
     expect(sev({ ...trap, id: 12, difficulty: 'normal' })).toEqual(['error']);
     expect(sev(fixed)).toEqual([]);
     expect(codes(trap)).not.toContain('tile_family_mix');
+  });
+});
+
+describe('K-49 K-53 CL-V3C-15 tutorial cell highlight on a 9-column board', () => {
+  const level = (id: number): LevelInput =>
+    JSON.parse(
+      readFileSync(
+        new URL(`../../levels/level_${String(id).padStart(3, '0')}.json`, import.meta.url),
+        'utf8',
+      ),
+    ) as LevelInput;
+  const step = (highlight: string): NonNullable<LevelInput['tutorial']>[number] => ({
+    step: 1,
+    highlight: [highlight],
+    textKey: 'tut.m.useall',
+    done: { event: 'placementCorrect', count: 1 },
+  });
+  const l17 = (json: LevelInput, highlight: string): string[] =>
+    validateLevelJson({ ...json, tutorial: [step(highlight)] }, { only: ['L-17'] }).issues.map((i) => i.code);
+
+  it('K-53 CL-V3C-15 HIGHLIGHT_REGEX takes cell:[0-8],[0-9]: column 8 is a schema-valid highlight, column 9 is not', () => {
+    expect(HIGHLIGHT_REGEX.test('cell:8,0')).toBe(true);
+    expect(HIGHLIGHT_REGEX.test('cell:8,9')).toBe(true);
+    expect(HIGHLIGHT_REGEX.test('cell:9,0')).toBe(false);
+  });
+
+  it('K-49 K-53 CL-V3C-15 cell:8,y is on the board of a 3-column site (level 7, x 0-8) and off a 2-column one (level 5, x 0-7)', () => {
+    const wide = level(7);
+    expect(wide.site?.cols).toBe(3);
+    expect(l17(wide, 'cell:8,0')).toEqual([]);
+    expect(l17(wide, 'cell:8,7')).toEqual([]); // H 8 (6 x 8 yard): y 0-7
+    expect(l17(wide, 'cell:8,8')).toEqual(['tut_highlight_invalid']);
+    const narrow = level(5);
+    expect(l17(narrow, 'cell:7,0')).toEqual([]);
+    expect(l17(narrow, 'cell:8,0')).toEqual(['tut_highlight_invalid']);
+    // column 9 never parses (the 9 x 10 frame, D-103)
+    expect(validateLevelJson({ ...wide, tutorial: [step('cell:9,0')] }).level).toBeNull();
   });
 });

@@ -1,9 +1,10 @@
 /**
- * The solver values of the shipped levels 1–10 (`levels:solve`, SOLVER_VERSION 6, RULES_VERSION 4; CL-V3-01). Written by
+ * The solver values of the shipped levels 1–10 (`levels:solve`, SOLVER_VERSION 7, RULES_VERSION 6; CL-V3-01). Written by
  * `node tools/gen/write-shipped-expected.ts` from the solver's own output: a change of a level file or of the solver shows up
  * here first. `scan` 'full' = complete state-space scan (proven `min`, K-50 metrics); 'large' = large-level search (`best` is
  * an upper bound of `min`, `lowerBound` = N or N + 1) plus the random-walk dead-state gate and the placement-first play
- * proxy (CL-V3-03; `policyLoose` = win rate within moves + N / 2, not `ahaMin`).
+ * proxy (CL-V3-03; `policyLoose` = win rate within moves + N / 2, not `ahaMin`; CL-V3C-13: 400 plays, tight and loose on
+ * the same plays).
  */
 export interface ShippedFull {
   readonly minShifts: number;
@@ -114,8 +115,8 @@ export const SHIPPED: Readonly<Record<number, ShippedExpectation>> = {
     band: [15, 17],
     warnings: [],
     eventLogHash: 'b484301f06963e42',
-    policyLoose: 0.41,
-    policyTight: 0.18,
+    policyLoose: 0.39,
+    policyTight: 0.24,
   },
   4: {
     level: 4,
@@ -130,7 +131,7 @@ export const SHIPPED: Readonly<Record<number, ShippedExpectation>> = {
     warnings: [],
     eventLogHash: '8f932563e3df146f',
     policyLoose: 0.14,
-    policyTight: 0.11,
+    policyTight: 0.1,
   },
   5: {
     level: 5,
@@ -145,7 +146,7 @@ export const SHIPPED: Readonly<Record<number, ShippedExpectation>> = {
     warnings: [],
     eventLogHash: 'aa2b8f84c7abebf9',
     policyLoose: 0.57,
-    policyTight: 0.33,
+    policyTight: 0.26,
   },
   6: {
     level: 6,
@@ -159,8 +160,8 @@ export const SHIPPED: Readonly<Record<number, ShippedExpectation>> = {
     band: [23, 26],
     warnings: [],
     eventLogHash: '5928fea4725f42d2',
-    policyLoose: 0.24,
-    policyTight: 0.25,
+    policyLoose: 0.27,
+    policyTight: 0.17,
   },
   7: {
     level: 7,
@@ -172,10 +173,10 @@ export const SHIPPED: Readonly<Record<number, ShippedExpectation>> = {
     lowerBound: 19,
     yao: [18, 0],
     band: [24, 27],
-    warnings: ['metric_out_of_band'], // CL-V3C-01: lookahead proxy outside targets.policyWin
+    warnings: ['metric_out_of_band'],
     eventLogHash: '2f5e57edf6955b8c',
-    policyLoose: 0.38,
-    policyTight: 0.16,
+    policyLoose: 0.42,
+    policyTight: 0.14,
   },
   8: {
     level: 8,
@@ -189,8 +190,8 @@ export const SHIPPED: Readonly<Record<number, ShippedExpectation>> = {
     band: [24, 27],
     warnings: [],
     eventLogHash: 'a6662dc3ff2bfaa5',
-    policyLoose: 0.68,
-    policyTight: 0.35,
+    policyLoose: 0.66,
+    policyTight: 0.37,
   },
   9: {
     level: 9,
@@ -203,9 +204,9 @@ export const SHIPPED: Readonly<Record<number, ShippedExpectation>> = {
     yao: [17, 0],
     band: [23, 26],
     warnings: [],
-    eventLogHash: '4651c261f9b9b59d',
-    policyLoose: 0.44,
-    policyTight: 0.26,
+    eventLogHash: 'b669c264f949ca61',
+    policyLoose: 0.54,
+    policyTight: 0.31,
   },
   10: {
     level: 10,
@@ -213,13 +214,13 @@ export const SHIPPED: Readonly<Record<number, ShippedExpectation>> = {
     moves: 23,
     blocks: 19,
     scan: 'large',
-    best: 22,
+    best: 21,
     lowerBound: 20,
     yao: [19, 0],
-    band: [23, 26],
-    warnings: ['metric_out_of_band'], // CL-V3C-01: lookahead proxy outside targets.policyWin
-    eventLogHash: '333840b4bcd1da90',
-    policyLoose: 0.33, // CL-V3C-02: the bonus is credited
-    policyTight: 0.13,
+    band: [22, 25],
+    warnings: ['metric_out_of_band'],
+    eventLogHash: 'e98de9cf1ecc5fb6',
+    policyLoose: 0.39,
+    policyTight: 0.16,
   },
 };

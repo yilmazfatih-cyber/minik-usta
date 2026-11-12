@@ -83,7 +83,8 @@ export type TutEvent = (typeof TUT_EVENTS)[number];
 /** UX_FLOWS §13.1 highlight vocabulary, one regex alternative per entry (TECH §8.2). */
 export const HIGHLIGHT_PATTERNS = [
   'piece:(\\d{1,2}|k[1-9]_\\d{1,2})',
-  'cell:[0-7],[0-9]',
+  // CL-V3C-15: x 0-8 (a 3-column site makes a 9-column board, D-103); the board check is L-17 (`geo.cols`, `geo.h`)
+  'cell:[0-8],[0-9]',
   'gap:[0-2]',
   'obstacle:\\d{1,2}',
   'debris:\\d{1,2}',

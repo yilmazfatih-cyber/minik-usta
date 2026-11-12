@@ -2,7 +2,7 @@
   "level": 9,
   "source": "docs/LEVELS.md §2 Bölüm 9 — Kanonik çözüm (solver, GDD K-50 madde 4)",
   "levelHash": "dc41f4aeac3f9729",
-  "rulesVersion": 5,
+  "rulesVersion": 6,
   "geo": { "yard": [6, 8], "site": [3, 5], "H": 8, "wall": 7 },
   "budget": 23,
   "minMoves": 19,
@@ -165,22 +165,22 @@
       "to": [7, 2]
     },
     {
-      "piece": "g",
-      "ref": "piece:6",
-      "shape": "D2_0",
-      "color": "Y",
-      "from": [1, 4],
-      "kind": "overWall",
-      "to": [6, 3]
-    },
-    {
       "piece": "o",
       "ref": "piece:14",
       "shape": "D2_90",
       "color": "W",
       "from": [4, 0],
       "kind": "overWall",
-      "to": [7, 4],
+      "to": [7, 4]
+    },
+    {
+      "piece": "g",
+      "ref": "piece:6",
+      "shape": "D2_0",
+      "color": "Y",
+      "from": [1, 4],
+      "kind": "overWall",
+      "to": [6, 3],
       "segmentCompleted": 2
     }
   ],
@@ -203,10 +203,10 @@
     { "kind": "drag", "pieceId": 9, "to": { "ix": 7, "iy": 0, "mode": 0 } },
     { "kind": "drag", "pieceId": 10, "to": { "ix": 6, "iy": 1, "mode": 0 } },
     { "kind": "drag", "pieceId": 13, "to": { "ix": 7, "iy": 2, "mode": 0 } },
-    { "kind": "drag", "pieceId": 6, "to": { "ix": 6, "iy": 3, "mode": 0 } },
-    { "kind": "drag", "pieceId": 14, "to": { "ix": 7, "iy": 4, "mode": 0 } }
+    { "kind": "drag", "pieceId": 14, "to": { "ix": 7, "iy": 4, "mode": 0 } },
+    { "kind": "drag", "pieceId": 6, "to": { "ix": 6, "iy": 3, "mode": 0 } }
   ],
-  "eventLogHash": "4651c261f9b9b59d",
+  "eventLogHash": "b669c264f949ca61",
   "finalAscii": [
     "L9 turn 19 moves 4 seg 3/3 elev 0",
     "size 6x8|3x5 H8",

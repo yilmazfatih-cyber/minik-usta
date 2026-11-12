@@ -2049,8 +2049,9 @@ D1 genişlemesidir (V3.2 madde 7); sevk edilen 10 bölümde `D1 states` 0 kaldı
    `correctSpots(…, cellColors)`, `remainingSupplyByColor`, `coverTotals` ve D3a sınıfları (`cellMasks`, W6 jokeri yok) hücre
    başına renk okur. Fırça seçemez, Vinç döndüremez (`badRotation`; döndürülmüş renk tablosu yok).
 3. **Y10 palet** (çekirdek modeli): yalnız üst katman `yardOcc`'tadır; alt katmanlar kaydını (zone yard, aynı çapa) korur.
-   `grid.layerBelow`, `isCovered`, `ownCellCode`: üst katman kalkınca hücrelere alttaki yazılır (`writePiece`), tutulan üst
-   katmanın kendi hücreleri dolu sayılır (`collisionMasks`, Vinç `yardSpotFree`), başlangıç düğümü K-07 satır 1 iptalidir.
+   `grid.layerBelow`, `isCovered`: üst katman kalkınca hücrelere alttaki yazılır (`writePiece`); başlangıç düğümü K-07 satır
+   1 iptalidir. **D-106 (V3.8):** tutulan üst katman kendi paletinin kalan katmanlarıyla çarpışmaz (`collisionMasks`
+   `exclude + 1`'i atlar; `ownCellCode` kaldırıldı), başka her blok için palet dolu kalır.
    `tryBeginDrag` → `covered` (yeni `PickFailure`). Yerçekimi örtülü katmanı varlık saymaz. Geri Al/Söküm tamponu geri yükler.
    `stateInvariantErrors` palet örtüşmesini tanır. Çözücünün erişim önbelleği alt katmanlı üst katmanda kapalıdır.
 4. **Y11 sargı + makas** (eklenti `obstacles/Y11_wrap.ts`): `canPick` sargılıyı reddeder (Vinç/Altın Mala da `rulesAllow`
@@ -2211,6 +2212,32 @@ yerde olmayan düzeni reddeder). Taslak girdiler: `tools/gen/specs/v3c/level_006
 2,3 s / 180 693 durum; D3a en çok 19 açılım; `levels:solve` toplamı 69 s, bunun ≈ 65 s'si 10 000 yürüyüşlük ölü masa kapısı
 (`--walks 2000` → 26 s, `--walks 1` → 3,2 s). 20 bloklu 3 sütunlu paletli taslaklarda (E 4) üreticinin rastgele başlangıç
 düzenleri çözülemedi (çoğu başlangıçta hamlesiz); bölüm turunda seçicinin (`pick-v3`) arama ve E bütçesi gerekir (P3).
+
+### V3.8 Paket A1 (v3c tur 2): palet katmanı kendi yığınından çıkar, vekil örneklemi (D-106; RULES_VERSION 6)
+
+**Kural (D-106, GDD K-58 madde 10).** Sürüklenen palet katmanı kendi paletinin kalan katmanlarıyla çarpışmaz. Paletin bütün
+katmanları aynı hücrelerdedir ve `yardOcc` o hücrelerde tutulan (üst) katmanın kodunu taşır; bu yüzden `collisionMasks`
+yalnız `exclude + 1`'i atlar ve ayak izi tutulan katman için boşalır (`grid.ownCellCode` kaldırıldı). Başka bloklar, duvar,
+çerçeve ve geçitler aynen çarpışır; palet başka her blok için dolu kalır (alt katman kodu yazılır, `writePiece`). Başlangıç
+düğümü K-07 satır 1 iptali, sahadaki her bırakma `palletSiteOnly` iptali (K-58 madde 9 c) kalır. Sonuç: C3/O4/L4/J4/T4 dahil
+her palet şekli yığından yukarı çıkar; D2_90 katmanı yanı boşsa kendi hücresi üstünden yana da kayabilir.
+**D1:** `quickHoldable` hiçbir palet katmanını (son katman dahil) hızlı yoldan "tutulabilir" saymaz; saha bırakması olup
+olmadığına `hasRelease` (BFS + `classify`) bakar. Eski kod son katmanı, sahaya hiç ulaşamasa da tutulabilir sayıyordu.
+**Vinç / Altın Mala:** yol yoktur, değişmedi (`yardSpotFree` palet katmanına hiç çağrılmaz). Çözücü `mayMove` zaten aynı
+kuralı uyguluyordu (palet hücreleri üst katmanın kodunu taşır); erişim önbelleği palet katmanını paylaşmamaya devam eder.
+**Doğrulayıcı:** `pallet_stuck` (L-41) emekli, adı yeniden kullanılmaz: D-106 ile katman, aynı çapadaki aynı şekilli sıradan bir
+blok kadar serbesttir; "hiç çıkamaz" durumlarının palete özgü olanı kalmadı (Ağır Yük katmanı `flag_combo_forbidden`, duvarı
+aşamayan şekil `piece_unreachable`, şantiyeye sığmayan `piece_too_wide`, kalıcı gömülü katman çözücü `unsolvable` / D-090).
+Testler `tests/core/palletD106.test.ts` ("K-58 item 10 …"). Kayıtlı denemeler **RULES_VERSION 6** ile geçersizdir (E-67).
+
+**Öğretici vurgu (CL-V3C-15).** `HIGHLIGHT_PATTERNS` `cell:[0-8],[0-9]`; tahtada olma denetimi L-17'de (`geo.cols`, `geo.h`).
+
+**Vekil örneklemi (CL-V3C-13).** `policyWinRates(lvl, budgets, opts)` bütçeleri **aynı oyunlarda** ölçer: her oyun en büyük
+bütçeye dek oynanır; `b` bütçesinde kazanç = sayaç `b`'ye ulaşmadan kazanılmış ve son `spent ≤ b`. Böylece büyük bütçe hiç daha
+düşük oran vermez (Bölüm 6'daki 0,25 / 0,24 çifti iki ayrı tohum akışının gürültüsüydü; 20 × 400 oyunda ayrı ve eşli ölçüm
+ortalaması 0,2180 / 0,2165, sapma yok). Her oran Wilson %95 aralığıyla raporlanır (`policy.ci`, notlar); bant kapısı nokta
+tahminine bakar (aralık yalnız rapor). Oyun sayısı `--games N` (varsayılan `POLICY_GAMES_DEFAULT` = 400; `--check` altında
+400'ün altı 400'e çekilir). Önbellek anahtarı `walks` ve `games` içerir. `SOLVER_VERSION` 7.
 
 ## 3. Şekiller
 
@@ -3063,7 +3090,7 @@ const HiddenRule = z.discriminatedUnion('kind', [
 // UX_FLOWS §13.1 vurgu sözlüğünün tamamı (GDD §14 tutorial satırı bağlar); varlık denetimi L-17
 const Highlight = z.string().check(z.regex(new RegExp('^(' + [
   'piece:(\\d{1,2}|k[1-9]_\\d{1,2})',                         // parti-0 sırası | k<parti>_<indeks> (0 tabanlı)
-  'cell:[0-7],[0-9]', 'gap:[0-2]', 'obstacle:\\d{1,2}',
+  'cell:[0-8],[0-9]', 'gap:[0-2]', 'obstacle:\\d{1,2}',
   'debris:\\d{1,2}',                                          // build.debris[] dizi sırası (0 tabanlı; UX §13.1)
   'booster:(hammer|crane|brush|undo)', 'pre:(thermos|trowel|shutter)',
   'wall', 'crane', 'build', 'front', 'panorama', 'goals', 'moves', 'truck', 'streak', 'fan',

@@ -169,6 +169,8 @@ export function randomWalks(lvl: CompiledLevel, opts: WalkOptions = {}): WalkRes
 
 /** Shifts a lookahead player compares per move (a uniform sample; a full scan of Bolum 10 took 218 s). */
 export const LOOK_CANDIDATES = 24;
+/** Plays of a policy proxy at the gate (CL-V3C-13: 200 plays gave a 95 % half-width of up to 7 points; `--games`). */
+export const POLICY_GAMES_DEFAULT = 400;
 
 export interface PolicyOptions {
   readonly plays?: number;
@@ -182,18 +184,66 @@ export interface PolicyOptions {
   readonly lookahead?: boolean;
 }
 
+/** A win rate of `games` plays with its Wilson 95 % score interval (CL-V3C-13). */
+export interface PolicyRate {
+  /** Point estimate, 2 decimals (the band gate reads this). */
+  readonly rate: number;
+  readonly wins: number;
+  readonly games: number;
+  /** Wilson 95 % interval, 2 decimals (reported only; it never decides a gate). */
+  readonly ci: readonly [number, number];
+}
+
+const round2 = (v: number): number => Math.round(v * 100) / 100;
+
+/**
+ * Wilson score interval of `wins` successes in `n` trials (z = 1.96 → 95 %): `[0, 0]` for `n = 0`. Unlike the normal
+ * approximation it stays inside [0, 1] and is not empty at 0 or `n` wins. Exact (not rounded).
+ */
+export function wilsonInterval(wins: number, n: number, z = 1.96): [number, number] {
+  if (n <= 0) return [0, 0];
+  const p = wins / n;
+  const z2 = z * z;
+  const den = 1 + z2 / n;
+  const mid = (p + z2 / (2 * n)) / den;
+  const half = (z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n))) / den;
+  return [Math.max(0, mid - half), Math.min(1, mid + half)];
+}
+
+function rateOf(wins: number, games: number): PolicyRate {
+  const [lo, hi] = wilsonInterval(wins, games);
+  return { rate: games === 0 ? 0 : round2(wins / games), wins, games, ci: [round2(lo), round2(hi)] };
+}
+
 /**
  * Win rate within `budget` of a "take any correct placement you can see" player (CL-V3-03 proxy for `greedyWin` /
  * `ahaMin`, which need the whole graph): at each state a uniformly random correct placement if one exists, else a
  * yard shift (random, or with `lookahead` the one that opens the most placements); with probability `eps` a uniformly
  * random move. A level the policy always wins has no decision to make; one it never wins is a wall. The spent moves are
  * the true counter difference, so a Y12 bonus placed correctly pays its moves back (K-62, CL-V3C-02: "play proxies apply
- * the bonus like the real game"). Deterministic (seeded).
+ * the bonus like the real game"). Deterministic (seeded). The point estimate of `policyWinRates` for one budget.
  */
 export function policyWinRate(lvl: CompiledLevel, budget: number, opts: PolicyOptions = {}): number {
-  const plays = opts.plays ?? 400;
+  return policyWinRates(lvl, [budget], opts)[0]?.rate ?? 0;
+}
+
+/**
+ * `policyWinRate` for several budgets on the SAME plays (CL-V3C-13): every play runs to the largest budget, and it wins
+ * within budget `b` when it is won without the counter reaching `b` first (the game's loss rule, K-07 (e): the loop
+ * stops once `spent ≥ b`; a bonus may lower `spent` again only inside the larger budgets) and its final `spent ≤ b`.
+ * So a larger budget never has a lower rate — measured separately the two seeded streams drift apart after the first
+ * loss, and 200 plays put Bolum 6 at 0.25 within `moves` and 0.24 within `moves + N/2`. One result per budget, in
+ * order, with its Wilson 95 % interval.
+ */
+export function policyWinRates(
+  lvl: CompiledLevel,
+  budgets: readonly number[],
+  opts: PolicyOptions = {},
+): PolicyRate[] {
+  const plays = opts.plays ?? POLICY_GAMES_DEFAULT;
   const eps = opts.eps ?? 0;
   const look = opts.lookahead === true;
+  const maxBudget = budgets.reduce((a, b) => Math.max(a, b), 0);
   const hooks = levelHooks(lvl);
   const x = new Expander(lvl, hooks);
   const peek = look ? new Expander(lvl, hooks) : null;
@@ -214,11 +264,17 @@ export function policyWinRate(lvl: CompiledLevel, budget: number, opts: PolicyOp
   const candBuf: Int32Array[] = [];
   const candCost: number[] = [];
   const scratch: GameState = { lvl, buf: new Int32Array(lvl.layout.size) };
-  let wins = 0;
+  const wins = budgets.map(() => 0);
+  /** Per budget: the play is still inside it (the counter never reached it before a move). */
+  const open = budgets.map(() => true);
   for (let p = 0; p < plays; p++) {
     cur.buf.set(solverStart(lvl).buf);
     let spent = 0;
-    while (!isLevelWon(cur) && spent < budget) {
+    open.fill(true);
+    for (;;) {
+      if (isLevelWon(cur)) break;
+      for (let b = 0; b < budgets.length; b++) if (spent >= (budgets[b] ?? 0)) open[b] = false;
+      if (spent >= maxBudget) break;
       let nPlace = 0;
       let nOther = 0;
       let nAll = 0;
@@ -264,13 +320,13 @@ export function policyWinRate(lvl: CompiledLevel, budget: number, opts: PolicyOp
           const cb = candBuf[k];
           if (!cb) continue;
           scratch.buf.set(cb);
-          const open = placementsIn(scratch);
-          if (open > bestOpen) {
-            bestOpen = open;
+          const opened = placementsIn(scratch);
+          if (opened > bestOpen) {
+            bestOpen = opened;
             ties = 1;
             bufB.set(cb);
             costB = candCost[k] ?? 1;
-          } else if (open === bestOpen && rng.nextInt(++ties) === 0) {
+          } else if (opened === bestOpen && rng.nextInt(++ties) === 0) {
             bufB.set(cb);
             costB = candCost[k] ?? 1;
           }
@@ -287,7 +343,9 @@ export function policyWinRate(lvl: CompiledLevel, budget: number, opts: PolicyOp
         spent += costB;
       }
     }
-    if (isLevelWon(cur) && spent <= budget) wins++;
+    if (isLevelWon(cur))
+      for (let b = 0; b < budgets.length; b++)
+        if (open[b] && spent <= (budgets[b] ?? 0)) wins[b] = (wins[b] ?? 0) + 1;
   }
-  return plays === 0 ? 0 : Math.round((wins / plays) * 100) / 100;
+  return wins.map((w) => rateOf(w, plays));
 }

@@ -14,7 +14,10 @@
  *
  * Usage: `npm run levels:solve [-- --level N[,M|N-M]] [--dir <path>] [--variant no-gaps|hammer-start]
  *   [--max-states N] [--max-ms N] [--jobs N] [--no-cache] [--no-variants] [--no-d3a] [--json] [--allow <file>]
- *   [--out <dir>] [--report] [--update-golden] [--emit-tables] [--large | --no-large] [--large-ms N] [--walks N]`
+ *   [--out <dir>] [--report] [--update-golden] [--emit-tables] [--large | --no-large] [--large-ms N] [--walks N]
+ *   [--games N]`
+ * `--games N`: plays of each play proxy of a large level (default 400; CL-V3C-13); the report gives every proxy rate
+ *   with its Wilson 95 % interval, the `targets.policyWin` band gate reads the point estimate. `--check` uses ≥ 400.
  * `--large` / `--no-large`: run / skip the large-level search (best found solution, TECH §V3.3) when the exploration
  *   is incomplete (default: on for `schemaVersion` 3 levels); `--large-ms` its time limit (default 60 000).
  * `npm run levels:check [-- …]` = this tool with `--check`: `levels:validate` (same `--dir`, `--level`, `--allow`,
@@ -42,6 +45,7 @@ import type { AllowList } from './lib/levelsAllow.ts';
 import { RULES_VERSION } from '../src/core/session.ts';
 import { DEFAULT_MAX_MS, DEFAULT_MAX_STATES } from './solver/explore.ts';
 import { SOLVER_VERSION, solveLevelJson } from './solver/solveLevel.ts';
+import { POLICY_GAMES_DEFAULT, WALKS_DEFAULT } from './solver/walks.ts';
 import type { SolveOptions, SolveReport } from './solver/solveLevel.ts';
 import type { SolveIssue } from './solver/metrics.ts';
 import { isVariantName } from './solver/variants.ts';
@@ -127,6 +131,8 @@ function cacheKeyOf(file: LevelFile, opts: SolveOptions): string {
     opts.variant ?? 'level',
     opts.variants === false ? 'novar' : 'var',
     opts.d3a === false ? 'nod3a' : 'd3a',
+    `walks${opts.walks ?? WALKS_DEFAULT}`,
+    `games${opts.policyGames ?? POLICY_GAMES_DEFAULT}`,
   ].join(':');
 }
 
@@ -219,6 +225,19 @@ function runValidate(dir: string): number {
   return res.status ?? 1;
 }
 
+/**
+ * CL-V3C-13 `--games N`: plays of each play proxy (default `POLICY_GAMES_DEFAULT` = 400). The gate (`--check`) never
+ * measures with fewer than the default: a smaller value is raised with a note (a 200-play rate has a 95 % half-width of
+ * up to 7 points).
+ */
+function gateGames(n: number): number {
+  if (!has('--check') || n >= POLICY_GAMES_DEFAULT) return n;
+  process.stdout.write(
+    `note: --games ${n} is below the gate's ${POLICY_GAMES_DEFAULT}; levels:check measures with ${POLICY_GAMES_DEFAULT}\n`,
+  );
+  return POLICY_GAMES_DEFAULT;
+}
+
 async function main(): Promise<number> {
   const dir = resolve(arg('--dir') ?? join(ROOT, 'levels'));
   const defaultDir = dir === resolve(join(ROOT, 'levels'));
@@ -248,6 +267,7 @@ async function main(): Promise<number> {
     ...(has('--large') ? { large: true } : has('--no-large') ? { large: false } : {}),
     ...(arg('--walks') !== undefined ? { walks: intArg('--walks', 10_000) } : {}),
     ...(arg('--large-ms') !== undefined ? { largeMs: intArg('--large-ms', 60_000) } : {}),
+    policyGames: gateGames(intArg('--games', POLICY_GAMES_DEFAULT)),
   };
   const allow: AllowList = arg('--allow') !== undefined ? loadAllowList(arg('--allow')) : loadAllowList();
   const files = listLevelFiles(dir).filter((f) => only === null || only.has(f.fileId));

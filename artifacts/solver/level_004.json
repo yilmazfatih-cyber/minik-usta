@@ -2,8 +2,8 @@
   "level": 4,
   "file": "level_004.json",
   "levelHash": "dc0071fb4eaadc35",
-  "rulesVersion": 5,
-  "solverVersion": 6,
+  "rulesVersion": 6,
+  "solverVersion": 7,
   "variant": null,
   "schemaVersion": 2,
   "status": "solved",
@@ -33,8 +33,8 @@
   "variants": [],
   "issues": [],
   "notes": [
-    "large-level search (U-v3-2): best found 12 (lower bound 11) — not proven optimal, en iyi bulunan; width 8, 57327 states, 873 ms, replay ok",
-    "play proxy (CL-V3-03; not ahaMin): placement-first player wins 0.11 within 16 moves, 0.14 within 21",
+    "large-level search (U-v3-2): best found 12 (lower bound 11) — not proven optimal, en iyi bulunan; width 8, 57327 states, 1110 ms, replay ok",
+    "play proxy (CL-V3-03; not ahaMin): placement-first player wins 0.1 (95 % CI 0.07-0.13, 39/400) within 16 moves, 0.14 (95 % CI 0.1-0.17, 54/400) within 21 (same plays)",
     "dead-state gate (CL-V3-01 B, estimate not proof; D-090 whole-space scan not run): 10000 random walks: won 3362, rescued by D1/D2/D3a 259, unresolved 6379 (probed 200: solvable 200, undetected dead 0) → estimated 0.00 %"
   ],
   "specGaps": [],
@@ -42,7 +42,7 @@
     "states": 2001,
     "expanded": 359,
     "edges": 5462,
-    "ms": 41,
+    "ms": 54,
     "bytes": 389387,
     "dragSessions": 1441,
     "applyMoves": 396,
@@ -52,7 +52,7 @@
     "d3aUnknown": 0,
     "complete": false,
     "limit": "maxStates",
-    "totalMs": 31080
+    "totalMs": 38726
   },
   "v3": {
     "liftRatio": 1,
@@ -77,28 +77,28 @@
       "value": 1
     },
     "states": 57327,
-    "ms": 873,
+    "ms": 1110,
     "replayOk": true,
     "runs": [
       {
         "width": 8,
         "cost": 12,
-        "ms": 11
+        "ms": 20
       },
       {
         "width": 32,
         "cost": 12,
-        "ms": 58
+        "ms": 75
       },
       {
         "width": 128,
         "cost": 12,
-        "ms": 215
+        "ms": 194
       },
       {
         "width": 512,
         "cost": 12,
-        "ms": 589
+        "ms": 821
       }
     ],
     "actions": [
@@ -228,10 +228,22 @@
       "ok": true
     },
     "policy": {
-      "tight": 0.11,
+      "tight": 0.1,
       "loose": 0.14,
-      "look": null
+      "look": null,
+      "games": 400,
+      "ci": {
+        "tight": [
+          0.07,
+          0.13
+        ],
+        "loose": [
+          0.1,
+          0.17
+        ],
+        "look": null
+      }
     }
   },
-  "cacheKey": "e9fb3392:rules5:solver6:srce88eb59c:level:var:d3a"
+  "cacheKey": "e9fb3392:rules6:solver7:srcf6518d28:level:var:d3a:walks10000:games400"
 }

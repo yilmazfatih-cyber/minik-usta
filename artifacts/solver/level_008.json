@@ -2,8 +2,8 @@
   "level": 8,
   "file": "level_008.json",
   "levelHash": "01d68b426c448f9f",
-  "rulesVersion": 5,
-  "solverVersion": 6,
+  "rulesVersion": 6,
+  "solverVersion": 7,
   "variant": null,
   "schemaVersion": 2,
   "status": "solved",
@@ -33,19 +33,19 @@
   "variants": [],
   "issues": [],
   "notes": [
-    "large-level search (U-v3-2): best found 20 (lower bound 19) — not proven optimal, en iyi bulunan; width 8, 152462 states, 3332 ms, replay ok",
-    "lookahead proxy (CL-V3C-01): one-step lookahead, eps 0.1, wins 0.89 within 24 moves (bonus applied like the game)",
-    "play proxy (CL-V3-03; not ahaMin): placement-first player wins 0.35 within 24 moves, 0.68 within 33",
-    "dead-state gate (CL-V3-01 B, estimate not proof; D-090 whole-space scan not run): 10000 random walks: won 9932, rescued by D1/D2/D3a 0, unresolved 68 (probed 68: solvable 68, undetected dead 0) → estimated 0.00 %"
+    "large-level search (U-v3-2): best found 20 (lower bound 19) — not proven optimal, en iyi bulunan; width 8, 152495 states, 3840 ms, replay ok",
+    "lookahead proxy (CL-V3C-01): one-step lookahead, eps 0.1, wins 0.86 (95 % CI 0.82-0.89, 344/400) within 24 moves (bonus applied like the game)",
+    "play proxy (CL-V3-03; not ahaMin): placement-first player wins 0.37 (95 % CI 0.33-0.42, 149/400) within 24 moves, 0.66 (95 % CI 0.61-0.7, 262/400) within 33 (same plays)",
+    "dead-state gate (CL-V3-01 B, estimate not proof; D-090 whole-space scan not run): 10000 random walks: won 9930, rescued by D1/D2/D3a 0, unresolved 70 (probed 70: solvable 70, undetected dead 0) → estimated 0.00 %"
   ],
   "specGaps": [],
   "stats": {
     "states": 2008,
     "expanded": 497,
     "edges": 6562,
-    "ms": 443,
+    "ms": 458,
     "bytes": 394950,
-    "dragSessions": 2716,
+    "dragSessions": 2773,
     "applyMoves": 447,
     "fastYardMoves": 6115,
     "d3aRuns": 38,
@@ -53,7 +53,7 @@
     "d3aUnknown": 0,
     "complete": false,
     "limit": "maxStates",
-    "totalMs": 83586
+    "totalMs": 109051
   },
   "v3": {
     "liftRatio": 0.94,
@@ -77,29 +77,29 @@
       "rail": 0,
       "value": 1
     },
-    "states": 152462,
-    "ms": 3332,
+    "states": 152495,
+    "ms": 3840,
     "replayOk": true,
     "runs": [
       {
         "width": 8,
         "cost": 20,
-        "ms": 155
+        "ms": 181
       },
       {
         "width": 32,
         "cost": 20,
-        "ms": 232
+        "ms": 347
       },
       {
         "width": 128,
         "cost": 20,
-        "ms": 784
+        "ms": 844
       },
       {
         "width": 512,
         "cost": 20,
-        "ms": 2160
+        "ms": 2467
       }
     ],
     "actions": [
@@ -291,20 +291,35 @@
     ],
     "walks": {
       "walks": 10000,
-      "won": 9932,
+      "won": 9930,
       "rescued": 0,
-      "unresolved": 68,
-      "probed": 68,
-      "stillSolvable": 68,
+      "unresolved": 70,
+      "probed": 70,
+      "stillSolvable": 70,
       "undetected": 0,
       "rate": 0,
       "ok": true
     },
     "policy": {
-      "tight": 0.35,
-      "loose": 0.68,
-      "look": 0.89
+      "tight": 0.37,
+      "loose": 0.66,
+      "look": 0.86,
+      "games": 400,
+      "ci": {
+        "tight": [
+          0.33,
+          0.42
+        ],
+        "loose": [
+          0.61,
+          0.7
+        ],
+        "look": [
+          0.82,
+          0.89
+        ]
+      }
     }
   },
-  "cacheKey": "67451c51:rules5:solver6:srce88eb59c:level:var:d3a"
+  "cacheKey": "67451c51:rules6:solver7:srcf6518d28:level:var:d3a:walks10000:games400"
 }

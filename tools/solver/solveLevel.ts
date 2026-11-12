@@ -26,8 +26,8 @@ import { replayCanonical } from './verify.ts';
 import type { ReplayCheck } from './verify.ts';
 import { VARIANTS, applyVariant, variantApplies, variantBandOk } from './variants.ts';
 import { largeActions, solveLarge } from './large.ts';
-import { policyWinRate, randomWalks, WALKS_DEFAULT } from './walks.ts';
-import type { WalkResult } from './walks.ts';
+import { POLICY_GAMES_DEFAULT, policyWinRates, randomWalks, WALKS_DEFAULT } from './walks.ts';
+import type { PolicyRate, WalkResult } from './walks.ts';
 import { v3Metrics } from './v3metrics.ts';
 import type { V3Metrics } from './v3metrics.ts';
 import { schemaVersionOf } from '../../src/core/level/schema.ts';
@@ -35,9 +35,10 @@ import type { VariantName } from './variants.ts';
 
 /**
  * Bump when the solver's results can change for the same level and rules (cache key with `levelHash` and
- * `RULES_VERSION`, TECH §2R.5). 4 = levels v3 (K-64 measures, v3 gates, large-level search, TECH §V3).
+ * `RULES_VERSION`, TECH §2R.5). 4 = levels v3 (K-64 measures, v3 gates, large-level search, TECH §V3). 7 = CL-V3C-13:
+ * the play proxies run `policyGames` plays (default 400), tight and loose on the same plays, with Wilson 95 % intervals.
  */
-export const SOLVER_VERSION = 6;
+export const SOLVER_VERSION = 7;
 
 export interface SolveOptions {
   readonly maxStates?: number;
@@ -59,6 +60,8 @@ export interface SolveOptions {
   readonly walks?: number;
   /** Walk ends the beam probes (default 200; the tests use fewer). */
   readonly walkSample?: number;
+  /** Plays of each play proxy (`--games`; default `POLICY_GAMES_DEFAULT` = 400, CL-V3C-13; the tests use fewer). */
+  readonly policyGames?: number;
 }
 
 /** What the report keeps of a large-level search (tools/solver/large.ts). */
@@ -88,6 +91,14 @@ export interface LargeSummary {
     readonly loose: number;
     /** CL-V3C-01: one-step lookahead, eps 0.1, within `moves` (bonus applied as in the game, CL-V3C-02). */
     readonly look: number | null;
+    /** CL-V3C-13: plays per proxy; tight and loose come from the same plays (loose ≥ tight). */
+    readonly games: number;
+    /** CL-V3C-13: Wilson 95 % intervals (reported only; the band gate reads the point estimate). */
+    readonly ci: {
+      readonly tight: readonly [number, number];
+      readonly loose: readonly [number, number];
+      readonly look: readonly [number, number] | null;
+    };
   } | null;
 }
 
@@ -290,14 +301,31 @@ export function solveLevelData(
           ...(opts.walkSample !== undefined ? { sample: opts.walkSample } : {}),
         });
         const loose = level.moves + Math.round(lvl.materialCount / 2);
+        const games = opts.policyGames ?? POLICY_GAMES_DEFAULT;
+        // CL-V3C-13: tight and loose on the same plays (a larger budget never wins less)
+        const [tightR, looseR] = policyWinRates(lvl, [level.moves, loose], { plays: games, seed: level.id });
+        // only a level with a `targets.policyWin` band is measured (the sampled lookahead takes 2-40 s per level)
+        const lookR: PolicyRate | null =
+          level.targets?.policyWin === undefined
+            ? null
+            : (policyWinRates(lvl, [level.moves], {
+                plays: games,
+                seed: level.id,
+                lookahead: true,
+                eps: 0.1,
+              })[0] ?? null);
+        const ciText = (r: PolicyRate | null | undefined): string =>
+          r ? `${r.rate} (95 % CI ${r.ci[0]}-${r.ci[1]}, ${r.wins}/${r.games})` : '-';
         const policy = {
-          tight: policyWinRate(lvl, level.moves, { plays: 200, seed: level.id }),
-          loose: policyWinRate(lvl, loose, { plays: 200, seed: level.id }),
-          // only a level with a `targets.policyWin` band is measured (the sampled lookahead takes 1-20 s per level)
-          look:
-            level.targets?.policyWin === undefined
-              ? null
-              : policyWinRate(lvl, level.moves, { plays: 200, seed: level.id, lookahead: true, eps: 0.1 }),
+          tight: tightR?.rate ?? 0,
+          loose: looseR?.rate ?? 0,
+          look: lookR?.rate ?? null,
+          games,
+          ci: {
+            tight: tightR?.ci ?? ([0, 0] as const),
+            loose: looseR?.ci ?? ([0, 0] as const),
+            look: lookR?.ci ?? null,
+          },
         };
         large = { ...large, walks: w, policy };
         if (level.difficulty !== 'easy' && policy.loose > 0.7)
@@ -320,15 +348,15 @@ export function solveLevelData(
               'L-33',
               'warn',
               'targets.policyWin',
-              `policyWin = ${policy.look} is outside [${pBand[0]}, ${pBand[1]}] (one-step lookahead player, eps 0.1, within ${level.moves} moves; CL-V3C-01)`,
+              `policyWin = ${policy.look} is outside [${pBand[0]}, ${pBand[1]}] (one-step lookahead player, eps 0.1, within ${level.moves} moves, ${games} plays, 95 % CI ${policy.ci.look?.[0] ?? '-'}-${policy.ci.look?.[1] ?? '-'}; the point estimate decides; CL-V3C-01, CL-V3C-13)`,
             ),
           );
         if (policy.look !== null)
           notes.push(
-            `lookahead proxy (CL-V3C-01): one-step lookahead, eps 0.1, wins ${policy.look} within ${level.moves} moves (bonus applied like the game)`,
+            `lookahead proxy (CL-V3C-01): one-step lookahead, eps 0.1, wins ${ciText(lookR)} within ${level.moves} moves (bonus applied like the game)`,
           );
         notes.push(
-          `play proxy (CL-V3-03; not ahaMin): placement-first player wins ${policy.tight} within ${level.moves} moves, ${policy.loose} within ${loose}`,
+          `play proxy (CL-V3-03; not ahaMin): placement-first player wins ${ciText(tightR)} within ${level.moves} moves, ${ciText(looseR)} within ${loose} (same plays)`,
         );
         const best = r.best ?? 0;
         const ctl = (code: string, rule: string, check: string, path: string, message: string): void => {

@@ -2,11 +2,11 @@
   "level": 10,
   "source": "docs/LEVELS.md §2 Bölüm 10 — Kanonik çözüm (solver, GDD K-50 madde 4)",
   "levelHash": "61257a35d615eec2",
-  "rulesVersion": 5,
+  "rulesVersion": 6,
   "geo": { "yard": [6, 8], "site": [3, 4], "H": 8, "wall": 6 },
   "budget": 23,
-  "minMoves": 22,
-  "movesLeft": 3,
+  "minMoves": 21,
+  "movesLeft": 4,
   "yao": { "overWall": 19, "rail": 0 },
   "steps": [
     {
@@ -147,15 +147,6 @@
       "to": [6, 1]
     },
     {
-      "piece": "h",
-      "ref": "piece:7",
-      "shape": "D2_0",
-      "color": "G",
-      "from": [3, 1],
-      "kind": "shift",
-      "to": [0, 0]
-    },
-    {
       "piece": "r",
       "ref": "piece:17",
       "shape": "D2_90",
@@ -193,22 +184,22 @@
       "to": [6, 1]
     },
     {
-      "piece": "h",
-      "ref": "piece:7",
-      "shape": "D2_0",
-      "color": "G",
-      "from": [0, 0],
-      "kind": "overWall",
-      "to": [8, 2]
-    },
-    {
       "piece": "p",
       "ref": "piece:15",
       "shape": "D2_90",
       "color": "G",
       "from": [2, 0],
       "kind": "overWall",
-      "to": [6, 3],
+      "to": [6, 3]
+    },
+    {
+      "piece": "h",
+      "ref": "piece:7",
+      "shape": "D2_0",
+      "color": "G",
+      "from": [3, 0],
+      "kind": "overWall",
+      "to": [8, 2],
       "segmentCompleted": 3
     }
   ],
@@ -229,17 +220,16 @@
     { "kind": "drag", "pieceId": 6, "to": { "ix": 7, "iy": 0, "mode": 0 } },
     { "kind": "drag", "pieceId": 12, "to": { "ix": 8, "iy": 2, "mode": 0 } },
     { "kind": "drag", "pieceId": 13, "to": { "ix": 6, "iy": 1, "mode": 0 } },
-    { "kind": "drag", "pieceId": 7, "to": { "ix": 0, "iy": 0, "mode": 0 } },
     { "kind": "drag", "pieceId": 17, "to": { "ix": 6, "iy": 3, "mode": 0 } },
     { "kind": "drag", "pieceId": 16, "to": { "ix": 6, "iy": 0, "mode": 0 } },
     { "kind": "drag", "pieceId": 10, "to": { "ix": 7, "iy": 0, "mode": 0 } },
     { "kind": "drag", "pieceId": 18, "to": { "ix": 6, "iy": 1, "mode": 0 } },
-    { "kind": "drag", "pieceId": 7, "to": { "ix": 8, "iy": 2, "mode": 0 } },
-    { "kind": "drag", "pieceId": 15, "to": { "ix": 6, "iy": 3, "mode": 0 } }
+    { "kind": "drag", "pieceId": 15, "to": { "ix": 6, "iy": 3, "mode": 0 } },
+    { "kind": "drag", "pieceId": 7, "to": { "ix": 8, "iy": 2, "mode": 0 } }
   ],
-  "eventLogHash": "333840b4bcd1da90",
+  "eventLogHash": "e98de9cf1ecc5fb6",
   "finalAscii": [
-    "L10 turn 22 moves 3 seg 4/4 elev 0",
+    "L10 turn 21 moves 4 seg 4/4 elev 0",
     "size 6x8|3x4 H8",
     " y  0 1 2 3 4 5 | W | 6 7 8",
     " 9  . . . . . . | : | . . .",

@@ -43,7 +43,7 @@ import type { GameState } from './state.ts';
 import { shapeById, shapeByIndex } from './shapes.ts';
 import type { ShapeDef } from './shapes.ts';
 import { isCargoShape, isPalletLayer } from './movement.ts';
-import { isCovered, ownCellCode, visibleSegment } from './grid.ts';
+import { isCovered, visibleSegment } from './grid.ts';
 import {
   lockPiece,
   movePiece,
@@ -224,13 +224,13 @@ export function craneSelectable(s: GameState, id: PieceId, hooks: MoveHooks): bo
 type CraneMove = Extract<Move, { kind: 'crane' }>;
 
 /**
- * K-37 (a): every cell of `shape` at `(x, y)` inside the yard and empty (the piece itself excluded — except a pallet
- * layer's own cells, which the layer below keeps full, v3 K-58 item 4).
+ * K-37 (a): every cell of `shape` at `(x, y)` inside the yard and empty (the piece itself excluded). A pallet layer
+ * never gets here (K-58 item 9 e: no yard target), so its pallet's cells need no special case.
  */
 function yardSpotFree(s: GameState, shape: ShapeDef, x: number, y: number, self: PieceId): boolean {
   const { wy, hy } = s.lvl.geo;
   if (x < 0 || y < 0 || x + shape.w > wy || y + shape.h > hy) return false;
-  const own = s.lvl.hasStacks ? ownCellCode(s, self) : self + 1;
+  const own = self + 1;
   for (const c of shape.cells) {
     const v = yardOcc(s, x + c.x, y + c.y);
     if (v !== 0 && v !== own) return false;

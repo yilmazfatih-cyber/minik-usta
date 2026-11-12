@@ -657,7 +657,7 @@ describe('K-43 in-level record and resume (TECH 11.1)', () => {
     ]);
   });
 
-  it('E-67 K-55 an attempt saved with an older rulesVersion (2) is closed without penalty under the current RULES_VERSION (5, levels v3c; life, pre-level boosters, +5 coins back)', () => {
+  it('E-67 K-55 an attempt saved with an older rulesVersion (2) is closed without penalty under the current RULES_VERSION (6, D-106 pallet layers; life, pre-level boosters, +5 coins back)', () => {
     const h = harness();
     const s = h.open();
     s.commit((d) => void (d.coins = 5000));
@@ -666,7 +666,7 @@ describe('K-43 in-level record and resume (TECH 11.1)', () => {
     s.recordAction({ kind: 'addMoves', amount: 5, source: 'offerCoins' }, { movesMade: 1, offerCoins: 900 });
     s.commit((d) => void (d.coins -= 900));
     const d = h.open().resumeOnLaunch(() => ({ levelHash: IDENTITY.levelHash, rulesVersion: RULES_VERSION }));
-    expect(RULES_VERSION).toBe(5);
+    expect(RULES_VERSION).toBe(6);
     expect(d).toMatchObject({
       kind: 'void',
       cause: 'rules_version',

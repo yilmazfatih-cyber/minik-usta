@@ -221,7 +221,7 @@ describe('i18n files (TECH 11.5)', () => {
     expect(missing).toEqual([]);
     for (const gone of ['lose.left', 'tut.ctx.truckhelp.material', 'tut.ctx.reshuffle'])
       expect(trKeys).not.toContain(gone);
-    expect(trKeys.filter((k) => k.startsWith('tut.m.')).length).toBe(23);
+    expect(trKeys.filter((k) => k.startsWith('tut.m.')).length).toBe(27);
   });
 
   /**

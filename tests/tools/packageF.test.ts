@@ -1,10 +1,11 @@
 /**
- * Paket F (CL-V3C-01/02/03/05/07): wide-site requirement, pallet_stuck, plan_trap on a 2-column site, the Y12 exemption
- * of L-16 / L-22 and the lookahead play proxy with the bonus applied like the game.
+ * Paket F (CL-V3C-01/02/03/05/07): wide-site requirement, pallet_stuck (retired by D-106; tests/core/palletD106.test.ts),
+ * plan_trap on a 2-column site, the Y12 exemption of L-16 / L-22 and the lookahead play proxy with the bonus applied
+ * like the game.
  */
 import { describe, expect, it } from 'vitest';
 import { compile } from '../../src/core/level/compile.ts';
-import { palletStuck, siteColsRange, validateLevelJson } from '../../src/core/level/logic.ts';
+import { siteColsRange, validateLevelJson } from '../../src/core/level/logic.ts';
 import type { LevelInput } from '../../src/core/level/schema.ts';
 import { deriveMechanics, mechanicFirstLevel } from '../../src/core/level/mechanics.ts';
 import { readFileSync } from 'node:fs';
@@ -52,12 +53,8 @@ describe('K-49 item 2 levels 6-10 require Ws = 3', () => {
   });
 });
 
-describe('K-58 item 10 pallet_stuck', () => {
-  it('K-58 item 10 a shape whose four one-unit shifts all overlap itself can never leave its pallet', () => {
-    for (const id of ['C3_0', 'O4_0', 'L4_0', 'J4_0', 'T4_0'] as const) expect(palletStuck(id)).toBe(true);
-    for (const id of ['D2_0', 'D2_90', 'I3_0', 'B1_0'] as const) expect(palletStuck(id)).toBe(false);
-  });
-  it('K-58 item 10 a C3 pallet is reported pallet_stuck, a D2 pallet is not', () => {
+describe('K-58 item 10 pallet_stuck (retired by D-106)', () => {
+  it('K-58 item 10 a C3 pallet (once pallet_stuck) and a D2 pallet both validate without pallet_stuck', () => {
     const pallet = (shape: 'C3_0' | 'D2_90'): LevelSpec => ({
       id: 8,
       yard: { cols: 6, rows: 4 },
@@ -71,7 +68,7 @@ describe('K-58 item 10 pallet_stuck', () => {
       ],
       traits: { 0: { stack: { id: 0, z: 0 } }, 1: { stack: { id: 0, z: 1 } } },
     });
-    expect(codes(pallet('C3_0'))).toContain('pallet_stuck');
+    expect(codes(pallet('C3_0'))).not.toContain('pallet_stuck');
     expect(codes(pallet('D2_90'))).not.toContain('pallet_stuck');
   });
 });

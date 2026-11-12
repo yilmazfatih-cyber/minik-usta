@@ -45,9 +45,12 @@ import type { TurnSummary } from './summary.ts';
  * pallet, wrap + scissors, bonus and slippery blocks; v3 flags in the Zobrist class; D1 widening — blocks that can be
  * held but have no release other than a cancel are D1 too). 5 = levels v3c (D-103…D-105: the 9 × 10 frame with
  * 3-column sites and Zobrist positions `y·9 + x`, the P5 shape, 3-wide material crossing the wall, pallet layers released
- * on the site only with a bounce back onto their pallet, the bonus "+n" event with `pieceId`). An attempt saved with an older version is voided (E-67).
+ * on the site only with a bounce back onto their pallet, the bonus "+n" event with `pieceId`). 6 = D-106 (GDD K-58
+ * item 10: a held pallet layer does not collide with its own pallet's remaining layers, so it rises out of the stack;
+ * the drag R of a layer can grow, and D1 tests a pallet layer by its real site releases). An attempt saved with an older
+ * version is voided (E-67).
  */
-export const RULES_VERSION = 5;
+export const RULES_VERSION = 6;
 /** K-29: moves of an accepted offer. */
 export const OFFER_MOVES = 5;
 /** K-29: offers per attempt (ad or coins). */

@@ -355,8 +355,8 @@ export class Expander {
     const cache = this.reachCache;
     let key = 0;
     let env: Uint16Array | null = null;
-    // v3 Y10: a pallet layer has its own start cells blocked (a layer below) and site-only releases (v3c K-58 item 9,
-    // D-104): its R and drop classes are not shared with ordinary blocks (no cache)
+    // v3 Y10: a pallet layer has site-only releases (v3c K-58 item 9, D-104) and a start that its pallet keeps full for
+    // every other block (D-106): its R and drop classes are not shared with ordinary blocks (no cache)
     if (cache && zone === Zone.yard && !(this.lvl.hasStacks && isPalletLayer(s, id))) {
       const buf = s.buf;
       const base = this.lvl.layout.pieces + id * PIECE_STRIDE;
@@ -411,7 +411,8 @@ export class Expander {
    * Necessary condition of K-09 (a) for a yard block, from the occupancy only (no BFS): some unit translation keeps
    * every new cell inside the frame (cargo: inside the yard, K-44) and every new yard cell empty. A translation into
    * the site columns is left to the core (open sky, boundary rows). False ⇒ the core's `tryBeginDrag` would answer
-   * `immovable` too, so the drag BFS is skipped; true ⇒ the core decides.
+   * `immovable` too, so the drag BFS is skipped; true ⇒ the core decides. A pallet's cells hold its top layer's code,
+   * so the top layer's own pallet never blocks it here — the core rule since D-106 (K-58 item 10).
    */
   private mayMove(buf: Int32Array, base: number): boolean {
     const { geo, layout } = this.lvl;

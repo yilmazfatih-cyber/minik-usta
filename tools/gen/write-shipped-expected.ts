@@ -8,7 +8,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { format, resolveConfig } from 'prettier';
 import { LevelSchema } from '../../src/core/level/schema.ts';
-import { solveLevelData } from '../solver/solveLevel.ts';
+import { SOLVER_VERSION, solveLevelData } from '../solver/solveLevel.ts';
+import { POLICY_GAMES_DEFAULT } from '../solver/walks.ts';
+import { RULES_VERSION } from '../../src/core/session.ts';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const pad = (n: number): string => String(n).padStart(3, '0');
@@ -63,11 +65,12 @@ for (let n = 1; n <= 10; n++) {
   process.stderr.write(`level ${n}: ${r.status} best ${best} ${large ? 'large' : 'full'}\n`);
 }
 const text = `/**
- * The solver values of the shipped levels 1–10 (\`levels:solve\`, SOLVER_VERSION 6, RULES_VERSION 4; CL-V3-01). Written by
+ * The solver values of the shipped levels 1–10 (\`levels:solve\`, SOLVER_VERSION ${SOLVER_VERSION}, RULES_VERSION ${RULES_VERSION}; CL-V3-01). Written by
  * \`node tools/gen/write-shipped-expected.ts\` from the solver's own output: a change of a level file or of the solver shows up
  * here first. \`scan\` 'full' = complete state-space scan (proven \`min\`, K-50 metrics); 'large' = large-level search (\`best\` is
  * an upper bound of \`min\`, \`lowerBound\` = N or N + 1) plus the random-walk dead-state gate and the placement-first play
- * proxy (CL-V3-03; \`policyLoose\` = win rate within moves + N / 2, not \`ahaMin\`).
+ * proxy (CL-V3-03; \`policyLoose\` = win rate within moves + N / 2, not \`ahaMin\`; CL-V3C-13: ${POLICY_GAMES_DEFAULT} plays, tight and loose on
+ * the same plays).
  */
 export interface ShippedFull {
   readonly minShifts: number;

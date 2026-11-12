@@ -90,14 +90,6 @@ export function isCovered(s: GameState, id: PieceId): boolean {
   return yardOcc(s, pieceX(s, id) + first.x, pieceY(s, id) + first.y) !== id + 1;
 }
 
-/**
- * K-58 item 4: the cells of the held block count as empty for its drag (its own start), except a pallet layer with a
- * layer below it: its cells stay full (the layer below). The occupancy code to skip, or 0 for none.
- */
-export function ownCellCode(s: GameState, id: PieceId): number {
-  return layerBelow(s, id) >= 0 ? 0 : id + 1;
-}
-
 function writePiece(s: GameState, id: PieceId, value: number): void {
   const zone = pieceZone(s, id);
   if (zone !== Zone.yard && zone !== Zone.site) return;
@@ -151,6 +143,10 @@ export function refreshSiteMasks(s: GameState, seg: number): void {
  * blocked, rows `0 … geo.rows − 1` of the frame. Yard occupancy (minus `exclude`; yard air and the crane area are
  * empty), the visible segment shifted by the elevator offset (plan rows `sy < hs` on the board), and the platform rows
  * `y < elev` of the site columns. Site air and the crane area are free. The wall boundary has no cells (R-03).
+ *
+ * D-106 (GDD K-58 item 10, `RULES_VERSION` 6): a held pallet layer does not collide with the remaining layers of its own
+ * pallet — they share its cells and `yardOcc` holds the held (top) layer's code there, so skipping `exclude + 1` frees
+ * the whole footprint and the layer rises out of the stack. Every other block, the wall and the frame still collide.
  */
 export function collisionMasks(
   s: GameState,
@@ -159,8 +155,7 @@ export function collisionMasks(
 ): Uint16Array {
   out.fill(0);
   const { wy, ws, hs, h, rows, siteX } = s.lvl.geo;
-  // K-58 item 4: a pallet layer's own cells stay blocked (the layer below fills them)
-  const skip = exclude >= 0 && s.lvl.hasStacks ? ownCellCode(s, exclude) : exclude + 1;
+  const skip = exclude + 1;
   for (let y = 0; y < rows; y++) {
     let row = 0;
     for (let x = 0; x < wy; x++) {
