@@ -524,7 +524,7 @@ cümlesi (`card.y10.site`, OBSTACLES Y10 kartının ek cümlesi; en çok 12 keli
 **Öğretici akışı (CL-V3C-06, Bölüm 7, en çok 2 adım):** (1) `tut.m.pallet`: el, palet üst katmanına gider (ilk dokunuş
 hedefi = üst katman, paletin altı değil); `done: lift`. (2) `tut.m.palletsite`: el, katmanı şantiyede ilk uygun satıra
 sürükler; `done: placeCorrect`. Balon 2. adımı katman kalkınca açar (ilk iptali beklemez: iptal öğretici değil ceza gibi
-okunur). Bölüm 7'ye girişte palet 1 s nabız (scale 1,0→1,06→1,0, 2 kez) çalar; ekranda ×n rozeti zaten görünür (ART_DIRECTION §3.6A).
+okunur). Bölüm 7'ye girişte palet 2 × 400 ms nabız (ölçek 1,0→1,06→1,0) çalar; ekranda ×n rozeti zaten görünür (ART_DIRECTION §3A.6).
 
 `tut.l4.window` ve `tut.l4.above` (pencere `.` hücresi) karşılıksızdır: R2-01 gereği `.` hücresi MVP'de yok. Bölüm 1–10
 öğretici verisi (`LevelData.tutorial[].textKey`) bu anahtarlara geçer (product-lead); i18n geçişi code-lead.

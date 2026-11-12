@@ -458,6 +458,26 @@ gölgesi, Ağır Yük, kasa ve torba çıkıntısızdır (blok ↔ plan ↔ yük
 
 ---
 
+### 3A.6 Palet (Y10) görünümü — D-108, paket A2 (2026-11-12)
+
+Karar kaynağı: D-108 (CL-V3C-10 seçenek B, renk için A). Eski "2–4 çentik, rakam yok" tarifi (OBSTACLES Y10 Okunurluk) **yerine**
+geçer; 23 px'te çentikler ayırt edilemediği için (CL-V3-13) sayı rakamla verilir. Sayısal değerler `tokens.json`
+`check.palletV3c` (salt kontrol; code-lead `obstacle.*` / `kit.badge` altına tipleyip taşır).
+
+| Parça | Tarif | Değer (design px, 1080 genişlik) |
+| ----- | ----- | -------------------------------- |
+| Kızak (taban) | **Gri-mavi metal**, ahşap rengi ve damarı yok. Dikey gradyan `lip` → `body`, alt kenarda `shade`, 5 px `outline` kontur. Yalnız bloğun altında **16 px dudak** olarak görünür; köşelerde 2 perçin (Ø 8, `rivet`). | `body` #8A9BB0 · `lip` #C2CFDD · `shade` #5A6B80 · `outline` #2E3A4B |
+| W bloğundan ayrım | W #764012 (L\* 33, sıcak kahve) ↔ kızak (L\* ≈ 63, soğuk gri-mavi). **CIEDE2000: W 43,5 · Y 47,5 · G 33,9 · R 37,5 · O 37,7 · P 31,4; C ve B 15,4** (en yakın iki blok; kızak yalnız 16 px dudaktır ve perçin + kontur taşır, tam hücre kaplamadığı için karışma riski kabul edilebilir). Ahşap tarifleri (kalas, çıta) kaldırıldı | W'ye ≥ 40 ΔE00 |
+| Katman kenar çizgileri | Her alt katman bir üsttekinden **6 px** aşağıda ve 3 px `layerEdge` çizgisiyle ayrılır (α 0,55): yığın yan görünüşü okunur; en alt katmanın altında `shade` gölgesi. Örtülü katman (üstte başka katman var) hücrenin %10'u kadar aşağıda ve diğer blokların altındadır | 6 px yükselme · 3 px çizgi |
+| **×n rozeti** | **Beyaz daire** Ø **76** (gradyan #FFFFFF → #DDE3EC), 5 px `outline` kontur (altta +3 px kalın, hacim), içinde "×n" `outline` rengi **44 px** Parlak başlık (rakam 2–4). Rozet satırında **ilk (en sol)** sıra; kaygan / bonus / sargı rozetleri onun sağına dizilir | Ø 76 · rakam 44 |
+| Altın yıldızdan ayrım | Bonus rozeti = **altın 5 kollu yıldız** (`ico_bonus`, #FFC21A, "+n", kahverengi kontur). Palet rozeti = **beyaz yuvarlak, "×" işareti, soğuk koyu mürekkep**. Biçim (yıldız ↔ daire), renk (altın ↔ beyaz) ve işaret (+ ↔ ×) üçü birden farklı; Bölüm 10'da ikisi aynı tahtadadır | 3 eksende ayrım |
+| 360 px alt sınırı | Rozet çapı ekranda hiçbir ölçekte **56 design px'in** altına inmez (`max(56, 76·s)`); rakam `kit.badge.fontPx` (36) × k'den küçük olamaz (k = ekran/1080 oranının tabanı, ART_REFERENCE k = 0,8955) ve önerilen 44 px'tir. Ölçüm: 360 px ekran görüntüsünde rakam yüksekliği ≥ 10 CSS px | 56 / 36·k |
+| Bölüm 7'ye giriş | Palet 400 ms × 2 nabız (ölçek 1,0 → 1,06 → 1,0); öğretici eli üst katmana gider (UX/STORY §6A) | 2 × 400 ms |
+| İptal / geri dönüş | Sahaya ya da Vinç Alanı'na getirilince katman soluk (α 0,5, gölge yok); bırakınca palete 220 ms `easeOutCubic` kayar (JUICE) | — |
+
+**Kabul:** Bölüm 7 ve 10 için 360×800 ve 390×844 ci-shots görüntülerinde (a) rozet ×n okunur, (b) kızak W ile karışmaz,
+(c) Bölüm 10'da "×3" ile "+2" 5 kişiden 5'ine farklı rozet olarak okunur.
+
 ## 4. Şantiye (ozalit) ve plan hücreleri
 
 > **Faz 2R (v2) değişiklikleri:**
