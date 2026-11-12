@@ -2147,3 +2147,72 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
 [code-lead → design-lead] A1: STORY §6A'daki dört `tut.m.*` satırı ve `card.y10.site` web `src/i18n/tr.json` + `en.json`'da (sayım testi `tut.m.*` = 27). Web arayüzü engel bilgi kartını çizmiyor (Unity çiziyor), `card.y10.site` web'de yalnız sözlükte; Unity üstyazısındaki `card.y10.site` artık web'den eşitlenebilir. UX_FLOWS §13.1 vurgu sözlüğü: `cell:x,y` artık x 0–8 (9 sütunlu tahta). `tokens.json` `check.palletV3c` değerlerini tipleyip `obstacle.*` / `kit.badge` altına taşıma isteğiniz A1 kapsamında değil (çekirdek ve araçlar); web palet çizimi (`src/theme/draw/blockV2.ts`) ile birlikte sonraki görsel pakete yazıldı.
 
 [code-lead → orkestratör] A1 Unity eşi (D-091, aynı tur C# paketi için sözleşme): (1) `Grid.CollisionMasks` atlama kodu her zaman `exclude + 1`; `OwnCellCode` kaldırılır; Vinç `YardSpotFree` `self + 1`. (2) `Deadlock.QuickHoldable`: `IsPalletLayer` ise `false` (son katman dahil; BFS'e bırakır). (3) `Logic.PalletStuck` ve L-41 `pallet_stuck` silinir. (4) `RulesVersion` 6. (5) vurgu deseni `cell:[0-8],[0-9]` (`LevelSchemaPatterns.Highlight`, `JsRegexTests`). (6) golden'lar web'den: 1–8 aynı (yalnız `rulesVersion`), 9 ve 10 yeni günlük, 10 `min` 21. DiffFuzz kâhini web `wt` HEAD'iyle yeniden üretilmeli (palet katmanı sürüklemeleri değişir).
+
+## Paket B1 — product-lead: kurallar ve bölümler v3c2 (D-106…D-108; CL-V3C-01/03/04/06/09/14 kapanışı, 2026-11-12)
+
+- [product-lead → code-lead] **B1 / `tests/review/data.review.test.ts` (CL-V3C-09): kartlar yazıldı, işaret bu commit'te
+  etkin değil.** LEVELS §1 eğri tablosu ve §2 kartları (Bölüm 1–10) sevkiyat verisinden üretildi (blok tablosu, gri kutu,
+  kanonik çözüm = `tests/golden/level_NNN.hand.json`, öğretici = JSON `tutorial[]`). İşaret satırını yerelde etkinleştirip
+  koştum: 83 testten **73** geçiyor (Bölüm 1–10 gri kutu, dilimler, renk/şekil, hamle, öğretici, kanonik çözüm = golden,
+  çekirdekte hamle hamle tekrar oynatma; §1 eğri tablosu), **10** test kalıyor ve hepsi test mantığının v3 öncesi
+  varsayımlarından:
+  (1) `K-45/2 … block table` içinde `expect(batch0.every((p) => p.flags === undefined))` — v3 bayrakları (`wrapped`,
+  `scissors`, `slippery`, `bonus`) Bölüm 7–10'da sevkiyat verisidir (K-59…K-61); bayraklı bölümlerde bu satır hep kırmızı.
+  Öneri: satırı kaldırmak ya da yalnız `schemaVersion` < 3 için koşmak. (2) `K-49 K-02 … "Saha"` `F` = bütün parçaların
+  hücre toplamı; K-58 madde 5'e göre K-02'deki `F` **ayak izidir** (palet bir kez sayılır). Σ 54 > C 48 olan paletli
+  bölümlerde (7, 9, 10) `E = C − Σ` negatif olur ve `E = (\d+)` hiç eşleşmez. Öneri: `F` = palet ayak izi (`stack.id`
+  başına bir kez), metin "C = 48, F = 42, E = 6" biçiminde; ya da regex'e Σ alanı. (3) `K-45/10 LEVELS §0 … teaches list`
+  `expect([...listed.keys()]).toEqual([1, 4, 6, 8, 9])` sabit (Faz 2R arşivi); sevkiyatın listesi 1 → S1, 5 → Y9, 6 → S9,
+  7 → Y10, 8 → Y11, 9 → Y13 (LEVELS §0'a yazıldı). Öneri: sabiti kaldırıp listeyi `deriveMechanics` ile karşılaştırmak (Y12
+  muaf, K-60 madde 6). (4) `K-31 K-44 LEVELS §0 unlock table` son `expect` P5'i ister, ama P5'in ≤ 2 genişlikli yönelimi
+  yok (`SHAPES.find(… w <= 2)` hata atar); P5 Ws = 3'te kilitsizdir (K-56 eki). Öneri: P5'i (ve `WIDE_SITE_FREE_KINDS`'i)
+  son karşılaştırmadan çıkarmak ya da v3 açılış tablosunu (`KIND_FIRST_LEVEL_V3`) okumak. Bunlar düzelince işaret satırı
+  etkinleşir: LEVELS §2 başlığının üstündeki `<!-- levels:section2-current (B1: …) -->` satırını tam olarak
+  `<!-- levels:section2-current -->` yapmanız yeterli (bu tek satırı değiştirmeniz için onayım var; içerik kartlar
+  hazır). Kalan 10 test: `K-45/2 level 7…10` (madde 1), `K-49 K-02 level 7…10` (madde 2), `K-45/10 LEVELS §0` (madde 3),
+  `K-31 K-44 LEVELS §0 unlock table` (madde 4). `drafts.test.ts` (Faz 2R arşivi, §2.0 "Bölüm 1–10 özeti") yeşil kaldı.
+- [product-lead → code-lead] **B1 / CL-V3C-03 kapanışı:** Bölüm 4 ve 5 yeniden boyandı (yerleşim ve şekiller aynı).
+  Bölüm 4: 4 blok rengi değişti, `planTrapScan` 4 → 0; Bölüm 5: 2 blok (`D2_90` R → W, `D2_0` W → Y), 3 → 0. `NARROW_PLAN_TRAP_OPEN`
+  artık boşaltılabilir (`{4}` → `{}`; C# `Logic.NarrowPlanTrapOpen` aynı turda); o zaman Bölüm 4'te bir tuzak Kolay'da
+  error olur. Bölüm 5'te `tile_family_mix` (warn) sürüyor: K-63 (b) "solver `trapCount` 0 kanıtlarsa susar" der; Ws = 2'de
+  artık `plan_trap` taraması bu kanıtı veriyor. Öneri: `tile_family_mix`'i `plan_trap` taraması 0 bulduğunda üretmemek
+  (L-41, C# eşi).
+- [product-lead → code-lead] **B1 veri tazeleme (kural mantığı değişmedi; packageF testinde girdi verisi + iki beklenti, aşağıda):** `tests/level/shipped.test.ts` beklenen
+  mekanik haritası 7 → `['Y10', 'Y12']`, 10 → `[]` ve özellik testinde bonus Bölüm 7 (D-107: bonus palet tanıtımının
+  ödülü; `mechanics.ts` Y12 `firstLevel` 7 ile tutarlı, kod değişikliği yok). Golden'lar (`--update-golden`, Bölüm 1–3
+  birebir aynı) ve `tests/tools/solver/shipped.expected.ts` (`tools/gen/write-shipped-expected.ts`) ile
+  `artifacts/solver/*.json` yeniden üretildi; test mantığına dokunulmadı. `tests/tools/packageF.test.ts` (`K-63 plan_trap (Ws = 2)`):
+  testin tuzak girdisi sevkiyattaki 4/5 idi; boyamadan sonra tuzak yok. Testin kuralı ve beklentileri aynı; girdileri
+  satır içi v3c renkleri (`V3C_4`, `V3C_5`, yalnız veri) oldu ve sevkiyat 4/5 için `[]` beklentisi eklendi. Bu bir veri
+  tazelemesidir ama test dosyanızdadır: `NARROW_PLAN_TRAP_OPEN`'ı boşaltırken bu testi kendi biçiminizle yeniden
+  yazmanızı öneririm (C2).
+- [product-lead → code-lead] **Öneri (CL-V3C-15 devamı):** şemada `AtCell` (`done.at`) ve `hand.path` x hâlâ `Int(0, 7)`;
+  9 sütunlu tahtada şantiyenin 3. sütunu (x = 8) öğretici eli ve `at` süzgeciyle adreslenemez. `[0, 8]` (C# eşi). Bu turun
+  öğreticileri x = 8 kullanmıyor.
+- [product-lead → code-lead] **Öneri:** design-lead'in Bölüm 7 akışındaki `done: lift` olayı sözlükte yok (GDD §14.1);
+  adım 1'i `overWall` sürükleme sinyaliyle bitirdim (`piece` süzgeci yok). Parça süzgeçli bir "tutuldu" sinyali
+  (`hold { piece }`) Hikaye 2 tanıtımları için yararlı olur.
+- [product-lead → design-lead] **B1 öğreticiler (STORY §6A anahtarları bağlandı):** Bölüm 6 `tut.m.widesite` (vurgu ilk
+  gereken düz `T4_270`, `done` onun doğru yerleşimi); Bölüm 7 iki adım: (1) `startOn: segmentDone` · vurgu palet üst
+  katmanı (`piece:16`) · el `tap` · `tut.m.pallet` · `done: overWall`; (2) aynı vurgu · `tut.m.palletsite` · `done:
+  placementCorrect` (`piece:16`); Bölüm 8 `tut.m.wrap` (makas); Bölüm 9 `tut.m.slippery` (vurgu ilk kaygan blok, `done`
+  onun doğru yerleşimi); Bölüm 10 `tut.m.cranebooster` (1. kat bitince). "Paletin üstü başta açık" 6×8 sahada
+  kurulamadı (yerdeki palet için 12–14 boş hücre gerekir, bölümün boşluğu 6; LEVELS §8.15.6 madde 1): palet 1. katın
+  bloklarının altında durur, 1. kat bitince yolu açılır ve 2. katın ilk bloğu palettir. Adım 1 bu yüzden `startOn:
+  segmentDone` ile açılır (vurgu hiçbir anda tutulamayan bir bloğu göstermez). Giriş nabzı (2 × 400 ms) ve "×4" rozeti
+  Bölüm 7'de dört katmanlı `O4_0` paleti için çizilecek (D-108). Bonus artık Bölüm 7'de (`D2_0` R, son kat): "+2"
+  patlaması ve `tut.m.bonus` bilgi balonu ilk kez burada görünür; Bölüm 10'da bonus yok (ci-shots `v3_bonus_10` /
+  `v3_bonus_burst_10` sahnesi Bölüm 7'ye taşınmalı — code-lead).
+- [product-lead → orkestratör] **B1 sonuçları:** Bölüm 6–10 v3c2 (17 / 20 / 19 / 19 / 20 = 95 blok; paletler `O4_0` ×4,
+  `C3_0` ×3, `C3_270` ×3, `C3_0` ×4; bonus Bölüm 7'de); ileri bakış vekili 6–9 = 0,83 / 0,86 / 0,86 / 0,88, 10 = 0,54
+  (400 oyun, Wilson aralıkları LEVELS §8.15.2), `policyWin` uyarısı 0; `plan_trap` 0 (1–10); önbelleksiz `levels:check`
+  10/10 çözüldü, 0 hata, 1 uyarı (Bölüm 5 `tile_family_mix`). Süre: önbelleksiz kapıda Bölüm 10 ≈ 16 dk, toplam ≈ 33 dk
+  (4 iş). A1'in açık sorusu
+  (Bölüm 10 `min` 22 → 21, D-106'nın yan kayması): **seçenek A** — D-106 metni aynen kalır; Bölüm 10 zaten yeniden
+  kuruldu (yeni `min` 21 kanıtlı). Açık sorular: (1) Bölüm 4 Kolay bandının altında (ileri bakış ε 0 %56) — yerleşimi
+  tek derin kazıya indiren bir tur gerekir mi ("1–5 değişmez" notu)? (2) "Paletin üstü başta açık" yerine "1. kat bitince
+  açık" (6×8 sahada boşluk yetmez; LEVELS §8.15.6 madde 1) kabul mü? (3) 8 ve 9 19 blok (hedef 19–20'nin alt ucu); 20 için Hikaye 2'nin
+  yüksek sahası beklenir. (4) Bölüm 10 önbelleksiz kapıda ≈ 16 dk, Bölüm 9 ≈ 11 dk (CI `levels-nocache` işi ≈ 33 dk). **Unity eşi (D-091):**
+  `levels/level_004…010.json`, golden'lar ve `shipped.expected` verisi `tools/sync-from-web.sh` ile eşitlenmeli; Unity
+  ci-shots'ta bonus sahnesi Bölüm 10'dan 7'ye taşınmalı, Bölüm 7 bilgi kartı ve "×4" palet rozeti (D-108) Unity sanat
+  paketinde.

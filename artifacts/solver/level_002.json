@@ -489,7 +489,7 @@
     "states": 76593,
     "expanded": 76593,
     "edges": 1968002,
-    "ms": 5878,
+    "ms": 5816,
     "bytes": 29928007,
     "dragSessions": 88508,
     "applyMoves": 135816,
@@ -499,7 +499,7 @@
     "d3aUnknown": 0,
     "complete": true,
     "limit": null,
-    "totalMs": 6327
+    "totalMs": 6406
   },
   "v3": {
     "liftRatio": 1,

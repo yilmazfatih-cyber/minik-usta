@@ -53,7 +53,7 @@ describe('K-55 shipped levels 1–10 (fixed yard)', () => {
     }
   });
 
-  it('K-45/10 K-60 the derived new mechanics are 1 → S1, 5 → Y9, 6 → S9, 7 → Y10, 8 → Y11, 9 → Y13, 10 → Y12 and match `teaches`; the bonus (Y12) is a reward moment that is never taught (K-60 item 6, D-105; levels v3c, LEVELS §8.14)', () => {
+  it('K-45/10 K-60 the derived new mechanics are 1 → S1, 5 → Y9, 6 → S9, 7 → Y10 + Y12, 8 → Y11, 9 → Y13 and match `teaches`; the bonus (Y12) is a reward moment that is never taught (K-60 item 6, D-105; levels v3c2, D-107: the bonus rewards the pallet intro, LEVELS §8.15)', () => {
     const seen = new Set<MechanicId>();
     const fresh: Record<number, MechanicId[]> = {};
     for (const n of IDS) {
@@ -69,10 +69,10 @@ describe('K-55 shipped levels 1–10 (fixed yard)', () => {
       4: [],
       5: ['Y9'],
       6: ['S9'],
-      7: ['Y10'],
+      7: ['Y10', 'Y12'],
       8: ['Y11'],
       9: ['Y13'],
-      10: ['Y12'],
+      10: [],
     });
   });
 
@@ -104,7 +104,7 @@ describe('K-55 shipped levels 1–10 (fixed yard)', () => {
     expect([...all]).toEqual(expect.arrayContaining(['D2', 'O4', 'C3', 'L4', 'J4', 'T4', 'I3']));
   });
 
-  it('K-57 K-58 K-59 K-60 K-61 CL-V3-05 the block traits of levels v3c: two-tone (5), pallet (7), wrap + scissors (8), slippery (9), bonus (10)', () => {
+  it('K-57 K-58 K-59 K-60 K-61 CL-V3-05 the block traits of levels v3c2: two-tone (5), pallet + bonus (7), wrap + scissors (8), slippery (9)', () => {
     const has = (n: number, pred: (p: ReturnType<typeof pieces>[number]) => boolean): boolean =>
       pieces(n).some(pred);
     expect(has(5, (p) => p.colors !== undefined)).toBe(true);
@@ -112,7 +112,7 @@ describe('K-55 shipped levels 1–10 (fixed yard)', () => {
     expect(has(8, (p) => p.flags?.includes('wrapped') === true)).toBe(true);
     expect(has(8, (p) => p.flags?.includes('scissors') === true)).toBe(true);
     expect(has(9, (p) => p.flags?.includes('slippery') === true)).toBe(true);
-    expect(has(10, (p) => p.flags?.includes('bonus') === true)).toBe(true);
+    expect(has(7, (p) => p.flags?.includes('bonus') === true)).toBe(true);
     // the finale uses three of them (CL-V3-07: the wrap is what the Hammer cuts)
     expect(has(10, (p) => p.flags?.includes('wrapped') === true)).toBe(true);
   });

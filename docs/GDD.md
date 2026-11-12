@@ -1722,6 +1722,10 @@ Ws ∈ {2, 3}, Wy + Ws ≤ 9, hücre basamağı), K-56 "D-103 eki" (3 sütunlu �
 (palet katmanı yalnız şantiyeye; madde 8 kaldırıldı), K-60 madde 6–7 ve K-62 (bonus her hikayede ödül anı, `k` = 0,
 "+n" olayı), K-63 "D-103 eki" (`plan_trap`), K-65 madde 2–3 ve K-17 istisnası bu pakette kesinleşti. Hepsi KABUL'dür.
 Bölüm planı: LEVELS §8.13 (v3c).
+**v3c2 eki (D-106, D-108 — orkestratör kararları, 2026-11-12; product-lead paketi B1):** K-58 madde 4 (sürüklenen palet
+katmanı kendi paletiyle çarpışmaz) ve madde 10 (palet şekli serbest, `pallet_stuck` emekli; `RULES_VERSION` 6), K-65
+madde 4 (palet katman sayısı "×n" beyaz daire rozet, gri-mavi metal kızak), K-58 ve K-62 örnekleri sevkiyat verisine
+çekildi (CL-V3C-14). Bölüm verisi: LEVELS §8.15 (v3c2).
 
 #### KABUL K-56 Şekil kümesi v3 (K-44 açılış tablosunun değişikliği)
 **Kural:** Hikaye bölümüne göre izinli türler: 1 → B1, D2, O4, C3, **L4, J4 (2. bölümden), T4 (6. bölümden), I3
@@ -1780,13 +1784,15 @@ iki renkli bloğu hedefleyemez. (7) (G1b) Renk çifti K-65 madde 3'teki izinli �
 Veri: `{ "shape": "D2_90", "color": "W", "colors": "WY", "x": 2, "y": 0 }`; `colors` uzunluğu 2 değilse ya da tek renkse
 `colors_invalid` (error); `colors: "WR"` Hikaye 1'de `colors_low_contrast` (error).
 
-#### KABUL K-58 Palet (Y10) ve doluluk ayak izi (D-104 ile madde 4, 8, 9 kesinleşti, 2026-11-09)
+#### KABUL K-58 Palet (Y10) ve doluluk ayak izi (D-104 ile madde 4, 8, 9 kesinleşti, 2026-11-09; D-106 ile madde 4 ve 10, 2026-11-12)
 **Kural:** (1) Aynı `stack.id`'yi taşıyan 2–4 malzeme bloğu bir palettir: şekilleri ve çapaları aynıdır, `z` değerleri
 0'dan ardışıktır. (2) Paletin hücreleri, paletinde en az bir katman kaldıkça doludur (K-08 yol kuralı için engeldir).
 (3) Yalnız en büyük `z`'li kalan katman (üst) tutulabilir (K-09'a koşul (f)); alt katmanın tutulma denemesi tepkisizdir
-(hamle harcanmaz). (4) Üst katman tutulduğunda erişim kümesi `R` (K-08), paletin hücreleri bir alt katmanla dolu sayılarak
-hesaplanır (son katmansa paletin hücreleri boş sayılır); bırakma hedefleri madde 9'dadır. Başlangıç konumuna bırakmak
-iptaldir (K-07 satır 1). **Oyuncu kaldırılan katmanı palete geri koyamaz;** katmanı palete yalnız madde 9 (b) geri
+(hamle harcanmaz). (4) **(D-106)** Üst katman tutulduğunda erişim kümesi `R` (K-08) hesaplanırken sürüklenen katman
+**kendi paletinin kalan katmanlarıyla çarpışmaz**: yığından yukarı çıkar, yanı boşsa kendi hücresinin üstünden yana da
+kayar. Başka bloklar, duvar, tahta çerçevesi ve geçit kenarlarıyla çarpışma aynen geçerlidir; palet, başka her blok için
+dolu kalır (madde 2). Örtülü (üstünde başka blok olan) katman tutulamaz (K-09). Bırakma hedefleri madde 9'dadır.
+Başlangıç konumuna bırakmak iptaldir (K-07 satır 1). **Oyuncu kaldırılan katmanı palete geri koyamaz;** katmanı palete yalnız madde 9 (b) geri
 sekmesi, Geri Al ve Söküm döndürür. (5) K-02 doluluk bandında `F` **ayak izidir** (başta dolu hücre sayısı; bir palet
 yalnız şekil hücreleri kadar sayılır); tam örtü (K-47) bütün katmanları sayar. Bu yüzden `Σ` saha alanını aşabilir. (6)
 Geri Al ve Söküm katmanı palete geri koyar (K-39, K-30: çekirdek durumu geri yüklenir). (7) (G1b) Hikaye 1'de palet tek
@@ -1818,24 +1824,27 @@ sahaya inemediği için (madde 9) paletten kalkan katman boş saha alanını hi�
      yalnız D-090 kapısının (`undetected_dead` = 0) kanıtıyla bulunur.
    - (h) Paletin son katmanı yerleşince ayak izi hücreleri boşalır; bu, oyunda **boş alanın arttığı** tek palet anıdır
      (sunum: kızak 120 ms'de söner, JUICE).
-**Örnek:** Bölüm 7 v3c: palet `D2_90` W×3, hücreler (0,0)–(1,0), üstü boş; sayaç 20. Oyuncu üst W'yi tutar, sahada
-(3,6)'ya bırakır → (c) iptal, sayaç 20, palet 3 katman. Aynı katmanı şantiyedeki W satırına (7,0)–(8,0) bırakır → (a)
-doğru, sayaç 19, palet 2 katman. Sonraki W'yi Y hücresine (6,1)–(7,1) bırakır → (b) hatalı, sayaç 18, W paletine üst
-katman olarak döner (2 katman). Son W doğru yerleşince (0,0)–(1,0) boşalır (iki yeni park hücresi). Geri Al → son W
-palete döner, (0,0)–(1,0) yine dolu. Hikaye 1 verisinde `C3_90` palet (sağ sütunun alt hücresi y = 1) →
-`pallet_not_grounded`.
-**ÖNERİ K-58 madde 10 — Palet şekli: üst katman kendi ayak izinden çıkabilmelidir (P3 bulgusu, 2026-11-12).** Madde 4
-gereği alt katmanlı bir üst katmanın sürüklemesinde paletin hücreleri dolu sayılır; K-08 yol kuralı yalnız birim
-ötelemeye izin verdiği için üst katman ancak **bir birim ötelemesi kendi ayak izine hiç değmeyen** bir şekilse tutulabilir:
-yatay çubuk (`D2_90`, `I3_90`; yukarı öteleme ayak izine değmez) ya da dikey çubuk (`D2_0`, `I3_0`; yalnız yana öteleme,
-yan sütunun o satırları boşsa). `C3`, `O4`, `L4`, `J4`, `T4` paletlerinde her öteleme kendi ayak izine değer: yalnız en alt
-katman (`z` 0) kalkabilir, üsttekiler hiç tutulamaz → bölüm çözümsüzdür. Kural: Hikaye 1'de palet şekli yalnız `D2_90`
-(ve `I3_90`, Bölüm 8+); dikey çubuk paleti Hikaye 2+'da ve yalnız yan sütun boşken. Doğrulayıcıya önerilen kod:
-`pallet_stuck` (error; L-41): alt katmanlı paletin şeklinin dört birim ötelemesinin hepsi kendi ayak iziyle kesişiyorsa
-(code-lead, REVIEW_LOG). Bugün bu durumu yalnız çözücü yakalar (`unsolvable`).
-**Örnek:** `C3_0` palet ×3, (4,0) çapalı: hücreler (4,0),(5,0),(4,1). Yukarı öteleme (4,1)'e değer (alt katman), sola
-(4,0)'a değer, sağa (5,0)'a değer → üst katman tutulamaz (K-09 (a)). Aynı yerde `D2_90` palet ×3: yukarı öteleme (4,1),(5,1)
-→ ayak izine değmez, boşsa tutulur.
+**Örnek (sevkiyat verisi, Bölüm 7 v3c2; CL-V3C-14):** palet `O4_0` Y ×4, hücreler (0,0)–(1,1); üstündeki beş blok 1.
+katındır. Kanonik çözümde 1. kat 9. hamlede biter, sayaç 16, paletin üstü boştur. Oyuncu üst Y'yi tutar, sahada (2,7)'ye
+bırakır → (c) iptal, sayaç 16, palet 4 katman. Aynı katmanı 2. katın Y karesine (7,0)–(8,1) bırakır → (a) doğru, sayaç
+15, palet 3 katman. Sonraki katmanı desteği henüz olmayan (6,2)–(7,3)'e bırakır (altındaki (6,0)–(6,1) R boş; K-34) →
+(b) hatalı, sayaç 14, katman paletine üst katman olarak döner (3 katman). Dördüncü katman doğru yerleşince (0,0)–(1,1)
+boşalır (dört yeni park hücresi). Geri Al → son katman palete döner, (0,0)–(1,1) yine dolu. Hikaye 1 verisinde `C3_90`
+palet (sağ sütunun alt hücresi y = 1) → `pallet_not_grounded`.
+**KABUL K-58 madde 10 — Palet şekli serbest (D-106, orkestratör kararı 2026-11-12; P3 bulgusunun ÖNERİ metninin yerine).**
+Madde 4 gereği katman kendi paletiyle çarpışmadığından Hikaye 1'de izinli her malzeme şekli palet olabilir (`D2`, `C3`,
+`O4`, `L4`, `J4`, `T4`, Bölüm 8+ `I3`), yeter ki yerde olsun (madde 9 g: `D2_0`, `D2_90`, `C3_0`, `C3_270`, `O4_0`, `L4_0`,
+`L4_270`, `J4_0`, `J4_90`, `T4_270`, `I3_90`). Eski "Hikaye 1'de palet yalnız `D2_90`" kısıtı kalktı. `pallet_stuck` (L-41)
+**emeklidir**: hiç üretilmez, adı yeniden kullanılmaz. Bir katmanın hiç çıkamaması artık palete özgü değildir ve şu
+kodlarla yakalanır: duvarı aşamayan şekil `piece_unreachable`, şantiyeye sığmayan `piece_too_wide`, Ağır Yük katmanı
+`flag_combo_forbidden`, başka bloklarla kalıcı gömülü katman çözücünün `unsolvable` sonucu ve D-090 yürüyüşleri.
+Çekirdek sürümü `RULES_VERSION` 6 (E-67: 5 ile kaydedilmiş denemeler geçersiz).
+**Örnek:** `C3_0` palet ×3, (4,0) çapalı (hücreler (4,0),(5,0),(4,1)); (5,1)'den (5,7)'ye ve (4,2)'den (4,7)'ye sütunlar
+boş. Oyuncu üst katmanı tutar: yukarı öteleme (4,1),(5,1),(4,2) hücrelerine iner; (4,1) alt katmanların hücresidir ama
+engel değildir (madde 4) → katman yükselir, duvarı aşar, şantiyede doğru yere konur (palet 2 katman). Aynı katman
+sahaya bırakılırsa iptal (madde 9 c). D-106'dan önce bu katman hiç tutulamazdı (her birim öteleme ayak izine değiyordu).
+Yan kayma örneği: `D2_90` palet (2,0)–(3,0), (1,0) boş → üst katman önce sola (1,0)–(2,0)'a, yani kendi hücresinin
+üstünden kayar, sonra yukarı çıkar (A1 golden'ında Bölüm 10 `min` 22 → 21 bu yüzden).
 
 #### KABUL K-59 Sargılı Blok ve Makas (Y11)
 **Kural:** (1) `wrapped` bayraklı blok tutulamaz ve Vinç (K-37) ile seçilemez (K-09 (c)'ye eklenir). (2) Sargı varsa
@@ -1879,9 +1888,10 @@ kodu emekliye ayrıldı: üretilmez, kimliği yeniden kullanılmaz. Orta bot, be
 oranları bonusu gerçek oyundaki gibi uygulayarak ölçülür (bonusu doğru yerleştiren oyuncu `bonusMoves` kazanır); LEVELS
 bantları bu bonuslu oranla karşılaştırılır. Bonus doğru yerleşince sayaç `+bonusMoves` artar ve "+n" olayı yayınlanır
 (K-60 madde 1, 7).
-**Örnek:** Bölüm 7 v3c (tanıtım Y10, Normal → P 4, `a` 0): `min` 20 → `moves` 24. Sayaç 15'ken bonus blok doğru konur →
-15 − 1 + 2 = 16, HUD'da "+2" patlar. Bonusu almayan bir oyuncunun bütçesi de 24'tür; HUD başta "24" gösterir, "(+2)"
-yazmaz. Bölüm 9 v3c (tanıtım Y13, Normal → P 4): `min` 22 → 26.
+**Örnek (sevkiyat verisi, v3c2; CL-V3C-14):** Bölüm 7 (tanıtım Y10, Normal → P 4, `a` 0): `min` 21 → `moves` 25.
+Kanonik çözümün 20. hamlesinde sayaç 6'yken bonus `D2_0` R doğru konur → 6 − 1 + 2 = 7, HUD'da "+2" patlar. Bonusu
+almayan bir oyuncunun bütçesi de 25'tir; HUD başta "25" gösterir, "(+2)" yazmaz. Bölüm 9 (tanıtım Y13, Normal → P 4,
+`a` 0): `min` 21 → 25. Bölüm 10 (Zor → P 1, `a` 2): `min` 21 → 24; bonus yok (D-107), etkin pay 3 açıktır.
 
 #### KABUL K-63 Döşeme aileleri (tuzaksız Kolay/Normal için doğrulayıcı uyarısı)
 **Kural:** 2 sütunlu şantiyede bir rengin "alt satırı dolu" şekilleri (`D2_90`, `O4_0`, `C3_0`, `C3_270`, `L4_0`,
@@ -1923,7 +1933,7 @@ Y10 paletin ayak izini ilk katman kalkınca boşalmış sanar; Y11 makaslı blo�
 19/19 = 1,00 ama `liftRatio` 15/19 = 0,79 ≥ 0,60 → geçer; 8'i öyleyse 11/19 = 0,58 → kapı kırmızı, bölüm 6×5 sahaya
 iner (LEVELS §8.1 Karar 9 A). Bölüm 5: orta bot %84, yok sayan kip %70 → `traitDelta` 14 ≥ 10 → geçer.
 
-#### KABUL K-65 Hikaye 1 okunurluk kısıtları (G1b; DL-V3-01, -03, -05, -06)
+#### KABUL K-65 Hikaye 1 okunurluk kısıtları (G1b; DL-V3-01, -03, -05, -06; madde 4 D-108 ile, 2026-11-12)
 **Kural:** Hikaye 1 (Bölüm 1–10) bölümlerinde: (1) **Palet tek tiplidir:** bir paletin bütün katmanları aynı `shape`,
 aynı `color` ve `colors`, aynı (boş) `flags` taşır; değilse `stack_mixed` (error). Karışık palet Hikaye 2'de, en çok 2
 katman, kendi tanıtım bölümüyle ve yalnız "sonraki katman" kenarı ile basılı tutunca gözetleme (hamle harcamaz,
@@ -1933,8 +1943,12 @@ bir kaplamayla birleşebilir. Birden çok kaplama `trait_overlay_many` (warn). (
 {W, Y}, {R, Y}, {W, G} (deutan ve protan ΔE ≥ 30, design-lead ölçümü; {G, Y} CL-V3-08 ile çıkarıldı, kodda
 `TWO_TONE_PAIRS_CH1` ile aynı); değilse `colors_low_contrast` (error).
 Hikaye 2+ için izinli çift listesi aynı ölçütle ART_DIRECTION'daki renk tablosundan türetilir. (4) **Bir blokta en
-çok bir rakamlı rozet** (bonus "+n", Islak Beton sayacı); palet katman sayısı rakamla değil çentikle gösterilir;
-`bonus` + `wet` birleşimi `flag_combo_forbidden` (error, her hikayede).
+çok bir rakamlı rozet** (bonus "+n", Islak Beton sayacı); `bonus` + `wet` birleşimi `flag_combo_forbidden` (error, her
+hikayede). **(D-108, 2026-11-12)** Palet katman sayısı **"×n" beyaz daire rozetiyle** gösterilir (n = 2–4; Ø 76 design px,
+rakam 44 px; 360 px genişlikte ekranda rozet ≥ 56 design px, rakam ≥ `kit.badge.fontPx` × k). Rozet bonus rozetinden
+(altın 5 kollu yıldız, "+n") biçim, renk ve işaretle ayrışır; aynı blokta ikisi birlikte olamaz (palet katmanı bonus
+taşıyamaz, madde 1). Palet kızağı gri-mavi metaldir (ahşap değil; W "Ahşap" bloğuyla ΔE00 ≥ 40; ART_DIRECTION §3A.6).
+Eski "katman sayısı rakamla değil çentikle" cümlesi D-108 ile kalktı.
 **Örnek:** Bölüm 3 G1 taslağı palet `[W, Y, W]` → `stack_mixed`; v3.1 palet A W×2, palet B G×2 → geçerli. Bölüm 10 G1
 taslağı `D2_90` "WR" → `colors_low_contrast`; v3.1'de "WY". Hem sargılı hem bonus bir blok → `trait_overlay_many`.
 
@@ -1989,4 +2003,4 @@ yoktur → yeni D1 → Söküm son hamleyi geri alır.
 | V3-21 (KABUL, D-103) | 3 genişlikli blok hatalı yerleşir, başlangıç konumu dolu değil | K-17 adım 1 (başlangıca döner); adım 2 gerekirse aday sütunlar `0 … Wy − 3` |
 | V3-22 (KABUL) | 3 genişlikli boy 2 blok duvarı `height` = H iken aşmak ister | `(H + 2) − H = 2 ≥ 2` → geçer; `P5_0` (boy 3) geçemez → doğrulayıcı `piece_unreachable` |
 | V3-23 (KABUL) | Geri Al, palet katmanının doğru yerleşiminden sonra | Katman paletine üst katman olarak döner; o hamlede verilen bonus ve kalkan sargılar da geri gelir |
-| V3-24 (ÖNERİ, P3) | Alt katmanlı paletin şekli `C3`/`O4`/`L4`/`J4`/`T4` | Üst katman hiçbir birim ötelemeyle ayak izinden çıkamaz → tutulamaz; bölüm çözümsüz. K-58 madde 10: Hikaye 1'de palet yalnız `D2_90` (`I3_90` Bölüm 8+); önerilen kod `pallet_stuck` |
+| V3-24 (KABUL, D-106) | Alt katmanlı paletin şekli `C3`/`O4`/`L4`/`J4`/`T4` | Sürüklenen katman kendi paletinin kalan katmanlarıyla çarpışmaz (K-58 madde 4): yığından yukarı çıkar, yanı boşsa yana kayar; palet başka bloklar için dolu kalır. Her yerde duran şekil palet olabilir (K-58 madde 10); `pallet_stuck` emekli (üretilmez, ad yeniden kullanılmaz). Katman başka bloklar yüzünden çıkamıyorsa sıradan gömülü bloktur (kazı; kalıcıysa çözücü `unsolvable`) |

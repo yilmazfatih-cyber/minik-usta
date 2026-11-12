@@ -129,10 +129,78 @@ describe('K-63 plan_trap scan on a 2-column site', () => {
       .issues.filter((i) => i.code === 'plan_trap')
       .map((i) => i.severity);
   };
+  // B1 (CL-V3C-03): the shipped levels 4 and 5 were repainted trap-free (LEVELS §8.15.3); their v3c colours (4 and 3
+  // traps) stay here as the trap fixtures of this check (data only; the rule and the expectations are unchanged).
+  const V3C_4 = {
+    build: {
+      mode: 'segments',
+      segments: [
+        { name: { tr: 'Kat 1', en: 'Floor 1' }, rows: ['WW', 'RR', 'RR', 'RR'] },
+        { name: { tr: 'Kat 2', en: 'Floor 2' }, rows: ['RR', 'RR', 'WW', 'WW'] },
+        { name: { tr: 'Kat 3', en: 'Floor 3' }, rows: ['WW', 'WW', 'WY', 'YY'] },
+      ],
+    },
+    yard: {
+      cols: 6,
+      rows: 5,
+      batches: [
+        {
+          forSegment: 0,
+          pieces: [
+            { shape: 'C3_180', color: 'R', x: 0, y: 3 },
+            { shape: 'D2_0', color: 'W', x: 2, y: 3 },
+            { shape: 'D2_0', color: 'W', x: 5, y: 3 },
+            { shape: 'D2_0', color: 'R', x: 0, y: 2 },
+            { shape: 'D2_90', color: 'W', x: 1, y: 2 },
+            { shape: 'D2_0', color: 'W', x: 3, y: 2 },
+            { shape: 'C3_0', color: 'R', x: 4, y: 2 },
+            { shape: 'D2_0', color: 'R', x: 0, y: 0 },
+            { shape: 'C3_180', color: 'W', x: 2, y: 0 },
+            { shape: 'C3_270', color: 'Y', x: 4, y: 0 },
+          ],
+        },
+      ],
+    },
+  };
+  const V3C_5 = {
+    build: {
+      mode: 'segments',
+      segments: [
+        { name: { tr: 'Kat 1', en: 'Floor 1' }, rows: ['WW', 'RY', 'WW', 'RW', 'RR'] },
+        { name: { tr: 'Kat 2', en: 'Floor 2' }, rows: ['WW', 'YY', 'RY', 'RR', 'RR'] },
+        { name: { tr: 'Kat 3', en: 'Floor 3' }, rows: ['WR', 'WY', 'RY', 'RW', 'RR'] },
+      ],
+    },
+    yard: {
+      cols: 6,
+      rows: 6,
+      batches: [
+        {
+          forSegment: 0,
+          pieces: [
+            { shape: 'D2_90', color: 'W', x: 1, y: 5 },
+            { shape: 'C3_0', color: 'R', x: 0, y: 4 },
+            { shape: 'C3_180', color: 'W', x: 3, y: 4 },
+            { shape: 'D2_90', color: 'R', x: 0, y: 3 },
+            { shape: 'O4_0', color: 'R', x: 2, y: 3, colors: 'RRRY' },
+            { shape: 'D2_90', color: 'R', x: 4, y: 3, colors: 'RY' },
+            { shape: 'D2_90', color: 'W', x: 0, y: 2 },
+            { shape: 'D2_90', color: 'Y', x: 4, y: 2 },
+            { shape: 'D2_0', color: 'W', x: 0, y: 0, colors: 'WY' },
+            { shape: 'D2_0', color: 'Y', x: 1, y: 0, colors: 'YR' },
+            { shape: 'L4_0', color: 'R', x: 3, y: 0 },
+            { shape: 'D2_0', color: 'W', x: 5, y: 0 },
+          ],
+        },
+      ],
+    },
+  };
   it('K-63 plan_trap (Ws = 2): Easy is an error, Normal a warning; the known open level 4 is a warning until repainted', () => {
-    expect(sev('level_004.json', { id: 14 })).toEqual(['error']);
-    expect(sev('level_004.json', {})).toEqual(['warn']);
-    expect(sev('level_005.json', {})).toEqual(['warn']);
+    expect(sev('level_004.json', { ...V3C_4, id: 14 })).toEqual(['error']);
+    expect(sev('level_004.json', V3C_4)).toEqual(['warn']);
+    expect(sev('level_005.json', V3C_5)).toEqual(['warn']);
+    expect(sev('level_004.json', {})).toEqual([]);
+    expect(sev('level_005.json', {})).toEqual([]);
     expect(sev('level_003.json', {})).toEqual([]);
   });
 });

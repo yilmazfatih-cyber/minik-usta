@@ -595,12 +595,15 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
   ("WY/YW" pencere) yalnız doğru iki renkliyle dolar. Ölçü: `traitDelta` ≥ 10 (Bölüm 5), `shapeDecisions` ≥ 2.
 - **Bilgi kartı** (ÖNERİ, anahtar `obs.y9.desc`): TR «İki renkli blok: her rengi kendi yerine gelmeli.» · EN «Two-tone block: each color must match its spot.»
 
-### Y10 — Palet (KABUL, D-104 ile kesinleşti)
-- **Bölge:** saha (bırakma yalnız şantiyede) · **İlk bölüm:** **7** (v3c tanıtım; ayrıca 8, 9, 10 — her bölümde **tek palet `D2_90` ×3**, katmanları son iki katın malzemesi, LEVELS §8.14)
-- **Palet şekli (ÖNERİ, GDD K-58 madde 10; P3 bulgusu):** alt katmanlı üst katman, sahadaki her birim ötelemesi kendi ayak
-  izine değmiyorsa tutulabilir. Yatay çubuk (`D2_90`; `I3_90` Bölüm 8+) yukarı kalkar; `C3`, `O4`, `L4`, `J4`, `T4`
-  paletlerinin üst katmanı **hiç** tutulamaz (her öteleme ayak izine değer) → planın `C3` paleti (§8.13.4) kaldırıldı;
-  dikey çubuk paleti (`D2_0`) yalnız yana çıkar, Hikaye 2'ye kaldı. Önerilen doğrulayıcı kodu `pallet_stuck` (code-lead).
+### Y10 — Palet (KABUL, D-104 ile kesinleşti; D-106 palet şekli, D-108 görünüm, 2026-11-12)
+- **Bölge:** saha (bırakma yalnız şantiyede) · **İlk bölüm:** **7** (v3c2 tanıtım; ayrıca 8, 9, 10 — her bölümde tek palet,
+  şekli bölümden bölüme değişir: 7 `O4_0` Y ×4, 8 `C3_0` W ×3, 9 `C3_270` G ×3, 10 `C3_0` W ×4; LEVELS §8.15)
+- **Palet şekli (KABUL, D-106; GDD K-58 madde 4 ve 10):** sürüklenen katman **kendi paletinin kalan katmanlarıyla
+  çarpışmaz**: yığından yukarı çıkar, yanı boşsa kendi hücresinin üstünden yana kayar; başka bloklar, duvar ve çerçeve
+  aynen engeldir, palet başka her blok için dolu kalır. Bu yüzden Hikaye 1'de yerde duran her izinli şekil palet olabilir:
+  `D2_0`, `D2_90`, `C3_0`, `C3_270`, `O4_0`, `L4_0`, `L4_270`, `J4_0`, `J4_90`, `T4_270` (Bölüm 6+), `I3_90` (Bölüm 8+).
+  `pallet_stuck` (L-41) emeklidir (hiç üretilmez, ad yeniden kullanılmaz). Paletin çıkış yolu sıradan bir bloğunki
+  gibidir: üstü ve yanı başka bloklarla kapalıysa katman gömülüdür, önce kazı gerekir.
 - **Kural:** Palet, aynı şekilde 2–4 malzeme bloğunun aynı hücrelerde üst üste (z) durduğu yığındır. Yalnız en üst katman
   tutulabilir (K-09); alttaki katmanlar paletin hücrelerini doldurur. Üst katman kaldırılınca bir alttaki aynı anda
   "üst" olur (hücreler dolu kalır). **Kaldırılan katman yalnız şantiyeye bırakılır (D-104, GDD K-58 madde 9):** şantiyede
@@ -612,13 +615,15 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
   kuralı (`pallet_capacity`, madde 8) D-104 ile kalktı: katman sahaya inmediği için palet boş alanı azaltamaz.
 - **Veri:** parçada `stack: { id, z }` (aynı `id`'li parçalar aynı şekil ve çapa; `z` 0 = en alt, ardışık). Palet
   katmanı `slippery`, harç ve cam bayrağı taşıyamaz (`flag_combo_forbidden`).
-- **Örnek:** Bölüm 7 v3c: palet `D2_90` W×3 (0,0)–(1,0). Üst W sahaya (3,6) bırakılır → iptal, sayaç aynı. Şantiyede W
-  satırına → doğru, palet 2 katman. Y hücresine → hatalı, sayaç −1, W palete döner. Üçüncü W de yerleşince (0,0)–(1,0)
-  boşalır.
-- **Okunurluk (G1b, DL-V3-01/02/03/17):** taban açık gri-mavi metal kızaktır (nötr `ui` tonu; ahşap rengi ve ağaç damarı
-  yok — W "Ahşap" bloğuyla karışmasın), 2 çıta, yalnız bloğun altında 16 design px dudak olarak görünür, hücrenin
-  ortasını kaplamaz. Katman sayısı dudakta 2–4 **çentikle** gösterilir (rakam yok; "+2" bonus ve Islak Beton sayacıyla
-  karışmasın); katman başına 6 design px yükselen gölge "yığın" okunur. Üst katman kalkınca alttaki 120 ms "pop" ile
+- **Örnek:** Bölüm 7 v3c2: palet `O4_0` Y ×4, hücreler (0,0)–(1,1); üstündeki beş blok 1. katın malzemesidir. 1. kat
+  bitince üst Y tutulur, sahaya (2,7) bırakılır → iptal, sayaç aynı. Şantiyede 2. katın Y karesine → doğru, palet 3
+  katman. W hücresine → hatalı, sayaç −1, Y palete döner. Dördüncü Y de yerleşince (0,0)–(1,1) boşalır (2×2 park yeri).
+- **Okunurluk (G1b, DL-V3-01/02/03/17; D-108):** taban gri-mavi metal kızaktır (gövde `#8A9BB0`; ahşap rengi ve ağaç
+  damarı yok — W "Ahşap" bloğuyla ΔE00 ≥ 40), yalnız bloğun altında 16 design px dudak olarak görünür, hücrenin ortasını
+  kaplamaz. Katman sayısı **"×n" beyaz daire rozetiyle** gösterilir (n = 2–4; Ø 76 design px, rakam 44 px, 360 px'te
+  rozet ≥ 56 design px; GDD K-65 madde 4, ART_DIRECTION §3A.6); rozet bonusun altın 5 kollu yıldızlı "+n" rozetinden
+  biçim, renk ve işaretle ayrışır (palet katmanı bonus taşımaz). Eski "çentik, rakam yok" kuralı D-108 ile kalktı.
+  Katman başına 6 design px yükselen gölge ve 3 px katman kenar çizgisi "yığın" okunur. Üst katman kalkınca alttaki 120 ms "pop" ile
   yükselir (JUICE). **v3c (D-104):** katman tutulup sahanın üstüne getirilince "iptal" görünümü (soluk katman, gölge yok)
   ve bırakınca palete kayan dönüş; şantiyede gölge her bloktaki gibi. Hikaye 2'de karışık palet: "sonraki katman"
   kenarı + basılı tutunca gözetleme; bunlar çizilmeden karışık palet yayımlanmaz.
@@ -628,12 +633,15 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
   18–20 blok bu yüzden sığar). v3c'deki karar: "paleti erken boşaltıp park yeri kazanmak mı, önce paletin ihtiyacı olan
   zemini kurmak mı?" (palet katmanlarının şantiyedeki yerleri birbirinin üstündedir; hangi paletten ne zaman çekileceği
   sıra kararıdır). Ölçü: `traitDelta` ≥ 10 (Bölüm 8), `palletEmptyAt` izlenir.
-- **Öğretici (Bölüm 7, 2 adım):** `tut.m.pallet` «Paletten hep en üstteki alınır.» / «Take from the top of the pallet.»;
-  `tut.m.palletsite` TR «Palet bloğu yalnız şantiyeye gider.» · EN «Pallet blocks go only to the site.» (ton denetimi
-  design-lead).
+- **Öğretici (Bölüm 7, 2 adım; STORY §6A, CL-V3C-06):** (1) `tut.m.pallet` TR "Paletten hep en üstteki alınır." · EN
+  "Take from the top of the pallet." — palet üst katmanı vurgulu, el dokunuşu; (2) `tut.m.palletsite` TR "Katmanı kaldır,
+  şantiyeye bırak." · EN "Lift a layer, set it on the site." — katman doğru yerleşince biter. Adımların `startOn`/`done`
+  olayları LEVELS §2 Bölüm 7 kartındadır. "Sahaya bırakılamaz" bilgisi öğretici balonunda değil, bilgi kartının ikinci
+  satırındadır.
 - **Bilgi kartı** (ÖNERİ, anahtar `obs.y10.desc`): TR «Paletten hep en üstteki alınır.» · EN «Take from the top of the pallet.»
-  v3c ek cümlesi (i18n'e code-lead ekler, ton denetimi design-lead; eklenince bu satır kartla birleşir): TR "Palet bloğu
-  yalnız şantiyeye gider." · EN "Pallet blocks go only to the site." (aynı metin `tut.m.palletsite` taslağıdır).
+  Kartın ikinci satırı ayrı anahtardır (`card.y10.site`, STORY §6A; web ve Unity i18n'de): TR "Katman sahaya inmez,
+  yalnız şantiyeye gider." · EN "Layers never rest on the field, only on the site." (eski taslak "Palet bloğu yalnız
+  şantiyeye gider." kalktı).
 
 ### Y11 — Sargılı Blok ve Makas (ÖNERİ)
 - **Bölge:** saha (tetik şantiyede) · **İlk bölüm:** 7 (v3b yayını) → **8 (v3c yayını, LEVELS §8.14)**
@@ -656,7 +664,7 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
 - **Bilgi kartı** (ÖNERİ, anahtar `obs.y11.desc`): TR «Makaslı bloğu yerleştir, paketler açılsın.» · EN «Place the scissors block to unwrap the rest.»
 
 ### Y12 — Bonus Blok (ÖNERİ)
-- **Bölge:** saha (tetik şantiyede) · **İlk bölüm:** 9 (v3b) → **10 (v3c yayını, P3; plan 7 ve 9 idi — L-22 tek yeni mekanik kuralı bonusu 6–9'a sokmaz, LEVELS §8.14.4)** · **D-105:** her hikayede ödül anı
+- **Bölge:** saha (tetik şantiyede) · **İlk bölüm:** 9 (v3b) → 10 (v3c, P3) → **7 (v3c2, D-107: palet tanıtımının ödülü; L-16/L-22 Y12'yi saymaz, K-60 madde 6; `mechanics.ts` Y12 `firstLevel` 7)** · Bölüm 10'da bonus yok (D-107: finalin etkin payını büyütmez) · **D-105:** her hikayede ödül anı
 - **Kural:** `bonus` bayraklı blok doğru yerleştiği hamlenin 4. adımında (K-35, maliyetten sonra) hamle sayacına
   `bonusMoves` (varsayılan 2) ekler. Hatalı yerleşim ve kaydırma bir şey vermez. Bölümde en çok 2 bonus blok. Geri Al ve
   Söküm bonusu geri alır. **Her hikayede ödül anıdır (D-105):** bütçeye girmez (K-62 `k` = 0 her zaman), karar sayımına
@@ -688,7 +696,7 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
 | Y9 | herhangi bir parçada `colors` | 5 (öneri) |
 | Y10 | herhangi bir parçada `stack` | 7 (v3c) |
 | Y11 | `wrapped` ya da `scissors` | 8 (v3c) |
-| Y12 | `bonus` | 10 (v3c) |
+| Y12 | `bonus` | 7 (v3c2; v3c'de 10) |
 | Y13 | `slippery` | 9 (v3c) |
 
 **v3c ilk bölümleri (D-103…D-105, LEVELS §8.13; "Veri imzası" tablosu code-lead'in v3c bölüm paketinde bunlarla
