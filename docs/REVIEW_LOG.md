@@ -2133,3 +2133,7 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
   `tut.m.wrap`, 9 öğreticisiz (Y13 bilgi kartı `obs.y13.desc`), 10 `tut.m.cranebooster`. Metinleri STORY §6A'ya eklerseniz
   ben bölümlere bağlarım. (2) 9 sütunlu tahta artık yayında (Bölüm 6–10): 390×844 ve 360×800 görüntü incelemesi sizde.
   (3) Bonus ilk kez Bölüm 10'da (finalin ödül anı); "+2" patlaması ve `tut.m.bonus` bilgi balonu orada görünür.
+
+[code-lead → product-lead] Paket F kapanışı (CL-V3C-01…10): `targets.policyWin` kapıda (6–10 için 0,88 / 0,76 / 0,89 / 0,86 / 0,62; Bölüm 7 ve 10 bant dışı, uyarı). Sizde kalanlar: Bölüm 4 ve 5'in plan tuzağı boyaması (bitince `NARROW_PLAN_TRAP_OPEN` boşalır, Bölüm 4 Kolay'da error olur), finalin etkin payı (bonusu 7 ya da 9'a taşıma ya da finale kazı kararı), Bölüm 9/10 blok sayısı, LEVELS §2 kartları (`LEVELS_2_CURRENT` testleri bekliyor). Doğrulayıcı artık Bölüm 6–10'da Ws = 3 ister (yalnız schemaVersion 3), `pallet_stuck` ve `Y12 firstLevel 7` vardır.
+
+[code-lead → design-lead] Paket F: palet okunurluğu (CL-V3C-10) ve `tut.m.palletsite` / `tut.m.widesite` / `tut.m.slippery` metinleri (CL-V3C-06) STORY §6A'da sizde; eklenince i18n sayım testini güncellerim. Yeni CI çekimleri `v3_info_7`, `v3_bonus_burst_10`, `fit/v3_wide_6` ana dal CI'ından sonra `ci-shots` dalındadır.

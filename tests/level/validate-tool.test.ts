@@ -61,7 +61,7 @@ describe('levels:validate tool (TECH §8.3, §12.2)', () => {
     expect(r.out).toContain('level_005.json  WARN  mechanics: S1 Y9');
     expect(r.out).toContain('10 file(s), 0 error(s)');
     const warnLines = r.out.split('\n').filter((l) => /^\s+warn /.test(l));
-    for (const l of warnLines) expect(l, l).toContain('tile_family_mix');
+    for (const l of warnLines) expect(l, l).toMatch(/tile_family_mix|plan_trap/);
   });
 });
 

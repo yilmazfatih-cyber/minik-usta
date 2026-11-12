@@ -36,7 +36,7 @@ describe('K-55 shipped levels 1–10 (fixed yard)', () => {
         `level ${n}`,
       ).toEqual([]);
       expect(
-        [...new Set(issues.map((i) => i.code))].filter((c) => c !== 'tile_family_mix'),
+        [...new Set(issues.map((i) => i.code))].filter((c) => c !== 'tile_family_mix' && c !== 'plan_trap'),
         `level ${n}`,
       ).toEqual([]);
       for (const m of deriveMechanics(parsed(n))) previous.add(m);

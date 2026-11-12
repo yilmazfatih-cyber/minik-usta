@@ -30,7 +30,7 @@
  * reused while `levelHash`, `RULES_VERSION`, `SOLVER_VERSION` and the options match (`--no-cache` recomputes).
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { format, resolveConfig } from 'prettier';
@@ -93,6 +93,29 @@ interface Job {
   readonly cacheKey: string;
 }
 
+/**
+ * CL-V3C-07: hash of every source file the solver result depends on (`src/core/**`, `tools/solver/**`), so a code change
+ * without a version bump can never serve a stale cached result. Computed once per run.
+ */
+let sourceHashMemo: string | null = null;
+function sourceHash(): string {
+  if (sourceHashMemo !== null) return sourceHashMemo;
+  const files: string[] = [];
+  const walk = (dir: string): void => {
+    for (const name of readdirSync(dir).sort()) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (name.endsWith('.ts')) files.push(p);
+    }
+  };
+  walk(join(ROOT, 'src', 'core'));
+  walk(join(ROOT, 'tools', 'solver'));
+  sourceHashMemo = fnv(
+    files.map((f) => `${f.slice(ROOT.length)}\n${readFileSync(f, 'utf8')}`).join('\u0000'),
+  );
+  return sourceHashMemo;
+}
+
 function cacheKeyOf(file: LevelFile, opts: SolveOptions): string {
   const json: unknown = JSON.parse(readFileSync(file.path, 'utf8'));
   return [
@@ -100,6 +123,7 @@ function cacheKeyOf(file: LevelFile, opts: SolveOptions): string {
     fnv(JSON.stringify(json)),
     `rules${RULES_VERSION}`,
     `solver${SOLVER_VERSION}`,
+    `src${sourceHash()}`,
     opts.variant ?? 'level',
     opts.variants === false ? 'novar' : 'var',
     opts.d3a === false ? 'nod3a' : 'd3a',

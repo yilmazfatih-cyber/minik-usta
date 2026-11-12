@@ -83,7 +83,12 @@ export interface LargeSummary {
    * CL-V3-03 proxy for `greedyWin` / `ahaMin` (they need the whole graph): win rate of a "take a correct placement you
    * see" player within `moves` (tight) and within `moves` + N / 2 (loose); null when not run.
    */
-  readonly policy?: { readonly tight: number; readonly loose: number } | null;
+  readonly policy?: {
+    readonly tight: number;
+    readonly loose: number;
+    /** CL-V3C-01: one-step lookahead, eps 0.1, within `moves` (bonus applied as in the game, CL-V3C-02). */
+    readonly look: number | null;
+  } | null;
 }
 
 /** A level with at least this many material blocks skips the whole-space scan (it stops working at 8–10, B2). */
@@ -288,6 +293,11 @@ export function solveLevelData(
         const policy = {
           tight: policyWinRate(lvl, level.moves, { plays: 200, seed: level.id }),
           loose: policyWinRate(lvl, loose, { plays: 200, seed: level.id }),
+          // only a level with a `targets.policyWin` band is measured (the sampled lookahead takes 1-20 s per level)
+          look:
+            level.targets?.policyWin === undefined
+              ? null
+              : policyWinRate(lvl, level.moves, { plays: 200, seed: level.id, lookahead: true, eps: 0.1 }),
         };
         large = { ...large, walks: w, policy };
         if (level.difficulty !== 'easy' && policy.loose > 0.7)
@@ -300,6 +310,22 @@ export function solveLevelData(
               'yard',
               `policy win ${policy.loose} > 0.70 within moves + N/2: a player who always takes a visible correct placement finishes inside the budget (proxy for greedyWin, CL-V3-03)`,
             ),
+          );
+        const pBand = level.targets?.policyWin;
+        if (pBand && policy.look !== null && (policy.look < pBand[0] || policy.look > pBand[1]))
+          out.push(
+            issue(
+              'metric_out_of_band',
+              'K-51/3',
+              'L-33',
+              'warn',
+              'targets.policyWin',
+              `policyWin = ${policy.look} is outside [${pBand[0]}, ${pBand[1]}] (one-step lookahead player, eps 0.1, within ${level.moves} moves; CL-V3C-01)`,
+            ),
+          );
+        if (policy.look !== null)
+          notes.push(
+            `lookahead proxy (CL-V3C-01): one-step lookahead, eps 0.1, wins ${policy.look} within ${level.moves} moves (bonus applied like the game)`,
           );
         notes.push(
           `play proxy (CL-V3-03; not ahaMin): placement-first player wins ${policy.tight} within ${level.moves} moves, ${policy.loose} within ${loose}`,

@@ -94,7 +94,7 @@ export const TRAIT_MECHANICS: readonly MechanicSignature[] = [
   { id: 'Y9', firstLevel: 5, detect: (l) => allPieces(l).some((p) => p.colors !== undefined) },
   { id: 'Y10', firstLevel: 7, detect: (l) => allPieces(l).some((p) => p.stack !== undefined) },
   { id: 'Y11', firstLevel: 8, detect: (l) => anyFlag(l, 'wrapped') || anyFlag(l, 'scissors') },
-  { id: 'Y12', firstLevel: 10, detect: (l) => anyFlag(l, 'bonus') },
+  { id: 'Y12', firstLevel: 7, detect: (l) => anyFlag(l, 'bonus') },
   { id: 'Y13', firstLevel: 9, detect: (l) => anyFlag(l, 'slippery') },
 ];
 

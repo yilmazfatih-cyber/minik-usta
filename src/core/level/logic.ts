@@ -163,12 +163,18 @@ export const NARROW_SITE_LAST_LEVEL = 5;
 export const WIDE_SITE_COLS = 3;
 /** K-49 item 1 (D-103): `Wy + Ws ≤ 9` (`board_too_wide`; 108 px cells at 9 columns, item 5). */
 export const MAX_BOARD_COLS = MAX_COLS;
+/** K-49 item 2 (D-103): the last level id that must have the 3-column site (6–10). */
+export const WIDE_SITE_LAST_REQUIRED_LEVEL = 10;
 /**
  * Site width Ws (K-49 items 1–2, D-103): exactly 2 in levels 1–5, 2–3 from level 6 on. Ws 1 and Ws 4 are not used in
  * the MVP (the frame of geometry.ts still encodes up to `MAX_SITE_COLS`).
  */
-export function siteColsRange(levelId: number): readonly [number, number] {
-  return levelId <= NARROW_SITE_LAST_LEVEL ? [2, 2] : [2, Math.min(WIDE_SITE_COLS, MAX_SITE_COLS)];
+export function siteColsRange(levelId: number, schemaVersion = 3): readonly [number, number] {
+  // CL-V3C-05(a): levels 6–10 require Ws = 3 (K-49 item 2, D-103); from 11 on both widths are allowed
+  if (levelId <= NARROW_SITE_LAST_LEVEL) return [2, 2];
+  const wide = Math.min(WIDE_SITE_COLS, MAX_SITE_COLS);
+  // the requirement is a v3 rule (D-103): the archived Faz 2R / D-099 levels (schemaVersion 1–2) keep Ws 2–3
+  return levelId <= WIDE_SITE_LAST_REQUIRED_LEVEL && schemaVersion >= 3 ? [wide, wide] : [2, wide];
 }
 /** Free yard cells at the start (K-02): `2 ≤ E ≤ ⌊0,4·C⌋`. */
 export const YARD_EMPTY_MIN = 2;
@@ -507,7 +513,7 @@ function checkSizes(level: LevelData, push: Push): boolean {
   };
   out('yard.cols', 'Wy', z.wy, SIZE_RANGES.yardCols);
   out('yard.rows', 'Hy', z.hy, SIZE_RANGES.yardRows);
-  out('site.cols', 'Ws', z.ws, siteColsRange(level.id), ` in level ${level.id}`);
+  out('site.cols', 'Ws', z.ws, siteColsRange(level.id, schemaVersionOf(level)), ` in level ${level.id}`);
   out('site.rows', 'Hs', z.hs, SIZE_RANGES.siteRows);
   if (z.wy + z.ws > MAX_BOARD_COLS)
     push(
@@ -1040,10 +1046,17 @@ export function planTrapScan(
  * K-63 D-103 annex: `plan_trap` on a 3-column site — error in levels 1–10 (story 1) and on Easy / Normal later, warn on
  * Hard / Very Hard; a scan that spends its budget gives the `plan_trap_unknown` warning (no proof).
  */
+/** Levels on a 2-column site whose known plan trap is still open (data fix: product-lead repaints; remove the id then). */
+export const NARROW_PLAN_TRAP_OPEN: ReadonlySet<number> = new Set([4]);
 function checkPlanTraps(level: LevelData, plans: readonly SegmentPlan[], geo: BoardGeo, push: Push): void {
   const res = planTrapScan(level, plans, geo);
   if (!res.tileable && res.status === 'done') return; // L-11 `untileable` reports a plan that cannot be tiled at all
-  const strict = level.chapter === 1 || level.difficulty === 'easy' || level.difficulty === 'normal';
+  // CL-V3C-03: on a 2-column site the scan runs too (milliseconds): Easy = error, Normal and above = warn. Level ids in
+  // `NARROW_PLAN_TRAP_OPEN` carry a known trap that product-lead has to repaint (CL-V3C-03): a warning until then.
+  const strict =
+    geo.ws >= WIDE_SITE_COLS
+      ? level.chapter === 1 || level.difficulty === 'easy' || level.difficulty === 'normal'
+      : level.difficulty === 'easy' && !NARROW_PLAN_TRAP_OPEN.has(level.id);
   if (res.traps > 0) {
     const e = res.example;
     push(
@@ -1390,7 +1403,8 @@ function checkGoals(level: LevelData, push: Push): void {
 
 /** L-16 teaches_mismatch, L-22 too_many_new_mechanics (K-45/10, OBSTACLES "Veri imzası" Faz 2R). */
 function checkMechanics(level: LevelData, previous: ReadonlySet<MechanicId>, push: Push): void {
-  const fresh = deriveMechanics(level).filter((m) => !previous.has(m));
+  // CL-V3C-05 (c): the bonus block (Y12) is a reward moment, not an idea to teach (K-60 item 6): it is not counted
+  const fresh = deriveMechanics(level).filter((m) => !previous.has(m) && m !== 'Y12');
   if (fresh.length > 1)
     push(
       'L-22',
@@ -1764,6 +1778,19 @@ function usesV3(p: PieceData): boolean {
 }
 
 /** Pallets of the start batch: id → layers (path, piece) in data order. */
+/** K-58 item 10: all four one-unit translations of the shape intersect the shape itself. */
+export function palletStuck(shapeId: PieceData['shape']): boolean {
+  const own = new Set(shapeById(shapeId).cells.map((c) => `${c.x},${c.y}`));
+  return [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ].every(([dx, dy]) =>
+    shapeById(shapeId).cells.some((c) => own.has(`${c.x + (dx ?? 0)},${c.y + (dy ?? 0)}`)),
+  );
+}
+
 function palletsOf(level: LevelData): Map<number, { path: string; piece: PieceData }[]> {
   const out = new Map<number, { path: string; piece: PieceData }[]>();
   level.yard.batches[0]?.pieces.forEach((p, i) => {
@@ -1879,6 +1906,15 @@ function checkTraits(level: LevelData, push: Push): void {
         'stack_invalid',
         path,
         'a pallet in a yard-gravity level (Y6) is not defined (OBSTACLES v3 table)',
+      );
+    // K-58 item 10 (CL-V3C-05 b): a lower layer must be able to leave its pallet's footprint; a one-unit shift in each of
+    // the four directions that still overlaps the own footprint means the block can never clear it (C3 / O4 / L4 / J4 / T4)
+    if (layers.length >= 2 && palletStuck(first.shape))
+      push(
+        'L-41',
+        'pallet_stuck',
+        path,
+        `pallet ${id} (${first.shape}): every one-unit shift overlaps the own footprint; the lower layers can never leave (K-58 item 10)`,
       );
   }
   if (level.chapter >= 2) {
@@ -2034,6 +2070,7 @@ function checkTraitDesign(
   if (geo.ws >= WIDE_SITE_COLS) {
     if (plansUsable) checkPlanTraps(level, plans, geo, push);
   } else if (level.difficulty === 'easy' || level.difficulty === 'normal') {
+    if (plansUsable && schemaVersionOf(level) >= 3) checkPlanTraps(level, plans, geo, push); // CL-V3C-03 (v3 files)
     const fam = new Map<string, { bottom: Set<string>; column: Set<string> }>();
     for (const p of pieces) {
       if (p.colors !== undefined || isCargo(shapeById(p.shape))) continue;

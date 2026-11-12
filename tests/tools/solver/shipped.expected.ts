@@ -172,7 +172,7 @@ export const SHIPPED: Readonly<Record<number, ShippedExpectation>> = {
     lowerBound: 19,
     yao: [18, 0],
     band: [24, 27],
-    warnings: [],
+    warnings: ['metric_out_of_band'], // CL-V3C-01: lookahead proxy outside targets.policyWin
     eventLogHash: '2f5e57edf6955b8c',
     policyLoose: 0.38,
     policyTight: 0.16,
@@ -217,9 +217,9 @@ export const SHIPPED: Readonly<Record<number, ShippedExpectation>> = {
     lowerBound: 20,
     yao: [19, 0],
     band: [23, 26],
-    warnings: [],
+    warnings: ['metric_out_of_band'], // CL-V3C-01: lookahead proxy outside targets.policyWin
     eventLogHash: '333840b4bcd1da90',
-    policyLoose: 0.3,
-    policyTight: 0.04,
+    policyLoose: 0.33, // CL-V3C-02: the bonus is credited
+    policyTight: 0.13,
   },
 };

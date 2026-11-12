@@ -357,6 +357,9 @@ const Targets = z.strictObject({
   greedyWin: z.optional(RateBand),
   ahaMin: z.optional(Band),
   branch3: z.optional(RateBand),
+  // CL-V3C-01: win rate within `moves` of the one-step-lookahead play proxy at eps 0.1 (large levels only; the band is a
+  // difficulty gate for a middle player: tools/solver/walks.ts `policyWinRate`)
+  policyWin: z.optional(RateBand),
 });
 
 /**

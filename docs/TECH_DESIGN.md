@@ -2145,6 +2145,8 @@ Onun yerine:
 3. **Oyun-yanlış-yön vekili (CL-V3-03):** `policyWinRate` = "gördüğü doğru yerleşimi al" oyuncusunun `moves` ve `moves + N/2`
    içindeki kazanma oranı (`greedyWin`/`ahaMin` tüm çizge ister, büyük bölümde yok). Normal/Zor'da > 0,70 ise `puzzle_greedy_easy`
    uyarısı. `ahaMin` ≥ 1 kapısı büyük bölümde ölçülemez: yerine 7–10'dan en az birinde vekil ≤ 0,5 testi (`shipped.test.ts`).
+   - **Paket F (CL-V3C-01/02):** `policyWinRate` iki seçenek daha alır: `lookahead` (doğru yerleşim yoksa en çok yerleşim açan kaydırma) ve `eps` (rastgele hamle payı). Harcanan hamle `Expander.lastRawCost`'tur (kırpılmamış; Y12 bonusu 1 − 2 = −1 öder, K-62). Kapı: `targets.policyWin` bandı, `lookahead` + ε 0,1, `moves` bütçesinde (`metric_out_of_band`, uyarı).
+   - **Önbellek (CL-V3C-07):** `tools/solve.ts` önbellek anahtarı `src/core/**` ve `tools/solver/**` kaynak karmasını içerir; CI `levels-nocache` işi bu klasörler ya da `levels/` değişince önbelleksiz çalışır.
 
 `SOLVER_VERSION` 5. Yeni seçenek `--walks N` (`levels:solve`); `levels:validate --booster-unlock hammer=8` (Faz 2R arşivi için).
 `shape_decisions_low` Hikaye 1'de uyarı (`level.chapter ≤ 1`), 2'den itibaren hata; product-lead B3 kararı bekleniyor.

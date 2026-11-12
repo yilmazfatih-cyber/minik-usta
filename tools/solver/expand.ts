@@ -164,6 +164,12 @@ export class Expander {
   lastToY = 0;
   /** The successor came through `applyMove` (a placement, a delivery, a slow yard move): D3a may change. */
   lastSlow = false;
+  /**
+   * True move cost of the last successor before normalisation (CL-V3C-02): 1 for a shift, the K-07 cost for a placement,
+   * minus the Y12 bonus moves a correct placement of a bonus block pays back (so it can be negative: 1 - 2 = -1). The edge
+   * info byte clamps it to 1..3 (the search treats a bonus as k = 0, K-62); a play proxy reads this one instead.
+   */
+  lastRawCost = 1;
 
   readonly stats = { sessions: 0, applyMoves: 0, fastMoves: 0, reachHits: 0 };
 
@@ -272,6 +278,7 @@ export class Expander {
             this.lastToX = ix;
             this.lastToY = iy;
             this.lastSlow = false;
+            this.lastRawCost = 1;
             this.stats.fastMoves++;
             cb(nlo, nhi, FAST_INFO);
           } else {
@@ -536,6 +543,7 @@ export class Expander {
     this.lastToX = to.ix;
     this.lastToY = to.iy;
     this.lastSlow = true;
+    this.lastRawCost = cost;
     cb(nlo, nhi, edgeInfo(k, cost, via !== undefined));
     this.lastVia = undefined;
   }

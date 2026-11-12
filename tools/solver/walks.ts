@@ -20,7 +20,7 @@ import { isLevelWon } from '../../src/core/moves.ts';
 import { levelHooks } from '../../src/core/obstacles/registry.ts';
 import { hashState } from '../../src/core/hash.ts';
 import { detectDeadlock, noMoves } from '../../src/core/deadlock.ts';
-import { Expander, infoCost, infoKind, KIND_RAIL } from './expand.ts';
+import { Expander, infoKind, KIND_RAIL } from './expand.ts';
 import { solverStart } from './explore.ts';
 import { scoreOf, solveLarge } from './large.ts';
 
@@ -167,29 +167,53 @@ export function randomWalks(lvl: CompiledLevel, opts: WalkOptions = {}): WalkRes
   };
 }
 
+/** Shifts a lookahead player compares per move (a uniform sample; a full scan of Bolum 10 took 218 s). */
+export const LOOK_CANDIDATES = 24;
+
 export interface PolicyOptions {
   readonly plays?: number;
   readonly seed?: number;
   /** Share of moves chosen uniformly among all moves instead of by the policy (a careless player; default 0). */
   readonly eps?: number;
+  /**
+   * One-step lookahead (CL-V3C-01): with no correct placement in sight, take the yard shift that opens the most correct
+   * placements (ties: uniformly random) instead of a random shift. A player who sees one move ahead.
+   */
+  readonly lookahead?: boolean;
 }
 
 /**
  * Win rate within `budget` of a "take any correct placement you can see" player (CL-V3-03 proxy for `greedyWin` /
  * `ahaMin`, which need the whole graph): at each state a uniformly random correct placement if one exists, else a
- * uniformly random yard shift; with probability `eps` a uniformly random move. A level the policy always wins has no
- * decision to make; one it never wins is a wall. Deterministic (seeded).
+ * yard shift (random, or with `lookahead` the one that opens the most placements); with probability `eps` a uniformly
+ * random move. A level the policy always wins has no decision to make; one it never wins is a wall. The spent moves are
+ * the true counter difference, so a Y12 bonus placed correctly pays its moves back (K-62, CL-V3C-02: "play proxies apply
+ * the bonus like the real game"). Deterministic (seeded).
  */
 export function policyWinRate(lvl: CompiledLevel, budget: number, opts: PolicyOptions = {}): number {
   const plays = opts.plays ?? 400;
   const eps = opts.eps ?? 0;
+  const look = opts.lookahead === true;
   const hooks = levelHooks(lvl);
   const x = new Expander(lvl, hooks);
+  const peek = look ? new Expander(lvl, hooks) : null;
   const rng = mulberry32((opts.seed ?? 1) * 104729 + lvl.materialCount);
   const cur: GameState = { lvl, buf: new Int32Array(lvl.layout.size) };
   const bufA = new Int32Array(lvl.layout.size);
   const bufB = new Int32Array(lvl.layout.size);
   const bufC = new Int32Array(lvl.layout.size);
+  /** Correct placements available in a state (the lookahead score of a shift). */
+  const placementsIn = (s: GameState): number => {
+    let n = 0;
+    const hh = hashState(s);
+    peek?.expand(s, hh[0] ?? 0, hh[1] ?? 0, (_lo, _hi, info) => {
+      if (infoKind(info) <= KIND_RAIL) n++;
+    });
+    return n;
+  };
+  const candBuf: Int32Array[] = [];
+  const candCost: number[] = [];
+  const scratch: GameState = { lvl, buf: new Int32Array(lvl.layout.size) };
   let wins = 0;
   for (let p = 0; p < plays; p++) {
     cur.buf.set(solverStart(lvl).buf);
@@ -207,23 +231,51 @@ export function policyWinRate(lvl: CompiledLevel, budget: number, opts: PolicyOp
         nAll++;
         if (rng.nextInt(nAll) === 0) {
           bufC.set(x.materialize().buf);
-          costC = infoCost(info);
+          costC = x.lastRawCost;
         }
         if (place) {
           nPlace++;
           if (rng.nextInt(nPlace) === 0) {
             bufA.set(x.materialize().buf);
-            costA = infoCost(info);
+            costA = x.lastRawCost;
+          }
+        } else if (look) {
+          // reservoir of `LOOK_CANDIDATES` shifts (uniform): only those are scored, which keeps the proxy affordable
+          nOther++;
+          const slot = nOther <= LOOK_CANDIDATES ? nOther - 1 : rng.nextInt(nOther);
+          if (slot < LOOK_CANDIDATES) {
+            (candBuf[slot] ??= new Int32Array(lvl.layout.size)).set(x.materialize().buf);
+            candCost[slot] = x.lastRawCost;
           }
         } else {
           nOther++;
           if (rng.nextInt(nOther) === 0) {
             bufB.set(x.materialize().buf);
-            costB = infoCost(info);
+            costB = x.lastRawCost;
           }
         }
       });
       if (nAll === 0) break;
+      if (look && nPlace === 0 && nOther > 0) {
+        // score the sampled shifts by the placements they open; keep the best (ties uniformly)
+        let bestOpen = -1;
+        let ties = 0;
+        for (let k = 0; k < Math.min(nOther, LOOK_CANDIDATES); k++) {
+          const cb = candBuf[k];
+          if (!cb) continue;
+          scratch.buf.set(cb);
+          const open = placementsIn(scratch);
+          if (open > bestOpen) {
+            bestOpen = open;
+            ties = 1;
+            bufB.set(cb);
+            costB = candCost[k] ?? 1;
+          } else if (open === bestOpen && rng.nextInt(++ties) === 0) {
+            bufB.set(cb);
+            costB = candCost[k] ?? 1;
+          }
+        }
+      }
       if (eps > 0 && rng.next() < eps) {
         cur.buf.set(bufC);
         spent += costC;

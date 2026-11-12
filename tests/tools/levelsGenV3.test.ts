@@ -9,7 +9,7 @@ import type { GenPlan } from '../../tools/gen/generate.ts';
 import { validateLevelJson } from '../../src/core/level/logic.ts';
 
 const PLAN: GenPlan = {
-  id: 7,
+  id: 12,
   name: { tr: 'Deneme', en: 'Trial' },
   difficulty: 'normal',
   yard: { cols: 4, rows: 4 },

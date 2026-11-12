@@ -481,7 +481,7 @@
     "states": 767033,
     "expanded": 767033,
     "edges": 9885120,
-    "ms": 33313,
+    "ms": 35842,
     "bytes": 144409285,
     "dragSessions": 90181,
     "applyMoves": 1157452,
@@ -491,9 +491,9 @@
     "d3aUnknown": 0,
     "complete": true,
     "limit": null,
-    "totalMs": 35178
+    "totalMs": 38197
   },
   "v3": null,
   "large": null,
-  "cacheKey": "1904d74b:rules5:solver6:level:var:d3a"
+  "cacheKey": "1904d74b:rules5:solver6:srce88eb59c:level:var:d3a"
 }

@@ -1,7 +1,7 @@
 {
   "level": 8,
   "file": "level_008.json",
-  "levelHash": "53ef7521544544f6",
+  "levelHash": "01d68b426c448f9f",
   "rulesVersion": 5,
   "solverVersion": 6,
   "variant": null,
@@ -33,7 +33,8 @@
   "variants": [],
   "issues": [],
   "notes": [
-    "large-level search (U-v3-2): best found 20 (lower bound 19) — not proven optimal, en iyi bulunan; width 8, 152462 states, 4028 ms, replay ok",
+    "large-level search (U-v3-2): best found 20 (lower bound 19) — not proven optimal, en iyi bulunan; width 8, 152462 states, 3332 ms, replay ok",
+    "lookahead proxy (CL-V3C-01): one-step lookahead, eps 0.1, wins 0.89 within 24 moves (bonus applied like the game)",
     "play proxy (CL-V3-03; not ahaMin): placement-first player wins 0.35 within 24 moves, 0.68 within 33",
     "dead-state gate (CL-V3-01 B, estimate not proof; D-090 whole-space scan not run): 10000 random walks: won 9932, rescued by D1/D2/D3a 0, unresolved 68 (probed 68: solvable 68, undetected dead 0) → estimated 0.00 %"
   ],
@@ -42,7 +43,7 @@
     "states": 2008,
     "expanded": 497,
     "edges": 6562,
-    "ms": 483,
+    "ms": 443,
     "bytes": 394950,
     "dragSessions": 2716,
     "applyMoves": 447,
@@ -52,7 +53,7 @@
     "d3aUnknown": 0,
     "complete": false,
     "limit": "maxStates",
-    "totalMs": 115523
+    "totalMs": 83586
   },
   "v3": {
     "liftRatio": 0.94,
@@ -77,28 +78,28 @@
       "value": 1
     },
     "states": 152462,
-    "ms": 4028,
+    "ms": 3332,
     "replayOk": true,
     "runs": [
       {
         "width": 8,
         "cost": 20,
-        "ms": 329
+        "ms": 155
       },
       {
         "width": 32,
         "cost": 20,
-        "ms": 374
+        "ms": 232
       },
       {
         "width": 128,
         "cost": 20,
-        "ms": 939
+        "ms": 784
       },
       {
         "width": 512,
         "cost": 20,
-        "ms": 2385
+        "ms": 2160
       }
     ],
     "actions": [
@@ -301,8 +302,9 @@
     },
     "policy": {
       "tight": 0.35,
-      "loose": 0.68
+      "loose": 0.68,
+      "look": 0.89
     }
   },
-  "cacheKey": "93e6dcc4:rules5:solver6:level:var:d3a"
+  "cacheKey": "67451c51:rules5:solver6:srce88eb59c:level:var:d3a"
 }
