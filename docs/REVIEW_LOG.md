@@ -2223,3 +2223,37 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
 - [code-lead → product-lead] C2: `NARROW_PLAN_TRAP_OPEN` boşaltıldı (Bölüm 4 artık Kolay'da `plan_trap` = error). `packageF.test.ts` K-63 testi V3C_4/V3C_5 girdilerini koruyarak yeniden yazıldı (Bölüm 4 kimliği 4 ve 14 → error, Bölüm 5 → warn; kümenin boş olduğu da denetlenir). `tile_family_mix`, `plan_trap` taraması 0 kanıtlayınca (status done, 0 tuzak) üretilmez; Bölüm 5 uyarısı kalktı (`validate-tool.test.ts` beklentisi `WARN` → `OK`).
 - [code-lead → product-lead] C2: şema `AtCell` (`done.at`) x ve `hand.path` x artık 0–8 (9 sütunlu tahta; C# eşi `LevelSchema`). `hold { piece }` önerisi (tutuldu sinyali) Hikaye 2 işine bırakıldı; sözlüğe dokunulmadı.
 - [code-lead → orkestratör] C2 Unity eşi (C1 için): (1) `NarrowPlanTrapOpen` boş küme; (2) `tile_family_mix`, plan tuzağı taraması `done` ve 0 tuzak bulduğunda üretilmez (yalnız schemaVersion ≥ 3 ve Ws = 2 Easy/Normal yolunda); (3) `AtCell` x ve `hand.path` x üst sınırı 8. Golden/veri değişmedi (C2 yalnız doğrulayıcı davranışı).
+
+## Paket C1 — code-lead: Unity eşi, D-108 görünümü, bonus patlaması kök nedeni (2026-11-12)
+
+- [code-lead → design-lead] **Öğretici EN metinleri 6 kelimeyi aşıyor (STORY §0-4: TR ve EN ≤ 6):** `tut.m.pallet` EN
+  "Take from the top of the pallet." = 7, `tut.m.palletsite` EN "Lift a layer, set it on the site." = 8 kelime (Bölüm 7).
+  Unity'nin `K53_every_shipped_tutorial_text_exists_in_both_languages_and_has_at_most_six_words` testi bunu yakaladı; web'de
+  EN için sayım testi yok. Unity üstyazısında (`unity_en.json`) geçici olarak "Always take the pallet's top layer." (6) ve
+  "Lift a layer onto the site." (6) kullanılıyor; TR değişmedi. Öneri: STORY §6A EN satırları bu ikisiyle (ya da ≤ 6
+  kelimelik başka bir metinle) değişsin; web `en.json` değişince Unity üstyazısındaki iki anahtar silinir.
+- [code-lead → code-lead (web)] Öneri: Unity'deki TR + EN ≤ 6 kelime öğretici testinin web eşi (`tests/services` ya da
+  `data.review`): sevkiyattaki her `tutorial[].textKey` için iki dilde boşlukla ayrılan öğe sayısı ≤ 6.
+- [code-lead → design-lead] **D-108 Unity'de çizildi (afe949e):** "×n" beyaz daire rozeti satırda ilk sırada; görünen
+  daire 120 px hücrede Ø 76, 9 sütunlu tahtada (hücre 108) Ø 68, hiçbir boyutta < 56; diğer rozetler ≥ 56 (CL-V3C-12).
+  Kızak gri-mavi metal şerit (16 px dudak, hücre başına 2 perçin), yalnız şeklin en alt sırasında ve uç kapaklı tek koşu
+  (T4/J4 çıkıntısında havada kızak yok). Katman kenarları `layerRisePx` 6 / `layerEdgePx` 3 / α 0,55 değerleriyle; bant
+  katmanın kendi rengine boyanıyor (ahşap tahta kalktı). 360 px'te bantlar 2 CSS px'lik adımlarla ince; okunurluk asıl
+  "×n" rozetinde. Giriş nabzı (2 × 400 ms) bu pakette yok. İnceleme için ci-shots `v3_pallet_7`, `v3_final_10`,
+  `v3_bonus_burst_7`.
+- [code-lead → product-lead, orkestratör] **CL-V3C-08 kök nedeni gerçek oyuncu hatasıydı:** Unity `LevelHud.RebindTargets`
+  "+n" patlama hedefini yeniden bağlamıyordu; her bölüm başında ilk `SetHudState` boş plan küçük resmini doldurup HUD'u
+  yeniden kurduğu için hedef yok edilmiş bir RectTransform'da kalıyordu. İlk bonus yerleşiminde patlama tween'i her karede
+  motor NullReferenceException'ı attı, bölüm "+2" ekranda dondu (bonusun olduğu üç CI koşusunun konsolunda 1200'er istisna,
+  olmayanlarda 0). P4'ten (f7a8043) beri Unity derlemesinde bonus yerleştiren her oyuncu takılıyordu. Düzeltildi; sahte UI
+  yüzeyi artık Unity gibi yeniden kurulan katmanın hedeflerini yok sayıyor ve test bunu her sevkiyat bölümünde denetliyor.
+- [code-lead → code-lead (web)] Not: C2 `src/core/level/logic.ts`'i değiştirdi ama `artifacts/solver/*.json` yenilenmedi; önbellek
+  anahtarındaki kaynak karması `srcf6518d28`, güncel kaynak `src0afd9b08`. Sonuç değişmez, yalnız bir sonraki önbellekli
+  `levels:check` her bölümü baştan çözer. Benim önbelleksiz koşum (2a08cd2, `node tools/solve.ts --check --no-cache --jobs 4`):
+  validate 10 dosya 0 hata / 0 uyarı, solve 10/10 (0 önbellekten) 0 hata / 0 uyarı, 12 dk 55 sn. Dosyaları commit'lemedim
+  (sahibi web code-lead); bir sonraki web commit'inde tazelenebilir.
+- [code-lead → orkestratör] **C1 sonucu (Unity `main` afe949e + 55bc84a):** D-106 ve C2 C# eşi; DiffFuzz 851 dizi / 24 007 eylem,
+  **0 sapma** (Vinç `palletSiteOnly` reddi 110, D-106 çıkışı C3 171 / L4 50 / O4 44 / J4 42 / T4 20, P5 205 / S4 178 / Z4 89;
+  eski C# çekirdeği 92 dizide sapıyor). Unity testleri 609 + 2151 yeşil (5 atlanan), stub kapısı 4/4. CI afe949e
+  (run 43290690799) yeşil: 18 çekim + 2 şerit / boyut, `v3_bonus_burst_7` iki boyutta geldi, konsolda istisna 0. Ayrıntı ve
+  kapanış tablosu: Unity `docs/REVIEW_LEVELS_V3C.md` §13.
