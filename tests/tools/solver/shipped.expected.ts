@@ -1,5 +1,5 @@
 /**
- * The solver values of the shipped levels 1–10 (`levels:solve`, SOLVER_VERSION 7, RULES_VERSION 6; CL-V3-01). Written by
+ * The solver values of the shipped levels 1–10 (`levels:solve`, SOLVER_VERSION 8, RULES_VERSION 6; CL-V3-01). Written by
  * `node tools/gen/write-shipped-expected.ts` from the solver's own output: a change of a level file or of the solver shows up
  * here first. `scan` 'full' = complete state-space scan (proven `min`, K-50 metrics); 'large' = large-level search (`best` is
  * an upper bound of `min`, `lowerBound` = N or N + 1) plus the random-walk dead-state gate and the placement-first play

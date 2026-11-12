@@ -169,6 +169,8 @@ export function randomWalks(lvl: CompiledLevel, opts: WalkOptions = {}): WalkRes
 
 /** Shifts a lookahead player compares per move (a uniform sample; a full scan of Bolum 10 took 218 s). */
 export const LOOK_CANDIDATES = 24;
+/** Follow-up shifts a two-step lookahead compares per candidate (a uniform sample). */
+export const LOOK2_SHIFTS = 12;
 /** Plays of a policy proxy at the gate (CL-V3C-13: 200 plays gave a 95 % half-width of up to 7 points; `--games`). */
 export const POLICY_GAMES_DEFAULT = 400;
 
@@ -182,6 +184,13 @@ export interface PolicyOptions {
    * placements (ties: uniformly random) instead of a random shift. A player who sees one move ahead.
    */
   readonly lookahead?: boolean;
+  /**
+   * Dig steps the lookahead player sees (CL-V3C2-03, P-Fl-1; LEVELS 8.16.5): 1 = the shift that opens the most correct
+   * placements; 2 (default with `lookahead`) = when none of the candidate shifts opens a placement, each candidate is scored
+   * by the most placements any of `LOOK2_SHIFTS` follow-up shifts opens (a player who sees through two lids stacked on a
+   * dig; one step is blind to that). Ignored without `lookahead`.
+   */
+  readonly lookDepth?: 1 | 2;
 }
 
 /** A win rate of `games` plays with its Wilson 95 % score interval (CL-V3C-13). */
@@ -243,10 +252,13 @@ export function policyWinRates(
   const plays = opts.plays ?? POLICY_GAMES_DEFAULT;
   const eps = opts.eps ?? 0;
   const look = opts.lookahead === true;
+  const deep2 = look && (opts.lookDepth ?? 2) === 2;
   const maxBudget = budgets.reduce((a, b) => Math.max(a, b), 0);
   const hooks = levelHooks(lvl);
   const x = new Expander(lvl, hooks);
   const peek = look ? new Expander(lvl, hooks) : null;
+  const dig = deep2 ? new Expander(lvl, hooks) : null;
+  const followBuf: Int32Array[] = [];
   const rng = mulberry32((opts.seed ?? 1) * 104729 + lvl.materialCount);
   const cur: GameState = { lvl, buf: new Int32Array(lvl.layout.size) };
   const bufA = new Int32Array(lvl.layout.size);
@@ -260,6 +272,27 @@ export function policyWinRates(
       if (infoKind(info) <= KIND_RAIL) n++;
     });
     return n;
+  };
+  /** Second dig step: the most placements any of `LOOK2_SHIFTS` shifts from `s` opens (uniform reservoir of the shifts). */
+  const bestFollowUp = (s: GameState, pick: (n: number) => number): number => {
+    let nShift = 0;
+    const hh = hashState(s);
+    dig?.expand(s, hh[0] ?? 0, hh[1] ?? 0, (_lo, _hi, info) => {
+      if (infoKind(info) <= KIND_RAIL) return;
+      nShift++;
+      const slot = nShift <= LOOK2_SHIFTS ? nShift - 1 : pick(nShift);
+      if (slot < LOOK2_SHIFTS)
+        (followBuf[slot] ??= new Int32Array(lvl.layout.size)).set(dig.materialize().buf);
+    });
+    let best = 0;
+    const follow: GameState = { lvl, buf: new Int32Array(lvl.layout.size) };
+    for (let k = 0; k < Math.min(nShift, LOOK2_SHIFTS); k++) {
+      const fb = followBuf[k];
+      if (!fb) continue;
+      follow.buf.set(fb);
+      best = Math.max(best, placementsIn(follow));
+    }
+    return best;
   };
   const candBuf: Int32Array[] = [];
   const candCost: number[] = [];
@@ -316,11 +349,27 @@ export function policyWinRates(
         // score the sampled shifts by the placements they open; keep the best (ties uniformly)
         let bestOpen = -1;
         let ties = 0;
-        for (let k = 0; k < Math.min(nOther, LOOK_CANDIDATES); k++) {
+        const nCand = Math.min(nOther, LOOK_CANDIDATES);
+        const opens: number[] = [];
+        let anyOpen = false;
+        for (let k = 0; k < nCand; k++) {
           const cb = candBuf[k];
           if (!cb) continue;
           scratch.buf.set(cb);
-          const opened = placementsIn(scratch);
+          const o = placementsIn(scratch);
+          opens[k] = o;
+          if (o > 0) anyOpen = true;
+        }
+        // nothing opens a placement in one step: look one dig step further (a second shift)
+        const second = deep2 && !anyOpen;
+        for (let k = 0; k < nCand; k++) {
+          const cb = candBuf[k];
+          if (!cb) continue;
+          let opened = opens[k] ?? 0;
+          if (second) {
+            scratch.buf.set(cb);
+            opened = bestFollowUp(scratch, (n) => rng.nextInt(n));
+          }
           if (opened > bestOpen) {
             bestOpen = opened;
             ties = 1;

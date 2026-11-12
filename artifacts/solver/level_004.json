@@ -3,7 +3,7 @@
   "file": "level_004.json",
   "levelHash": "259a61b42c2d524f",
   "rulesVersion": 6,
-  "solverVersion": 7,
+  "solverVersion": 8,
   "variant": null,
   "schemaVersion": 2,
   "status": "solved",
@@ -33,7 +33,7 @@
   "variants": [],
   "issues": [],
   "notes": [
-    "large-level search (U-v3-2): best found 12 (lower bound 11) — not proven optimal, en iyi bulunan; width 8, 54838 states, 604 ms, replay ok",
+    "large-level search (U-v3-2): best found 12 (lower bound 11) — not proven optimal, en iyi bulunan; width 8, 54838 states, 595 ms, replay ok",
     "play proxy (CL-V3-03; not ahaMin): placement-first player wins 0.17 (95 % CI 0.14-0.21, 69/400) within 16 moves, 0.3 (95 % CI 0.25-0.34, 119/400) within 21 (same plays)",
     "dead-state gate (CL-V3-01 B, estimate not proof; D-090 whole-space scan not run): 10000 random walks: won 7082, rescued by D1/D2/D3a 0, unresolved 2918 (probed 200: solvable 200, undetected dead 0) → estimated 0.00 %"
   ],
@@ -42,7 +42,7 @@
     "states": 2004,
     "expanded": 350,
     "edges": 5198,
-    "ms": 30,
+    "ms": 42,
     "bytes": 388094,
     "dragSessions": 1187,
     "applyMoves": 260,
@@ -52,7 +52,7 @@
     "d3aUnknown": 0,
     "complete": false,
     "limit": "maxStates",
-    "totalMs": 22892
+    "totalMs": 20021
   },
   "v3": {
     "liftRatio": 1,
@@ -77,28 +77,28 @@
       "value": 1
     },
     "states": 54838,
-    "ms": 604,
+    "ms": 595,
     "replayOk": true,
     "runs": [
       {
         "width": 8,
         "cost": 12,
-        "ms": 17
+        "ms": 9
       },
       {
         "width": 32,
         "cost": 12,
-        "ms": 41
+        "ms": 33
       },
       {
         "width": 128,
         "cost": 12,
-        "ms": 123
+        "ms": 103
       },
       {
         "width": 512,
         "cost": 12,
-        "ms": 423
+        "ms": 450
       }
     ],
     "actions": [
@@ -245,5 +245,5 @@
       }
     }
   },
-  "cacheKey": "48c44790:rules6:solver7:src0afd9b08:level:var:d3a:walks10000:games400"
+  "cacheKey": "48c44790:rules6:solver8:src8dc52a22:level:var:d3a:walks10000:games400"
 }

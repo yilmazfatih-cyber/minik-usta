@@ -87,4 +87,34 @@ describe('K-51 item 3 CL-V3C-13 play proxy sample size and interval', () => {
     const [tight, wide] = policyWinRates(res.level, [moves, loose], { plays: 120, seed: 6 });
     expect(tight!.wins).toBeLessThanOrEqual(wide!.wins);
   });
+
+  it('K-51 item 3 CL-V3C2-03 two dig steps: Bolum 4 (two lids on a dig) is seen through by lookDepth 2 (default) and not by lookDepth 1', () => {
+    const json: unknown = JSON.parse(
+      readFileSync(new URL('../../../levels/level_004.json', import.meta.url), 'utf8'),
+    );
+    const res = loadLevel(json);
+    if (!res.ok) throw new Error('level 4 does not load');
+    const moves = (json as { moves: number }).moves;
+    const opts = { plays: 120, seed: 4, lookahead: true, eps: 0.1 } as const;
+    const one = policyWinRates(res.level, [moves], { ...opts, lookDepth: 1 })[0]!;
+    const two = policyWinRates(res.level, [moves], { ...opts, lookDepth: 2 })[0]!;
+    // measured at the gate seed and 400 plays: 0.44 (one step) against 0.89 (two steps)
+    expect(two.rate).toBeGreaterThanOrEqual(one.rate + 0.2);
+    expect(two.rate).toBeGreaterThan(0.7);
+    // two steps is the default of a lookahead player, and it is deterministic (seeded)
+    expect(policyWinRates(res.level, [moves], opts)[0]).toEqual(two);
+    expect(policyWinRates(res.level, [moves], { ...opts, lookDepth: 2 })[0]).toEqual(two);
+  });
+
+  it('K-51 item 3 CL-V3C2-03 where the first dig step already opens a placement the second step changes nothing: Bolum 1 equals at both depths', () => {
+    const json: unknown = JSON.parse(
+      readFileSync(new URL('../../../levels/level_001.json', import.meta.url), 'utf8'),
+    );
+    const res = loadLevel(json);
+    if (!res.ok) throw new Error('level 1 does not load');
+    const moves = (json as { moves: number }).moves;
+    const o = { plays: 60, seed: 1, lookahead: true, eps: 0.1 } as const;
+    expect(policyWinRates(res.level, [moves], { ...o, lookDepth: 2 })[0]!.rate).toBeGreaterThanOrEqual(0.95);
+    expect(policyWinRates(res.level, [moves], { ...o, lookDepth: 1 })[0]!.rate).toBeGreaterThanOrEqual(0.95);
+  });
 });

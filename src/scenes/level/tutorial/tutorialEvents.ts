@@ -13,7 +13,9 @@
  */
 import { FLAG_BIT, pieceFlags } from '../../../core/state.ts';
 import type { GameState } from '../../../core/state.ts';
-import type { TutCondition } from '../../../core/level/schema.ts';
+import type { PieceFreeCondition, TutCondition } from '../../../core/level/schema.ts';
+import { holdableIgnoringMoves } from '../../../core/deadlock.ts';
+import { levelHooks } from '../../../core/obstacles/registry.ts';
 import type { GameEvent, PieceId } from '../../../core/types.ts';
 
 export type TutEventName = TutCondition['event'];
@@ -53,6 +55,17 @@ function pieceMatches(piece: string | undefined, pieceId: PieceId, s: GameState 
   if (piece === undefined) return true;
   const id = s?.lvl.tutorialPieceIds.get(piece);
   return id !== undefined && id === pieceId;
+}
+
+/**
+ * `startOn: pieceFree` (K-53 item 7): the named block can be held now (K-30 `holdableIgnoringMoves`, the counter
+ * ignored). A STATE condition: read at the level start and after each move, never from a move's events. False when the
+ * state is unknown or the highlight id names no block.
+ */
+export function pieceFreeNow(cond: PieceFreeCondition, s: GameState | null): boolean {
+  if (!s) return false;
+  const id = s.lvl.tutorialPieceIds.get(cond.piece);
+  return id !== undefined && holdableIgnoringMoves(s, id, levelHooks(s.lvl).drag);
 }
 
 /**

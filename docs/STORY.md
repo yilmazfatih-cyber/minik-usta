@@ -506,8 +506,8 @@ sütunu i18n geçişi içindir.
 | `tut.m.narrow` | Dar geçitten tek sıra geçer. | Narrow gaps take one row. | `tut.l9.narrow` | W3, K-12 |
 | `tut.m.cranebooster` | Vinç gömülü bloğu da taşır. | The Crane moves buried blocks too. | `tut.l10.crane` | K-37 |
 | `tut.m.widesite` | Şantiye genişledi: yatay blok sığar. | Wider site: flat blocks fit. | — (yeni, v3c Bölüm 6) | D-103, K-55 |
-| `tut.m.pallet` | Paletten hep en üstteki alınır. | Take from the top of the pallet. | — (yeni, v3c Bölüm 7 adım 1) | K-58 madde 9, Y10 |
-| `tut.m.palletsite` | Katmanı kaldır, şantiyeye bırak. | Lift a layer, set it on the site. | — (yeni, v3c Bölüm 7 adım 2) | D-104, K-58 madde 9 |
+| `tut.m.pallet` | Paletten hep en üstteki alınır. | Always take the pallet's top layer. | — (yeni, v3c Bölüm 7 adım 1) | K-58 madde 9, Y10 |
+| `tut.m.palletsite` | Katmanı kaldır, şantiyeye bırak. | Lift a layer onto the site. | — (yeni, v3c Bölüm 7 adım 2) | D-104, K-58 madde 9 |
 | `tut.m.slippery` | Kaygan blok boşlukta durmaz, kayar. | Slippery blocks slide into gaps. | — (yeni, v3c Bölüm 9) | K-60 |
 | `tut.meta.task` | Yıldızla yapıya yeni kat ekle. | Add a floor with a star. | — (yeni) | META §1 |
 

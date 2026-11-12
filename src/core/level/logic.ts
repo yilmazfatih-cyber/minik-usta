@@ -27,7 +27,7 @@ import {
 } from '../shapes.ts';
 import type { ShapeDef } from '../shapes.ts';
 import { LevelSchema, V3_FLAGS, isFixedYardLevel, schemaVersionOf } from './schema.ts';
-import type { GapData, LevelData, MechanicId, PieceData, TutCondition } from './schema.ts';
+import type { GapData, LevelData, MechanicId, PieceData, TutCondition, TutStartCondition } from './schema.ts';
 import { TRAIT_MECHANICS, boardHeight, deriveMechanics, isCargo } from './mechanics.ts';
 import { buildPlans, localIndex } from './plan.ts';
 import type { SegmentPlan } from './plan.ts';
@@ -1517,8 +1517,8 @@ function deliveryOrder(level: LevelData): number[] {
 }
 
 /** `count` of a condition of `event`, else 0. */
-const countOf = (cond: TutCondition | undefined, event: TutCondition['event']): number =>
-  cond?.event === event ? (cond.count ?? 1) : 0;
+const countOf = (cond: TutStartCondition | undefined, event: TutCondition['event']): number =>
+  cond === undefined || cond.event === 'pieceFree' ? 0 : cond.event === event ? (cond.count ?? 1) : 0;
 
 /**
  * L-17 (GDD §14.1 with the Faz 2R vocabulary, UX §13.1). Faz 2R: the required-step branches (GDD 14.1/4a) are gone;
@@ -1616,6 +1616,17 @@ function checkTutorial(level: LevelData, geo: BoardGeo, ctx: LogicContext, push:
       ['startOn', st.startOn],
     ] as const) {
       if (!cond) continue;
+      if (cond.event === 'pieceFree') {
+        // start-only state condition (K-53 item 7): the named block must exist
+        if (!pieceOfRef(level, cond.piece))
+          push(
+            'L-17',
+            'tut_done_invalid',
+            `${path}.${field}`,
+            `pieceFree piece ${cond.piece}: no such block`,
+          );
+        continue;
+      }
       const why = conditionImpossible(level, geo, cond);
       if (why) push('L-17', 'tut_done_invalid', `${path}.${field}`, why);
       // LEVELS §5 / GDD §14.1/3 (Faz 2 tur 3, product-lead PL-F2T3-3): a player who releases without resting never

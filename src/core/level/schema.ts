@@ -248,7 +248,7 @@ const Yes = z.optional(z.literal(true));
  * (strictObject → elsewhere `schema_invalid`). Faz 2R (K-53, CL-2R-10): `done` and `startOn` are events only;
  * `{ timeoutMs }` is no longer valid (`schema_invalid`).
  */
-export const TutCond = z.discriminatedUnion('event', [
+const TUT_COND_MEMBERS = [
   // drag signals
   z.strictObject({ event: z.literal('overWall'), count: Count }),
   z.strictObject({ event: z.literal('gapPass'), count: Count }),
@@ -278,7 +278,20 @@ export const TutCond = z.discriminatedUnion('event', [
   // other
   z.strictObject({ event: z.literal('tap'), count: Count }),
   z.strictObject({ event: z.literal('boosterUsed'), count: Count }),
-]);
+] as const;
+export const TutCond = z.discriminatedUnion('event', TUT_COND_MEMBERS);
+
+/**
+ * Start-only condition (K-53 item 7, Fl request): the step starts when the named block can be held (K-30
+ * `holdableIgnoringMoves`) — checked at the level start and after every move. A STATE condition, not a move event, so
+ * it is NOT in the 16-name `done` vocabulary (`TUT_EVENTS`); `done` rejects it (`schema_invalid`). No `count`.
+ */
+export const PieceFreeCond = z.strictObject({
+  event: z.literal('pieceFree'),
+  piece: z.string().check(z.regex(PIECE_REF_REGEX)),
+});
+/** `startOn`: the `done` vocabulary plus the start-only `pieceFree`. */
+export const TutStartCond = z.discriminatedUnion('event', [...TUT_COND_MEMBERS, PieceFreeCond]);
 
 /** Plan row characters (K-15, K-32); `.` passes the schema so L-05 can name it (`plan_has_window`). */
 const PLAN_ROW = /^[WYGROCBP.?]{1,4}$/;
@@ -323,7 +336,7 @@ const TutorialStep = z.strictObject({
   ),
   textKey: z.string().check(z.regex(TUT_TEXT_KEY_REGEX)),
   /** GDD §14.1/5: same format as `done`. */
-  startOn: z.optional(TutCond),
+  startOn: z.optional(TutStartCond),
   done: TutCond,
 });
 
@@ -438,6 +451,9 @@ type ParsedLevel = z.output<typeof LevelSchema>;
 type InputLevel = z.input<typeof LevelSchema>;
 type InputStep = NonNullable<InputLevel['tutorial']>[number];
 export type TutCondition = z.output<typeof TutCond>;
+export type PieceFreeCondition = z.output<typeof PieceFreeCond>;
+/** A `startOn` condition: a `done` event or the start-only `pieceFree`. */
+export type TutStartCondition = z.output<typeof TutStartCond>;
 /** A parsed Faz 2R tutorial step. */
 export type TutorialStep2R = NonNullable<ParsedLevel['tutorial']>[number];
 /**

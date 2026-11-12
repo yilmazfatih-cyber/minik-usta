@@ -2364,3 +2364,55 @@ deterministik olarak aynı; (4) 7–9'un yakalanmayan çıkmaz uçlarına güçl
   bütçe oyuncu lehine 1 bol); (3) ölü masa resmî tahmini 7–9'da 0 değil (%0,19 / %0,02 / %0,11, kapı ≤ %1) ama güçlü
   yoklamada üç uç da çözülebilir (LEVELS §8.16.6 madde 7) — kapıya ikinci yoklama code-lead'in kararı; (4) Unity eşitlemesi
   (veri, golden, `shipped.expected`, ci-shots `v3_bonus_burst_7` hamle 19) Paket Fc'de.
+
+## Paket Fc — code-lead: 2 adım kazı vekili, `startOn: pieceFree`, EN öğretici metinleri, Unity eşitlemesi (2026-11-12)
+
+- [code-lead → design-lead] **CL-V3C2-05 kapandı (orkestratör izniyle STORY §6A düzenlendi):** `tut.m.pallet` EN "Always take the
+  pallet's top layer." (6 kelime), `tut.m.palletsite` EN "Lift a layer onto the site." (6 kelime); STORY §6A tablosundaki iki
+  EN satırı ve `src/i18n/en.json` eşitlendi, TR değişmedi. §6A notundaki "EN 5–6" artık doğru (en uzun EN öğretici metni 6).
+  Yeni test: `tests/review/services-theme.review.test.ts` "K-53 STORY 0-4 CL-V3C2-05 …": sevkiyattaki her öğretici
+  `textKey` (levels/*.json) TR ve EN'de vardır ve ≤ 6 kelimedir (eski "TR ≤ 8" testi tüm `tut.*` anahtarları için duruyor).
+  Unity'deki geçici üstyazı (`unity_en.json` / `unity_tr.json` içindeki `tut.m.pallet`, `tut.m.palletsite`) silindi.
+- [code-lead → product-lead] **OBSTACLES Y10 öğretici alıntısı:** satır 639–640'taki EN metin eski kaldı ("Take from the top of
+  the pallet." / "Lift a layer, set it …"); STORY §6A ile eşitleyin (sizin dosyanız). LEVELS satır 237 ve 2312 civarındaki
+  kelime sayısı notları ("`tut.m.pallet` ve `tut.m.palletsite` (7)") aynı nedenle güncellenebilir.
+- [code-lead → product-lead] **Fl isteği (i) yapıldı — resmî vekil artık 2 adım kazı görür (P-Fl-1 uygulaması):**
+  `tools/solver/walks.ts` `policyWinRates` yeni seçenek `lookDepth` (1 | 2; `lookahead` ile varsayılan **2**): doğru yerleşim
+  yoksa 24 aday kaydırmadan en çok yerleşim açanı alır; hiçbiri yerleşim açmıyorsa her aday, ardından gelen 12 kaydırmanın açtığı
+  en çok yerleşimle puanlanır (§8.16.5 yöntemi, aynı sabitler). `lookDepth: 1` eski sayıları bire bir üretir (doğruladım:
+  6–10 için 0,83 / 0,86 / 0,87 / 0,83 / 0,54, v3c3 raporuyla aynı). `SOLVER_VERSION` 7 → 8 (önbellek anahtarı değişti; bütün
+  `artifacts/solver/*.json` yeniden yazıldı). Test: `tests/tools/solver/policyProxy.test.ts` "K-51 item 3 CL-V3C2-03 two dig steps …".
+  **1–10'un yeniden ölçümü** (kapı tohumu = bölüm kimliği, ε 0,1, 400 oyun, `moves` bütçesi; 1 adım → 2 adım):
+
+  | # | moves | 1 adım | **2 adım** [Wilson %95] | bant |
+  | --- | --- | --- | --- | --- |
+  | 1 | 12 | 1,00 | 1,00 | — |
+  | 2 | 12 | 0,94 | 0,93 | — |
+  | 3 | 15 | 0,54 | **0,93** [0,89–0,95] | yok |
+  | 4 | 16 | 0,44 | **0,89** [0,86–0,92] | yok |
+  | 5 | 18 | 0,56 | **0,97** [0,95–0,98] | yok |
+  | 6 | 23 | 0,83 | 0,85 [0,81–0,88] | [0,80, 0,90] ✓ |
+  | 7 | 24 | 0,86 | 0,88 [0,84–0,91] | [0,80, 0,90] ✓ |
+  | 8 | 26 | 0,87 | 0,89 [0,86–0,92] | [0,80, 0,90] ✓ |
+  | 9 | 25 | 0,83 | 0,86 [0,82–0,89] | [0,80, 0,90] ✓ |
+  | 10 | 24 | 0,54 | 0,51 [0,46–0,56] | [0,50, 0,60] ✓ (alt kenara yakın) |
+
+  Sonuç: 6–10 yeni vekilde de bandının içinde (7 üst kenara 0,02 yakın: sizin scratch ölçümünüz 0,912 idi, kapı tohumu 0,88
+  veriyor; tohum gürültüsü ±0,03). Bölüm 10 alt kenara 0,01 yakın (0,51); `moves` 23 adayı gerekmedi. 3–5'e band yazmak sizin
+  (P-Fl-1: Kolay [0,85, 1,00] ve 5 için [0,80, 1,00] bu ölçümde 3 0,93, 4 0,89, 5 0,97 ile tutar). Kapı `targets.policyWin`
+  olan bölümleri ölçtüğü için 3–5 band yazılana kadar kapıda görünmez.
+- [code-lead → product-lead] **Fl isteği (ii) yapıldı — öğretici başlangıç koşulu `startOn: { event: 'pieceFree', piece }`
+  (TS + C#):** adlandırılan blok tutulabilir olduğu (`holdableIgnoringMoves`, K-30, sayaç yok sayılır) ilk anda adım başlar; bölüm
+  başında, geri yüklemede ve her hamleden sonra denetlenir. Bir **durum koşuludur**, `done` olay sözlüğünün 16 adında değildir
+  (`TUT_EVENTS` ve GDD §14.1/3 testi değişmedi); yalnız `startOn` kabul eder, `piece` zorunlu, `count` yok, `done` içinde
+  `schema_invalid`, olmayan blok `tut_done_invalid`. L-35 kanonik çözümde `pieceFree` olan ilk durumda başlatır. Testler:
+  `tests/scenes/tutorial.test.ts` "K-53 pieceFree …" (4), Unity `TutorialTests` "K53_pieceFree_…" (3). **GDD için istek
+  (sizin dosyanız):** §14.1 madde 5'e (`startOn`) "`{ event: 'pieceFree', piece: 'piece:N' }` durum koşulu" satırını ve K-53
+  madde 7'ye "(b) adımı `startOn: pieceFree` ile bağlanırsa oran %100'dür (koşul tam o anda sağlanır)" cümlesini ekleyin.
+  **Veri bağlama sizde:** Bölüm 7 adım 1'in `startOn: { event: 'segmentDone', count: 1 }`'i `{ event: 'pieceFree', piece:
+  'piece:15' }` ile değişirse adım, 1. kat bitmeden de olsa üst katman tutulabilir olur olmaz başlar (golden/hash değişmez,
+  yalnız öğretici verisi; L-35 `piece:15`'in tap eliyle uyumu `hand.path` gerektirmediği için etkilenmez). Not: `done` hâlâ
+  `overWall` olduğundan eşleşme semantiği aynı kalır; yalnız başlama anı değişir.
+- [code-lead → product-lead] **Açık kalanlar (bu pakette yapılmadı):** ölü masa kapısına ikinci yoklama ve LEVEL_REPORT
+  başlığı (Fl isteği; Fc'nin atanan kapsamı dışında, sonraki pakete); K-53 madde 7 otomatik kapısı (L-xx) `startOn: pieceFree`
+  verisi bağlanınca anlamsız kalacağı için kural kararına bağlı.

@@ -1677,6 +1677,29 @@ describe('round 2: i18n text rules (ART 8, STORY 0, D-012)', () => {
     expect(en.filter(([, t]) => /little builder|scoop|kepçe|minik usta/i.test(t))).toEqual([]);
   });
 
+  it('K-53 STORY 0-4 CL-V3C2-05: every textKey of a shipped tutorial step (levels/*.json) exists in TR and EN and has at most 6 words in BOTH languages', () => {
+    const words = (text: string): number => text.split(/\s+/).filter((w) => /\p{L}|\{/u.test(w)).length;
+    const levelsDir = join(ROOT, 'levels');
+    const keys = new Set<string>();
+    for (const f of readdirSync(levelsDir).filter((n) => /^level_\d+\.json$/.test(n))) {
+      const json = JSON.parse(readFileSync(join(levelsDir, f), 'utf8')) as {
+        tutorial?: { textKey: string }[];
+      };
+      for (const st of json.tutorial ?? []) keys.add(st.textKey);
+    }
+    expect(keys.size).toBeGreaterThan(5);
+    const long: string[] = [];
+    for (const locale of ['tr', 'en'] as const) {
+      const texts = new Map(allTexts(locale));
+      for (const key of keys) {
+        const text = texts.get(key);
+        if (text === undefined) long.push(`${locale} ${key}: missing`);
+        else if (words(text) > 6) long.push(`${locale} ${key} (${words(text)}): ${text}`);
+      }
+    }
+    expect(long).toEqual([]);
+  });
+
   it('STORY 0-10 town and company only via placeholders: "Renkli Tepe" / "Hue Hill" live only in town.name, EN never spells the company; every text renders with no open placeholder except {coin} / {ok}', () => {
     // STORY §0-10: "Kasaba adı oyuncuya görünen her metinde (TR ve EN) {town} yer tutucusudur; değeri tek kaynaktan,
     // town.name anahtarından gelir"; §0-6: "Firma adı EN'de {company} yer tutucusudur".
