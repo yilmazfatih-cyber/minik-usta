@@ -58,7 +58,7 @@ describe('levels:validate tool (TECH §8.3, §12.2)', () => {
     expect(r.code, r.out).toBe(0);
     for (let n = 1; n <= 10; n++)
       expect(r.out).toMatch(new RegExp(`level_${String(n).padStart(3, '0')}\\.json  (OK|WARN)`));
-    expect(r.out).toContain('level_005.json  WARN  mechanics: S1 Y9');
+    expect(r.out).toContain('level_005.json  OK  mechanics: S1 Y9'); // C2: tile_family_mix silenced by the trap-free proof
     expect(r.out).toContain('10 file(s), 0 error(s)');
     const warnLines = r.out.split('\n').filter((l) => /^\s+warn /.test(l));
     for (const l of warnLines) expect(l, l).toMatch(/tile_family_mix|plan_trap/);

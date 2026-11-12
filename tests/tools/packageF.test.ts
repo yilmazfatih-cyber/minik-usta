@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { compile } from '../../src/core/level/compile.ts';
-import { siteColsRange, validateLevelJson } from '../../src/core/level/logic.ts';
+import { NARROW_PLAN_TRAP_OPEN, siteColsRange, validateLevelJson } from '../../src/core/level/logic.ts';
 import type { LevelInput } from '../../src/core/level/schema.ts';
 import { deriveMechanics, mechanicFirstLevel } from '../../src/core/level/mechanics.ts';
 import { readFileSync } from 'node:fs';
@@ -195,12 +195,34 @@ describe('K-63 plan_trap scan on a 2-column site', () => {
       ],
     },
   };
-  it('K-63 plan_trap (Ws = 2): Easy is an error, Normal a warning; the known open level 4 is a warning until repainted', () => {
+  it('K-63 plan_trap (Ws = 2): Easy is an error (level 4 too: NARROW_PLAN_TRAP_OPEN is empty since C2), Normal a warning', () => {
     expect(sev('level_004.json', { ...V3C_4, id: 14 })).toEqual(['error']);
-    expect(sev('level_004.json', V3C_4)).toEqual(['warn']);
+    expect(sev('level_004.json', V3C_4)).toEqual(['error']);
+    expect(NARROW_PLAN_TRAP_OPEN.size).toBe(0);
     expect(sev('level_005.json', V3C_5)).toEqual(['warn']);
     expect(sev('level_004.json', {})).toEqual([]);
     expect(sev('level_005.json', {})).toEqual([]);
     expect(sev('level_003.json', {})).toEqual([]);
+  });
+});
+
+describe('C2 closing', () => {
+  const issues = (file: string): string[] =>
+    validateLevelJson(
+      JSON.parse(readFileSync(new URL(`../../levels/${file}`, import.meta.url), 'utf8')) as LevelInput,
+    ).issues.map((i) => i.code);
+  it('K-63 tile_family_mix is silent when the plan trap scan proves 0 traps (level 5)', () => {
+    expect(issues('level_005.json')).not.toContain('tile_family_mix');
+    expect(issues('level_005.json')).not.toContain('plan_trap');
+  });
+  it('K-65 CL-V3C-15 tutorial hand path and done.at accept x = 8 on the 9-column board', () => {
+    const raw = JSON.parse(
+      readFileSync(new URL('../../levels/level_007.json', import.meta.url), 'utf8'),
+    ) as LevelInput & { tutorial?: { hand?: { path?: number[][] } }[] };
+    const t = raw.tutorial?.[0];
+    if (!t) throw new Error('level 7 tutorial missing');
+    t.hand = { ...(t.hand ?? {}), kind: 'tap', path: [[8, 0]] } as never;
+    const codes = validateLevelJson(raw).issues.map((i) => i.code);
+    expect(codes).not.toContain('schema');
   });
 });

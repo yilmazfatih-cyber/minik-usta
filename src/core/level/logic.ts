@@ -1047,10 +1047,11 @@ export function planTrapScan(
  * Hard / Very Hard; a scan that spends its budget gives the `plan_trap_unknown` warning (no proof).
  */
 /** Levels on a 2-column site whose known plan trap is still open (data fix: product-lead repaints; remove the id then). */
-export const NARROW_PLAN_TRAP_OPEN: ReadonlySet<number> = new Set([4]);
-function checkPlanTraps(level: LevelData, plans: readonly SegmentPlan[], geo: BoardGeo, push: Push): void {
+export const NARROW_PLAN_TRAP_OPEN: ReadonlySet<number> = new Set<number>(); // C2: level 4 repainted trap-free (B1), the list is empty
+/** Returns true when the scan proved the plan trap-free (status done, 0 traps, tileable). */
+function checkPlanTraps(level: LevelData, plans: readonly SegmentPlan[], geo: BoardGeo, push: Push): boolean {
   const res = planTrapScan(level, plans, geo);
-  if (!res.tileable && res.status === 'done') return; // L-11 `untileable` reports a plan that cannot be tiled at all
+  if (!res.tileable && res.status === 'done') return false; // L-11 `untileable` reports a plan that cannot be tiled at all
   // CL-V3C-03: on a 2-column site the scan runs too (milliseconds): Easy = error, Normal and above = warn. Level ids in
   // `NARROW_PLAN_TRAP_OPEN` carry a known trap that product-lead has to repaint (CL-V3C-03): a warning until then.
   const strict =
@@ -1076,6 +1077,7 @@ function checkPlanTraps(level: LevelData, plans: readonly SegmentPlan[], geo: Bo
       `the plan trap scan stopped after ${res.states} states: no proof of a trap-free plan (K-63 D-103 annex)`,
       'warn',
     );
+  return res.status === 'done' && res.traps === 0;
 }
 
 function tileSearch(
@@ -2057,7 +2059,9 @@ function checkTraitDesign(
   if (geo.ws >= WIDE_SITE_COLS) {
     if (plansUsable) checkPlanTraps(level, plans, geo, push);
   } else if (level.difficulty === 'easy' || level.difficulty === 'normal') {
-    if (plansUsable && schemaVersionOf(level) >= 3) checkPlanTraps(level, plans, geo, push); // CL-V3C-03 (v3 files)
+    // CL-V3C-03 (v3 files); a scan that proves 0 traps silences `tile_family_mix` (K-63 (b), B1 suggestion).
+    const trapFree =
+      plansUsable && schemaVersionOf(level) >= 3 ? checkPlanTraps(level, plans, geo, push) : false;
     const fam = new Map<string, { bottom: Set<string>; column: Set<string> }>();
     for (const p of pieces) {
       if (p.colors !== undefined || isCargo(shapeById(p.shape))) continue;
@@ -2067,7 +2071,7 @@ function checkTraitDesign(
       fam.set(p.color, f);
     }
     for (const [color, f] of fam)
-      if (f.bottom.size > 1 || f.column.size > 1)
+      if (!trapFree && (f.bottom.size > 1 || f.column.size > 1))
         push(
           'L-41',
           'tile_family_mix',

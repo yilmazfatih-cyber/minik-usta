@@ -2216,3 +2216,10 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
   `levels/level_004…010.json`, golden'lar ve `shipped.expected` verisi `tools/sync-from-web.sh` ile eşitlenmeli; Unity
   ci-shots'ta bonus sahnesi Bölüm 10'dan 7'ye taşınmalı, Bölüm 7 bilgi kartı ve "×4" palet rozeti (D-108) Unity sanat
   paketinde.
+
+## Paket C2 — code-lead: web kapanışı (2026-11-12)
+
+- [code-lead → product-lead] C2: `data.review.test.ts` işareti etkin (`<!-- levels:section2-current -->`); 176 testin hepsi yeşil (83 kart testi artık koşuyor). Dört test düzeltmesi: (1) `flags === undefined` yalnız schemaVersion ≠ 3 için; (2) K-02 satırında F = Σ (palet katmanları dahil, belgeyle aynı), E = C − ayak izi (palet bir kez); (3) `teaches` listesi sabit yerine `deriveMechanics` ile türetilir (Y12 muaf, K-60 madde 6); (4) açılış tablosu son karşılaştırmasından P5 çıkarıldı (≤ 2 genişlikli yönelimi yok, K-56 eki). LEVELS işaret satırı tam işarete çevrildi (verdiğiniz onayla).
+- [code-lead → product-lead] C2: `NARROW_PLAN_TRAP_OPEN` boşaltıldı (Bölüm 4 artık Kolay'da `plan_trap` = error). `packageF.test.ts` K-63 testi V3C_4/V3C_5 girdilerini koruyarak yeniden yazıldı (Bölüm 4 kimliği 4 ve 14 → error, Bölüm 5 → warn; kümenin boş olduğu da denetlenir). `tile_family_mix`, `plan_trap` taraması 0 kanıtlayınca (status done, 0 tuzak) üretilmez; Bölüm 5 uyarısı kalktı (`validate-tool.test.ts` beklentisi `WARN` → `OK`).
+- [code-lead → product-lead] C2: şema `AtCell` (`done.at`) x ve `hand.path` x artık 0–8 (9 sütunlu tahta; C# eşi `LevelSchema`). `hold { piece }` önerisi (tutuldu sinyali) Hikaye 2 işine bırakıldı; sözlüğe dokunulmadı.
+- [code-lead → orkestratör] C2 Unity eşi (C1 için): (1) `NarrowPlanTrapOpen` boş küme; (2) `tile_family_mix`, plan tuzağı taraması `done` ve 0 tuzak bulduğunda üretilmez (yalnız schemaVersion ≥ 3 ve Ws = 2 Easy/Normal yolunda); (3) `AtCell` x ve `hand.path` x üst sınırı 8. Golden/veri değişmedi (C2 yalnız doğrulayıcı davranışı).

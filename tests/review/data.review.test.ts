@@ -2630,7 +2630,9 @@ describe.skipIf(!LEVELS_2_CURRENT).each(LEVEL_IDS)(
       // LEVELS §0 "Ağır Yük … `color` yazılmaz"
       for (const p of batch0)
         if (isCargo(shapeById(p.shape))) expect(p.color, `${p.shape} colour`).toBeUndefined();
-      expect(batch0.every((p) => p.flags === undefined)).toBe(true);
+      // v3 flags (wrapped, scissors, slippery, bonus; K-59…K-61) are shipped data of schemaVersion 3
+      if ((json as { schemaVersion?: number }).schemaVersion !== 3)
+        expect(batch0.every((p) => p.flags === undefined)).toBe(true);
     });
 
     it(`K-49 K-02 level ${n}: "Boyut" and "Saha" rows are the JSON sizes and the yard fill (C, F, E)`, () => {
@@ -2643,8 +2645,16 @@ describe.skipIf(!LEVELS_2_CURRENT).each(LEVEL_IDS)(
         size.slice(1, 6).map(Number),
       );
       const fill = match(/C = (\d+), F = (\d+).*E = (\d+)/, docField(doc, 'Saha'), 'Saha');
+      // K-58 item 5: F is the sum of all cells (pallet layers included), E counts the footprint (a pallet once; K-02)
       const F = batch0.reduce((t, p) => t + shapeById(p.shape).cells.length, 0);
-      expect([geo.wy * geo.hy, F, geo.wy * geo.hy - F]).toEqual(fill.slice(1, 4).map(Number));
+      const foot = batch0
+        .filter(
+          (p) =>
+            !p.stack ||
+            !batch0.some((q) => q.stack?.id === p.stack?.id && (q.stack?.z ?? 0) > (p.stack?.z ?? 0)),
+        )
+        .reduce((t, p) => t + shapeById(p.shape).cells.length, 0);
+      expect([geo.wy * geo.hy, F, geo.wy * geo.hy - foot]).toEqual(fill.slice(1, 4).map(Number));
     });
 
     it(`K-04 K-15 level ${n}: the start blockout is the batch-0 yard (letters, Q = Ağır Yük, · = air), the wall column (# closed, = gap, : open) and the first segment plan`, () => {
@@ -2830,7 +2840,7 @@ describe.skipIf(!LEVELS_2_CURRENT)('review LEVELS §0–§1 tables (Faz 2R)', ()
     }
   });
 
-  it('K-45/10 LEVELS §0 "JSON eşlemesi" teaches list (1 → S1, 4 → W1, 6 → W2, 8 → Y5, 9 → W3) is exactly the derived new mechanic of each level 1–10', () => {
+  it('K-45/10 LEVELS §0 "JSON eşlemesi" teaches list (1 → S1, 5 → Y9, 6 → S9, 7 → Y10, 8 → Y11, 9 → Y13) is exactly the derived new mechanic of each level 1–10', () => {
     const list =
       match(
         /`teaches` yalnızca veri imzası olan\s+mekanik için yazılır \(OBSTACLES "Veri imzası": ([^)]*)\)/,
@@ -2840,12 +2850,14 @@ describe.skipIf(!LEVELS_2_CURRENT)('review LEVELS §0–§1 tables (Faz 2R)', ()
     const listed = new Map(
       [...list.matchAll(/(\d+) → ([A-Z][\w-]*)/g)].map((m) => [Number(m[1]), m[2] ?? '']),
     );
-    expect([...listed.keys()]).toEqual([1, 4, 6, 8, 9]);
+    // the listed ids are the shipped data (v3c2: 1, 5, 6, 7, 8, 9); the loop below derives each level's new mechanic
+    expect(listed.size).toBeGreaterThan(0);
     const history = new Set<MechanicId>();
     for (const n of LEVEL_IDS) {
       const res = validateLevelJson(readLevelJson(n));
       if (!res.level) throw new Error(`level ${n} fails the schema`);
-      const fresh = deriveMechanics(res.level).filter((m) => !history.has(m));
+      // Y12 (bonus) is exempt from `teaches` (K-60 item 6)
+      const fresh = deriveMechanics(res.level).filter((m) => !history.has(m) && m !== 'Y12');
       expect([fresh, res.level.teaches], `level ${n}`).toEqual(
         listed.has(n) ? [[listed.get(n)], listed.get(n)] : [[], undefined],
       );
@@ -2913,7 +2925,8 @@ describe.skipIf(!LEVELS_2_CURRENT)('review LEVELS §0–§1 tables (Faz 2R)', ()
       kinds = [...kinds, ...fresh];
     }
     expect([...kinds].sort()).toEqual(
-      SHAPE_KINDS.filter((k) => k !== 'I5' && k !== 'Q9')
+      // P5 has no <= 2-wide orientation: free on the 3-column site (K-56 annex), not in the chapter table
+      SHAPE_KINDS.filter((k) => k !== 'I5' && k !== 'Q9' && k !== 'P5')
         .slice()
         .sort(),
     );

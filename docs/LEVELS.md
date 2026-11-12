@@ -150,7 +150,7 @@ tanıtım bandına (§0) çekilir. "Hedef kazanma" sütunu **bot** oranıdır; b
 
 ---
 
-<!-- levels:section2-current (B1: kartlar sevkiyat verisinde; data.review'daki 4 test mantığı düzelince code-lead bu satırı tam işarete çevirir, REVIEW_LOG B1) -->
+<!-- levels:section2-current -->
 
 ## 2. Bölüm 1–10 (Hikaye Bölümü 1 — Ağaç Ev) — v3c2 sevkiyatı (`schemaVersion` 3; D-099 sabit saha)
 

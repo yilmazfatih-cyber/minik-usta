@@ -238,7 +238,7 @@ export const PIECE_REF_REGEX = /^piece:(\d{1,2}|k[1-9]_\d{1,2})$/;
 
 const Count = z.optional(Int(1, 9));
 /** Anchor in global coordinates; region check (yard / site of this level's geometry) in L-17. */
-const AtCell = z.optional(z.tuple([Int(0, 7), Int(0, 7)]));
+const AtCell = z.optional(z.tuple([Int(0, 8), Int(0, 7)])); // x 0–8: 9-column board (CL-V3C-15)
 const PieceRef = z.optional(z.string().check(z.regex(PIECE_REF_REGEX)));
 const FlagFilter = z.optional(z.enum(['glass', 'balloon', 'mortar']));
 const Yes = z.optional(z.literal(true));
@@ -318,7 +318,7 @@ const TutorialStep = z.strictObject({
     z.strictObject({
       kind: z.enum(['tap', 'drag', 'hold']),
       /** Held cells in board coordinates (GDD §14 "`hand.path` anlamı"); full check L-35 at `levels:solve`. */
-      path: z.optional(z.array(z.tuple([Int(0, 7), Int(0, 9)]))),
+      path: z.optional(z.array(z.tuple([Int(0, 8), Int(0, 9)]))),
     }),
   ),
   textKey: z.string().check(z.regex(TUT_TEXT_KEY_REGEX)),
