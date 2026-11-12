@@ -2285,8 +2285,13 @@ Web `70d7dc8` + Unity `4a4cc07`. Kendi koşularım: önbelleksiz `levels:check` 
 
 ## Paket Fl — product-lead: v3c2 inceleme bulgularının kapanışı, Bölüm 7–9 v3c3 (2026-11-12)
 
-Kanıt: resmî önbelleksiz `node tools/solve.ts --check --no-cache --jobs 3 --level 7,8,9 --update-golden` (0 hata, 0 uyarı;
-validate 10 dosya 0/0), inceleyenin kendi betikleriyle (`tut7.ts`, `bonus7.ts`) 2 000'er oyun; ayrıntı LEVELS §8.16.
+Kanıt (kapanış koşusu, kendi worktree'mde, web `wip/phase-2r` üstünde): (1) `node tools/solve.ts --check --no-cache
+--jobs 4` (Bölüm 1–10, `--update-golden` olmadan): validate 10 dosya 0/0, solve 10/10 (0 önbellekten) **0 hata, 0 uyarı**,
+10 dk 49 sn; golden'lar birebir (7–9'unki `--update-golden` ile bu paketin verisinden üretilmişti), `artifacts/solver/*.json`
+farkı yalnız süre alanları ve 1–6, 10'un önbellek anahtarı; (2) `npm run check` yeşil (sayılar aşağıda, kapanış satırında);
+(3) inceleyenin betikleri (`tut7.ts` birebir, `bonus7.ts` yalnız bonus/palet kimliği parametreli) 2 000'er oyun, sonuç
+deterministik olarak aynı; (4) 7–9'un yakalanmayan çıkmaz uçlarına güçlü yoklama (LEVELS §8.16.6 madde 7). Ayrıntı LEVELS
+§8.16.
 
 - [product-lead → code-lead] **CL-V3C2-01 kapandı (B seçeneği, veri):** Bölüm 7 yeniden kuruldu; paletin üstündeki iki R
   `C3` 2–3. kata hiç uymaz (oradaki R yalnız `L4_180`), plan tuzağı 0 iken 1. kat ancak onlarla biter. Senaryonuz (ε 0):
@@ -2302,7 +2307,8 @@ validate 10 dosya 0/0), inceleyenin kendi betikleriyle (`tut7.ts`, `bonus7.ts`) 
 - [product-lead → code-lead, orkestratör] **CL-V3C2-03 — veri değişmedi, ölçüm + karar önerisi (DECISIONS ÖNERİ
   P-Fl-1):** resmî vekile ikinci kazı adımı eklenince (24 aday kaydırmanın hiçbiri yerleşim açmıyorsa her aday, ardından
   12 kaydırmanın açtığı en çok yerleşimle puanlanır; scratch betiği, ikinci adım kapalıyken resmî sayıları yeniden üretir)
-  3 **0,962**, 4 **0,909**, 5 **0,965** (2 000 oyun, ε 0,1; ε 0'da 1,00); 6–10 neredeyse aynı (0,855 / 0,912 / 0,858 /
+  3 **0,962**, 4 **0,909**, 5 **0,965** (2 000 oyun, ε 0,1; ε 0'da 1,00; kapanışta 2–9 tohum dizisiyle yeniden: 3 0,956–0,957,
+  4 0,894–0,905, 5 0,963–0,966); 6–10 neredeyse aynı (0,855 / 0,912 / 0,858 /
   0,843 / 0,565). Kolay 3–4'ün "zorluğu" 1 adımlı vekilin derin kazı körlüğüdür; "1–5 değişmez" notu tam korunabilir.
   **İstek (code-lead):** `policyWinRates`'e bu ikinci kazı adımı (LEVELS §8.16.5 yöntemi, ≈ 40 satır + "K-51 …" testi) ve
   1–10'un yeniden ölçümü; sonra 3–5'e `targets.policyWin` yazarım (Kolay [0,85, 1,00], 5 [0,80, 1,00]), 6–10'u yeni vekille
@@ -2316,9 +2322,20 @@ validate 10 dosya 0/0), inceleyenin kendi betikleriyle (`tut7.ts`, `bonus7.ts`) 
   `data.review.test.ts` "K-49 K-02 … (C, F, E)" testi F = Σ okuyor (C2). Testi K-58 madde 5'e (F = ayak izi) çevirirseniz
   kart üreticisini aynı turda çeviririm; o zamana kadar kart "F = Σ (… ayak izi 42)" biçiminde kalır.
 - [product-lead → code-lead] **CL-V3C2-11 (sahiplik):** bu pakette test mantığına dokunmadım. Yalnız veri/golden tazeleme:
-  `tests/golden/level_007…009.{hand,solver}.json` (`--update-golden`), `artifacts/solver/level_007…009.json` (önbelleksiz
+  `tests/golden/level_007…009.{hand,solver}.json` (`--update-golden`), `artifacts/solver/level_001…010.json` (önbelleksiz
   kapının çıktısı), `tests/tools/solver/shipped.expected.ts` (`tools/gen/write-shipped-expected.ts`; fark yalnız 7–9: 1–6 ve 10
-  aynı). `artifacts/solver/level_001…006.json` ve `level_010.json` önbellek anahtarı hâlâ eski (CL-V3C2-07, sizde).
+  aynı). **CL-V3C2-07 (Öneri, sizin):** kapanış koşusu 1–10'u önbelleksiz çözdüğü için `artifacts/solver/level_001…006.json`
+  ve `level_010.json` güncel önbellek anahtarıyla yazıldı (fark yalnız anahtar ve süre; içerik aynı). Önbellekli
+  `levels:check` artık bu commit'te hiçbir bölümü baştan çözmez; kapatmayı siz onaylayın.
+- [product-lead → code-lead] **`docs/LEVEL_REPORT.md` (sizin, üretilen):** yalnız `<!-- levels:solve:begin/end -->` arası
+  `node tools/solve.ts --report` ile bu commit'in önbelleğinden yeniden üretildi (Bölüm 7–9 v3c3 satırları ve süreler; elle
+  düzenleme yok, işaret dışına dokunulmadı). İşaret dışındaki başlık metni eski kaldı ("D-099 Bölüm 1–10 (`schemaVersion`
+  2 …)", "2 uyarı: `puzzle_greedy_easy` Bölüm 5 ve 7"); sevkiyatta 0 uyarı var, başlığı v3c3'e siz çekin.
+- [product-lead → code-lead] **Ölü masa kapısı, Öneri:** 7–9'da resmî tahmin %0,19 / %0,02 / %0,11 (kapı ≤ %1; v3c2'de 0).
+  Her bölümde 200 yoklamadan 1 uç sınırlı ışın aramasıyla çözülemedi; bu üç ucu daha geniş ışınla (2 048 → 32 768, ≤ 20 M
+  düğüm, 120 sn, `solveLarge` o durumdan) yokladım: üçü de çözülebilir (19 / 25 / 43 hamle). Yani gerçek çıkmaz 0, tahmin
+  yoklama sınırından geliyor (LEVELS §8.16.6 madde 7). İsterseniz kapı ilk yoklamanın çözemediği uca bu ayarlarla ikinci
+  yoklama ekler (her bölümde ≤ 1–2 uç, ≤ 90 sn); o zaman rapor 0 okur ve tahminle kanıt arasındaki fark raporda görünür.
 - [product-lead → code-lead (Fc, Unity eşi)] Bölüm 7–9 verisi, golden'lar ve `shipped.expected` `tools/sync-from-web.sh` ile
   eşitlenmeli. Unity ci-shots: `v3_bonus_burst_7` kanonik çözümü 19. hamlede bonus (`piece:16`, `D2_0` W) yerleştirir (eski:
   20. hamle, `piece:12`); HUD yine 7 ve "+2". `v3_pallet_7` / `v3_info_7`: palet hâlâ `O4_0` Y ×4 (0,0), "×4" rozeti aynı;
@@ -2328,7 +2345,22 @@ validate 10 dosya 0/0), inceleyenin kendi betikleriyle (`tut7.ts`, `bonus7.ts`) 
   (kırmızı `C3` = 1. kat, kırmızı `L4` = 2–3. kat): renk + simge kuralı aynı, şekil okunurluğu önemli; makas/kaygan rozetleri
   yeni bloklarda (`D2_90` Y makas, `D2_0` W kaygan ×2). CL-V3C2-05 (EN ≤ 6 kelime) sizde; OBSTACLES Y10 öğretici satırındaki EN
   alıntıyı STORY §6A değişince ben eşitlerim.
-- [product-lead → orkestratör] **Fl sonucu:** 01, 02, 04 veriyle kapandı; 03 için karar önerisi P-Fl-1 (veri değişmez, vekil
-  2 adımlı olur — proje sahibine "1–5 değişmez" notunun bu öneriyle tam korunduğu söylenebilir); 10 kısmen (F biçimi
-  code-lead testine bağlı); 11 uyuldu. Açık: (1) P-Fl-1 ve P-Fl-2 onayı; (2) ölü masa tahmini 7–9'da 0 değil (%0,19 / %0,02 /
-  %0,11, kapı ≤ %1; v3c2'de 0) — güçlü yoklama sonucu LEVELS §8.16.6; (3) Bölüm 8–9 `min` kanıtsız (20, alt sınır 19).
+- [product-lead → orkestratör] **Fl sonucu (kapanış, 2026-11-12):** kapılar yeşil — önbelleksiz `levels:check` 1–10 0 hata /
+  0 uyarı (10 dk 49 sn); `npm run check` yeşil (typecheck, lint, format, vitest **125 dosya, 2 317 geçti, 0 atlandı**,
+  `test:rules` 88 kimlik / 1 702 test; son belge düzenlemelerinden sonra yeniden koşuldu, 7 dk 56 sn). Durum tablosu
+  (REVIEW_LEVELS_V3C2):
+
+  | Kimlik | Önem | Durum | Kanıt |
+  | --- | --- | --- | --- |
+  | CL-V3C2-01 Bölüm 7 öğretici adım 1 | Önemli | **Kapandı (B, veri)** | inceleyenin senaryosu: ε 0 %98,4, ε 0,2 %95,0 (kabul ≥ %95; ε 0,2 sınırda) — A (`startOn pieceFree`) sağlamlık önerisi olarak code-lead'de |
+  | CL-V3C2-02 Bölüm 7 bonus anı | Önemli | **Kapandı (veri)** | ilk palet katmanından sonra %98,7 (kabul ≥ %80); kanonik 19. hamle, 6 − 1 + 2 = 7 |
+  | CL-V3C2-03 Kolay 3–4 eğrisi | Önemli | **Karar önerisi (P-Fl-1), veri değişmedi** | 2 adım kazı bakışlı vekil 3 0,96, 4 0,89–0,91, 5 0,96–0,97; vekil değişikliği code-lead'e, karar orkestratör / sahibe |
+  | CL-V3C2-04 7–9 şekil çeşitliliği | Önemli | **Kapandı (veri)** | 7–9'un her birinde paletsiz dörtlü (`L4`) ve 4 aile; N 19 / 18 / 18 (D-107 ≥ 18), domino %47 / %39 / %39 (P-Fl-2) |
+  | CL-V3C2-07 önbellek anahtarı | Öneri (code-lead) | Veri tazelendi | `artifacts/solver/*.json` 1–10 güncel anahtarla |
+  | CL-V3C2-10 LEVELS tutarlılığı | Öneri | Kısmen | "aha" tablosu dolu, §8.3/§8.9 D-108 notu; kart F biçimi code-lead testine bağlı |
+  | CL-V3C2-11 sahiplik | Öneri | Uyuldu | test mantığına dokunulmadı; yalnız veri/golden/artifact/`shipped.expected` tazeleme ve LEVEL_REPORT'un üretilen bölgesi |
+
+  Açık: (1) P-Fl-1 ve P-Fl-2 onayı; (2) Bölüm 8–9 `min` kanıtsız (en iyi bulunan 20, alt sınır 19; daha kısa çözüm varsa
+  bütçe oyuncu lehine 1 bol); (3) ölü masa resmî tahmini 7–9'da 0 değil (%0,19 / %0,02 / %0,11, kapı ≤ %1) ama güçlü
+  yoklamada üç uç da çözülebilir (LEVELS §8.16.6 madde 7) — kapıya ikinci yoklama code-lead'in kararı; (4) Unity eşitlemesi
+  (veri, golden, `shipped.expected`, ci-shots `v3_bonus_burst_7` hamle 19) Paket Fc'de.

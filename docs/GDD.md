@@ -1397,14 +1397,22 @@ Yukarıdaki T tablosu yalnız `schemaVersion` 1 verisi içindir (Faz 2R'de vard�
    `tutorial[]` adımları gösterilmez (1–10 tekrar döngüsü ve Usta Modu dahil, META §8.5, §10). Bağlamsal satırlar kendi
    `seenContextTips` kuralına bağlıdır.
 7. **ÖNERİ — Elin gösterdiği blok tutulabilir (CL-V3C2-01, product-lead 2026-11-12; bölüm verisi kuralı, otomatik kapısı
-   code-lead'e önerildi):** `hand` taşıyan ve `highlight`'ı `piece:N` olan bir adım `startOn` ile başlıyorsa, adım
-   başladığı anda N tutulabilir olmalıdır (`holdableIgnoringMoves`, K-30). Ölçü: çözücünün hamle kümesiyle "görünen doğru
-   yerleşimi al, yoksa rastgele kaydır" oyuncusu, ε 0, 2 000 oyun; `startOn` olayının gerçekleştiği oyunların **≥ %95**'inde
-   N tutulabilir (LEVELS §8.16.3). `startOn`'suz adım bölüm başında açılır; ilk hamle kazı olduğundan (K-51/1) vurgulanan
-   blok örtülü olabilir, bu yüzden böyle bir adım `hand` taşımaz ve `done`'ı o bloğun doğru yerleşimidir (Bölüm 6, 8, 9).
+   code-lead'e önerildi):** `hand` taşıyan ve `highlight`'ı `piece:N` olan bir adım başladığı anda N tutulabilir olmalıdır
+   (`holdableIgnoringMoves`, K-30). Adımın başladığı an iki türlüdür:
+   (a) Bölümün `startOn`'suz **ilk** adımı başlangıç durumunda açılır; koşul başlangıç durumunda bir kez denetlenir
+   (deterministik, doğru/yanlış).
+   (b) `startOn`'lu adım ve önceki adımın bitişiyle açılan adım oyuncunun yoluna bağlıdır. Ölçü: çözücünün hamle kümesiyle
+   "görünen doğru yerleşimi al, yoksa rastgele kaydır" oyuncusu, ε 0, 2 000 oyun; adımın başladığı oyunların **≥ %95**'inde
+   N tutulabilir (LEVELS §8.16.3).
+   (c) Başlangıç durumunda örtülü bir bloğu vurgulayan adım `hand` taşımaz (K-51/1 gereği ilk hamle kazıdır; vurgu bloğu
+   gösterir, el gösteremez).
+   Sevkiyat verisi (Bölüm 1–10): (a) Bölüm 1 adım 1 (`piece:1`, el `drag`) başta tutulabilir ✓; (b) Bölüm 7 adım 1 (aşağıdaki
+   örnek) ✓; (c) Bölüm 5, 6, 8, 9 adım 1 başta örtülü bloğu vurgular, hiçbirinde el yoktur ✓; Bölüm 7 adım 2 elsizdir.
    **Örnek:** Bölüm 7 v3c3 adım 1 (`startOn segmentDone`, `piece:15`, el `tap`):
    paletin üstündeki iki R `C3` başka hiçbir kata uymaz (plan tuzağı 0 iken 1. kat ancak onlar yerleşince biter), en üst sıradaki
    W domino (`j`) onlara ulaşmak için kalkar; 1. katı bitiren oyunların %98,4'ünde üst katman tutulabilir (v3c2'de %3,9).
+   Karşı örnek (v3c2): aynı adım `piece:16`'yı gösteriyordu; 1. kat paletin üstündeki bloklar kalkmadan da bitebildiği için
+   oranı %3,9'du → kural çiğnenir.
 **Örnek:** Bölüm 3 adım 1 (`piece:2` = `c`, `done: { event: yardMove, piece: 'piece:2' }`) etkinken oyuncu `d`'yi
 (`D2_90` Y, (2,0)) sahada (2,1)'e kaydırır → `yardMove` olur ama süzgeç tutmaz, adım sürer; 4 sn hareketsizlikte el
 yeniden görünür. Oyuncu `c`'yi (1,2)'ye kaydırınca adım biter, adım 2 (`tut.m.free`) başlar. Oyuncu Bölüm 3'ü kazanıp

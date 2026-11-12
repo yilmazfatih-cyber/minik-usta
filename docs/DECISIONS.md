@@ -742,16 +742,16 @@ vekilinde (ε 0,1; 1 adım: gereken yerleşimi açan kaydırmayı görür) Kolay
 0,81–0,86; Zor 10 0,56 (REVIEW_LEVELS_V3C2 §5). Bölüm 4'te bütçe + 8 ile bile 0,59: iki derin kazıda (gereken blok iki
 bloğun altında) ilk kaydırma hiçbir yerleşim açmaz, vekil rastgele kaydırır. **Ölçüm (product-lead, LEVELS §8.16.5):**
 aynı vekile ikinci kazı adımı eklendiğinde (24 aday kaydırmanın hiçbiri yerleşim açmıyorsa her aday, ardından gelebilecek
-12 kaydırmanın açtığı en çok yerleşimle puanlanır) Bölüm 3 **0,96**, 4 **0,91**, 5 **0,97** (2 000 oyun, ε 0,1; ε 0'da
+12 kaydırmanın açtığı en çok yerleşimle puanlanır) Bölüm 3 **0,96**, 4 **0,89–0,91**, 5 **0,96–0,97** (2 000 oyun, ε 0,1, aralık tohum dizileri arası; ε 0'da
 üçü de 1,00); 6 0,86, 7 0,91, 8 0,86, 9 0,84, 10 0,57 (400 oyun) — 6–10 neredeyse değişmez (sığ kazılar). Yani Kolay 3–4
-gerçekte zor değil; 1 adımlık vekil derin kazıda kördür. Eğri bu vekilde testere dişidir: Kolay ≥ 0,91, Normal 0,84–0,97,
+gerçekte zor değil; 1 adımlık vekil derin kazıda kördür. Eğri bu vekilde testere dişidir: Kolay ≥ 0,89, Normal 0,84–0,97,
 Zor 0,57.
 **Öneri:** (1) Bölüm 1–5'in yerleşimi, planı ve bütçesi **değişmez** (sahibin notu korunur; hiçbir veri değişikliği
 gerekmez). (2) code-lead resmî vekile (`tools/solver/walks.ts` `policyWinRates`) 2 adım kazı bakışını ekler (≈ 40 satır +
 test "K-51 …"; ölçüm yöntemi LEVELS §8.16.5) ve `levels:check` 1–10'u bu vekille ölçer. (3) Bu vekil gelince product-lead
 Bölüm 3–5'e `targets.policyWin` yazar: Kolay 3–4 [0,85, 1,00], Normal tanıtım 5 [0,80, 1,00] (tanıtım bölümü bandın üst
 sınırına bağlanmaz; 0,97 "nefes" sayılır) ve 6–10 bantlarını yeni vekille yeniden doğrular; bandın dışına çıkan bölümde
-yalnız `a` (bütçe) ayarlanır (ör. Bölüm 7 2 adımlı vekilde 0,91 → `moves` 25 → 24 adayı).
+yalnız `a` (bütçe) ayarlanır (ör. Bölüm 7 v3c3 2 adımlı vekilde 0,91 → `moves` 24 → 23 adayı).
 **Reddedilen seçenek:** bugünkü 1 adımlı vekile göre Bölüm 4'ü tek derin kazıya indirmek ve 3–5 bütçesini büyütmek — kör
 bir ölçüye ayar yapılır, eğrinin gerçek biçimi değil vekilin kusuru düzeltilir.
 **Gerekçe:** brif ilke 4 (testere dişi) ve 6 (önce ölçü, sonra ayar); sahibin "abartısız zorluk" amacı veri değişmeden
@@ -759,9 +759,9 @@ korunur. **Proje sahibine:** "1–5 değişmez" notu bu öneriyle tam korunur; t
 
 ### ÖNERİ P-Fl-2 — Bölüm 8 ve 9'da 18 blok + dörtlü şekil; Bölüm 7 19 blok (product-lead, 2026-11-12; CL-V3C2-04)
 **Durum:** ÖNERİ (D-107 alt sınırları içinde; hedef aralığın altı için kayıt). **Karar önerisi:** Bölüm 7 19 blok (D2 ×9,
-C3 ×4, L4 ×2, palet `O4_0` ×4), Bölüm 8 18 blok (D2 ×8, C3 ×6 [3'ü palet], I3 ×2, L4, J4), Bölüm 9 18 blok (D2 ×7, C3 ×8 [3'ü
+C3 ×4, L4 ×2, palet `O4_0` ×4), Bölüm 8 18 blok (D2 ×7, C3 ×7 [3'ü palet], I3 ×3, L4), Bölüm 9 18 blok (D2 ×7, C3 ×8 [3'ü
 palet], I3 ×2, L4). **Gerekçe:** sahibin amacı "daha çok blok, **daha çeşitli şekil**"; Σ 48'lik planda domino payı ≤ %50
-iken bir dörtlü blokla N en çok 18'dir (2d + 3c + 4 = 48, d + c + 1 = N, d ≤ N/2 ⇒ N ≤ 18); Σ 54'te paletsiz bir dörtlüyle
-N en çok 19'dur. Bölüm 6'daki "şekil çeşitliliği 18'den önce gelir" ilkesi (D-107) 7–9'a da uygulanır; 7–9'un her biri
+iken bir dörtlü blokla N en çok 18'dir (tekli `B1` olmadan: 2d + 3c + 4 = 48, d + c + 1 = N, d ≤ N/2 ⇒ d = 7, N = 18;
+tekli blok sayıyı artırır, çeşitliliği değil); Σ 54'te (Bölüm 7, palet `O4_0` ×4 = 16 hücre) paletsiz iki dörtlüyle N 19'dur. Bölüm 6'daki "şekil çeşitliliği 18'den önce gelir" ilkesi (D-107) 7–9'a da uygulanır; 7–9'un her biri
 ≥ 1 paletsiz dörtlü blok ve ≥ 4 şekil ailesi taşır (v3c2'de 0 dörtlü, 3 aile). D-107'nin "hedef 19–20"si 8 ve 9 için
 Hikaye 2'nin yüksek sahasına kalır.

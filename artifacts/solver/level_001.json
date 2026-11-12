@@ -481,7 +481,7 @@
     "states": 767033,
     "expanded": 767033,
     "edges": 9885120,
-    "ms": 35904,
+    "ms": 28039,
     "bytes": 144409285,
     "dragSessions": 90181,
     "applyMoves": 1157452,
@@ -491,9 +491,9 @@
     "d3aUnknown": 0,
     "complete": true,
     "limit": null,
-    "totalMs": 37928
+    "totalMs": 29933
   },
   "v3": null,
   "large": null,
-  "cacheKey": "1904d74b:rules6:solver7:srcf6518d28:level:var:d3a:walks10000:games400"
+  "cacheKey": "1904d74b:rules6:solver7:src0afd9b08:level:var:d3a:walks10000:games400"
 }

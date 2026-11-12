@@ -146,6 +146,11 @@ tablosu; resmî önbelleksiz `levels:check`; tanıtım bölümleri 1, 5, 6, 7, 8
 tanıtım bölümleri aynı kuralla). Fark ve gerekçe §4'te. 11–50'nin tanıtım bölümlerinin hedef oranları Faz 3'te
 tanıtım bandına (§0) çekilir. "Hedef kazanma" sütunu **bot** oranıdır; bot K-34 kanca 5 ipuçlarını görmez (DL-2R-04).
 
+**Bölüm 3–5 ölçümü (CL-V3C2-03; §8.16.5, ÖNERİ P-Fl-1):** 1–5'in hedefi bot oranıdır, `targets.policyWin` bandı yoktur.
+Resmî 1 adımlı ileri bakış vekilinde (ε 0,1) 3 0,51, 4 0,43, 5 0,56 çıkar; aynı vekile ikinci kazı adımı eklenince 3
+0,96, 4 0,89–0,91, 5 0,96–0,97 (2 000 oyun; aralık tohumlar arası). Fark vekilin derin kazı körlüğüdür (gereken blok iki bloğun altında), bölümün zorluğu
+değildir; 1–5 verisi değişmez. Resmî vekil 2 adımlı olunca 3–4'e Kolay bandı [0,85, 1,00], 5'e [0,80, 1,00] yazılır.
+
 ---
 
 ---
@@ -2672,7 +2677,7 @@ y0  Go  Gp~ Gp~ Gp~ WtP WtP |  WWY  WWY  YYY
 |---|---|---|---|---|
 | 6 | S9 Geniş şantiye (3 sütun) | "Düz blok bir satırı tek hamlede kapatır": `T4_270` G tabanı örter, çıkıntısı ortadaki G'ye oturur | Paletsiz tanıtım; ilk gereken düz blok 1 kazı altında; şekil çeşitliliği (D2, C3, L4, T4) blok sayısından önce gelir | `tut.m.widesite` (1 adım; vurgu `T4_270`, doğru yerleşince biter) |
 | 7 | Y10 Palet (v3c3, §8.16) | "Paletten yalnız en üstteki alınır ve yalnız şantiyeye gider"; 1. katın kırmızı blokları paletin üstündedir ve başka kata uymaz, kat bitince palet açılır | 1. kat paletin yolunu açar, 2. katın ilk bloğu palet katmanıdır; dört Y katman 2–3. katın kareleri; bonus 2–3. katta "+2" ödülü | `tut.m.pallet` (1. kat bitince, el üst katmanda) + `tut.m.palletsite` |
-| 8 | Y11 Sargılı blok + makas (v3c3) | "Makaslı blok yerleşince sargılar açılır": sargılı blok makastan önce gelmez, makası erken çıkarmak gerekir | Makas gömülü (ilk hamle kazı), iki sargılı blok sonraki katlarda; I3, L4, J4 ile beş şekil ailesi | `tut.m.wrap` (1 adım; vurgu makaslı blok, doğru yerleşince biter) |
+| 8 | Y11 Sargılı blok + makas (v3c3) | "Makaslı blok yerleşince sargılar açılır": sargılı blok makastan önce gelmez, makası erken çıkarmak gerekir | Makas `e` 1. katın iki bloğunun (`d`, `c`) altında: onlar yerleşince açılır, 1. katı bitirir; iki sargılı blok (`h`, `j`) 2. katın malzemesi; ilk hamle kazı (K-51/1); D2, C3, I3, L4 ile dört şekil ailesi | `tut.m.wrap` (1 adım; vurgu makaslı blok, doğru yerleşince biter) |
 | 9 | Y13 Kaygan blok (v3c3) | "Kaygan blok boşlukta durmaz": altı dolmadan yerleştirilemez, sırayı aşağıdan kurmak gerekir | İki kaygan `D2_0` W; L4 ve I3 ile dört aile; 2 kazı | `tut.m.slippery` (1 adım; vurgu ilk kaygan blok, doğru yerleşince biter) |
 | 10 | — (Zor final; yeni mekanik yok) | "Vinç gömülü bloğu da taşır"; dar boşlukta (E 3) kazı sırasını önceden planlamak | Hikaye 1'in bütün özellikleri bir arada; bonus yok, etkin pay açık (3) | `tut.m.cranebooster` (1. kat bitince) |
 
@@ -2691,11 +2696,14 @@ y0  Go  Gp~ Gp~ Gp~ WtP WtP |  WWY  WWY  YYY
    ≥ 8 hücre kazanç gerekir: ya 4 hücreli bir palet ×3–4 (bu bölümlerde 4 hücreli şekil paletleri `I3` ve `C3`'ün yerini
    alır, N 19'da kalır) ya da iki palet; iki paletin çıkış kanalları sahanın dört sütununu ayırır ve ters oyun kurucusu
    iki paletli Σ 54 taslağında (Bölüm 10 ilk denemesi, 11 tohum) geçerli saha bulamadı. Hikaye 2'de (yüksek saha ya da
-   `I3_90` paleti) 20+ kurulur.
+   `I3_90` paleti) 20+ kurulur. **Güncelleme (v3c3, CL-V3C2-04):** 8 ve 9 paletsiz birer dörtlüyle 18 bloktur; bir dörtlü ve
+   domino ≤ %50 ile Σ 48'de tavan 18'dir (§8.16.1 madde 3, ÖNERİ P-Fl-2).
 3. **Bölüm 4 Kolay bandının altında (ileri bakış vekili ε 0 %56, ε 0,1 %46).** CL-V3C-03 yalnız boyama istedi; tuzak 0 oldu, Söküm'le
    kurtarılan yürüyüş 259 → 0 düştü, ama 2 derin kazı (1 adım ileri bakan oyuncu ikinci kapağı göremez) yerleşimden gelir.
    Öneri: Bölüm 4'ün yerleşimi bir sonraki turda tek derin kazıya indirilir (proje sahibinin "1–5 değişmez" notu nedeniyle
-   bu turda yapılmadı). Karar: orkestratör / proje sahibi.
+   bu turda yapılmadı). Karar: orkestratör / proje sahibi. **Güncelleme (Fl, CL-V3C2-03):** öneri geri çekildi. 2 adım kazı
+   bakışlı vekilde Bölüm 4 ≈ 0,90 (Kolay bandı ≥ 0,85 içinde); darboğaz bölüm değil vekilin derin kazı körlüğüdür. Yerleşim
+   değişmez (§8.16.5, ÖNERİ P-Fl-1).
 4. **D-090 kanıt sınıfı değişmedi:** 6–10'da "ölü masa yok" iddiası `plan_trap` 0 (kanıt) + 10 000 yürüyüşte yakalanmayan
    çıkmaz 0 (**tahmin**) üzerinedir (§8.13.7 soru 2).
 5. **Bölüm 10'un `min` değeri kanıtlıdır** (ışın araması alt sınıra eşit: 21 = 21). 6–9'da alt sınırla fark 1.
@@ -2736,7 +2744,7 @@ yerine uymayan 1. kat blokları konur (plan tuzağı 0 iken 1. kat ancak onlar y
    8 `L4_180` W (D2, C3, I3, L4); 9 `L4_270` Y (D2, C3, I3, L4). Blok sayısı 19 / 18 / 18 (v3c2 20 / 19 / 19); Σ 48'de domino
    ≤ %50 iken bir dörtlüyle N en çok 18'dir (P-Fl-2). 6–10 toplamı 17 + 19 + 18 + 18 + 20 = **92** (v3c2 95); D-107 alt
    sınırlarının (6 ≥ 17, 7–9 ≥ 18, 10 ≥ 20) hepsi tutar.
-4. **Kolay 3–4 eğrisi (CL-V3C2-03): veri değişmedi.** 2 adım kazı bakışlı vekil 3–5'i 0,91–0,97 ölçer (§8.16.5); sorun
+4. **Kolay 3–4 eğrisi (CL-V3C2-03): veri değişmedi.** 2 adım kazı bakışlı vekil 3–5'i 0,89–0,97 ölçer (§8.16.5); sorun
    vekilin derin kazıda körlüğüdür. Karar önerisi P-Fl-1 (vekil code-lead'de, bantlar sonra).
 
 #### 8.16.2 Bölüm tablosu (yayın; resmî önbelleksiz `node tools/solve.ts --check --no-cache --jobs 3 --level 7,8,9 --update-golden`, 2026-11-12: 0 hata, 0 uyarı)
@@ -2751,6 +2759,9 @@ Ortak: `plan_trap` 0, `policyWin` bandı uyarısı 0 (D-107), domino ≤ %50 (7:
 bayraksız, iki renkli çiftler yalnız W–Y ve W–G, `puzzle_greedy_easy` yok (bütçe + N/2'de ≤ 0,59), K-51/1 (ilk hamle kazı)
 ✓, `min` ≤ 22 ✓. Bölüm 7'de `min` kanıtlı (alt sınıra eşit); 8 ve 9'da en iyi bulunan 20, alt sınır 19. Bölüm 1–6 ve 10'un
 çözücü sonuçları değişmedi (`tests/tools/solver/shipped.expected.ts` farkı yalnız 7–9). Süre: üç bölüm paralel ≈ 9 dk.
+Yeniden koşum (Fl kapanışı, 2026-11-12): `node tools/solve.ts --check --no-cache --jobs 4` (1–10, `--update-golden`
+olmadan) **0 hata, 0 uyarı**, 10 dk 49 sn; golden'lar birebir aynı, `artifacts/solver/*.json` farkı yalnız süre alanları ve
+1–6, 10'un önbellek anahtarı (CL-V3C2-07 tazelendi); vekil ve yürüyüş sayıları yukarıdaki tabloyla aynı.
 
 #### 8.16.3 Bölüm 7 senaryoları (CL-V3C2-01/02 kabul ölçüsü; inceleyenin betikleriyle, 2 000 oyun)
 
@@ -2827,8 +2838,14 @@ yeniden üretir (3 0,505, 4 0,400, 5 0,575; 400 oyun), yani fark yalnız ikinci 
 | 9 | Normal (tanıtım) | 0,83 (v3c3) | 0,843 [0,804–0,875] (400) | — | — |
 | 10 | Zor | 0,54 | 0,565 [0,516–0,613] (400) | — | — |
 
+Yeniden üretim (Fl kapanışı, aynı betik, ε 0,1, dizi başına 2 000 oyun; 3 ve 5: tohum 101 ve 101…505 × 400; 4: ayrıca tohum
+1, 3, 4, 5, 7, 1…5 × 400 ve 11…55 × 400): 3 0,956–0,957, 4 **0,894–0,905**
+(Wilson alt ucu ≥ 0,880), 5 0,963–0,966; ikinci adım kapalıyken 400 oyunda 0,515 / 0,450 / 0,583 (resmî 1 adımlı sayılarla
+aynı aralık). Tablodaki 0,909 bu aralığın hemen üstündedir (tohum farkı); Bölüm 4'ün gerçekçi değeri ≈ 0,90'dır ve Kolay
+bandının alt sınırı (0,85) her tohumda tutar.
+
 Okuma: 3–5'in "zorluğu" derin kazıdaki vekil körlüğüdür (iki kapak üst üste: ilk kapağı kaldırmak hiçbir yerleşim açmaz);
-6–10 sığ kazılı olduğu için iki vekilde aynıdır (fark ≤ 0,05). 2 adım vekilde eğri testere dişidir: Kolay 0,91–0,96 · Normal
+6–10 sığ kazılı olduğu için iki vekilde aynıdır (fark ≤ 0,05). 2 adım vekilde eğri testere dişidir: Kolay 0,89–0,96 · Normal
 0,84–0,97 · Zor 0,57. Bölüm 1–5 verisi değişmez; öneri P-Fl-1: resmî vekil 2 adımlı olur (code-lead), sonra 3–5'e
 `targets.policyWin` (Kolay [0,85, 1,00], Normal tanıtım 5 [0,80, 1,00]) ve 6–10 bantları yeni vekille yeniden doğrulanır
 (Bölüm 7 0,91 ile üst sınırı aşarsa `moves` 24 → 23 adayı; yalnız `a` değişir).
@@ -2837,14 +2854,22 @@ Okuma: 3–5'in "zorluğu" derin kazıdaki vekil körlüğüdür (iki kapak üst
 
 1. **Ölü masa tahmini 0 değil, kapının içinde.** 7–9'un her birinde 200 yoklamadan 1 uç sınırlı ışın aramasıyla (genişlik
    ≤ 512, 100 000 düğüm) çözülemedi → tahmin %0,19 / %0,02 / %0,11 (kapı ≤ %1, K-51/2; v3c2'de 0). Güçlü yoklama sonucu
-   aşağıda madde 7'de. Kanıt sınıfı v3c2 ile aynıdır: `plan_trap` 0 (kanıt) + yürüyüş tahmini (D-090, §8.13.7 soru 2).
+   aşağıda madde 7'de: üç uç da çözülebilir. Kanıt sınıfı v3c2 ile aynıdır: `plan_trap` 0 (kanıt) + yürüyüş tahmini (D-090, §8.13.7 soru 2).
 2. **8 ve 9'da 18 blok** (D-107 alt sınırı; hedef 19–20'nin altı). Gerekçe P-Fl-2: dörtlü şekil + domino ≤ %50 ile Σ 48'de
    tavan 18. 20+ blok Hikaye 2'nin yüksek sahasında.
 3. **Bölüm 8 ve 9'un `min`'i kanıtlı değil** (en iyi bulunan 20, alt sınır 19; v3c2'de 8 kanıtlıydı). Hamle bütçesi
    bulunan `min`'e göre kuruldu; daha kısa bir çözüm varsa bütçe 1 hamle bol olur (oyuncu lehine).
 4. **Bölüm 8 ve 9'un öğreticisi (el yok) başta örtülü bloğu vurgular** (makas `e` iki bloğun, ilk kaygan `c` bir dominonun
-   altında); v3c2 ile aynı desen, `done` o bloğun doğru yerleşimidir (GDD K-53 madde 7).
+   altında); v3c2 ile aynı desen, `done` o bloğun doğru yerleşimidir; elsiz olması GDD K-53 madde 7 (c) gereğidir.
 5. **Bonus 1. kata da uyar** (`D2_0` W, 1. katın W sütunu): ε 0,1 oyunların %1,3'ünde 1. katta yerleşir (kazı ile `i`'nin
    altından erken çıkarılırsa). Ödül anı bu oyuncularda da paletin öğretildiği bölümde kalır.
 6. **Bölüm 7 bütçesi `a` = 0** (24 = 20 + 4): vekil 0,86 bandın ortasında; 25'te 0,91 (bant dışı). Bölüm 8'de `a` = 2
    (25'te 0,77), Bölüm 9'da `a` = 1.
+7. **Güçlü yoklama: yoklanan uçlarda gerçek çıkmaz 0.** Resmî kapının sınırlı ışın aramasıyla çözemediği uç (her bölümde
+   200 yoklamadan 1; aynı tohum = bölüm kimliği, aynı 10 000 yürüyüş) daha geniş bir ışın aramasıyla (genişlik 2 048 →
+   8 192 → 32 768, ≤ 20 milyon düğüm, 120 sn; scratch betiği, `tools/solver/large.ts` `solveLarge` ile o durumdan) yeniden
+   yoklandı. Üçü de **çözülebilir**: Bölüm 7 19 hamlede (317 271 düğüm, 88 sn), Bölüm 8 25 hamlede (45 713 düğüm, 9 sn),
+   Bölüm 9 43 hamlede (79 630 düğüm, 41 sn). Resmî tahmin (%0,19 / %0,02 / %0,11) yoklama aramasının sınırından gelir;
+   7–9'da yoklanan 600 uçta yakalanmayan çıkmaz 0'dır (v3c2 ile aynı sınıf). Kanıt sınıfı yine tahmindir (D-090 tam uzay
+   taraması koşmaz). Öneri (code-lead'e, REVIEW_LOG Fl): kapı, ilk yoklamanın çözemediği uca bu ayarlarla ikinci bir yoklama
+   eklerse resmî tahmin de bunu okur.
