@@ -2257,3 +2257,28 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
   eski C# çekirdeği 92 dizide sapıyor). Unity testleri 609 + 2151 yeşil (5 atlanan), stub kapısı 4/4. CI afe949e
   (run 43290690799) yeşil: 18 çekim + 2 şerit / boyut, `v3_bonus_burst_7` iki boyutta geldi, konsolda istisna 0. Ayrıntı ve
   kapanış tablosu: Unity `docs/REVIEW_LEVELS_V3C.md` §13.
+
+## v3c2 şüpheci inceleme — code-lead (2026-11-12; Unity `docs/REVIEW_LEVELS_V3C2.md`)
+
+Web `70d7dc8` + Unity `4a4cc07`. Kendi koşularım: önbelleksiz `levels:check` (13 dk, 0 hata / 0 uyarı), `npm run check`
+(2317 geçti / 0 atlanan), Unity build + test (2151 + 609, DiffFuzz 0 sapma), stub kapısı 4/4. Engel yok; 5 Önemli, 10 Öneri.
+
+- [code-lead → product-lead] **CL-V3C2-01 (Önemli):** Bölüm 7 öğretici adım 1 (`startOn segmentDone`, `piece:16`) yerleştiren
+  vekilin 1. katı bitirdiği oyunların yalnız %3,9 / %4,6'sında (ε 0 / 0,2; 2 000 oyun) tutulabilir bir katmanı gösteriyor:
+  1. katı 10/12 (R) ve 6/7 (W) de bitiriyor, paletin üstündeki (0,2) R ve (1,2) W kalıyor. Seçimim: code-lead
+  `startOn: { event: 'pieceFree', piece }` ekler, adım 1 ona bağlanır (veri/golden değişmez).
+- [code-lead → product-lead] **CL-V3C2-02 (Önemli):** Bölüm 7 bonusu (`D2_0` R (5,2)) oyunların %81'inde 1. katta, %92'sinde
+  ilk palet katmanından önce yerleşiyor; D-107 "palet tanıtımının ödülü" yalnız kanonik çözümde tutuyor. Bonus 1. katta
+  yuvası olmayan bir bloğa taşınmalı (kabul: "paletten sonra" ≥ %80).
+- [code-lead → product-lead] **CL-V3C2-03 (Önemli):** aynı ileri bakış vekilinde (ε 0,1) Kolay 3 0,51 / Kolay 4 **0,43** /
+  Normal 5 0,56, Normal 6–9 0,81–0,86, Zor 10 0,56; hatasız oyuncuda 4 0,54, 10 0,93. Eğri 3–5'te tepe yapıyor. Karar
+  ("1–5 değişmez" kapsamı) sahibe; code-lead vekile 2 adım kazı bakışı ekleyip yeniden ölçer.
+- [code-lead → product-lead] **CL-V3C2-04 (Önemli):** 7–9'un paletsiz blokları yalnız D2/C3/I3 (v3c'de 6 dörtlü blok vardı);
+  8 ve 9'da 18–19 blok + ≥ 1 L4/T4/J4 ya da sahibin açık kabulü.
+- [code-lead → design-lead] **CL-V3C2-05 (Önemli):** `tut.m.pallet` EN 7, `tut.m.palletsite` EN 8 kelime (STORY §0-4 ≤ 6);
+  STORY §6A notu "EN 5–6" diyor. code-lead `en.json` + TR/EN ≤ 6 testini (sevkiyattaki her `textKey`) ekleyecek.
+- [code-lead → code-lead / product-lead / design-lead] Öneriler CL-V3C2-06…15: Bölüm 6 bant kenarında (bağımsız 1 200 oyun
+  0,810 [0,787–0,831]); `artifacts/solver` önbellek anahtarı eski; D-108 giriş nabzı ve web palet çizimi yok; fuzz'da
+  D-106 → Söküm 0; LEVELS §8.15.5 "aha" tablosu boş ve kartta F tanımı K-58 madde 5'ten farklı; B1 code-lead test mantığını
+  değiştirdi; A2 belge commit'leri CI'ı 45 dk kırmızı bıraktı; 3B çözme 278 ms; rozet payı 55–57 design px; Unity CI
+  `dotnet test` / DiffFuzz koşturmuyor. Ayrıntı ve önceki CL-V3C-01…17 durum tablosu Unity belgesinde.
