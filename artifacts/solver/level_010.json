@@ -1,105 +1,105 @@
 {
   "level": 10,
   "file": "level_010.json",
-  "levelHash": "4073179f156e18cc",
+  "levelHash": "b903ba2775564619",
   "rulesVersion": 5,
   "solverVersion": 6,
   "variant": null,
   "schemaVersion": 2,
   "status": "solved",
-  "geometry": "6x8|2x5 H8",
+  "geometry": "6x8|3x4 H8",
   "difficulty": "hard",
   "teaches": null,
-  "moves": 21,
+  "moves": 23,
   "metrics": null,
   "band": {
     "row": "hard",
     "version": 2,
     "T": 1,
     "floor": 1,
-    "A": 2,
-    "nominal": 21,
-    "lo": 21,
-    "hi": 23
+    "A": 3,
+    "nominal": 23,
+    "lo": 23,
+    "hi": 26
   },
   "canonical": [],
   "steps": [],
   "replay": {
     "ok": true,
     "message": null,
-    "eventLogHash": "3f80c8e607a064a9",
-    "events": 109
+    "eventLogHash": "333840b4bcd1da90",
+    "events": 125
   },
   "variants": [],
   "issues": [],
   "notes": [
     "fast yard path off (slippery blocks (Y13))",
-    "large-level search (U-v3-2): best found 20 (lower bound 17) — not proven optimal, en iyi bulunan; width 32, 359449 states, 16712 ms, replay ok",
-    "play proxy (CL-V3-03; not ahaMin): placement-first player wins 0 within 21 moves, 0.01 within 29",
-    "dead-state gate (CL-V3-01 B, estimate not proof; D-090 whole-space scan not run): 10000 random walks: won 2486, rescued by D1/D2/D3a 333, unresolved 7181 (probed 200: solvable 200, undetected dead 0) → estimated 0.00 %"
+    "large-level search (U-v3-2): best found 22 (lower bound 20) — not proven optimal, en iyi bulunan; width 8, 164180 states, 14972 ms, replay ok",
+    "play proxy (CL-V3-03; not ahaMin): placement-first player wins 0.04 within 23 moves, 0.3 within 33",
+    "dead-state gate (CL-V3-01 B, estimate not proof; D-090 whole-space scan not run): 10000 random walks: won 9781, rescued by D1/D2/D3a 0, unresolved 219 (probed 200: solvable 200, undetected dead 0) → estimated 0.00 %"
   ],
   "specGaps": [],
   "stats": {
-    "states": 2003,
-    "expanded": 600,
-    "edges": 5986,
-    "ms": 859,
-    "bytes": 260953,
-    "dragSessions": 4422,
-    "applyMoves": 6363,
+    "states": 2006,
+    "expanded": 547,
+    "edges": 6983,
+    "ms": 339,
+    "bytes": 397037,
+    "dragSessions": 2305,
+    "applyMoves": 7322,
     "fastYardMoves": 0,
-    "d3aRuns": 2002,
-    "d3aMaxExpansions": 35,
+    "d3aRuns": 2005,
+    "d3aMaxExpansions": 23,
     "d3aUnknown": 0,
     "complete": false,
     "limit": "maxStates",
-    "totalMs": 386683
+    "totalMs": 597571
   },
   "v3": {
-    "liftRatio": 0.75,
-    "lifted": 12,
-    "placements": 16,
-    "visibleAtStart": 16,
+    "liftRatio": 0.79,
+    "lifted": 15,
+    "placements": 19,
+    "visibleAtStart": 17,
     "shapeDecisions": null,
     "stackParks": 0,
-    "unwrapAt": 0.5,
-    "bonusAt": null,
+    "unwrapAt": 0.27,
+    "bonusAt": 0.23,
     "traitDelta": null
   },
   "large": {
     "status": "solved",
-    "best": 20,
-    "lowerBound": 17,
+    "best": 22,
+    "lowerBound": 20,
     "optimal": false,
-    "width": 32,
+    "width": 8,
     "yao": {
-      "overWall": 16,
+      "overWall": 19,
       "rail": 0,
       "value": 1
     },
-    "states": 359449,
-    "ms": 16712,
+    "states": 164180,
+    "ms": 14972,
     "replayOk": true,
     "runs": [
       {
         "width": 8,
-        "cost": 26,
-        "ms": 312
+        "cost": 22,
+        "ms": 172
       },
       {
         "width": 32,
-        "cost": 20,
-        "ms": 800
+        "cost": 22,
+        "ms": 601
       },
       {
         "width": 128,
-        "cost": 20,
-        "ms": 3153
+        "cost": 22,
+        "ms": 2909
       },
       {
         "width": 512,
-        "cost": 20,
-        "ms": 12446
+        "cost": 22,
+        "ms": 11287
       }
     ],
     "actions": [
@@ -110,9 +110,45 @@
       },
       {
         "kind": "drag",
-        "pieceId": 6,
+        "pieceId": 0,
         "to": {
-          "ix": 5,
+          "ix": 4,
+          "iy": 7,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 1,
+        "to": {
+          "ix": 6,
+          "iy": 0,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 0,
+        "to": {
+          "ix": 6,
+          "iy": 1,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 2,
+        "to": {
+          "ix": 6,
+          "iy": 2,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 5,
+        "to": {
+          "ix": 7,
           "iy": 1,
           "mode": 0
         }
@@ -121,104 +157,14 @@
         "kind": "drag",
         "pieceId": 4,
         "to": {
-          "ix": 4,
-          "iy": 4,
-          "mode": 0
-        }
-      },
-      {
-        "kind": "drag",
-        "pieceId": 0,
-        "to": {
-          "ix": 3,
-          "iy": 5,
-          "mode": 0
-        }
-      },
-      {
-        "kind": "drag",
-        "pieceId": 3,
-        "to": {
-          "ix": 7,
-          "iy": 0,
-          "mode": 0
-        }
-      },
-      {
-        "kind": "drag",
-        "pieceId": 2,
-        "to": {
           "ix": 7,
           "iy": 3,
-          "mode": 0
-        }
-      },
-      {
-        "kind": "drag",
-        "pieceId": 0,
-        "to": {
-          "ix": 1,
-          "iy": 5,
-          "mode": 0
-        }
-      },
-      {
-        "kind": "drag",
-        "pieceId": 9,
-        "to": {
-          "ix": 6,
-          "iy": 0,
-          "mode": 0
-        }
-      },
-      {
-        "kind": "drag",
-        "pieceId": 10,
-        "to": {
-          "ix": 6,
-          "iy": 3,
-          "mode": 0
-        }
-      },
-      {
-        "kind": "drag",
-        "pieceId": 0,
-        "to": {
-          "ix": 6,
-          "iy": 0,
-          "mode": 0
-        }
-      },
-      {
-        "kind": "drag",
-        "pieceId": 5,
-        "to": {
-          "ix": 6,
-          "iy": 1,
           "mode": 0
         }
       },
       {
         "kind": "drag",
         "pieceId": 8,
-        "to": {
-          "ix": 6,
-          "iy": 3,
-          "mode": 0
-        }
-      },
-      {
-        "kind": "drag",
-        "pieceId": 14,
-        "to": {
-          "ix": 7,
-          "iy": 3,
-          "mode": 0
-        }
-      },
-      {
-        "kind": "drag",
-        "pieceId": 1,
         "to": {
           "ix": 7,
           "iy": 0,
@@ -229,6 +175,42 @@
         "kind": "drag",
         "pieceId": 7,
         "to": {
+          "ix": 3,
+          "iy": 5,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 11,
+        "to": {
+          "ix": 6,
+          "iy": 0,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 14,
+        "to": {
+          "ix": 7,
+          "iy": 2,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 9,
+        "to": {
+          "ix": 6,
+          "iy": 2,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 3,
+        "to": {
           "ix": 6,
           "iy": 0,
           "mode": 0
@@ -239,24 +221,6 @@
         "pieceId": 6,
         "to": {
           "ix": 7,
-          "iy": 3,
-          "mode": 0
-        }
-      },
-      {
-        "kind": "drag",
-        "pieceId": 11,
-        "to": {
-          "ix": 6,
-          "iy": 3,
-          "mode": 0
-        }
-      },
-      {
-        "kind": "drag",
-        "pieceId": 4,
-        "to": {
-          "ix": 6,
           "iy": 0,
           "mode": 0
         }
@@ -265,8 +229,8 @@
         "kind": "drag",
         "pieceId": 12,
         "to": {
-          "ix": 6,
-          "iy": 1,
+          "ix": 8,
+          "iy": 2,
           "mode": 0
         }
       },
@@ -274,7 +238,61 @@
         "kind": "drag",
         "pieceId": 13,
         "to": {
+          "ix": 6,
+          "iy": 1,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 7,
+        "to": {
+          "ix": 0,
+          "iy": 0,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 17,
+        "to": {
+          "ix": 6,
+          "iy": 3,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 16,
+        "to": {
+          "ix": 6,
+          "iy": 0,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 10,
+        "to": {
           "ix": 7,
+          "iy": 0,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 18,
+        "to": {
+          "ix": 6,
+          "iy": 1,
+          "mode": 0
+        }
+      },
+      {
+        "kind": "drag",
+        "pieceId": 7,
+        "to": {
+          "ix": 8,
           "iy": 2,
           "mode": 0
         }
@@ -284,16 +302,16 @@
         "pieceId": 15,
         "to": {
           "ix": 6,
-          "iy": 4,
+          "iy": 3,
           "mode": 0
         }
       }
     ],
     "walks": {
       "walks": 10000,
-      "won": 2486,
-      "rescued": 333,
-      "unresolved": 7181,
+      "won": 9781,
+      "rescued": 0,
+      "unresolved": 219,
       "probed": 200,
       "stillSolvable": 200,
       "undetected": 0,
@@ -301,9 +319,9 @@
       "ok": true
     },
     "policy": {
-      "tight": 0,
-      "loose": 0.01
+      "tight": 0.04,
+      "loose": 0.3
     }
   },
-  "cacheKey": "83f03545:rules5:solver6:level:var:d3a"
+  "cacheKey": "b9171216:rules5:solver6:level:var:d3a"
 }

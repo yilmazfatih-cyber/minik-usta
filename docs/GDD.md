@@ -1824,6 +1824,18 @@ doğru, sayaç 19, palet 2 katman. Sonraki W'yi Y hücresine (6,1)–(7,1) bıra
 katman olarak döner (2 katman). Son W doğru yerleşince (0,0)–(1,0) boşalır (iki yeni park hücresi). Geri Al → son W
 palete döner, (0,0)–(1,0) yine dolu. Hikaye 1 verisinde `C3_90` palet (sağ sütunun alt hücresi y = 1) →
 `pallet_not_grounded`.
+**ÖNERİ K-58 madde 10 — Palet şekli: üst katman kendi ayak izinden çıkabilmelidir (P3 bulgusu, 2026-11-12).** Madde 4
+gereği alt katmanlı bir üst katmanın sürüklemesinde paletin hücreleri dolu sayılır; K-08 yol kuralı yalnız birim
+ötelemeye izin verdiği için üst katman ancak **bir birim ötelemesi kendi ayak izine hiç değmeyen** bir şekilse tutulabilir:
+yatay çubuk (`D2_90`, `I3_90`; yukarı öteleme ayak izine değmez) ya da dikey çubuk (`D2_0`, `I3_0`; yalnız yana öteleme,
+yan sütunun o satırları boşsa). `C3`, `O4`, `L4`, `J4`, `T4` paletlerinde her öteleme kendi ayak izine değer: yalnız en alt
+katman (`z` 0) kalkabilir, üsttekiler hiç tutulamaz → bölüm çözümsüzdür. Kural: Hikaye 1'de palet şekli yalnız `D2_90`
+(ve `I3_90`, Bölüm 8+); dikey çubuk paleti Hikaye 2+'da ve yalnız yan sütun boşken. Doğrulayıcıya önerilen kod:
+`pallet_stuck` (error; L-41): alt katmanlı paletin şeklinin dört birim ötelemesinin hepsi kendi ayak iziyle kesişiyorsa
+(code-lead, REVIEW_LOG). Bugün bu durumu yalnız çözücü yakalar (`unsolvable`).
+**Örnek:** `C3_0` palet ×3, (4,0) çapalı: hücreler (4,0),(5,0),(4,1). Yukarı öteleme (4,1)'e değer (alt katman), sola
+(4,0)'a değer, sağa (5,0)'a değer → üst katman tutulamaz (K-09 (a)). Aynı yerde `D2_90` palet ×3: yukarı öteleme (4,1),(5,1)
+→ ayak izine değmez, boşsa tutulur.
 
 #### KABUL K-59 Sargılı Blok ve Makas (Y11)
 **Kural:** (1) `wrapped` bayraklı blok tutulamaz ve Vinç (K-37) ile seçilemez (K-09 (c)'ye eklenir). (2) Sargı varsa
@@ -1977,3 +1989,4 @@ yoktur → yeni D1 → Söküm son hamleyi geri alır.
 | V3-21 (KABUL, D-103) | 3 genişlikli blok hatalı yerleşir, başlangıç konumu dolu değil | K-17 adım 1 (başlangıca döner); adım 2 gerekirse aday sütunlar `0 … Wy − 3` |
 | V3-22 (KABUL) | 3 genişlikli boy 2 blok duvarı `height` = H iken aşmak ister | `(H + 2) − H = 2 ≥ 2` → geçer; `P5_0` (boy 3) geçemez → doğrulayıcı `piece_unreachable` |
 | V3-23 (KABUL) | Geri Al, palet katmanının doğru yerleşiminden sonra | Katman paletine üst katman olarak döner; o hamlede verilen bonus ve kalkan sargılar da geri gelir |
+| V3-24 (ÖNERİ, P3) | Alt katmanlı paletin şekli `C3`/`O4`/`L4`/`J4`/`T4` | Üst katman hiçbir birim ötelemeyle ayak izinden çıkamaz → tutulamaz; bölüm çözümsüz. K-58 madde 10: Hikaye 1'de palet yalnız `D2_90` (`I3_90` Bölüm 8+); önerilen kod `pallet_stuck` |

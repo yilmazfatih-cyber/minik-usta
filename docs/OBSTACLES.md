@@ -421,7 +421,7 @@ değişiklikleri: W1 ilk bölüm 4; W2 imzası `height = H`; Y5 imzası I5/Q9; S
 | S8 | `balloon` | 38 |
 | G-H | `gravity.build = "high"` | 15 |
 | G-L | `gravity.build = "low"` | 23 |
-| S9 | `site.cols ≥ 3` | 12 |
+| S9 | `site.cols ≥ 3` | 6 |
 
 **MVP dışı imzalar** (tabloya girmez; araçlar bu satırı okumaz — CL-2R-12): S2 Plan Boşluğu, imza "herhangi bir planda
 `.`"; doğrulayıcı `plan_has_window` ile reddeder. Proje sahibi S2'yi geri getirirse ilk bölüm numarasıyla tabloya
@@ -596,7 +596,11 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
 - **Bilgi kartı** (ÖNERİ, anahtar `obs.y9.desc`): TR «İki renkli blok: her rengi kendi yerine gelmeli.» · EN «Two-tone block: each color must match its spot.»
 
 ### Y10 — Palet (KABUL, D-104 ile kesinleşti)
-- **Bölge:** saha (bırakma yalnız şantiyede) · **İlk bölüm:** **7** (v3c tanıtım; ayrıca 8, 9, 10)
+- **Bölge:** saha (bırakma yalnız şantiyede) · **İlk bölüm:** **7** (v3c tanıtım; ayrıca 8, 9, 10 — her bölümde **tek palet `D2_90` ×3**, katmanları son iki katın malzemesi, LEVELS §8.14)
+- **Palet şekli (ÖNERİ, GDD K-58 madde 10; P3 bulgusu):** alt katmanlı üst katman, sahadaki her birim ötelemesi kendi ayak
+  izine değmiyorsa tutulabilir. Yatay çubuk (`D2_90`; `I3_90` Bölüm 8+) yukarı kalkar; `C3`, `O4`, `L4`, `J4`, `T4`
+  paletlerinin üst katmanı **hiç** tutulamaz (her öteleme ayak izine değer) → planın `C3` paleti (§8.13.4) kaldırıldı;
+  dikey çubuk paleti (`D2_0`) yalnız yana çıkar, Hikaye 2'ye kaldı. Önerilen doğrulayıcı kodu `pallet_stuck` (code-lead).
 - **Kural:** Palet, aynı şekilde 2–4 malzeme bloğunun aynı hücrelerde üst üste (z) durduğu yığındır. Yalnız en üst katman
   tutulabilir (K-09); alttaki katmanlar paletin hücrelerini doldurur. Üst katman kaldırılınca bir alttaki aynı anda
   "üst" olur (hücreler dolu kalır). **Kaldırılan katman yalnız şantiyeye bırakılır (D-104, GDD K-58 madde 9):** şantiyede
@@ -632,7 +636,7 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
   yalnız şantiyeye gider." · EN "Pallet blocks go only to the site." (aynı metin `tut.m.palletsite` taslağıdır).
 
 ### Y11 — Sargılı Blok ve Makas (ÖNERİ)
-- **Bölge:** saha (tetik şantiyede) · **İlk bölüm:** 7 (v3b yayını) → **8 (v3c planı, LEVELS §8.13)**
+- **Bölge:** saha (tetik şantiyede) · **İlk bölüm:** 7 (v3b yayını) → **8 (v3c yayını, LEVELS §8.14)**
 - **Kural:** `wrapped` bayraklı blok tutulamaz (K-09 (c)), Vinçle ve Altın Mala'yla seçilemez; rengi ve şekli görünür.
   Bölümde tam bir `scissors` bayraklı blok vardır. Makaslı blok K-16'ya göre **doğru** yerleştiği hamlenin 5. adımında
   (K-35) sahadaki bütün sargılar kalkar. Çekiç (K-36) tek sargıyı keser (bloğu kırmaz). Geri Al ve Söküm sargıları geri
@@ -652,7 +656,7 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
 - **Bilgi kartı** (ÖNERİ, anahtar `obs.y11.desc`): TR «Makaslı bloğu yerleştir, paketler açılsın.» · EN «Place the scissors block to unwrap the rest.»
 
 ### Y12 — Bonus Blok (ÖNERİ)
-- **Bölge:** saha (tetik şantiyede) · **İlk bölüm:** 9 (v3b) → **7 (v3c; ayrıca 9)** · **D-105:** her hikayede ödül anı
+- **Bölge:** saha (tetik şantiyede) · **İlk bölüm:** 9 (v3b) → **10 (v3c yayını, P3; plan 7 ve 9 idi — L-22 tek yeni mekanik kuralı bonusu 6–9'a sokmaz, LEVELS §8.14.4)** · **D-105:** her hikayede ödül anı
 - **Kural:** `bonus` bayraklı blok doğru yerleştiği hamlenin 4. adımında (K-35, maliyetten sonra) hamle sayacına
   `bonusMoves` (varsayılan 2) ekler. Hatalı yerleşim ve kaydırma bir şey vermez. Bölümde en çok 2 bonus blok. Geri Al ve
   Söküm bonusu geri alır. **Her hikayede ödül anıdır (D-105):** bütçeye girmez (K-62 `k` = 0 her zaman), karar sayımına
@@ -668,7 +672,7 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
 - **Bilgi kartı** (ÖNERİ, anahtar `obs.y12.desc`): TR «Bonus blok yerine oturunca +2 hamle verir.» · EN «A bonus block gives +2 moves when placed.»
 
 ### Y13 — Kaygan Blok (KABUL)
-- **Bölge:** saha · **İlk bölüm:** 8 (v3b yayını) → **9 (v3c planı)** · palet katmanı kaygan olamaz
+- **Bölge:** saha · **İlk bölüm:** 8 (v3b yayını) → **9 (v3c yayını)** · palet katmanı kaygan olamaz
 - **Kural:** `slippery` bayraklı blok sahada desteksiz kalamaz: `gravity.yard` kapalı olsa da hamle sonu 6. adımda (K-35)
   altında boşluk varsa düşer (K-20 kuralıyla, yalnız bu blok). Şantiyede sıradan bloktur.
 - **Veri:** `flags: ["slippery"]`.
@@ -682,14 +686,17 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
 | Mekanik | Veri imzası | İlk bölüm |
 |---|---|---|
 | Y9 | herhangi bir parçada `colors` | 5 (öneri) |
-| Y10 | herhangi bir parçada `stack` | 3 (öneri) |
-| Y11 | `wrapped` ya da `scissors` | 7 (öneri) |
-| Y12 | `bonus` | 9 (öneri) |
-| Y13 | `slippery` | 13 (öneri) |
+| Y10 | herhangi bir parçada `stack` | 7 (v3c) |
+| Y11 | `wrapped` ya da `scissors` | 8 (v3c) |
+| Y12 | `bonus` | 10 (v3c) |
+| Y13 | `slippery` | 9 (v3c) |
 
 **v3c ilk bölümleri (D-103…D-105, LEVELS §8.13; "Veri imzası" tablosu code-lead'in v3c bölüm paketinde bunlarla
 güncellenir — tablo testlerce okunduğu için bu pakette değişmedi):** S9 Geniş Şantiye 6 · Y10 Palet 7 · Y12 Bonus 7 ·
 Y11 Sargı + Makas 8 · Y13 Kaygan 9 · Y9 İki Renkli 5 (değişmez).
+**v3c yayını (P3, 2026-11-09):** "Veri imzası" tablosunda S9 = 6; `mechanics.ts` `TRAIT_MECHANICS` ilk bölümleri Y10 7 ·
+Y11 8 · Y13 9 · **Y12 10** (planın 7'si yerine: Bölüm 6–9'un her biri zaten bir mekanik tanıtır ve L-22 bölüm başına en çok
+bir yeni mekanik ister; bonus ilk kez finalde ödül anı olarak gelir, LEVELS §8.14.4).
 
 **Taşınan ilk bölümler (ÖNERİ, v3 eğrisi; LEVELS §8.2; S9 satırı D-103 ile geçersiz):** W1 Sabit Geçit 4 → 11, W2 Yüksek Duvar 6 → 12 (yalnız
 boyu ≤ 2 şekillerle), Y5 Ağır Yük 8 → 14, W3 Dar Geçit 9 → 16; S9 Geniş Şantiye 12 → 18. Hikaye 1 yeni oyuncaklara

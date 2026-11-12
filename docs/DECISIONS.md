@@ -685,3 +685,16 @@ açılış 10'a (Vinç ile aynı bölüm), B Bölüm 8'e bir sargı + makas (8 p
 **Gerekçe:** proje sahibinin "kurallar korunur" şartı (D-090 dahil) ile "daha çok blok" isteği bu çözücü ölçeğinde çakışıyor;
 kanıtsız bölüm yayımlamak yerine çeşitliliği şekil + özellikle (C3, L/J, T, I3, iki renkli, sargı, bonus) verdim.
 **Proje sahibine:** blok sayısı bugün 6–8'den 8–9'a çıktı, 16–22 hedefi bu turda yok; nedeni ve yolu yukarıda.
+
+### ÖNERİ P-P3-1 — v3c yayını: Hikaye 1'de palet yalnız `D2_90`; Bölüm 6–10 17–19 blok; bonus ilk kez finalde (product-lead, 2026-11-12)
+**Durum:** ÖNERİ. **Bağlam:** P3 bölüm turu (LEVELS §8.14); D-103…D-105 uygulandı, 6–10 `levels:check` yeşil.
+**Öneri:** (1) GDD K-58 madde 10: alt katmanlı paletin üst katmanı ancak bir birim ötelemesi kendi ayak izine değmiyorsa
+tutulabilir; Hikaye 1'de palet şekli yalnız `D2_90` (`I3_90` Bölüm 8+); doğrulayıcı kodu `pallet_stuck` (code-lead).
+`C3`/`O4`/`L4`/`J4`/`T4` paletinin üst katmanı hiç tutulamaz (P1 planındaki `C3` paletleri bu yüzden çıkarıldı). (2) Blok
+sayısı 17 / 18 / 18 / 17 / 19 (D-103 "18–22" amacının alt ucu): tek `D2_90` ×3 paletle Σ ≤ 48, domino ≤ %50 → N ≤ 19.
+Daha fazlası Hikaye 2'de `I3_90` paletiyle (kazanç 6). (3) Bonus (Y12) ilk kez Bölüm 10'da, `teaches` olmadan (K-60
+madde 6); 6–9'un her biri bir mekanik tanıttığı için L-22 bonusu oraya sokmaz. L-22'de Y12 muafiyeti kodlanırsa Hikaye 2'de
+de serbest. (4) Yerleşim üçlüsü en çok 2 bölümde (CL-V3-04): Bölüm 10 duvar 6.
+**Gerekçe:** D-103…D-105 ve korunan kurallar (K-55, K-47/K-48, YAO ≥ %60, D-090 kapıları, K-53, `min` ≤ 22) birlikte
+sağlandı; sapmalar ölçülen geometri sınırından gelir, kural gevşetilmedi.
+**Proje sahibine:** blok sayısı ve D-090'ın bu ölçekte tahmin sınıfı (10 000 yürüyüş, yakalanmayan çıkmaz %0,00) onayınızı bekler.

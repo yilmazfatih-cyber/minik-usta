@@ -127,8 +127,8 @@ describe('UX 5.10 booster bar (K-54, META 4)', () => {
     // level 10: the hammer and the crane are open; before the attempt grants them, their free trials show as pending
     expect(pendingFreeTrials(10, [])).toEqual({ hammer: 3, crane: 2 });
     expect(pendingFreeTrials(10, ['hammer'])).toEqual({ crane: 2 });
-    // level 7 holds two wrapped blocks (K-66: the hammer cuts a wrap); the slot model only needs the level id
-    const b7 = draft(7);
+    // level 8 holds two wrapped blocks (K-66: the hammer cuts a wrap; levels v3c, LEVELS §8.14); the slot model only needs the level id
+    const b7 = draft(8);
     const s7 = GameSession.start(b7);
     const before = boosterSlotModels({ levelId: 10, inv: NO_INV, targets: s7.summary().boosterTargets });
     expect(before[0]).toMatchObject({ id: 'hammer', state: 'ready', count: 3 });
@@ -164,8 +164,8 @@ describe('UX 5.10 booster bar (K-54, META 4)', () => {
     expect(slotLook('noTarget').color).toBe('grey');
   });
 
-  it('E-61 hammer slot without target in level 8 (K-54: slippery and two-tone blocks are no hammer target; nothing is wrapped)', () => {
-    const g = GameSession.start(draft(8));
+  it('E-61 hammer slot without target in level 9 (K-54: slippery, two-tone and pallet blocks are no hammer target; nothing is wrapped)', () => {
+    const g = GameSession.start(draft(9));
     const [hammer, crane] = boosterSlotModels({
       levelId: 10,
       inv: NO_INV,
@@ -375,8 +375,8 @@ describe('UX 5.2 booster picks read the core (K-33, K-36, K-37)', () => {
     }
   });
 
-  it('K-36 / K-37 hammer targets the wrapped blocks of level 7; the crane spots of a level 1 block are correct site spots', () => {
-    const b7 = draft(7);
+  it('K-36 / K-37 hammer targets the wrapped blocks of level 8; the crane spots of a level 1 block are correct site spots', () => {
+    const b7 = draft(8);
     const g7 = GameSession.start(b7);
     expect(pickEligible('hammer', g7.state, g7.hooks)).toHaveLength(2);
     const g10 = GameSession.start(draft(1));

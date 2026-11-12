@@ -1,5 +1,5 @@
 /**
- * The shipped levels 1–10 (`levels/level_001…010.json`, levels v3b: 8 → 16 blocks, `schemaVersion` 2 or 3) against the
+ * The shipped levels 1–10 (`levels/level_001…010.json`, levels v3c: 8 → 18 blocks, `schemaVersion` 2 or 3) against the
  * validator, the mechanic signatures (OBSTACLES "Veri imzası", K-45/10) and the owner's wishes (CL-V3-01/04/05): more blocks,
  * a different layout every level, new shapes and at least four new block traits. The Faz 2R levels they replaced are the
  * archive tests/fixtures/levels-2r/ (tests/level/drafts.test.ts).
@@ -53,14 +53,14 @@ describe('K-55 shipped levels 1–10 (fixed yard)', () => {
     }
   });
 
-  it('K-45/10 the derived new mechanics are 1 → S1, 5 → Y9, 7 → Y11, 8 → Y13, 9 → Y12 and match `teaches` (CL-V3-05: slippery moved to level 8)', () => {
+  it('K-45/10 K-60 the derived new mechanics are 1 → S1, 5 → Y9, 6 → S9, 7 → Y10, 8 → Y11, 9 → Y13, 10 → Y12 and match `teaches`; the bonus (Y12) is a reward moment that is never taught (K-60 item 6, D-105; levels v3c, LEVELS §8.14)', () => {
     const seen = new Set<MechanicId>();
     const fresh: Record<number, MechanicId[]> = {};
     for (const n of IDS) {
       const lvl = parsed(n);
       fresh[n] = deriveMechanics(lvl).filter((m) => !seen.has(m));
       for (const m of deriveMechanics(lvl)) seen.add(m);
-      expect(lvl.teaches, `level ${n} teaches`).toBe(fresh[n]?.[0]);
+      expect(lvl.teaches, `level ${n} teaches`).toBe(fresh[n]?.filter((m) => m !== 'Y12')[0]);
     }
     expect(fresh).toEqual({
       1: ['S1'],
@@ -68,11 +68,11 @@ describe('K-55 shipped levels 1–10 (fixed yard)', () => {
       3: [],
       4: [],
       5: ['Y9'],
-      6: [],
-      7: ['Y11'],
-      8: ['Y13'],
-      9: ['Y12'],
-      10: [],
+      6: ['S9'],
+      7: ['Y10'],
+      8: ['Y11'],
+      9: ['Y13'],
+      10: ['Y12'],
     });
   });
 
@@ -104,14 +104,15 @@ describe('K-55 shipped levels 1–10 (fixed yard)', () => {
     expect([...all]).toEqual(expect.arrayContaining(['D2', 'O4', 'C3', 'L4', 'J4', 'T4', 'I3']));
   });
 
-  it('K-57 K-59 K-60 K-61 CL-V3-05 at least four block traits are in shipped levels: two-tone (5), wrap + scissors (7), slippery (8), bonus (9)', () => {
+  it('K-57 K-58 K-59 K-60 K-61 CL-V3-05 the block traits of levels v3c: two-tone (5), pallet (7), wrap + scissors (8), slippery (9), bonus (10)', () => {
     const has = (n: number, pred: (p: ReturnType<typeof pieces>[number]) => boolean): boolean =>
       pieces(n).some(pred);
     expect(has(5, (p) => p.colors !== undefined)).toBe(true);
-    expect(has(7, (p) => p.flags?.includes('wrapped') === true)).toBe(true);
-    expect(has(7, (p) => p.flags?.includes('scissors') === true)).toBe(true);
-    expect(has(8, (p) => p.flags?.includes('slippery') === true)).toBe(true);
-    expect(has(9, (p) => p.flags?.includes('bonus') === true)).toBe(true);
+    expect(has(7, (p) => p.stack !== undefined)).toBe(true);
+    expect(has(8, (p) => p.flags?.includes('wrapped') === true)).toBe(true);
+    expect(has(8, (p) => p.flags?.includes('scissors') === true)).toBe(true);
+    expect(has(9, (p) => p.flags?.includes('slippery') === true)).toBe(true);
+    expect(has(10, (p) => p.flags?.includes('bonus') === true)).toBe(true);
     // the finale uses three of them (CL-V3-07: the wrap is what the Hammer cuts)
     expect(has(10, (p) => p.flags?.includes('wrapped') === true)).toBe(true);
   });

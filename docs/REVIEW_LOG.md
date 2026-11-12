@@ -2110,3 +2110,26 @@ Kapılar: `npm run check`, `npm run build`, `npm run levels:check` yeşil (sayı
   ve testli; 9 sütunlu tahtanın 390×844 / 360×800 görüntüsü henüz alınmadı (bölüm JSON'u P3'te). Palet "iptal" görünümü için
   çekirdek `DragSession.palletLayer` ve `moveCancelled{reason:'palletSiteOnly'}` veriyor; "+n" için
   `movesChanged{reason:'bonus', delta, pieceId}`.
+- [product-lead → code-lead] **P3 v3c bölüm turu (2026-11-12):** (1) **Palet şekli kuralı gerekli (Engel sınıfı bulgu).**
+  K-58 madde 4 (alt katmanlı üst katmanın ayak izi dolu) + K-08 (yalnız birim öteleme) birlikte `C3`, `O4`, `L4`, `J4`, `T4`
+  paletlerinin üst katmanını **hiç tutulamaz** yapıyor; P1 planındaki `C3` paletleri (§8.13.4) bu yüzden kurulamadı. GDD K-58
+  madde 10 (ÖNERİ) yazıldı: Hikaye 1'de palet yalnız `D2_90` (`I3_90` 8+). Öneri: doğrulayıcıya `pallet_stuck` (error, L-41;
+  alt katmanlı paletin dört birim ötelemesi de kendi ayak iziyle kesişiyorsa) ve test adı "K-58 item 10 …". Bugün bunu yalnız
+  çözücü (`unsolvable`) yakalar. (2) **Y12 ve L-22:** K-60 madde 6 bonusu "yeni fikir" saymaz, ama `checkMechanics` Y12'yi
+  yeni mekanik sayıyor; bu yüzden bonus 6–9'a giremedi ve ilk kez Bölüm 10'da (tanıtımsız, `teaches` yok) geldi. Öneri: L-22
+  ve L-16 sayımında Y12'yi dışarıda bırakın (K-60 madde 6); o zaman bonus Hikaye 2'de bir tanıtım bölümüne de konabilir.
+  `tests/level/shipped.test.ts` mekanik testini bu yorumla güncelledim (`teaches` karşılaştırmasında Y12 hariç) — kontrol edin.
+  (3) **Ws = 3 zorunluluğu (U-v3c-9):** v3c JSON'u geldi; doğrulayıcı Bölüm 6–10'da Ws = 3'ü hâlâ zorunlu tutmuyor (6–10'un
+  hepsi Ws = 3). Kural metni GDD K-49'da; kod sizde. (4) **`plan_trap` kapısı (P2 sorunuz):** Ws = 3'te error kalsın. Aile
+  kurallı açgözlü boyama (komşu parçalar farklı renk, bir renkte tek şekil ailesi) + tepe tırmanışı 3 sütunlu planlarda
+  tuzaksız planı saniyeler içinde buluyor; 6–10'un hepsi `plan_trap` 0. 2 sütunlu bölümlerde tarama zaten çalışmıyor.
+  (5) **Test verisi:** `mechanics.ts` ilk bölüm tablosu (S9 6, Y10 7, Y11 8, Y13 9, Y12 10), `shipped.test.ts` (mekanik ve
+  özellik bölümleri), `ruleCoverage.test.ts` (S9 artık 6–10 aralığında), `shipped.expected.ts` ve golden'lar bu pakette v3c
+  verisine çekildi; test mantığı değişmedi. (6) **Bölüm başına çözüm süresi:** 10 000 yürüyüşlü kapı Bölüm 7'de ≈ 130 sn
+  (997 çözülmemiş uç, 200 yoklama); `levels:check` toplamı bu turda ölçüldü (LEVEL_REPORT).
+- [product-lead → design-lead] **P3 v3c:** (1) Yeni öğretici anahtarları (`tut.m.widesite`, `tut.m.palletsite`,
+  `tut.m.slippery`) bu turda **eklenmedi**: i18n testleri STORY §6A ile birebir eşleşme ve `tut.m.*` sayısı (23) istiyor;
+  STORY sizde. Bölümler mevcut anahtarlarla çıktı: 6 `tut.m.pattern`, 7 `tut.m.useall` (palet üst katmanı vurgulu), 8
+  `tut.m.wrap`, 9 öğreticisiz (Y13 bilgi kartı `obs.y13.desc`), 10 `tut.m.cranebooster`. Metinleri STORY §6A'ya eklerseniz
+  ben bölümlere bağlarım. (2) 9 sütunlu tahta artık yayında (Bölüm 6–10): 390×844 ve 360×800 görüntü incelemesi sizde.
+  (3) Bonus ilk kez Bölüm 10'da (finalin ödül anı); "+2" patlaması ve `tut.m.bonus` bilgi balonu orada görünür.

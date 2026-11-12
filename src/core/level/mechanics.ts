@@ -79,8 +79,8 @@ export const MECHANICS: readonly MechanicSignature[] = [
   { id: 'S8', firstLevel: 38, detect: (l) => anyFlag(l, 'balloon') },
   { id: 'G-H', firstLevel: 15, detect: (l) => l.gravity.build === 'high' },
   { id: 'G-L', firstLevel: 23, detect: (l) => l.gravity.build === 'low' },
-  // S9 Geniş Şantiye (K-49, R2-02): a site of 3 or 4 columns.
-  { id: 'S9', firstLevel: 12, detect: (l) => (l.site?.cols ?? DEFAULT_SIZES.ws) >= 3 },
+  // S9 Geniş Şantiye (K-49, R2-02; D-103: first level 6, v3c): a site of 3 columns.
+  { id: 'S9', firstLevel: 6, detect: (l) => (l.site?.cols ?? DEFAULT_SIZES.ws) >= 3 },
 ];
 
 if (MECHANICS.length !== MECHANIC_IDS.length)
@@ -92,10 +92,10 @@ if (MECHANICS.length !== MECHANIC_IDS.length)
  */
 export const TRAIT_MECHANICS: readonly MechanicSignature[] = [
   { id: 'Y9', firstLevel: 5, detect: (l) => allPieces(l).some((p) => p.colors !== undefined) },
-  { id: 'Y10', firstLevel: 3, detect: (l) => allPieces(l).some((p) => p.stack !== undefined) },
-  { id: 'Y11', firstLevel: 7, detect: (l) => anyFlag(l, 'wrapped') || anyFlag(l, 'scissors') },
-  { id: 'Y12', firstLevel: 9, detect: (l) => anyFlag(l, 'bonus') },
-  { id: 'Y13', firstLevel: 8, detect: (l) => anyFlag(l, 'slippery') },
+  { id: 'Y10', firstLevel: 7, detect: (l) => allPieces(l).some((p) => p.stack !== undefined) },
+  { id: 'Y11', firstLevel: 8, detect: (l) => anyFlag(l, 'wrapped') || anyFlag(l, 'scissors') },
+  { id: 'Y12', firstLevel: 10, detect: (l) => anyFlag(l, 'bonus') },
+  { id: 'Y13', firstLevel: 9, detect: (l) => anyFlag(l, 'slippery') },
 ];
 
 if (TRAIT_MECHANICS.map((m) => m.id).join() !== TRAIT_MECHANIC_IDS.join())

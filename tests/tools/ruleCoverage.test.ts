@@ -88,8 +88,8 @@ describe('test:rules (TECH 12.2)', () => {
     // GDD §13 "(Faz 2R: geçersiz …)" rows keep their id but are no rule any more: E-23 (truck help B1), E-55 (multi-step
     // Söküm) need no test at any phase
     expect(ids.some((r) => r.id === 'E-23' || r.id === 'E-55')).toBe(false);
-    // Obstacles first seen in levels 6–10 (OBSTACLES "Veri imzası": W2 6, Y5 8, W3 9).
-    expect(only2R('obstacle').sort()).toEqual(['W2', 'W3', 'Y5']);
+    // Obstacles first seen in levels 6–10 (OBSTACLES "Veri imzası": W2 6, Y5 8, W3 9; v3c D-103: S9 6).
+    expect(only2R('obstacle').sort()).toEqual(['S9', 'W2', 'W3', 'Y5']);
     expect(phase(2, 'K')).not.toContain('K-47');
   });
 
