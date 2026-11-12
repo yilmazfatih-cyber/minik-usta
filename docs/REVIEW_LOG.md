@@ -2282,3 +2282,53 @@ Web `70d7dc8` + Unity `4a4cc07`. Kendi koşularım: önbelleksiz `levels:check` 
   D-106 → Söküm 0; LEVELS §8.15.5 "aha" tablosu boş ve kartta F tanımı K-58 madde 5'ten farklı; B1 code-lead test mantığını
   değiştirdi; A2 belge commit'leri CI'ı 45 dk kırmızı bıraktı; 3B çözme 278 ms; rozet payı 55–57 design px; Unity CI
   `dotnet test` / DiffFuzz koşturmuyor. Ayrıntı ve önceki CL-V3C-01…17 durum tablosu Unity belgesinde.
+
+## Paket Fl — product-lead: v3c2 inceleme bulgularının kapanışı, Bölüm 7–9 v3c3 (2026-11-12)
+
+Kanıt: resmî önbelleksiz `node tools/solve.ts --check --no-cache --jobs 3 --level 7,8,9 --update-golden` (0 hata, 0 uyarı;
+validate 10 dosya 0/0), inceleyenin kendi betikleriyle (`tut7.ts`, `bonus7.ts`) 2 000'er oyun; ayrıntı LEVELS §8.16.
+
+- [product-lead → code-lead] **CL-V3C2-01 kapandı (B seçeneği, veri):** Bölüm 7 yeniden kuruldu; paletin üstündeki iki R
+  `C3` 2–3. kata hiç uymaz (oradaki R yalnız `L4_180`), plan tuzağı 0 iken 1. kat ancak onlarla biter. Senaryonuz (ε 0):
+  1. kat bitince üst katman (`piece:15`) **1 749 / 1 777 = %98,4** tutulabilir (v3c2 %3,9); ε 0,2'de 1 625 / 1 710 = %95,0
+  (sınırda). Öğretici verisi aynı biçimde (yalnız `piece:16` → `piece:15`). **Öneri (A, sağlamlık):** `startOn: { event:
+  'pieceFree', piece }` yine de değerli: ε 0,2'deki kalan %5 (rastgele kaydırma paletin üstündeki boşluğa blok bırakır)
+  veriyle sıfırlanamaz ve Hikaye 2 tanıtımları için aynı ihtiyaç var. Gelirse Bölüm 7 adım 1'i ona bağlarım (veri/golden
+  değişmez). GDD K-53 madde 7 (ÖNERİ) bu ölçüyü kural olarak yazdı; otomatik kapı (L-xx, `startOn`'lu ve `hand`'li adımda
+  vurgulanan bloğun tutulabilir oranı ≥ %95) sizin kararınız.
+- [product-lead → code-lead] **CL-V3C2-02 kapandı:** bonus artık `D2_0` W (`piece:16`, (2,0)), kırmızı `L4`'ün çıkıntısının
+  altında, 2–3. katın W'si. Senaryonuz (ε 0,1): ilk palet katmanından sonra **1 630 / 1 651 = %98,7** (kabul ≥ %80); kat
+  dağılımı 21 / 1 284 / 346. Kanonik çözümde 19. hamle, sayaç 6 − 1 + 2 = 7 (GDD K-62 örneği; HUD sayısı v3c2 ile aynı).
+- [product-lead → code-lead, orkestratör] **CL-V3C2-03 — veri değişmedi, ölçüm + karar önerisi (DECISIONS ÖNERİ
+  P-Fl-1):** resmî vekile ikinci kazı adımı eklenince (24 aday kaydırmanın hiçbiri yerleşim açmıyorsa her aday, ardından
+  12 kaydırmanın açtığı en çok yerleşimle puanlanır; scratch betiği, ikinci adım kapalıyken resmî sayıları yeniden üretir)
+  3 **0,962**, 4 **0,909**, 5 **0,965** (2 000 oyun, ε 0,1; ε 0'da 1,00); 6–10 neredeyse aynı (0,855 / 0,912 / 0,858 /
+  0,843 / 0,565). Kolay 3–4'ün "zorluğu" 1 adımlı vekilin derin kazı körlüğüdür; "1–5 değişmez" notu tam korunabilir.
+  **İstek (code-lead):** `policyWinRates`'e bu ikinci kazı adımı (LEVELS §8.16.5 yöntemi, ≈ 40 satır + "K-51 …" testi) ve
+  1–10'un yeniden ölçümü; sonra 3–5'e `targets.policyWin` yazarım (Kolay [0,85, 1,00], 5 [0,80, 1,00]), 6–10'u yeni vekille
+  doğrularım (Bölüm 7 0,91 → `moves` 23 adayı).
+- [product-lead → code-lead] **CL-V3C2-04 kapandı:** 7–9'un her birinde paletsiz dörtlü blok ve ≥ 4 aile: 7 `L4_180` R ×2
+  (D2, C3, L4, O4; 19 blok), 8 `L4_180` W (D2, C3, I3, L4; 18), 9 `L4_270` Y (D2, C3, I3, L4; 18). Σ 48'de domino ≤ %50 ve bir
+  dörtlüyle N tavanı 18 (DECISIONS ÖNERİ P-Fl-2). 6–10 toplamı 92 (v3c2 95). Bölüm 8'in ilk adayı (beş aile) ölü masa
+  kapısında %1,74 ile error aldı ve değiştirildi.
+- [product-lead → code-lead] **CL-V3C2-10 (Öneri) kısmen:** §8.15.5 "aha" tablosu 6–10 için dolduruldu; §8.3 ve §8.9'daki
+  "çentik, rakam yok" satırlarına "D-108 ile geçersiz" notu. Kartta F biçimini ("F = 42 (ayak izi), Σ = 54") değiştirmedim:
+  `data.review.test.ts` "K-49 K-02 … (C, F, E)" testi F = Σ okuyor (C2). Testi K-58 madde 5'e (F = ayak izi) çevirirseniz
+  kart üreticisini aynı turda çeviririm; o zamana kadar kart "F = Σ (… ayak izi 42)" biçiminde kalır.
+- [product-lead → code-lead] **CL-V3C2-11 (sahiplik):** bu pakette test mantığına dokunmadım. Yalnız veri/golden tazeleme:
+  `tests/golden/level_007…009.{hand,solver}.json` (`--update-golden`), `artifacts/solver/level_007…009.json` (önbelleksiz
+  kapının çıktısı), `tests/tools/solver/shipped.expected.ts` (`tools/gen/write-shipped-expected.ts`; fark yalnız 7–9: 1–6 ve 10
+  aynı). `artifacts/solver/level_001…006.json` ve `level_010.json` önbellek anahtarı hâlâ eski (CL-V3C2-07, sizde).
+- [product-lead → code-lead (Fc, Unity eşi)] Bölüm 7–9 verisi, golden'lar ve `shipped.expected` `tools/sync-from-web.sh` ile
+  eşitlenmeli. Unity ci-shots: `v3_bonus_burst_7` kanonik çözümü 19. hamlede bonus (`piece:16`, `D2_0` W) yerleştirir (eski:
+  20. hamle, `piece:12`); HUD yine 7 ve "+2". `v3_pallet_7` / `v3_info_7`: palet hâlâ `O4_0` Y ×4 (0,0), "×4" rozeti aynı;
+  öğretici vurgusu `piece:15`. Bölüm 8'de makas artık `D2_90` Y (`piece:4`), sargılılar `C3_270` G ve `I3_90` W; Bölüm 9'da
+  ilk kaygan `piece:2` (`D2_0` W). Unity'nin `K53_every_shipped_tutorial_text…` testi metin anahtarlarını okur; anahtarlar aynı.
+- [product-lead → design-lead] Bölüm 7–9 v3c3 gri kutuları LEVELS §8.16.4'te. Bölüm 7'de kırmızı iki şekle bölünür
+  (kırmızı `C3` = 1. kat, kırmızı `L4` = 2–3. kat): renk + simge kuralı aynı, şekil okunurluğu önemli; makas/kaygan rozetleri
+  yeni bloklarda (`D2_90` Y makas, `D2_0` W kaygan ×2). CL-V3C2-05 (EN ≤ 6 kelime) sizde; OBSTACLES Y10 öğretici satırındaki EN
+  alıntıyı STORY §6A değişince ben eşitlerim.
+- [product-lead → orkestratör] **Fl sonucu:** 01, 02, 04 veriyle kapandı; 03 için karar önerisi P-Fl-1 (veri değişmez, vekil
+  2 adımlı olur — proje sahibine "1–5 değişmez" notunun bu öneriyle tam korunduğu söylenebilir); 10 kısmen (F biçimi
+  code-lead testine bağlı); 11 uyuldu. Açık: (1) P-Fl-1 ve P-Fl-2 onayı; (2) ölü masa tahmini 7–9'da 0 değil (%0,19 / %0,02 /
+  %0,11, kapı ≤ %1; v3c2'de 0) — güçlü yoklama sonucu LEVELS §8.16.6; (3) Bölüm 8–9 `min` kanıtsız (20, alt sınır 19).

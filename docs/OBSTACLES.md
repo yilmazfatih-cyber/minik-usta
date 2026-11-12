@@ -597,7 +597,8 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
 
 ### Y10 — Palet (KABUL, D-104 ile kesinleşti; D-106 palet şekli, D-108 görünüm, 2026-11-12)
 - **Bölge:** saha (bırakma yalnız şantiyede) · **İlk bölüm:** **7** (v3c2 tanıtım; ayrıca 8, 9, 10 — her bölümde tek palet,
-  şekli bölümden bölüme değişir: 7 `O4_0` Y ×4, 8 `C3_0` W ×3, 9 `C3_270` G ×3, 10 `C3_0` W ×4; LEVELS §8.15)
+  şekli bölümden bölüme değişir: 7 `O4_0` Y ×4, 8 `C3_0` W ×3, 9 `C3_270` G ×3, 10 `C3_0` W ×4; LEVELS §8.15, 7–9 v3c3
+  §8.16)
 - **Palet şekli (KABUL, D-106; GDD K-58 madde 4 ve 10):** sürüklenen katman **kendi paletinin kalan katmanlarıyla
   çarpışmaz**: yığından yukarı çıkar, yanı boşsa kendi hücresinin üstünden yana kayar; başka bloklar, duvar ve çerçeve
   aynen engeldir, palet başka her blok için dolu kalır. Bu yüzden Hikaye 1'de yerde duran her izinli şekil palet olabilir:
@@ -615,9 +616,11 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
   kuralı (`pallet_capacity`, madde 8) D-104 ile kalktı: katman sahaya inmediği için palet boş alanı azaltamaz.
 - **Veri:** parçada `stack: { id, z }` (aynı `id`'li parçalar aynı şekil ve çapa; `z` 0 = en alt, ardışık). Palet
   katmanı `slippery`, harç ve cam bayrağı taşıyamaz (`flag_combo_forbidden`).
-- **Örnek:** Bölüm 7 v3c2: palet `O4_0` Y ×4, hücreler (0,0)–(1,1); üstündeki beş blok 1. katın malzemesidir. 1. kat
-  bitince üst Y tutulur, sahaya (2,7) bırakılır → iptal, sayaç aynı. Şantiyede 2. katın Y karesine → doğru, palet 3
-  katman. W hücresine → hatalı, sayaç −1, Y palete döner. Dördüncü Y de yerleşince (0,0)–(1,1) boşalır (2×2 park yeri).
+- **Örnek:** Bölüm 7 v3c3 (CL-V3C2-01): palet `O4_0` Y ×4, hücreler (0,0)–(1,1); üstünde 1. katın iki R `C3`'ü ve en üst
+  sırada bir W domino durur. R `C3`'ler 2–3. kata uymaz (oradaki R yalnız `L4` biçimindedir), bu yüzden 1. kat bitince
+  paletin üstü açıktır. Üst Y tutulur, sahaya (2,7) bırakılır → iptal, sayaç aynı. Şantiyede 2. katın Y karesine (6,0)–(7,1)
+  → doğru, palet 3 katman. W hücresine → hatalı, sayaç −1, Y palete döner. Dördüncü Y de yerleşince (0,0)–(1,1) boşalır
+  (2×2 park yeri).
 - **Okunurluk (G1b, DL-V3-01/02/03/17; D-108):** taban gri-mavi metal kızaktır (gövde `#8A9BB0`; ahşap rengi ve ağaç
   damarı yok — W "Ahşap" bloğuyla ΔE00 ≥ 40), yalnız bloğun altında 16 design px dudak olarak görünür, hücrenin ortasını
   kaplamaz. Katman sayısı **"×n" beyaz daire rozetiyle** gösterilir (n = 2–4; Ø 76 design px, rakam 44 px, 360 px'te
@@ -636,7 +639,8 @@ G1b'den sonra K-64 `traitDelta` ile ölçülür), (b) **görsel okunurluk** (ren
 - **Öğretici (Bölüm 7, 2 adım; STORY §6A, CL-V3C-06):** (1) `tut.m.pallet` TR "Paletten hep en üstteki alınır." · EN
   "Take from the top of the pallet." — palet üst katmanı vurgulu, el dokunuşu; (2) `tut.m.palletsite` TR "Katmanı kaldır,
   şantiyeye bırak." · EN "Lift a layer, set it on the site." — katman doğru yerleşince biter. Adımların `startOn`/`done`
-  olayları LEVELS §2 Bölüm 7 kartındadır. "Sahaya bırakılamaz" bilgisi öğretici balonunda değil, bilgi kartının ikinci
+  olayları LEVELS §2 Bölüm 7 kartındadır. Adım 1 `startOn: segmentDone` ile açılır; o anda üst katman 1. katı bitiren
+  oyunların ≥ %95'inde tutulabilir olmalıdır (GDD K-53 madde 7 ÖNERİ; v3c3'te %98,4, LEVELS §8.16.3). "Sahaya bırakılamaz" bilgisi öğretici balonunda değil, bilgi kartının ikinci
   satırındadır.
 - **Bilgi kartı** (ÖNERİ, anahtar `obs.y10.desc`): TR «Paletten hep en üstteki alınır.» · EN «Take from the top of the pallet.»
   Kartın ikinci satırı ayrı anahtardır (`card.y10.site`, STORY §6A; web ve Unity i18n'de): TR "Katman sahaya inmez,

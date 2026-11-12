@@ -1396,6 +1396,15 @@ Yukarıdaki T tablosu yalnız `schemaVersion` 1 verisi içindir (Faz 2R'de vard�
 6. **Tekrar oynanış (Faz 2R):** oyuncunun kaydında bölüm `won = true` ise (§14 "Kayıt, bölüm başına") o bölümün
    `tutorial[]` adımları gösterilmez (1–10 tekrar döngüsü ve Usta Modu dahil, META §8.5, §10). Bağlamsal satırlar kendi
    `seenContextTips` kuralına bağlıdır.
+7. **ÖNERİ — Elin gösterdiği blok tutulabilir (CL-V3C2-01, product-lead 2026-11-12; bölüm verisi kuralı, otomatik kapısı
+   code-lead'e önerildi):** `hand` taşıyan ve `highlight`'ı `piece:N` olan bir adım `startOn` ile başlıyorsa, adım
+   başladığı anda N tutulabilir olmalıdır (`holdableIgnoringMoves`, K-30). Ölçü: çözücünün hamle kümesiyle "görünen doğru
+   yerleşimi al, yoksa rastgele kaydır" oyuncusu, ε 0, 2 000 oyun; `startOn` olayının gerçekleştiği oyunların **≥ %95**'inde
+   N tutulabilir (LEVELS §8.16.3). `startOn`'suz adım bölüm başında açılır; ilk hamle kazı olduğundan (K-51/1) vurgulanan
+   blok örtülü olabilir, bu yüzden böyle bir adım `hand` taşımaz ve `done`'ı o bloğun doğru yerleşimidir (Bölüm 6, 8, 9).
+   **Örnek:** Bölüm 7 v3c3 adım 1 (`startOn segmentDone`, `piece:15`, el `tap`):
+   paletin üstündeki iki R `C3` başka hiçbir kata uymaz (plan tuzağı 0 iken 1. kat ancak onlar yerleşince biter), en üst sıradaki
+   W domino (`j`) onlara ulaşmak için kalkar; 1. katı bitiren oyunların %98,4'ünde üst katman tutulabilir (v3c2'de %3,9).
 **Örnek:** Bölüm 3 adım 1 (`piece:2` = `c`, `done: { event: yardMove, piece: 'piece:2' }`) etkinken oyuncu `d`'yi
 (`D2_90` Y, (2,0)) sahada (2,1)'e kaydırır → `yardMove` olur ama süzgeç tutmaz, adım sürer; 4 sn hareketsizlikte el
 yeniden görünür. Oyuncu `c`'yi (1,2)'ye kaydırınca adım biter, adım 2 (`tut.m.free`) başlar. Oyuncu Bölüm 3'ü kazanıp
@@ -1726,6 +1735,8 @@ Bölüm planı: LEVELS §8.13 (v3c).
 katmanı kendi paletiyle çarpışmaz) ve madde 10 (palet şekli serbest, `pallet_stuck` emekli; `RULES_VERSION` 6), K-65
 madde 4 (palet katman sayısı "×n" beyaz daire rozet, gri-mavi metal kızak), K-58 ve K-62 örnekleri sevkiyat verisine
 çekildi (CL-V3C-14). Bölüm verisi: LEVELS §8.15 (v3c2).
+**v3c3 eki (product-lead paketi Fl, 2026-11-12; CL-V3C2-01/02/04):** Bölüm 7–9 yeniden kuruldu (LEVELS §8.16); K-58 ve
+K-62 örnekleri yeni kanonik çözüme çekildi; K-53 madde 7 (ÖNERİ: elin gösterdiği blok adım başında tutulabilir) eklendi.
 
 #### KABUL K-56 Şekil kümesi v3 (K-44 açılış tablosunun değişikliği)
 **Kural:** Hikaye bölümüne göre izinli türler: 1 → B1, D2, O4, C3, **L4, J4 (2. bölümden), T4 (6. bölümden), I3
@@ -1824,13 +1835,13 @@ sahaya inemediği için (madde 9) paletten kalkan katman boş saha alanını hi�
      yalnız D-090 kapısının (`undetected_dead` = 0) kanıtıyla bulunur.
    - (h) Paletin son katmanı yerleşince ayak izi hücreleri boşalır; bu, oyunda **boş alanın arttığı** tek palet anıdır
      (sunum: kızak 120 ms'de söner, JUICE).
-**Örnek (sevkiyat verisi, Bölüm 7 v3c2; CL-V3C-14):** palet `O4_0` Y ×4, hücreler (0,0)–(1,1); üstündeki beş blok 1.
-katındır. Kanonik çözümde 1. kat 9. hamlede biter, sayaç 16, paletin üstü boştur. Oyuncu üst Y'yi tutar, sahada (2,7)'ye
-bırakır → (c) iptal, sayaç 16, palet 4 katman. Aynı katmanı 2. katın Y karesine (7,0)–(8,1) bırakır → (a) doğru, sayaç
-15, palet 3 katman. Sonraki katmanı desteği henüz olmayan (6,2)–(7,3)'e bırakır (altındaki (6,0)–(6,1) R boş; K-34) →
-(b) hatalı, sayaç 14, katman paletine üst katman olarak döner (3 katman). Dördüncü katman doğru yerleşince (0,0)–(1,1)
-boşalır (dört yeni park hücresi). Geri Al → son katman palete döner, (0,0)–(1,1) yine dolu. Hikaye 1 verisinde `C3_90`
-palet (sağ sütunun alt hücresi y = 1) → `pallet_not_grounded`.
+**Örnek (sevkiyat verisi, Bölüm 7 v3c3; CL-V3C-14, CL-V3C2-01):** palet `O4_0` Y ×4, hücreler (0,0)–(1,1); üstünde 1.
+katın iki R `C3`'ü ve bir W domino durur. Kanonik çözümde 1. kat 8. hamlede biter, sayaç 16 (24 − 8), paletin üstü boştur.
+Oyuncu üst Y'yi tutar, sahada (2,7)'ye bırakır → (c) iptal, sayaç 16, palet 4 katman. Aynı katmanı 2. katın Y karesine
+(6,0)–(7,1) bırakır → (a) doğru, sayaç 15, palet 3 katman. Sonraki katmanı desteği henüz olmayan (7,3)–(8,4)'e bırakır
+(altındaki (7,2)–(8,2) R boş; K-34) → (b) hatalı, sayaç 14, katman paletine üst katman olarak döner (3 katman). Dördüncü
+katman doğru yerleşince (0,0)–(1,1) boşalır (dört yeni park hücresi). Geri Al → son katman palete döner, (0,0)–(1,1) yine
+dolu. Hikaye 1 verisinde `C3_90` palet (sağ sütunun alt hücresi y = 1) → `pallet_not_grounded`.
 **KABUL K-58 madde 10 — Palet şekli serbest (D-106, orkestratör kararı 2026-11-12; P3 bulgusunun ÖNERİ metninin yerine).**
 Madde 4 gereği katman kendi paletiyle çarpışmadığından Hikaye 1'de izinli her malzeme şekli palet olabilir (`D2`, `C3`,
 `O4`, `L4`, `J4`, `T4`, Bölüm 8+ `I3`), yeter ki yerde olsun (madde 9 g: `D2_0`, `D2_90`, `C3_0`, `C3_270`, `O4_0`, `L4_0`,
@@ -1888,10 +1899,11 @@ kodu emekliye ayrıldı: üretilmez, kimliği yeniden kullanılmaz. Orta bot, be
 oranları bonusu gerçek oyundaki gibi uygulayarak ölçülür (bonusu doğru yerleştiren oyuncu `bonusMoves` kazanır); LEVELS
 bantları bu bonuslu oranla karşılaştırılır. Bonus doğru yerleşince sayaç `+bonusMoves` artar ve "+n" olayı yayınlanır
 (K-60 madde 1, 7).
-**Örnek (sevkiyat verisi, v3c2; CL-V3C-14):** Bölüm 7 (tanıtım Y10, Normal → P 4, `a` 0): `min` 21 → `moves` 25.
-Kanonik çözümün 20. hamlesinde sayaç 6'yken bonus `D2_0` R doğru konur → 6 − 1 + 2 = 7, HUD'da "+2" patlar. Bonusu
-almayan bir oyuncunun bütçesi de 25'tir; HUD başta "25" gösterir, "(+2)" yazmaz. Bölüm 9 (tanıtım Y13, Normal → P 4,
-`a` 0): `min` 21 → 25. Bölüm 10 (Zor → P 1, `a` 2): `min` 21 → 24; bonus yok (D-107), etkin pay 3 açıktır.
+**Örnek (sevkiyat verisi, v3c3; CL-V3C-14, CL-V3C2-02):** Bölüm 7 (tanıtım Y10, Normal → P 4, `a` 0): `min` 20 → `moves`
+24. Kanonik çözümün 19. hamlesinde (3. kat, dört palet katmanının hepsinden sonra) sayaç 6'yken bonus `D2_0` W doğru konur
+→ 6 − 1 + 2 = 7, HUD'da "+2" patlar. Bonusu almayan bir oyuncunun bütçesi de 24'tür; HUD başta "24" gösterir, "(+2)"
+yazmaz. Bölüm 9 (tanıtım Y13, Normal → P 4, `a` 1): `min` 20 → 25. Bölüm 10 (Zor → P 1, `a` 2): `min` 21 → 24; bonus yok
+(D-107), etkin pay 3 açıktır.
 
 #### KABUL K-63 Döşeme aileleri (tuzaksız Kolay/Normal için doğrulayıcı uyarısı)
 **Kural:** 2 sütunlu şantiyede bir rengin "alt satırı dolu" şekilleri (`D2_90`, `O4_0`, `C3_0`, `C3_270`, `L4_0`,
