@@ -16,6 +16,7 @@ import type { CompiledLevel } from '../../src/core/level/compile.ts';
 import { validateLevelJson } from '../../src/core/level/logic.ts';
 import type { LevelInput } from '../../src/core/level/schema.ts';
 import { ArraySink, applyMove } from '../../src/core/moves.ts';
+import { holdableIgnoringMoves } from '../../src/core/deadlock.ts';
 import { tryBeginDrag } from '../../src/core/movement.ts';
 import { levelHooks } from '../../src/core/obstacles/registry.ts';
 import { GameSession } from '../../src/core/session.ts';
@@ -70,7 +71,7 @@ import type { PresenceInputKind, PresenceState } from '../../src/scenes/level/tu
 import { moveMatches } from '../../src/scenes/level/tutorial/tutorialEvents.ts';
 import { loadBoosterUnlock } from '../../tools/lib/levels.ts';
 import { loadArchive2rJson as loadLevelJson } from '../fixtures/builders.ts';
-import { LEVELS_1_10, handSteps } from '../core/moves.fixtures.ts';
+import { LEVELS_1_10, handSteps, shippedHandMoves } from '../core/moves.fixtures.ts';
 
 const ROOT = join(import.meta.dirname, '..', '..');
 const T = TOKENS.tutorial;
@@ -423,6 +424,85 @@ function feed(s: PresenceState, inputs: readonly (readonly [number, PresenceInpu
   return out;
 }
 const last = (xs: readonly PresenceState[]): PresenceState => xs[xs.length - 1] as PresenceState;
+
+describe('K-53 item 7 startOn pieceFree (state condition, Fl request)', () => {
+  const step1 = (startOn: unknown): unknown[] => [
+    { step: 1, highlight: ['piece:15'], textKey: 'tut.m.pallet', startOn, done: { event: 'overWall' } },
+  ];
+  /** The SHIPPED Bolum 7 (levels/level_007.json; its golden is `shippedHandMoves(7)`) with a replaced tutorial. */
+  const shipped7 = (tutorial: unknown): unknown => ({
+    ...(JSON.parse(readFileSync(join(ROOT, 'levels', 'level_007.json'), 'utf8')) as object),
+    tutorial,
+  });
+  const lvl7 = (startOn: unknown): CompiledLevel => {
+    const res = loadLevel(shipped7(step1(startOn)));
+    if (!res.ok) throw new Error(JSON.stringify(res.issues));
+    return res.level;
+  };
+  const free = (r: Run, ref: string): boolean =>
+    holdableIgnoringMoves(r.game.state, r.lvl.tutorialPieceIds.get(ref) as PieceId, levelHooks(r.lvl).drag);
+  const piece15 = { event: 'pieceFree', piece: 'piece:15' };
+
+  it('K-53 pieceFree waits while the block is covered and starts at the first state where it can be held (level 7 piece:15)', () => {
+    const r = run(lvl7(piece15));
+    expect(free(r, 'piece:15')).toBe(false); // covered at the start: the step waits
+    expect(r.tut.waiting?.step).toBe(1);
+    let startedAt = -1;
+    shippedHandMoves(7).forEach((move, i) => {
+      if (startedAt >= 0) return;
+      r.play(move);
+      const active = r.tut.current !== null;
+      // never active while the block is covered, active exactly when it can be held
+      expect(active, `after move ${i + 1}`).toBe(free(r, 'piece:15'));
+      if (active) startedAt = i + 1;
+    });
+    expect(startedAt).toBeGreaterThan(0);
+    expect(r.tut.current?.data.step).toBe(1);
+  });
+
+  it('K-53 pieceFree starts at the level start when the block is already free (level 1 piece:1)', () => {
+    const lvl = draft(1, [
+      {
+        step: 1,
+        highlight: ['piece:1'],
+        textKey: 'tut.m.useall',
+        startOn: { event: 'pieceFree', piece: 'piece:1' },
+        done: { event: 'placementCorrect' },
+      },
+    ]);
+    const r = run(lvl);
+    expect(free(r, 'piece:1')).toBe(true);
+    expect(r.step()).toBe(1);
+    expect(r.tut.waiting).toBeNull();
+  });
+
+  it('K-53 pieceFree is a start-only state condition: schema accepts it in startOn only, with a piece and no count; an unknown block is tut_done_invalid', () => {
+    const codes = (tutorial: unknown): string[] =>
+      validateLevelJson(shipped7(tutorial), { fileId: 7 }).issues.map((i) => i.code);
+    expect(codes(step1(piece15))).toEqual([]);
+    expect(codes(step1({ event: 'pieceFree' }))).toContain('schema_invalid');
+    expect(codes(step1({ ...piece15, count: 2 }))).toContain('schema_invalid');
+    expect(codes(step1({ event: 'pieceFree', piece: 'piece:99' }))).toContain('tut_done_invalid');
+    const asDone = [{ step: 1, highlight: ['piece:15'], textKey: 'tut.m.pallet', done: piece15 }];
+    expect(codes(asDone)).toContain('schema_invalid');
+  });
+
+  it('K-53 pieceFree survives a K-43 restore: a saved waiting step starts at once when the block is already free', () => {
+    const r = run(lvl7(piece15));
+    for (const move of shippedHandMoves(7)) {
+      if (r.tut.current !== null) break;
+      r.play(move);
+    }
+    expect(r.tut.current?.data.step).toBe(1);
+    const again = new TutorialController(r.lvl, {
+      state: () => r.game.state,
+      markContextTip: () => {},
+      stepEnded: () => {},
+    });
+    expect(again.restore({ index: 0, shown: false, count: 0 }, 0)).toBe(true);
+    expect(again.current?.data.step).toBe(1);
+  });
+});
 
 describe('K-53 TutorialPresence (UX 13.1 "Zamanlama", tokens.tutorial, fake clock)', () => {
   it('K-53 presence hides after visibleMs and reshows after idleReshowMs', () => {

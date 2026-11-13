@@ -3,7 +3,7 @@
   "file": "level_009.json",
   "levelHash": "a9963e52023a5f3c",
   "rulesVersion": 6,
-  "solverVersion": 7,
+  "solverVersion": 8,
   "variant": null,
   "schemaVersion": 2,
   "status": "solved",
@@ -34,8 +34,8 @@
   "issues": [],
   "notes": [
     "fast yard path off (slippery blocks (Y13))",
-    "large-level search (U-v3-2): best found 20 (lower bound 19) — not proven optimal, en iyi bulunan; width 8, 161673 states, 9608 ms, replay ok",
-    "lookahead proxy (CL-V3C-01): one-step lookahead, eps 0.1, wins 0.83 (95 % CI 0.79-0.86, 332/400) within 25 moves (bonus applied like the game)",
+    "large-level search (U-v3-2): best found 20 (lower bound 19) — not proven optimal, en iyi bulunan; width 8, 161673 states, 9622 ms, replay ok",
+    "lookahead proxy (CL-V3C-01, CL-V3C2-03): lookahead with 2 dig steps, eps 0.1, wins 0.86 (95 % CI 0.82-0.89, 344/400) within 25 moves (bonus applied like the game)",
     "play proxy (CL-V3-03; not ahaMin): placement-first player wins 0.21 (95 % CI 0.17-0.25, 84/400) within 25 moves, 0.38 (95 % CI 0.33-0.43, 151/400) within 34 (same plays)",
     "dead-state gate (CL-V3-01 B, estimate not proof; D-090 whole-space scan not run): 10000 random walks: won 7823, rescued by D1/D2/D3a 0, unresolved 2177 (probed 200: solvable 199, undetected dead 1) → estimated 0.11 %"
   ],
@@ -44,7 +44,7 @@
     "states": 2000,
     "expanded": 661,
     "edges": 6547,
-    "ms": 511,
+    "ms": 507,
     "bytes": 394803,
     "dragSessions": 2044,
     "applyMoves": 6695,
@@ -54,7 +54,7 @@
     "d3aUnknown": 0,
     "complete": false,
     "limit": "maxStates",
-    "totalMs": 466704
+    "totalMs": 483199
   },
   "v3": {
     "liftRatio": 1,
@@ -79,28 +79,28 @@
       "value": 1
     },
     "states": 161673,
-    "ms": 9608,
+    "ms": 9622,
     "replayOk": true,
     "runs": [
       {
         "width": 8,
         "cost": 20,
-        "ms": 239
+        "ms": 212
       },
       {
         "width": 32,
         "cost": 20,
-        "ms": 557
+        "ms": 518
       },
       {
         "width": 128,
         "cost": 20,
-        "ms": 1862
+        "ms": 1912
       },
       {
         "width": 512,
         "cost": 20,
-        "ms": 6948
+        "ms": 6980
       }
     ],
     "actions": [
@@ -304,7 +304,7 @@
     "policy": {
       "tight": 0.21,
       "loose": 0.38,
-      "look": 0.83,
+      "look": 0.86,
       "games": 400,
       "ci": {
         "tight": [
@@ -316,11 +316,11 @@
           0.43
         ],
         "look": [
-          0.79,
-          0.86
+          0.82,
+          0.89
         ]
       }
     }
   },
-  "cacheKey": "6dfca0b1:rules6:solver7:src0afd9b08:level:var:d3a:walks10000:games400"
+  "cacheKey": "6dfca0b1:rules6:solver8:srcb2ea1a58:level:var:d3a:walks10000:games400"
 }

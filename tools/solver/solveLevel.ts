@@ -37,8 +37,9 @@ import type { VariantName } from './variants.ts';
  * Bump when the solver's results can change for the same level and rules (cache key with `levelHash` and
  * `RULES_VERSION`, TECH §2R.5). 4 = levels v3 (K-64 measures, v3 gates, large-level search, TECH §V3). 7 = CL-V3C-13:
  * the play proxies run `policyGames` plays (default 400), tight and loose on the same plays, with Wilson 95 % intervals.
+ * 8 = CL-V3C2-03 (P-Fl-1): the lookahead proxy sees two dig steps (`lookDepth` 2; LEVELS 8.16.5).
  */
-export const SOLVER_VERSION = 7;
+export const SOLVER_VERSION = 8;
 
 export interface SolveOptions {
   readonly maxStates?: number;
@@ -89,7 +90,7 @@ export interface LargeSummary {
   readonly policy?: {
     readonly tight: number;
     readonly loose: number;
-    /** CL-V3C-01: one-step lookahead, eps 0.1, within `moves` (bonus applied as in the game, CL-V3C-02). */
+    /** CL-V3C-01 / CL-V3C2-03: lookahead (2 dig steps), eps 0.1, within `moves` (bonus applied as in the game, CL-V3C-02). */
     readonly look: number | null;
     /** CL-V3C-13: plays per proxy; tight and loose come from the same plays (loose ≥ tight). */
     readonly games: number;
@@ -348,12 +349,12 @@ export function solveLevelData(
               'L-33',
               'warn',
               'targets.policyWin',
-              `policyWin = ${policy.look} is outside [${pBand[0]}, ${pBand[1]}] (one-step lookahead player, eps 0.1, within ${level.moves} moves, ${games} plays, 95 % CI ${policy.ci.look?.[0] ?? '-'}-${policy.ci.look?.[1] ?? '-'}; the point estimate decides; CL-V3C-01, CL-V3C-13)`,
+              `policyWin = ${policy.look} is outside [${pBand[0]}, ${pBand[1]}] (lookahead player (2 dig steps), eps 0.1, within ${level.moves} moves, ${games} plays, 95 % CI ${policy.ci.look?.[0] ?? '-'}-${policy.ci.look?.[1] ?? '-'}; the point estimate decides; CL-V3C-01, CL-V3C-13)`,
             ),
           );
         if (policy.look !== null)
           notes.push(
-            `lookahead proxy (CL-V3C-01): one-step lookahead, eps 0.1, wins ${ciText(lookR)} within ${level.moves} moves (bonus applied like the game)`,
+            `lookahead proxy (CL-V3C-01, CL-V3C2-03): lookahead with 2 dig steps, eps 0.1, wins ${ciText(lookR)} within ${level.moves} moves (bonus applied like the game)`,
           );
         notes.push(
           `play proxy (CL-V3-03; not ahaMin): placement-first player wins ${ciText(tightR)} within ${level.moves} moves, ${ciText(looseR)} within ${loose} (same plays)`,

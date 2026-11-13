@@ -3,7 +3,7 @@
   "file": "level_002.json",
   "levelHash": "cbc945b59b37aa26",
   "rulesVersion": 6,
-  "solverVersion": 7,
+  "solverVersion": 8,
   "variant": null,
   "schemaVersion": 2,
   "status": "solved",
@@ -489,7 +489,7 @@
     "states": 76593,
     "expanded": 76593,
     "edges": 1968002,
-    "ms": 4186,
+    "ms": 4336,
     "bytes": 29928007,
     "dragSessions": 88508,
     "applyMoves": 135816,
@@ -499,7 +499,7 @@
     "d3aUnknown": 0,
     "complete": true,
     "limit": null,
-    "totalMs": 4535
+    "totalMs": 4647
   },
   "v3": {
     "liftRatio": 1,
@@ -513,5 +513,5 @@
     "traitDelta": null
   },
   "large": null,
-  "cacheKey": "f0aaa608:rules6:solver7:src0afd9b08:level:var:d3a:walks10000:games400"
+  "cacheKey": "f0aaa608:rules6:solver8:srcb2ea1a58:level:var:d3a:walks10000:games400"
 }

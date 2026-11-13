@@ -663,7 +663,7 @@ export const DEFAULT_GEO: BoardGeo;     // 6, 8, 2, 8, eMax 0 → h 8, rows 10 (
 | Parti k ≥ 1, `y` | `= yard.rows` (Hy; yok sayılır) | `batch_invalid` |
 | `build.segments[].rows` | tam `site.rows` satır, satır başına tam `site.cols` karakter; `.` yok | `plan_size`, `plan_has_window` |
 | `tutorial` | en çok 2 öğe; `mode` isteğe bağlı, yalnız `'soft'` (başka değer ya da spot alanı → `tut_blocking`); `done` ve `startOn` yalnız olay (`timeoutMs` → `schema_invalid`, CL-2R-10, PL-2R-16) | `tut_too_many_steps`, `tut_blocking`, `schema_invalid` |
-| `tutorial[].done`, `startOn` (`TutCond`) | GDD §14.1/3 kapalı sözlüğü; Faz 2R ekleri: `boosterUsed` olayı (Vinç yerleşimi `placementCorrect` üretmez), `piece: '<vurgu kimliği>'` süzgeci (yalnız `yardMove`, `placementCorrect`; `at` ile birlikte yazılabilir), `startOn: { event: 'segmentDone' }` | `schema_invalid` |
+| `tutorial[].done`, `startOn` (`TutCond`) | GDD §14.1/3 kapalı sözlüğü; Faz 2R ekleri: `boosterUsed` olayı (Vinç yerleşimi `placementCorrect` üretmez), `piece: '<vurgu kimliği>'` süzgeci (yalnız `yardMove`, `placementCorrect`; `at` ile birlikte yazılabilir), `startOn: { event: 'segmentDone' }`; yalnız `startOn`: `{ event: 'pieceFree', piece }` (durum koşulu; "`startOn: pieceFree`" paragrafı, §2R.5 sonu) | `schema_invalid` |
 | `tutorial[].highlight` | UX §13.1 sözlüğü + `blocks` (yalnız kalan blok çipi, CL-2R-21); `goals` = panelin tamamı | `tut_highlight_invalid` (mevcut kod) |
 | `tutorial[].hand.path` | GDD §14 "`hand.path` anlamı"; denetim solver aşamasında (§2R.5) | `tut_hand_invalid` |
 | `tutorial[].textKey` | regex `^tut\.(l\d{1,2}\|m\|ctx)\.[a-z][A-Za-z0-9]*$` (GDD §14.1/1) | `tut_key_missing` |
@@ -2238,6 +2238,22 @@ düşük oran vermez (Bölüm 6'daki 0,25 / 0,24 çifti iki ayrı tohum akışı
 ortalaması 0,2180 / 0,2165, sapma yok). Her oran Wilson %95 aralığıyla raporlanır (`policy.ci`, notlar); bant kapısı nokta
 tahminine bakar (aralık yalnız rapor). Oyun sayısı `--games N` (varsayılan `POLICY_GAMES_DEFAULT` = 400; `--check` altında
 400'ün altı 400'e çekilir). Önbellek anahtarı `walks` ve `games` içerir. `SOLVER_VERSION` 7.
+
+**İki adım kazı bakışı (CL-V3C2-03, P-Fl-1; `SOLVER_VERSION` 8).** `lookahead` vekili artık varsayılan olarak `lookDepth: 2`
+çalışır: doğru yerleşim yoksa 24 aday kaydırmadan en çok yerleşim açanı alır (1. adım); hiçbiri yerleşim açmıyorsa her aday,
+ardından gelebilecek `LOOK2_SHIFTS` = 12 kaydırmanın açtığı en çok yerleşimle puanlanır (2. adım: iki kapağın üst üste olduğu
+kazıyı görür). `lookDepth: 1` eski davranışı ve rastgele akışı bire bir üretir (ölçüm tekrarı için). Kapı tohumu (bölüm
+kimliği), ε 0,1, 400 oyun: Bölüm 3 0,54 → 0,93, 4 0,44 → 0,89, 5 0,56 → 0,97; 6–10 1 adımda 0,83 / 0,86 / 0,87 / 0,83 / 0,54,
+2 adımda 0,85 / 0,88 / 0,89 / 0,86 / 0,51 (Bölüm 1–2: 1,00 / 0,94 → 1,00 / 0,93). Test: `tests/tools/solver/policyProxy.test.ts`
+"K-51 item 3 CL-V3C2-03 two dig steps".
+
+**`startOn: pieceFree` (K-53 madde 7, Fl isteği).** Başlatma koşulu bir hamle olayı değil bir **durum koşuludur**:
+`{ event: 'pieceFree', piece: 'piece:N' }` adım, adlandırılan blok tutulabilir olduğu (`holdableIgnoringMoves`, K-30, sayaç
+yok sayılır) ilk anda başlar; bölüm başında, geri yüklemede ve her hamleden sonra denetlenir
+(`TutorialController.refresh`, `pieceFreeNow`). `done` sözlüğünün 16 adında DEĞİLDİR (`TUT_EVENTS` değişmedi; `done` içinde
+`schema_invalid`), yalnız `startOn` kabul eder (`TutStartCond`); `piece` zorunlu, `count` yok (`schema_invalid`); olmayan blok
+`tut_done_invalid` (L-17). L-35 (`tools/solver/tutorial.ts`): adım, kanonik çözümün `pieceFree` olan ilk durumunda başlar.
+Unity eşi: `TutEvents.PieceFree`, `LevelJson.TutCond(startOn)`, `TutorialController.Refresh`. Testler "K-53 pieceFree ...".
 
 ## 3. Şekiller
 

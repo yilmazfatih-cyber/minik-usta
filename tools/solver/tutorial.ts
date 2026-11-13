@@ -28,7 +28,8 @@ import { tryBeginDrag } from '../../src/core/movement.ts';
 import type { DragSession } from '../../src/core/movement.ts';
 import type { DragNode } from '../../src/core/types.ts';
 import { hashState } from '../../src/core/hash.ts';
-import type { TutCondition } from '../../src/core/level/schema.ts';
+import type { PieceFreeCondition, TutCondition } from '../../src/core/level/schema.ts';
+import { holdableIgnoringMoves } from '../../src/core/deadlock.ts';
 import type { LevelData } from '../../src/core/level/schema.ts';
 import type { Graph } from './explore.ts';
 import { stateAt } from './explore.ts';
@@ -177,6 +178,22 @@ function findEnd(g: Graph, cond: TutCondition, moves: readonly MoveRecord[], fro
   return -1;
 }
 
+/** First canonical position ≥ `from` whose state lets the `pieceFree` block be held (K-30); null when never. */
+function firstFreeState(
+  g: Graph,
+  cond: PieceFreeCondition,
+  from: number,
+  pathStates: readonly number[],
+): number | null {
+  const id = g.lvl.tutorialPieceIds.get(cond.piece);
+  if (id === undefined) return null;
+  for (let p = from; p < pathStates.length; p++) {
+    const idx = pathStates[p];
+    if (idx !== undefined && holdableIgnoringMoves(stateAt(g, idx), id, g.hooks.drag)) return p;
+  }
+  return null;
+}
+
 /** L-35 on every `drag` / `hold` hand of the level's tutorial. */
 export function checkTutorialHands(
   g: Graph,
@@ -195,9 +212,15 @@ export function checkTutorialHands(
   tutorial.forEach((step, k) => {
     const done = step.done;
     let start: number | null = position;
-    if (start !== null && step.startOn) {
-      const j = findEnd(g, step.startOn, moves, start);
-      start = j < 0 ? null : j + 1;
+    const so = step.startOn;
+    if (start !== null && so) {
+      if (so.event === 'pieceFree') {
+        // state condition (K-53 item 7): the first canonical state at or after `start` where the block can be held
+        start = firstFreeState(g, so, start, pathStates);
+      } else {
+        const j = findEnd(g, so, moves, start);
+        start = j < 0 ? null : j + 1;
+      }
     }
     if (step.hand && (step.hand.kind === 'drag' || step.hand.kind === 'hold') && step.hand.path) {
       if (start === null)

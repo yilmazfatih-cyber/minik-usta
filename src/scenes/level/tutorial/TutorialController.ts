@@ -24,10 +24,10 @@
  *   `gapPass`: released on a rail); a hold has no duration in the log, so `holdOverBuild` is never assumed.
  */
 import type { CompiledLevel } from '../../../core/level/compile.ts';
-import type { TutCondition, TutorialStepData } from '../../../core/level/schema.ts';
+import type { TutCondition, TutStartCondition, TutorialStepData } from '../../../core/level/schema.ts';
 import type { GameState } from '../../../core/state.ts';
 import type { GameEvent, PieceId, SessionAction } from '../../../core/types.ts';
-import { moveMatches } from './tutorialEvents.ts';
+import { moveMatches, pieceFreeNow } from './tutorialEvents.ts';
 import type { DragSignalEvent } from './tutorialEvents.ts';
 
 export interface TutorialHost {
@@ -156,7 +156,7 @@ export class TutorialController {
     if (!step) return false;
     const cond = shown ? step.done : step.startOn;
     if (!cond) return false; // a step without `startOn` never waits
-    return count < (cond.count ?? 1);
+    return count < (cond.event === 'pieceFree' ? 1 : (cond.count ?? 1));
   }
 
   /**
@@ -180,6 +180,7 @@ export class TutorialController {
       this.#phase = 'waiting';
       this.#count = pos.count;
       this.#bump();
+      this.refresh(now);
     }
     return true;
   }
@@ -196,6 +197,16 @@ export class TutorialController {
     if (this.#phase === 'finished') return;
     this.#phase = 'finished';
     this.#bump();
+  }
+
+  /**
+   * `startOn: pieceFree` is a state condition: a waiting step whose block can be held now starts. Called at the level start,
+   * after a restore and after every move (`moveEnded`); a no-op for any other phase or condition.
+   */
+  refresh(now: number): void {
+    if (this.#phase !== 'waiting') return;
+    const cond = this.steps[this.#index]?.startOn;
+    if (cond?.event === 'pieceFree' && pieceFreeNow(cond, this.#host.state())) this.#activate(now);
   }
 
   /** The player lifted a block (K-07 threshold passed): a new drag for the drag-signal counting. */
@@ -246,13 +257,14 @@ export class TutorialController {
   /** One committed move (drag or booster use) finished playing: a move-end event counts once. */
   moveEnded(events: readonly GameEvent[], now: number): void {
     const cond = this.#activeCond();
-    if (cond && moveMatches(cond, events, this.#host.state())) this.#hit(cond, now);
+    if (cond?.event === 'pieceFree') this.refresh(now);
+    else if (cond && moveMatches(cond, events, this.#host.state())) this.#hit(cond, now);
   }
 
   // --- internals ---------------------------------------------------------------------------------------------------------
 
   /** The condition the controller listens for now: `startOn` while waiting, `done` while active. */
-  #activeCond(): TutCondition | null {
+  #activeCond(): TutStartCondition | null {
     const step = this.steps[this.#index];
     if (!step) return null;
     if (this.#phase === 'waiting') return step.startOn ?? null;
@@ -285,6 +297,7 @@ export class TutorialController {
     if (step.startOn) {
       this.#phase = 'waiting';
       this.#bump();
+      this.refresh(now); // a `pieceFree` start can already hold
       return;
     }
     this.#activate(now);
