@@ -669,6 +669,27 @@ Karar: Y12 bonus blok yalnız ödül anıdır; hamle bütçesi bonusa göre dü�
 Gerekçe: Bonusun bütçe baskısı yaratmaması (brif ilke 5: süre baskısı yok); K-62 bu hâliyle kesinleşir. Bonus ilk kez Bölüm 10'da, `teaches` olmadan görünür (K-60 madde 6).
 Etkilenen: docs/GDD.md §16 (K-60 madde 6–7, K-62), docs/OBSTACLES.md (Y12), src/core (bonus olayı), tools/levels-gen (bot oranları bonusla ölçülür)
 
+### D-106 — Sürüklenen palet katmanı kendi paletiyle çarpışmaz; palet şekli serbest (K-58 madde 10) (2026-11-12)
+Durum: KABUL     Sahip: orkestratör (kabul); code-lead uygulaması     Tarih: 2026-11-12
+Karar: Sürüklenen palet katmanı KENDİ paletinin kalan katmanlarıyla çarpışmaz (yığından yukarı çıkar); başka bloklar, duvar ve sınırlarla çarpışma aynen geçerlidir. Palet, diğer bütün bloklar için dolu kalır. Katman yanı boşsa kendi hücresinin üstünden yana da kayabilir. Örtülü katman tutulamaz (`covered`). Böylece C3/O4/L4/J4/T4 paletleri kullanılabilir ve palet başına daha çok malzeme taşınır. Başlangıç düğümü `sameSpot` ve sahadaki her bırakma `palletSiteOnly` iptali olarak kalır. `pallet_stuck` (L-41) emekliye ayrılır; adı yeniden kullanılmaz. RULES_VERSION 6 (5 ile kaydedilmiş denemeler geçersiz sayılır). SOLVER_VERSION 7.
+Gerekçe: P-P3-1 (1) önerisinin "yalnız D2_90" sınırı bu kuralla kalktı; D-106 metni "yalnız dikey çıkış" daraltmasına (seçenek B: BFS'te düğüme bağlı istisna, ≈ 30 satır + C# eşi) gerek bırakmadan uygulandı (seçenek A). Gerekçe: "daha çok blok, daha çeşitli şekil" amacı (D-103) ve K-55 sabit sahanın korunması.
+Uygulama notu (dürüst kayıt): Bölüm 1–5 ve Bölüm 1–8 golden'ları değişmedi. Bölüm 9'un kanonik çözümü değişti (min aynı). Bölüm 10 min 22 → 21 (yanal kayma sonucu; `min` alt sınırı 20). "D2_90 paletli sonuçlar değişmesin" beklentisi tam tutmadı; bölüm verisi D-107 turuyla yeniden kuruldu.
+Etkilenen: docs/GDD.md §16 (K-58 madde 4 ve 10), docs/OBSTACLES.md (Y10), src/core (collisionMasks, deadlock.quickHoldable, palletStuck silindi), tools/solver (SOLVER_VERSION 7, `mayMove`), levels/level_006…010.json, minik-usta-unity Grid/Vinç/Deadlock (D-091 eşi)
+
+### D-107 — Blok hedefi, bonus yeri ve zorluk bandı (Bölüm 6–10) (2026-11-12)
+Durum: KABUL     Sahip: orkestratör (kabul); product-lead veri işi     Tarih: 2026-11-12
+Karar: Proje sahibinin "daha çok blok, daha çeşitli şekil, abartısız zorluk" amacı doğrultusunda: (1) Bölüm 6 ≥ 17 blok (paletsiz geniş şantiye tanıtımı; saha 48 hücre sınırı; şekil çeşitliliği 18'den önce gelir). (2) Bölüm 7–9 ≥ 18 blok (hedef 19–20). (3) Bölüm 10 ≥ 20 blok (hedef 20–22). (4) Bonus Bölüm 7'de (palet tanıtımının ödülü); bant izin verirse 9'da da olabilir. Bölüm 10'da bonus etkin payı büyütmez. (5) Zorluk bantları lookahead vekiliyle ölçülür (ε = 0,1, `targets.policyWin`): Bölüm 6–9 %80–90, Bölüm 10 %50–60; sevkiyatta `policyWin` uyarısı 0. (6) Domino payı ≤ %50, YAO ≥ %60, `plan_trap` 0.
+Gerekçe: D-103'ün "18–22" amacı; D-106 ile palet şekilleri açıldığı için blok sayısı alt sınırları yükseltildi. Korunan kurallar: K-55 sabit saha, K-47/K-48 tam örtü, YAO ≥ %60, D-090 ölü masa kapıları, K-53 hafif öğretici (≤ 2 adım), hamle bütçesi = min + pay, `min` ≤ 22, renk körlüğü (renk + simge).
+Uygulama (v3c3 sonrası, REVIEW_LOG kapanışına göre): Bölüm 6 17, Bölüm 7 19, Bölüm 8 18, Bölüm 9 18, Bölüm 10 20 blok. Bölüm 7 ve 10'da `min` kanıtlı (alt sınıra eşit); Bölüm 8–9'da `min` kanıtsız (en iyi bulunan 20, alt sınır 19; REVIEW_LOG Fl kapanışı, açık madde 2). Bant uyarılarının son durumu ve kalan `policyWin` sapmaları ölçü tablosunda (LEVELS §8.15–§8.16) izlenir.
+Etkilenen: docs/GDD.md §16 (K-49, K-56, K-62), docs/LEVELS.md §8.15–§8.16, levels/level_006…010.json, src/core (palet ve bonus kuralları), tools/solver (lookahead vekili, Wilson aralığı)
+
+### D-108 — Palet görünümü: "×n" beyaz daire rozet; gri-mavi metal kızak (K-65 madde 4) (2026-11-12)
+Durum: KABUL     Sahip: orkestratör (kabul); design-lead şartnamesi (ART_DIRECTION §3A.6), code-lead uygulaması     Tarih: 2026-11-12
+Karar: (1) Katman sayısı "×n" BEYAZ daire rozette gösterilir (Ø 76 design px, kontur 5 px #2E3A4B, rakam 44 px; 360 px ekranda rozet ≥ 56 design px; rakam ≥ `kit.badge.fontPx` × k). Altın yıldızdan biçim olarak ayrılır (bonus rozeti altın 5 kollu yıldız "+n"; katman rozeti daire). (2) Palet kızağı gri-mavi metal (gövde #8A9BB0, dudak #C2CFDD, gölge #5A6B80, perçin #E4ECF5); ahşap değil, W bloğuyla karışmaz. Dudak 16 px; katman kenar çizgisi 3 px α 0,55; katman başına 6 px yükselme. (3) Özellik rozetleri 360 px ekranda ≥ 56 design px, rakam ≥ `kit.badge.fontPx` × k. (4) Giriş nabzı (ilk palet katmanı, 2 × 400 ms, ölçek 1,06) Bölüm 7 öğreticisinde.
+Gerekçe: CL-V3C-10 (palet katmanı sayısı okunmuyordu) ve CL-V3C-12 (kızak W bloğuyla karışıyordu). Renk körlüğü: rozet biçimi ve simge renkten bağımsız okunur (K-65 madde 4).
+Uygulama durumu: Unity görünümü D-108 şartnamesine göre yapıldı; giriş nabzı ve bazı rozet çakışmaları sanat işinde açık (bkz. docs/REVIEW_LOG.md ve Unity LEVELS_V3C2_REPORT.md açık sorular).
+Etkilenen: docs/ART_DIRECTION.md §3A.6, src/theme/tokens.json (`check.palletV3c`), docs/GDD.md §16 (K-65 madde 4), docs/OBSTACLES.md (Y10 "Okunurluk"), minik-usta-unity art/** ve BlockSkin
+
 ### ÖNERİ P-A2-1 — Bölüm 10 iki katlı; üç kat, Ağır Yük ve takas tuzağı U-4 sonrasına (product-lead, 2026-11-02)
 Durum: ÖNERİ. D0 eğrisi (LEVELS §6.6) Bölüm 10'u 6×8 saha, üç kat ve `Q9` ile tanımlıyordu; bugünkü tam tarama bu
 uzayı bitiremez (`scan_incomplete`, error; 5×6 üç kat yedeği de > 2,5 M durum). A2'de Bölüm 10, 4×5 sahada iki katlı
@@ -723,8 +744,8 @@ açılış 10'a (Vinç ile aynı bölüm), B Bölüm 8'e bir sargı + makas (8 p
 kanıtsız bölüm yayımlamak yerine çeşitliliği şekil + özellikle (C3, L/J, T, I3, iki renkli, sargı, bonus) verdim.
 **Proje sahibine:** blok sayısı bugün 6–8'den 8–9'a çıktı, 16–22 hedefi bu turda yok; nedeni ve yolu yukarıda.
 
-### ÖNERİ P-P3-1 — v3c yayını: Hikaye 1'de palet yalnız `D2_90`; Bölüm 6–10 17–19 blok; bonus ilk kez finalde (product-lead, 2026-11-12)
-**Durum:** ÖNERİ. **Bağlam:** P3 bölüm turu (LEVELS §8.14); D-103…D-105 uygulandı, 6–10 `levels:check` yeşil.
+### KAPANDI P-P3-1 — v3c yayını: Hikaye 1'de palet yalnız `D2_90`; Bölüm 6–10 17–19 blok; bonus ilk kez finalde (product-lead, 2026-11-12)
+**Durum:** KAPANDI (2026-11-12): D-106 (palet şekli serbest, `pallet_stuck` emekli) ve D-107 (blok hedefi 17/≥18/≥20, bonus Bölüm 7) ile çözüldü; bu öneri metni tarihsel kayıttır. **Bağlam:** P3 bölüm turu (LEVELS §8.14); D-103…D-105 uygulandı, 6–10 `levels:check` yeşil.
 **Öneri:** (1) GDD K-58 madde 10: alt katmanlı paletin üst katmanı ancak bir birim ötelemesi kendi ayak izine değmiyorsa
 tutulabilir; Hikaye 1'de palet şekli yalnız `D2_90` (`I3_90` Bölüm 8+); doğrulayıcı kodu `pallet_stuck` (code-lead).
 `C3`/`O4`/`L4`/`J4`/`T4` paletinin üst katmanı hiç tutulamaz (P1 planındaki `C3` paletleri bu yüzden çıkarıldı). (2) Blok
@@ -736,8 +757,8 @@ de serbest. (4) Yerleşim üçlüsü en çok 2 bölümde (CL-V3-04): Bölüm 10 
 sağlandı; sapmalar ölçülen geometri sınırından gelir, kural gevşetilmedi.
 **Proje sahibine:** blok sayısı ve D-090'ın bu ölçekte tahmin sınıfı (10 000 yürüyüş, yakalanmayan çıkmaz %0,00) onayınızı bekler.
 
-### ÖNERİ P-Fl-1 — Bölüm 1–5 verisi değişmez; resmî vekile 2 adım kazı bakışı, 3–5'e bant (product-lead, 2026-11-12; CL-V3C2-03)
-**Durum:** ÖNERİ (orkestratör, proje sahibine "Bölüm 1–5 değişmez" notunun kapsamıyla). **Bağlam:** resmî ileri bakış
+### KABUL P-Fl-1 — Bölüm 1–5 verisi değişmez; resmî vekile 2 adım kazı bakışı, 3–5'e bant (product-lead, 2026-11-12; CL-V3C2-03)
+**Durum:** KABUL (orkestratör, 2026-11-12; proje sahibine "Bölüm 1–5 değişmez" notunun kapsamıyla). **Bağlam:** resmî ileri bakış
 vekilinde (ε 0,1; 1 adım: gereken yerleşimi açan kaydırmayı görür) Kolay 3 0,51, Kolay 4 0,43, Normal 5 0,56; Normal 6–9
 0,81–0,86; Zor 10 0,56 (REVIEW_LEVELS_V3C2 §5). Bölüm 4'te bütçe + 8 ile bile 0,59: iki derin kazıda (gereken blok iki
 bloğun altında) ilk kaydırma hiçbir yerleşim açmaz, vekil rastgele kaydırır. **Ölçüm (product-lead, LEVELS §8.16.5):**
@@ -757,8 +778,8 @@ bir ölçüye ayar yapılır, eğrinin gerçek biçimi değil vekilin kusuru dü
 **Gerekçe:** brif ilke 4 (testere dişi) ve 6 (önce ölçü, sonra ayar); sahibin "abartısız zorluk" amacı veri değişmeden
 korunur. **Proje sahibine:** "1–5 değişmez" notu bu öneriyle tam korunur; tek değişiklik ölçü aracındadır.
 
-### ÖNERİ P-Fl-2 — Bölüm 8 ve 9'da 18 blok + dörtlü şekil; Bölüm 7 19 blok (product-lead, 2026-11-12; CL-V3C2-04)
-**Durum:** ÖNERİ (D-107 alt sınırları içinde; hedef aralığın altı için kayıt). **Karar önerisi:** Bölüm 7 19 blok (D2 ×9,
+### KABUL P-Fl-2 — Bölüm 8 ve 9'da 18 blok + dörtlü şekil; Bölüm 7 19 blok (product-lead, 2026-11-12; CL-V3C2-04)
+**Durum:** KABUL (orkestratör, 2026-11-12; D-107 alt sınırları içinde; hedef aralığın altı için kayıt). **Karar önerisi:** Bölüm 7 19 blok (D2 ×9,
 C3 ×4, L4 ×2, palet `O4_0` ×4), Bölüm 8 18 blok (D2 ×7, C3 ×7 [3'ü palet], I3 ×3, L4), Bölüm 9 18 blok (D2 ×7, C3 ×8 [3'ü
 palet], I3 ×2, L4). **Gerekçe:** sahibin amacı "daha çok blok, **daha çeşitli şekil**"; Σ 48'lik planda domino payı ≤ %50
 iken bir dörtlü blokla N en çok 18'dir (tekli `B1` olmadan: 2d + 3c + 4 = 48, d + c + 1 = N, d ≤ N/2 ⇒ d = 7, N = 18;
